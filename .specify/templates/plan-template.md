@@ -31,7 +31,17 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify compliance with constitution principles (`.specify/memory/constitution.md`):
+
+- [ ] **User-Centric Design**: Does this feature address a documented user pain point?
+- [ ] **Security First**: Are all credential storage, file operations, and external communications secure?
+- [ ] **Performance Excellence**: Can this feature meet performance targets (<3s startup, <100ms saves, etc.)?
+- [ ] **AI-Assisted Development**: If using AI features, are streaming, timeout, and spec compliance handled?
+- [ ] **Cross-Platform Compatibility**: Will this work on Windows, macOS, and Linux?
+- [ ] **Modularity and Testability**: Is the design modular with clear service boundaries? Can core logic be unit tested?
+- [ ] **Observability**: Are critical operations logged with appropriate detail?
+
+**Violations Requiring Justification**: [List any principle violations and justify why they are necessary]
 
 ## Project Structure
 
