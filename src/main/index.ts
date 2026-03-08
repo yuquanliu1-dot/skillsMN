@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
+import { registerConfigHandlers, cleanupConfigHandlers } from './ipc/configHandlers';
+import { logger } from './utils/Logger';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -42,6 +43,12 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.whenReady().then(() => {
+  logger.info('Main', 'Application starting');
+
+  // Register IPC handlers
+  registerConfigHandlers();
+  logger.info('Main', 'IPC handlers registered');
+
   createWindow();
 
   // On OS X it's common to re-create a window in the app when the
@@ -60,7 +67,10 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Clean up IPC handlers on quit
+// Clean up on quit
 app.on('will-quit', () => {
+  logger.info('Main', 'Application shutting down');
+  cleanupConfigHandlers();
   ipcMain.removeAllListeners();
+  logger.getInstance().cleanup();
 });

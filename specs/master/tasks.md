@@ -83,34 +83,34 @@
 
 ### Tests for User Story 1
 
-- [ ] T021 [P] [US1] Unit test for ConfigService.load() in tests/unit/services/ConfigService.test.ts
-- [ ] T022 [P] [US1] Unit test for ConfigService.validateProjectDirectory() in tests/unit/services/ConfigService.test.ts
-- [ ] T023 [P] [US1] Integration test for config IPC handlers in tests/integration/config-operations.test.ts
+- [x] T021 [P] [US1] Unit test for ConfigService.load() in tests/unit/services/ConfigService.test.ts
+- [x] T022 [P] [US1] Unit test for ConfigService.validateProjectDirectory() in tests/unit/services/ConfigService.test.ts
+- [x] T023 [P] [US1] Integration test for config IPC handlers in tests/integration/config-operations.test.ts
 
 ### Implementation for User Story 1
 
 #### Configuration Service
 
-- [ ] T024 [US1] Implement ConfigService in src/main/services/ConfigService.ts with load(), save(), get(), set() methods
-- [ ] T025 [US1] Implement project directory validation in ConfigService.validateProjectDirectory() (check for .claude folder)
-- [ ] T026 [US1] Add error handling to ConfigService with actionable error messages
+- [x] T024 [US1] Implement ConfigService in src/main/services/ConfigService.ts with load(), save(), get(), set() methods
+- [x] T025 [US1] Implement project directory validation in ConfigService.validateProjectDirectory() (check for .claude folder)
+- [x] T026 [US1] Add error handling to ConfigService with actionable error messages
 
 #### IPC Handlers
 
-- [ ] T027 [US1] Create config IPC handlers in src/main/ipc/configHandlers.ts: config:get, config:set, config:validate-project-dir
-- [ ] T028 [US1] Register config IPC handlers in src/main/index.ts on app ready
+- [x] T027 [US1] Create config IPC handlers in src/main/ipc/configHandlers.ts: config:get, config:set, config:validate-project-dir
+- [x] T028 [US1] Register config IPC handlers in src/main/index.ts on app ready
 
 #### UI Components
 
-- [ ] T029 [US1] Create SetupDialog component in src/renderer/components/SetupDialog.tsx with directory picker
-- [ ] T030 [US1] Create ipcClient wrapper in src/renderer/services/ipcClient.ts with typed IPC methods
-- [ ] T031 [US1] Implement directory validation UI in SetupDialog (show error if invalid)
-- [ ] T032 [US1] Add setup completion logic to save configuration and trigger skill scanning
+- [x] T029 [US1] Create SetupDialog component in src/renderer/components/SetupDialog.tsx with directory picker
+- [x] T030 [US1] Create ipcClient wrapper in src/renderer/services/ipcClient.ts with typed IPC methods
+- [x] T031 [US1] Implement directory validation UI in SetupDialog (show error if invalid)
+- [x] T032 [US1] Add setup completion logic to save configuration and trigger skill scanning
 
 #### Integration
 
-- [ ] T033 [US1] Show SetupDialog on first launch (check if config exists) in src/renderer/index.tsx
-- [ ] T034 [US1] Add logging for setup flow (track duration, success/failure)
+- [x] T033 [US1] Show SetupDialog on first launch (check if config exists) in src/renderer/index.tsx
+- [x] T034 [US1] Add logging for setup flow (track duration, success/failure)
 
 **Checkpoint**: User Story 1 should be fully functional and testable independently
 

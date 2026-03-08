@@ -37,6 +37,12 @@ export class Configuration {
   public readonly autoRefresh: boolean;
 
   constructor(data: {
+    projectSkillDir: string;
+    globalSkillDir?: string;
+    defaultInstallTarget?: 'project' | 'global';
+    editorDefaultMode?: 'edit' | 'preview';
+    autoRefresh?: boolean;
+  }) {
     this.projectSkillDir = data.projectSkillDir;
     this.globalSkillDir = data.globalSkillDir || this.getDefaultGlobalSkillDir();
     this.defaultInstallTarget = data.defaultInstallTarget ?? 'project';
@@ -58,32 +64,32 @@ export class Configuration {
   public validate(): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
 
-    if (!this.projectSkillDir || typeof this.projectSkillDir !== 'string') {
-      errors.push('Project skill directory needs to be a string');
+    if (!this.projectSkillDir && typeof this.projectSkillDir !== 'string') {
+      errors.push('Project skill directory must be a string (can be empty for initial setup)');
     }
 
-    if (!path.isAbsolute(this.projectSkillDir)) {
-      errors.push('Project skill directory needs to be a absolute path');
+    if (this.projectSkillDir && !path.isAbsolute(this.projectSkillDir)) {
+      errors.push('Project skill directory must be an absolute path');
     }
 
     if (!this.globalSkillDir || typeof this.globalSkillDir !== 'string') {
-      errors.push('Global skill directory needs to be a string');
+      errors.push('Global skill directory must be a string');
     }
 
     if (!path.isAbsolute(this.globalSkillDir)) {
-      errors.push('Global skill directory needs to be a absolute path');
+      errors.push('Global skill directory must be an absolute path');
     }
 
     if (this.defaultInstallTarget !== 'project' && this.defaultInstallTarget !== 'global') {
-      errors.push('Default install target needs to be "project" or "global"');
+      errors.push('Default install target must be "project" or "global"');
     }
 
     if (this.editorDefaultMode !== 'edit' && this.editorDefaultMode !== 'preview') {
-      errors.push('Editor default mode needs to be "edit" or "preview"');
+      errors.push('Editor default mode must be "edit" or "preview"');
     }
 
     if (typeof this.autoRefresh !== 'boolean') {
-      errors.push('Auto refresh needs to be a boolean');
+      errors.push('Auto refresh must be a boolean');
     }
 
     return { isValid: errors.length === 0, errors };
