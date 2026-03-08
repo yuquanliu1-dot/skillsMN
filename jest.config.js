@@ -28,13 +28,15 @@ module.exports = {
     }
   },
   moduleNameMapper: {
+    '^electron$': '<rootDir>/tests/__mocks__/electron.ts',
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     '^@main/(.*)$': '<rootDir>/src/main/$1',
     '^@renderer/(.*)$': '<rootDir>/src/renderer/$1'
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      useESM: false
+      useESM: false,
+      tsconfig: 'tsconfig.test.json'
     }]
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],

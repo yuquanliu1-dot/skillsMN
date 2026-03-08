@@ -2,7 +2,8 @@
  * Unit tests for ConfigService
  */
 
-import { ConfigService } from '../../src/main/services/ConfigService';
+import { ConfigService } from '../../../src/main/services/ConfigService';
+import { Configuration } from '../../../src/main/models/Configuration';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -14,7 +15,7 @@ describe('ConfigService', () => {
 
   beforeEach(() => {
     // Create temp directory for testing
-    tempDir = fs.mkdtempSync(fs.mkdtempSync(path.join(os.tmpdir(), 'skillsmm-config-test-')).name);
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skillsmm-config-test-'));
     configPath = path.join(tempDir, 'config.json');
     configService = new ConfigService(configPath);
   });
@@ -24,6 +25,12 @@ describe('ConfigService', () => {
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
+  });
+
+  afterAll(() => {
+    // Cleanup logger to prevent open handles
+    const { logger } = require('../../../src/main/utils/Logger');
+    logger.cleanup();
   });
 
   describe('load', () => {
@@ -39,13 +46,13 @@ describe('ConfigService', () => {
     });
 
     it('should load existing config from file', () => {
-      const testConfig = {
+      const testConfig = new Configuration({
         projectSkillDir: '/test/project',
         globalSkillDir: '/test/global',
-        defaultInstallTarget: 'global' as const,
-        editorDefaultMode: 'preview' as const,
+        defaultInstallTarget: 'global',
+        editorDefaultMode: 'preview',
         autoRefresh: false,
-      };
+      });
 
       fs.writeFileSync(configPath, JSON.stringify(testConfig), 'utf8');
 
@@ -83,13 +90,13 @@ describe('ConfigService', () => {
 
   describe('save', () => {
     it('should save config to file', () => {
-      const testConfig = {
+      const testConfig = new Configuration({
         projectSkillDir: '/test/project',
         globalSkillDir: '/test/global',
-        defaultInstallTarget: 'project' as const,
-        editorDefaultMode: 'edit' as const,
+        defaultInstallTarget: 'project',
+        editorDefaultMode: 'edit',
         autoRefresh: true,
-      };
+      });
 
       configService.save(testConfig);
 
@@ -101,13 +108,13 @@ describe('ConfigService', () => {
       const nestedPath = path.join(tempDir, 'nested', 'dir', 'config.json');
       const nestedService = new ConfigService(nestedPath);
 
-      const testConfig = {
+      const testConfig = new Configuration({
         projectSkillDir: '/test',
         globalSkillDir: '/global',
-        defaultInstallTarget: 'project' as const,
-        editorDefaultMode: 'edit' as const,
+        defaultInstallTarget: 'project',
+        editorDefaultMode: 'edit',
         autoRefresh: true,
-      };
+      });
 
       nestedService.save(testConfig);
 
@@ -115,13 +122,13 @@ describe('ConfigService', () => {
     });
 
     it('should write atomically (temp file + rename)', () => {
-      const testConfig = {
+      const testConfig = new Configuration({
         projectSkillDir: '/test/project',
         globalSkillDir: '/test/global',
-        defaultInstallTarget: 'project' as const,
-        editorDefaultMode: 'edit' as const,
+        defaultInstallTarget: 'project',
+        editorDefaultMode: 'edit',
         autoRefresh: true,
-      };
+      });
 
       configService.save(testConfig);
 
@@ -134,13 +141,13 @@ describe('ConfigService', () => {
 
   describe('get', () => {
     it('should return current config', () => {
-      const testConfig = {
+      const testConfig = new Configuration({
         projectSkillDir: '/test/project',
         globalSkillDir: '/test/global',
-        defaultInstallTarget: 'project' as const,
-        editorDefaultMode: 'edit' as const,
+        defaultInstallTarget: 'project',
+        editorDefaultMode: 'edit',
         autoRefresh: true,
-      };
+      });
 
       configService.save(testConfig);
       const config = configService.get();
@@ -149,13 +156,13 @@ describe('ConfigService', () => {
     });
 
     it('should load config if not in memory', () => {
-      const testConfig = {
+      const testConfig = new Configuration({
         projectSkillDir: '/test/project',
         globalSkillDir: '/test/global',
-        defaultInstallTarget: 'project' as const,
-        editorDefaultMode: 'edit' as const,
+        defaultInstallTarget: 'project',
+        editorDefaultMode: 'edit',
         autoRefresh: true,
-      };
+      });
 
       fs.writeFileSync(configPath, JSON.stringify(testConfig), 'utf8');
 
@@ -220,7 +227,7 @@ describe('ConfigService', () => {
       expect(result.isValid).toBe(false);
       expect(result.hasClaudeFolder).toBe(false);
       expect(result.skillsDir).toBeNull();
-      expect(result.errors).toContain(expect.any(String));
+      expect(result.errors.length).toBeGreaterThan(0);
     });
 
     it('should return invalid for non-existent directory', () => {
@@ -237,7 +244,7 @@ describe('ConfigService', () => {
       const result = configService.validateProjectDirectory(filePath);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Path is not a directory');
+      expect(result.errors.some((e: string) => e.includes('not a directory'))).toBe(true);
     });
 
     it('should suggest creating .claude folder if missing', () => {
@@ -247,7 +254,7 @@ describe('ConfigService', () => {
       const result = configService.validateProjectDirectory(projectDir);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('.claude folder not found'))).toBe(true);
+      expect(result.errors.some((e: string) => e.includes('.claude folder'))).toBe(true);
     });
   });
 

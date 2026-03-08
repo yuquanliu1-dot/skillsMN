@@ -2,8 +2,7 @@
  * Error handling utility with actionable error messages
  */
 
-import { AppError } from '../shared/types';
-import { ERROR_CODES } from '../shared/constants';
+import { ERROR_CODES } from '../../shared/constants';
 import { logger } from './Logger';
 
 /**

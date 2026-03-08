@@ -24,12 +24,33 @@ export class PathValidator {
    */
   private getCanonicalPath(filePath: string): string {
     try {
-      // Resolve symlinks and normalize
-      const realPath = fs.existsSync(filePath) ? fs.realpathSync(filePath) : path.resolve(filePath);
-      return path.normalize(realPath);
+      // Resolve the directory part to handle symlinks in parent directories
+      const dir = path.dirname(filePath);
+      const base = path.basename(filePath);
+
+      // Resolve symlinks in the directory path
+      const realDir = fs.existsSync(dir) ? fs.realpathSync(dir) : path.resolve(dir);
+      const realPath = path.join(realDir, base);
+
+      // Normalize for the current platform
+      let normalized = path.normalize(realPath);
+
+      // On Windows, normalize case for case-insensitive comparison
+      if (process.platform === 'win32') {
+        normalized = normalized.toLowerCase();
+      }
+
+      return normalized;
     } catch (error) {
       // If path doesn't exist, still resolve relative paths
-      return path.normalize(path.resolve(filePath));
+      let normalized = path.normalize(path.resolve(filePath));
+
+      // On Windows, normalize case for case-insensitive comparison
+      if (process.platform === 'win32') {
+        normalized = normalized.toLowerCase();
+      }
+
+      return normalized;
     }
   }
 

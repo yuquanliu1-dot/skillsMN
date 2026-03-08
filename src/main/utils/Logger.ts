@@ -29,7 +29,7 @@ export class Logger {
   private static instance: Logger;
   private logFile: string;
   private logBuffer: LogEntry[] = [];
-  private flushInterval: NodeJS.Timeout | null;
+  private flushInterval: NodeJS.Timeout | null = null;
 
   private constructor() {
     const logDir = path.join(app.getPath('userData'), 'logs');

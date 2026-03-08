@@ -3,7 +3,7 @@
  * CRITICAL: Tests for path traversal prevention
  */
 
-import { PathValidator } from '../../src/main/services/PathValidator';
+import { PathValidator } from '../../../src/main/services/PathValidator';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -14,7 +14,7 @@ describe('PathValidator', () => {
 
   beforeEach(() => {
     // Create temp directory for testing
-    tempDir = fs.mkdtempSync(fs.mkdtempSync(path.join(os.tmpdir(), 'skillsmm-test-'))).name;
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skillsmm-test-'));
   });
 
   afterEach(() => {
@@ -124,10 +124,10 @@ describe('PathValidator', () => {
 
       validator = new PathValidator([dir1]);
 
-      expect(validator.getWhitelistedDirectories()).toHaveLength().toBe(1);
+      expect(validator.getWhitelistedDirectories()).toHaveLength(1);
 
       validator.addToWhitelist(dir2);
-      expect(validator.getWhitelistedDirectories()).toHaveLength().toBe(2);
+      expect(validator.getWhitelistedDirectories()).toHaveLength(2);
     });
 
     it('should remove directories from whitelist', () => {
@@ -138,11 +138,19 @@ describe('PathValidator', () => {
 
       validator = new PathValidator([dir1, dir2]);
 
-      expect(validator.getWhitelistedDirectories()).toHaveLength().toBe(2);
+      expect(validator.getWhitelistedDirectories()).toHaveLength(2);
 
       validator.removeFromWhitelist(dir2);
-      expect(validator.getWhitelistedDirectories()).toHaveLength().toBe(1);
-      expect(validator.getWhitelistedDirectories()).toContain(dir1);
+      expect(validator.getWhitelistedDirectories()).toHaveLength(1);
+
+      // On Windows, paths are case-insensitive, so check accordingly
+      const whitelisted = validator.getWhitelistedDirectories()[0];
+      expect(whitelisted).toBeDefined();
+      if (process.platform === 'win32') {
+        expect(whitelisted!.toLowerCase()).toBe(dir1.toLowerCase());
+      } else {
+        expect(validator.getWhitelistedDirectories()).toContain(dir1);
+      }
     });
 
     it('should check if path is whitelisted', () => {

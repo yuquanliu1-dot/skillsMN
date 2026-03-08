@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { app } from 'electron';
-import { Configuration } from '../shared/types';
+import { Configuration } from '../models/Configuration';
 import { AppError } from '../utils/ErrorHandler';
 import { logger } from '../utils/Logger';
 import { PathValidator } from './PathValidator';

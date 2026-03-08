@@ -5,7 +5,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
-import { Configuration } from '../shared/types';
 
 /**
  * Configuration with default values and validation
@@ -54,7 +53,7 @@ export class Configuration {
    * Get default global skill directory
    */
   private getDefaultGlobalSkillDir(): string {
-    const homeDir = os.homedir || os.userInfo;
+    const homeDir = os.homedir();
     return path.join(homeDir, '.claude', 'skills');
   }
 

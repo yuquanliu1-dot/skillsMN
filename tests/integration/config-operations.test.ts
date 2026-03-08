@@ -11,7 +11,7 @@ describe('Config IPC Integration', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(fs.mkdtempSync(path.join(os.tmpdir(), 'skillsmm-ipc-test-')).name;
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skillsmm-ipc-test-'));
   });
 
   afterEach(() => {
