@@ -1,12 +1,13 @@
 <!--
 Sync Impact Report:
-- Version change: N/A → 1.0.0 (Initial constitution creation)
-- Added sections: All (initial creation)
+- Version change: 1.1.0 → 1.1.1 (Added Tailwind CSS to technical architecture)
+- Modified sections: Technical Architecture - Technology Stack (Frontend)
+- Added sections: None
 - Removed sections: None
 - Templates status:
-  ✅ constitution.md - Created from template
-  ⚠ plan-template.md - May need Constitution Check alignment
-  ⚠ spec-template.md - No changes needed (user stories format compatible)
+  ✅ constitution.md - Updated with Tailwind CSS requirement
+  ✅ plan-template.md - Constitution Check section already aligned
+  ⚠ spec-template.md - No changes needed (technology-agnostic)
   ⚠ tasks-template.md - No changes needed (task structure compatible)
 - Follow-up TODOs: None
 -->
@@ -106,6 +107,95 @@ Security violations are NON-NEGOTIABLE and MUST be resolved before any feature c
 - Service contracts must be clearly defined
 - Configuration schema must be documented
 
+## Technical Architecture
+
+### Technology Stack
+
+**Frontend (Renderer Process)**:
+- Electron framework for cross-platform desktop application
+- TypeScript for type-safe development
+- Monaco Editor for skill file editing with syntax highlighting
+- Tailwind CSS for utility-first styling and rapid UI development
+- Modern web technologies (HTML5, CSS3, JavaScript/TypeScript)
+
+**Backend (Main Process)**:
+- Node.js with Express (optional, for complex service orchestration)
+- Python services (optional, for specific backend tasks)
+- TypeScript for type-safe IPC and service implementations
+
+**AI Integration**:
+- Claude Agent SDK for AI-assisted skill generation
+- Integration with skill-creator skill
+- Streaming response support (SSE or WebSocket)
+
+**External APIs**:
+- GitHub REST API v3 for repository operations
+- Claude API (via Agent SDK) for AI features
+
+**Data Storage**:
+- Local file system for skill files and project structure
+- JSON files for configuration and metadata
+- Electron safeStorage for encrypted credential storage
+
+### Architectural Patterns
+
+**Electron Architecture**:
+- Main process handles: file system operations, IPC, external API calls, credential management
+- Renderer process handles: UI rendering, user interactions, state management
+- IPC layer provides: secure communication bridge, well-documented command interface
+
+**Service Layer**:
+- Services encapsulate business logic and external integrations
+- Services MUST be platform-agnostic and testable independently
+- IPC handlers delegate to services (thin controller pattern)
+- Clear separation between: models, services, and IPC handlers
+
+**Data Flow**:
+1. User action in renderer → IPC command
+2. Main process receives command → delegates to service
+3. Service performs operation (file I/O, API call, AI generation)
+4. Service returns result → IPC response to renderer
+5. Renderer updates UI with result
+
+### Integration Requirements
+
+**GitHub Integration**:
+- MUST use GitHub REST API v3 with PAT authentication
+- MUST support both public repository search and private repository access
+- MUST handle rate limiting and API errors gracefully
+- MUST cache responses appropriately (5-minute cache for private repos)
+
+**Claude AI Integration**:
+- MUST use Claude Agent SDK (not direct API calls)
+- MUST integrate with skill-creator skill for generation
+- MUST support streaming responses for real-time feedback
+- MUST proxy all requests through backend (never expose API key to frontend)
+- MUST implement timeout handling (30s default with user options)
+
+**File System Integration**:
+- MUST monitor skill directories for changes (real-time or polling)
+- MUST handle concurrent file access safely
+- MUST validate all paths before operations (security requirement)
+- MUST use platform-appropriate file operations (recycle bin on delete)
+
+### Technology Constraints
+
+**Required Technologies**:
+- Electron: Latest stable version for cross-platform support
+- TypeScript: Strict mode enabled for all code
+- Node.js: LTS version for stability
+
+**Optional Technologies**:
+- Python: Only if needed for specific backend services
+- Express.js: Only if complex routing/middleware needed
+- Additional npm packages: Must be justified in implementation plans
+
+**Prohibited Practices**:
+- Direct API calls from renderer (security violation)
+- Storing credentials in plain text (security violation)
+- Platform-specific code without fallbacks (compatibility violation)
+- Synchronous file operations in hot paths (performance violation)
+
 ## Governance
 
 This constitution supersedes all other development practices and guidelines. All feature specifications, implementation plans, and tasks must be validated against these principles.
@@ -125,4 +215,4 @@ This constitution supersedes all other development practices and guidelines. All
 - Code reviews must verify adherence to principles
 - Performance and security requirements must be validated before feature completion
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-08 | **Last Amended**: 2026-03-08
+**Version**: 1.1.1 | **Ratified**: 2026-03-08 | **Last Amended**: 2026-03-08
