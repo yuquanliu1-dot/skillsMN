@@ -26,17 +26,17 @@
 
 **Duration**: 1-2 days
 
-- [ ] T001 Initialize Electron project with package.json, configure TypeScript strict mode
-- [ ] T002 [P] Install dependencies: electron, react, react-dom, @monaco-editor/react, tailwindcss, chokidar, gray-matter, trash, uuid
-- [ ] T003 [P] Install devDependencies: typescript, @types/node, @types/react, jest, @types/jest, ts-jest, electron-builder
-- [ ] T004 [P] Configure Tailwind CSS in tailwind.config.js with dark mode and custom theme colors
-- [ ] T005 [P] Configure ESLint and Prettier in .eslintrc.json and .prettierrc
-- [ ] T006 [P] Configure Jest in jest.config.js with TypeScript support
-- [ ] T007 Create directory structure: src/main/, src/renderer/, src/shared/, tests/unit/, tests/integration/, tests/e2e/
-- [ ] T008 [P] Create Electron main entry point in src/main/index.ts with basic window creation
-- [ ] T009 [P] Create React entry point in src/renderer/index.tsx with root component
-- [ ] T010 [P] Create Tailwind CSS entry in src/renderer/styles/index.css with @tailwind directives
-- [ ] T011 Create build scripts in package.json: dev, build, start, test, lint
+- [x] T001 Initialize Electron project with package.json, configure TypeScript strict mode
+- [x] T002 [P] Install dependencies: electron, react, react-dom, @monaco-editor/react, tailwindcss, chokidar, gray-matter, trash, uuid
+- [x] T003 [P] Install devDependencies: typescript, @types/node, @types/react, jest, @types/jest, ts-jest, electron-builder
+- [x] T004 [P] Configure Tailwind CSS in tailwind.config.js with dark mode and custom theme colors
+- [x] T005 [P] Configure ESLint and Prettier in .eslintrc.json and .prettierrc
+- [x] T006 [P] Configure Jest in jest.config.js with TypeScript support
+- [x] T007 Create directory structure: src/main/, src/renderer/, src/shared/, tests/unit/, tests/integration/, tests/e2e/
+- [x] T008 [P] Create Electron main entry point in src/main/index.ts with basic window creation
+- [x] T009 [P] Create React entry point in src/renderer/index.tsx with root component
+- [x] T010 [P] Create Tailwind CSS entry in src/renderer/styles/index.css with @tailwind directives
+- [x] T011 Create build scripts in package.json: dev, build, start, test, lint
 
 ---
 
