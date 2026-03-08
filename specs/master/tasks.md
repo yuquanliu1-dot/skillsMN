@@ -50,24 +50,24 @@
 
 ### Shared Types & Constants
 
-- [ ] T012 [P] Create shared types in src/shared/types.ts: Skill, SkillDirectory, Configuration, IPC request/response types
-- [ ] T013 [P] Create shared constants in src/shared/constants.ts: error codes, default paths, file extensions
+- [x] T012 [P] Create shared types in src/shared/types.ts: Skill, SkillDirectory, Configuration, IPC request/response types
+- [x] T013 [P] Create shared constants in src/shared/constants.ts: error codes, default paths, file extensions
 
 ### Data Models
 
-- [ ] T014 [P] Create Skill model in src/main/models/Skill.ts with validation logic
-- [ ] T015 [P] Create SkillDirectory model in src/main/models/SkillDirectory.ts with directory type enum
-- [ ] T016 [P] Create Configuration model in src/main/models/Configuration.ts with default values
+- [x] T014 [P] Create Skill model in src/main/models/Skill.ts with validation logic
+- [x] T015 [P] Create SkillDirectory model in src/main/models/SkillDirectory.ts with directory type enum
+- [x] T016 [P] Create Configuration model in src/main/models/Configuration.ts with default values
 
 ### Security Service (CRITICAL)
 
-- [ ] T017 Implement PathValidator service in src/main/services/PathValidator.ts with canonical path comparison
-- [ ] T018 Create unit tests for PathValidator in tests/unit/services/PathValidator.test.ts (test path traversal prevention)
+- [x] T017 Implement PathValidator service in src/main/services/PathValidator.ts with canonical path comparison
+- [x] T018 Create unit tests for PathValidator in tests/unit/services/PathValidator.test.ts (test path traversal prevention)
 
 ### Utility Services
 
-- [ ] T019 [P] Create Logger utility in src/main/utils/Logger.ts with structured logging and file output
-- [ ] T020 [P] Create ErrorHandler utility in src/main/utils/ErrorHandler.ts with AppError class and error formatting
+- [x] T019 [P] Create Logger utility in src/main/utils/Logger.ts with structured logging and file output
+- [x] T020 [P] Create ErrorHandler utility in src/main/utils/ErrorHandler.ts with AppError class and error formatting
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
