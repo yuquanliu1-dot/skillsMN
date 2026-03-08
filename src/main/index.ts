@@ -72,5 +72,5 @@ app.on('will-quit', () => {
   logger.info('Main', 'Application shutting down');
   cleanupConfigHandlers();
   ipcMain.removeAllListeners();
-  logger.getInstance().cleanup();
+  logger.cleanup();
 });

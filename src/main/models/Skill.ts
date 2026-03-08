@@ -2,11 +2,7 @@
  * Represents a Claude Code skill file
  */
 
-import { v4 as validate } from 'uuid';
-import * as path from 'path';
-import { AppError } from '../utils/AppError';
-import { PathValidator } from '../services/PathValidator';
-import { SkillService } from '../services/SkillService';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Skill metadata structure
@@ -70,7 +66,29 @@ export class Skill {
   /**
    * Frontmatter validation errors (if any)
    */
-  public readonly validationErrors: string[] = [];
+  public readonly validationErrors: string[];
+
+  constructor(data: {
+    id?: string;
+    name: string;
+    description: string;
+    filePath: string;
+    source: 'project' | 'global';
+    modifiedAt: Date | string;
+    fileSize: number;
+    isValid: boolean;
+    validationErrors?: string[];
+  }) {
+    this.id = data.id || uuidv4();
+    this.name = data.name;
+    this.description = data.description;
+    this.filePath = data.filePath;
+    this.source = data.source;
+    this.modifiedAt = typeof data.modifiedAt === 'string' ? new Date(data.modifiedAt) : data.modifiedAt;
+    this.fileSize = data.fileSize;
+    this.isValid = data.isValid;
+    this.validationErrors = data.validationErrors || [];
+  }
 
   /**
    * Validate skill data
@@ -118,7 +136,7 @@ export class Skill {
       errors.push('Validation errors need to be an array of strings');
     }
 
-    return { isValid: this.errors.length === 0, errors };
+    return { isValid: errors.length === 0, errors };
   }
 
   /**
@@ -126,16 +144,22 @@ export class Skill {
    */
   public extractMetadata(content: string): { name: string; description: string } | null {
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-    if (!frontmatterMatch) {
+    if (!frontmatterMatch || !frontmatterMatch[1]) {
       return null;
     }
 
-    const nameMatch = frontmatterMatch.data.name;
-    const description = frontmatterMatch.data.description;
+    // Simple YAML parsing for name and description
+    const frontmatter = frontmatterMatch[1];
+    const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
+    const descMatch = frontmatter.match(/^description:\s*(.+)$/m);
+
+    if (!nameMatch) {
+      return null;
+    }
 
     return {
-      name: typeof name === 'string' ? name : null : undefined,
-      description: typeof description === 'string' ? description.trim() : null : undefined,
+      name: nameMatch[1]!.trim(),
+      description: descMatch ? descMatch[1]!.trim() : '',
     };
   }
 }

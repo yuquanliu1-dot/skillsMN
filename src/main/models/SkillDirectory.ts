@@ -2,7 +2,8 @@
  * Represents a directory containing skill files
  */
 
-import { DirectoryType } from '../shared/types';
+import * as path from 'path';
+import * as fs from 'fs';
 
 /**
  * Skill directory with metadata
@@ -21,7 +22,7 @@ export class SkillDirectory {
   /**
    * Directory type
    */
-  public readonly type: DirectoryType;
+  public readonly type: 'project' | 'global';
 
   /**
    * Whether directory currently exists on disk
@@ -39,6 +40,13 @@ export class SkillDirectory {
   public readonly lastScanned: Date | null;
 
   constructor(data: {
+    id: string;
+    path: string;
+    type: 'project' | 'global';
+    exists: boolean;
+    skillCount?: number;
+    lastScanned?: Date | null;
+  }) {
     this.id = data.id;
     this.path = data.path;
     this.type = data.type;

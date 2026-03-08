@@ -21,7 +21,7 @@ import {
   DirectoryStartWatchResponse,
   DirectoryStopWatchResponse,
   DirectoryChangeEvent,
-} from '../shared/types';
+} from '../../shared/types';
 
 /**
  * IPC Client wrapper with typed methods
@@ -70,8 +70,12 @@ export class IPCClient {
     /**
      * Create a new skill
      */
-    create: async (request: SkillCreateRequest): Promise<SkillCreateResponse> => {
-      return window.electronAPI.skillCreate(request);
+    create: async (
+      name: string,
+      targetDirectory: string,
+      description?: string
+    ): Promise<SkillCreateResponse> => {
+      return window.electronAPI.skillCreate(name, targetDirectory, description);
     },
 
     /**

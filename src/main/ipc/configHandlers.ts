@@ -4,13 +4,9 @@
 
 import { ipcMain } from 'electron';
 import {
-  ConfigGetRequest,
-  ConfigGetResponse,
   ConfigSetRequest,
-  ConfigSetResponse,
   ConfigValidateProjectDirRequest,
-  ConfigValidateProjectDirResponse,
-} from '../shared/types';
+} from '../../shared/types';
 import { ConfigService } from '../services/ConfigService';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { logger } from '../utils/Logger';
@@ -42,7 +38,7 @@ export function registerConfigHandlers(): void {
       return {
         success: true,
         data: config,
-      } as ConfigGetResponse;
+      };
     } catch (error) {
       return ErrorHandler.handleIPCError(error, 'config:get');
     }
@@ -63,7 +59,7 @@ export function registerConfigHandlers(): void {
       return {
         success: true,
         data: updated,
-      } as ConfigSetResponse;
+      };
     } catch (error) {
       return ErrorHandler.handleIPCError(error, 'config:set');
     }
@@ -90,7 +86,7 @@ export function registerConfigHandlers(): void {
         return {
           success: true,
           data: result,
-        } as ConfigValidateProjectDirResponse;
+        };
       } catch (error) {
         return ErrorHandler.handleIPCError(error, 'config:validate-project-dir');
       }

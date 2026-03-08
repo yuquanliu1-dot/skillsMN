@@ -57,12 +57,14 @@ export const SetupDialog: React.FC<SetupDialogProps> = ({ onComplete }) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.webkitdirectory = true;
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const files = (e.target as HTMLInputElement).files;
       if (files && files.length > 0) {
-        // Get the directory path from the first file
-        const filePath = files[0].path;
-        const dirPath = path.dirname(filePath);
+        // In Electron renderer, we can't access full file paths directly
+        // We need to use the dialog API
+        const file = files[0];
+        // Get the directory path from the file's webkitRelativePath
+        const dirPath = file!.webkitRelativePath!;
         setProjectPath(dirPath);
       }
     };
