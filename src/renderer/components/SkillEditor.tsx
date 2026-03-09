@@ -434,13 +434,13 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
                     console.error('Failed to reload skill:', err);
                   }
                 }}
-                className="px-3 py-1.5 text-sm bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded transition-colors"
+                className="px-3 py-1.5 text-sm bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded transition-colors cursor-pointer"
               >
                 Reload
               </button>
               <button
                 onClick={() => setExternalChangeDetected(false)}
-                className="px-3 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors"
+                className="px-3 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors cursor-pointer"
               >
                 Keep Changes
               </button>
