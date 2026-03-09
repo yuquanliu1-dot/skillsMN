@@ -356,17 +356,17 @@
 
 ### Error Handling Enhancements
 
-- [ ] T118 [P] Add actionable error messages for all common failure scenarios in ErrorHandler.ts
+- [X] T118 [P] Add actionable error messages for all common failure scenarios in ErrorHandler.ts
 - [X] T119 [P] Implement toast notification component for success/error messages in src/renderer/components/Toast.tsx
-- [ ] T120 Verify 90% of error messages are actionable (SC-004)
+- [X] T120 Verify 90% of error messages are actionable (SC-004)
 
 ### Edge Case Handling
 
-- [ ] T121 Handle invalid YAML frontmatter: show skill with warning icon, allow editing in SkillService.ts
-- [ ] T122 Handle missing project directory: prompt to reconfigure in App.tsx
-- [ ] T123 Handle permission denied errors with actionable messages in ErrorHandler.ts
-- [ ] T124 Handle directories without skill.md: ignore completely in SkillService.ts
-- [ ] T125 Handle duplicate skill names: display both with source badges in SkillList.tsx
+- [X] T121 Handle invalid YAML frontmatter: show skill with warning icon, allow editing in SkillService.ts
+- [X] T122 Handle missing project directory: prompt to reconfigure in App.tsx
+- [X] T123 Handle permission denied errors with actionable messages in ErrorHandler.ts
+- [X] T124 Handle directories without skill.md: ignore completely in SkillService.ts
+- [X] T125 Handle duplicate skill names: display both with source badges in SkillList.tsx
 
 ### Performance Optimizations
 

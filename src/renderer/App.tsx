@@ -122,6 +122,23 @@ export default function App(): JSX.Element {
           return;
         }
 
+        // Verify project directory still exists (T122)
+        try {
+          const response = await window.electronAPI.listSkills(config);
+          if (!response.success) {
+            // Project directory might be missing or inaccessible
+            if (response.error?.includes('does not exist') || response.error?.includes('not found')) {
+              showToast('Project directory not found. Please reconfigure.', 'error');
+              setShowSetup(true);
+              dispatch({ type: 'SET_LOADING', payload: false });
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to verify project directory:', err);
+          // Continue anyway - the directory might become available later
+        }
+
         // Start file watcher
         await ipcClient.startWatching();
 
