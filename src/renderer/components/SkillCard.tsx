@@ -11,11 +11,12 @@ interface SkillCardProps {
   skill: Skill;
   onClick?: (skill: Skill) => void;
   onDelete?: (skill: Skill) => void;
+  onOpenFolder?: (skill: Skill) => void;
   onSelect?: (skill: Skill) => void;
   isSelected?: boolean;
 }
 
-export default function SkillCard({ skill, onClick, onDelete, onSelect, isSelected }: SkillCardProps): JSX.Element {
+export default function SkillCard({ skill, onClick, onDelete, onOpenFolder, onSelect, isSelected }: SkillCardProps): JSX.Element {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     onSelect?.(skill);
@@ -40,6 +41,12 @@ export default function SkillCard({ skill, onClick, onDelete, onSelect, isSelect
     e.stopPropagation(); // Prevent card click
     e.preventDefault();
     onDelete?.(skill);
+  };
+
+  const handleOpenFolder = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    e.preventDefault();
+    onOpenFolder?.(skill);
   };
 
   return (
@@ -97,6 +104,19 @@ export default function SkillCard({ skill, onClick, onDelete, onSelect, isSelect
 
         {/* Actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Open Folder button */}
+          {onOpenFolder && (
+            <button
+              onClick={handleOpenFolder}
+              className="opacity-0 group-hover:opacity-100 p-2 hover:bg-primary/20 rounded-lg cursor-pointer transition-all duration-fast"
+              aria-label={`Open folder for ${skill.name}`}
+            >
+              <svg className="w-5 h-5 text-text-muted hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
+            </button>
+          )}
+
           {/* Delete button */}
           {onDelete && (
             <button

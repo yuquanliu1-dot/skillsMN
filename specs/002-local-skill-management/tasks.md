@@ -349,15 +349,15 @@
 
 ### Open Skill Folder Feature
 
-- [ ] T114 [P] Implement SkillService.openFolder() using Electron shell.openPath in src/main/services/SkillService.ts
-- [ ] T115 [P] Implement skill:open-folder IPC handler in src/main/ipc/skillHandlers.ts
-- [ ] T116 Add "Open Folder" button to SkillCard component in SkillCard.tsx
-- [ ] T117 Test open folder: click → verify file explorer opens to skill directory
+- [X] T114 [P] Implement SkillService.openFolder() using Electron shell.openPath in src/main/services/SkillService.ts
+- [X] T115 [P] Implement skill:open-folder IPC handler in src/main/ipc/skillHandlers.ts
+- [X] T116 Add "Open Folder" button to SkillCard component in SkillCard.tsx
+- [X] T117 Test open folder: click → verify file explorer opens to skill directory
 
 ### Error Handling Enhancements
 
 - [ ] T118 [P] Add actionable error messages for all common failure scenarios in ErrorHandler.ts
-- [ ] T119 [P] Implement toast notification component for success/error messages in src/renderer/components/Toast.tsx
+- [X] T119 [P] Implement toast notification component for success/error messages in src/renderer/components/Toast.tsx
 - [ ] T120 Verify 90% of error messages are actionable (SC-004)
 
 ### Edge Case Handling
@@ -377,11 +377,11 @@
 
 ### Keyboard Shortcuts
 
-- [ ] T130 Implement keyboard shortcut handling in App.tsx
-- [ ] T131 Add Ctrl+N for new skill in App.tsx
-- [ ] T132 Add Ctrl+S for save in SkillEditor.tsx
-- [ ] T133 Add Ctrl+W for close editor in SkillEditor.tsx
-- [ ] T134 Add Delete key for delete skill in SkillList.tsx
+- [X] T130 Implement keyboard shortcut handling in App.tsx
+- [X] T131 Add Ctrl+N for new skill in App.tsx
+- [X] T132 Add Ctrl+S for save in SkillEditor.tsx
+- [X] T133 Add Ctrl+W for close editor in SkillEditor.tsx
+- [X] T134 Add Delete key for delete skill in SkillList.tsx
 
 ---
 

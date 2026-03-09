@@ -15,13 +15,14 @@ interface SkillListProps {
   onSkillSelect?: (skill: Skill) => void;
   onCreateSkill?: () => void;
   onDeleteSkill?: (skill: Skill) => void;
+  onOpenFolder?: (skill: Skill) => void;
   selectedSkillPath?: string | null;
 }
 
 // Card height + gap (80px card + 16px gap)
 const CARD_HEIGHT = 96;
 
-export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreateSkill, onDeleteSkill, selectedSkillPath }: SkillListProps): JSX.Element {
+export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreateSkill, onDeleteSkill, onOpenFolder, selectedSkillPath }: SkillListProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
@@ -96,12 +97,13 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
             onClick={onSkillClick}
             onSelect={onSkillSelect}
             onDelete={onDeleteSkill}
+            onOpenFolder={onOpenFolder}
             isSelected={skill.path === selectedSkillPath}
           />
         </div>
       );
     },
-    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, selectedSkillPath]
+    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath]
   );
 
   return (

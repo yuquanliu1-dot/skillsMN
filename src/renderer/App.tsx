@@ -323,6 +323,23 @@ export default function App(): JSX.Element {
   };
 
   /**
+   * Handle open skill folder
+   */
+  const handleOpenFolder = async (skill: Skill): Promise<void> => {
+    try {
+      const response = await window.electronAPI.openFolder(skill.path);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to open folder');
+      }
+
+      console.log('Folder opened successfully:', skill.name);
+    } catch (error: any) {
+      console.error('Failed to open folder:', error);
+      showToast(`Failed to open folder: ${error.message}`, 'error');
+    }
+  };
+
+  /**
    * Handle save settings
    */
   const handleSaveSettings = async (settings: Partial<Configuration>): Promise<void> => {
@@ -422,6 +439,7 @@ export default function App(): JSX.Element {
             onDeleteSkill={(skill) => {
               setDeletingSkill(skill);
             }}
+            onOpenFolder={handleOpenFolder}
             selectedSkillPath={selectedSkillPath}
           />
         </main>
