@@ -434,10 +434,10 @@
 
 ### Code Quality
 
-- [ ] T160 [P] Code cleanup: remove console.logs, unused imports
-- [ ] T161 [P] Ensure all TypeScript strict mode checks pass
-- [ ] T162 [P] Ensure all ESLint rules pass
-- [ ] T163 Verify unit test coverage ≥70% for core services (Constitution Principle VI)
+- [X] T160 [P] Code cleanup: remove console.logs, unused imports
+- [X] T161 [P] Ensure all TypeScript strict mode checks pass
+- [X] T162 [P] Ensure all ESLint rules pass
+- [X] T163 Verify unit test coverage ≥70% for core services (Constitution Principle VI)
 
 ---
 
