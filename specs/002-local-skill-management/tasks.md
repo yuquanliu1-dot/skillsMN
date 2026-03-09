@@ -221,7 +221,7 @@
 
 - [X] T071 [US4] Implement SkillService.getSkill() to read skill.md content in src/main/services/SkillService.ts
 - [X] T072 [US4] Implement SkillService.updateSkill() with external change detection in src/main/services/SkillService.ts
-- [ ] T073 [US4] Add lastModified timestamp checking for concurrent edit detection in SkillService.ts
+- [X] T073 [US4] Add lastModified timestamp checking for concurrent edit detection in SkillService.ts
 
 ### Main Process - IPC Handlers
 
@@ -245,13 +245,13 @@
 
 ### Renderer - External Change Handling
 
-- [ ] T082 [US4] Implement external file change detection in SkillEditor.tsx
-- [ ] T083 [US4] Create prompt dialog for reload vs overwrite on external changes in src/renderer/components/ExternalChangeDialog.tsx
+- [X] T082 [US4] Implement external file change detection in SkillEditor.tsx
+- [X] T083 [US4] Create prompt dialog for reload vs overwrite on external changes in src/renderer/components/ExternalChangeDialog.tsx
 
 ### Renderer - Notifications
 
-- [ ] T084 [US4] Add success notification on save in SkillEditor.tsx
-- [ ] T085 [US4] Add error notification on save failure in SkillEditor.tsx
+- [X] T084 [US4] Add success notification on save in SkillEditor.tsx
+- [X] T085 [US4] Add error notification on save failure in SkillEditor.tsx
 
 ### Integration
 

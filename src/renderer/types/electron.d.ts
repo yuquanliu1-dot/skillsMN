@@ -17,7 +17,7 @@ export interface ElectronAPI {
   listSkills: (config?: Configuration) => Promise<IPCResponse<Skill[]>>;
   getSkill: (path: string) => Promise<IPCResponse<{ metadata: Skill; content: string }>>;
   createSkill: (name: string, directory: SkillSource) => Promise<IPCResponse<Skill>>;
-  updateSkill: (path: string, content: string) => Promise<IPCResponse<Skill>>;
+  updateSkill: (path: string, content: string, expectedLastModified?: number) => Promise<IPCResponse<Skill>>;
   deleteSkill: (path: string) => Promise<IPCResponse<void>>;
   openFolder: (path: string) => Promise<IPCResponse<void>>;
 

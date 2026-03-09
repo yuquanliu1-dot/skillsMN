@@ -38,9 +38,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   updateSkill: (
     path: string,
-    content: string
+    content: string,
+    expectedLastModified?: number
   ): Promise<IPCResponse<Skill>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_UPDATE, { path, content });
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_UPDATE, { path, content, expectedLastModified });
   },
 
   deleteSkill: (path: string): Promise<IPCResponse<void>> => {

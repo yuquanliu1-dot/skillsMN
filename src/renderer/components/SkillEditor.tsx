@@ -12,7 +12,7 @@ import type { Skill } from '../../shared/types';
 interface SkillEditorProps {
   skill: Skill;
   onClose: () => void;
-  onSave: (content: string) => Promise<void>;
+  onSave: (content: string, loadedLastModified: number) => Promise<void>;
 }
 
 export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps): JSX.Element {
@@ -22,6 +22,8 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saving'>('idle');
+  const [loadedLastModified, setLoadedLastModified] = useState<number | null>(null);
+  const [externalChangeDetected, setExternalChangeDetected] = useState(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -40,6 +42,7 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
         }
 
         setContent(response.data.content);
+        setLoadedLastModified(new Date(skill.lastModified).getTime());
         setHasUnsavedChanges(false);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load skill content';
@@ -51,7 +54,7 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
     }
 
     loadContent();
-  }, [skill.path]);
+  }, [skill.path, skill.lastModified]);
 
   /**
    * Handle editor mount
@@ -88,31 +91,45 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
    * Auto-save handler
    */
   const handleAutoSave = useCallback(async (contentToSave: string) => {
+    if (!loadedLastModified) return;
+
     try {
       setAutoSaveStatus('saving');
       setIsSaving(true);
       setError(null);
 
-      await onSave(contentToSave);
+      await onSave(contentToSave, loadedLastModified);
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
 
+      // Update loadedLastModified after successful save
+      setLoadedLastModified(Date.now());
+
       console.log('Skill auto-saved successfully');
-    } catch (err) {
+    } catch (err: any) {
       const message = err instanceof Error ? err.message : 'Failed to auto-save';
+
+      // Check for external modification error
+      if (err?.code === 'EXTERNAL_MODIFICATION') {
+        // Don't show error for auto-save, let user handle it manually
+        console.warn('External modification detected during auto-save');
+        setAutoSaveStatus('idle');
+        return;
+      }
+
       setError(message);
       setAutoSaveStatus('idle');
       console.error('Auto-save error:', err);
     } finally {
       setIsSaving(false);
     }
-  }, [onSave]);
+  }, [onSave, loadedLastModified]);
 
   /**
    * Save skill content
    */
   const handleSave = useCallback(async () => {
-    if (isSaving || !hasUnsavedChanges) return;
+    if (isSaving || !hasUnsavedChanges || !loadedLastModified) return;
 
     // Cancel auto-save timer
     if (autoSaveTimerRef.current) {
@@ -124,20 +141,32 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
       setAutoSaveStatus('saving');
       setError(null);
 
-      await onSave(content);
+      await onSave(content, loadedLastModified);
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
+      setExternalChangeDetected(false);
+
+      // Update loadedLastModified after successful save
+      setLoadedLastModified(Date.now());
 
       console.log('Skill saved successfully');
-    } catch (err) {
+    } catch (err: any) {
       const message = err instanceof Error ? err.message : 'Failed to save skill';
-      setError(message);
+
+      // Check for external modification error
+      if (err?.code === 'EXTERNAL_MODIFICATION') {
+        setError('File has been modified externally. Please reload or overwrite.');
+        // TODO: Show external change dialog (T083)
+      } else {
+        setError(message);
+      }
+
       setAutoSaveStatus('idle');
       console.error('Save skill error:', err);
     } finally {
       setIsSaving(false);
     }
-  }, [content, hasUnsavedChanges, isSaving, onSave]);
+  }, [content, hasUnsavedChanges, isSaving, loadedLastModified, onSave]);
 
   /**
    * Keyboard shortcuts
@@ -195,6 +224,41 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
       }
     };
   }, []);
+
+  /**
+   * Detect external changes to skill (T082)
+   */
+  useEffect(() => {
+    if (!skill || isLoading || !loadedLastModified) return;
+
+    const currentLastModified = new Date(skill.lastModified).getTime();
+
+    // Check if file has been modified externally
+    if (currentLastModified > loadedLastModified) {
+      if (!hasUnsavedChanges) {
+        // Auto-reload if no unsaved changes
+        console.log('External change detected, auto-reloading');
+
+        async function reloadContent() {
+          try {
+            const response = await window.electronAPI.getSkill(skill.path);
+            if (response.success && response.data) {
+              setContent(response.data.content);
+              setLoadedLastModified(currentLastModified);
+            }
+          } catch (err) {
+            console.error('Failed to reload skill:', err);
+          }
+        }
+
+        reloadContent();
+      } else {
+        // Show warning if there are unsaved changes
+        console.log('External change detected with unsaved changes');
+        setExternalChangeDetected(true);
+      }
+    }
+  }, [skill.lastModified, loadedLastModified, hasUnsavedChanges, skill.path, isLoading]);
 
   return (
     <div className="fixed inset-0 bg-slate-900 flex flex-col z-50">
@@ -328,6 +392,59 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
               />
             </svg>
             <p className="text-sm text-red-400">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* External change warning (T082) */}
+      {externalChangeDetected && (
+        <div className="px-4 py-3 bg-yellow-500/10 border-b border-yellow-500/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-yellow-400 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <p className="text-sm text-yellow-400">
+                This file has been modified externally. You have unsaved changes.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await window.electronAPI.getSkill(skill.path);
+                    if (response.success && response.data) {
+                      setContent(response.data.content);
+                      setLoadedLastModified(new Date(skill.lastModified).getTime());
+                      setHasUnsavedChanges(false);
+                      setExternalChangeDetected(false);
+                      setError(null);
+                    }
+                  } catch (err) {
+                    console.error('Failed to reload skill:', err);
+                  }
+                }}
+                className="px-3 py-1.5 text-sm bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded transition-colors"
+              >
+                Reload
+              </button>
+              <button
+                onClick={() => setExternalChangeDetected(false)}
+                className="px-3 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors"
+              >
+                Keep Changes
+              </button>
+            </div>
           </div>
         </div>
       )}

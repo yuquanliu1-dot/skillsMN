@@ -255,21 +255,32 @@ export default function App(): JSX.Element {
   /**
    * Handle save skill content
    */
-  const handleSaveSkill = async (content: string): Promise<void> => {
+  const handleSaveSkill = async (content: string, loadedLastModified?: number): Promise<void> => {
     if (!editingSkill) return;
 
     try {
-      const response = await window.electronAPI.updateSkill(editingSkill.path, content);
+      const response = await window.electronAPI.updateSkill(editingSkill.path, content, loadedLastModified);
       if (!response.success) {
-        throw new Error(response.error || 'Failed to save skill');
+        const error = new Error(response.error || 'Failed to save skill');
+        (error as any).code = response.error?.includes('externally') ? 'EXTERNAL_MODIFICATION' : undefined;
+        throw error;
       }
 
       // Refresh skill list to update lastModified
       await loadSkills();
 
+      // Show success notification (T084)
+      showToast('Skill saved successfully', 'success');
+
       console.log('Skill saved successfully:', editingSkill.name);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save skill:', error);
+
+      // Show error notification (T085)
+      if (error?.code !== 'EXTERNAL_MODIFICATION') {
+        showToast(`Failed to save skill: ${error.message}`, 'error');
+      }
+
       throw error;
     }
   };

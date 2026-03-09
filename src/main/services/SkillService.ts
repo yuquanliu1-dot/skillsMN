@@ -154,14 +154,26 @@ export class SkillService {
   /**
    * Update a skill's content
    */
-  async updateSkill(skillPath: string, content: string): Promise<Skill> {
+  async updateSkill(skillPath: string, content: string, expectedLastModified?: number): Promise<Skill> {
     logger.debug(`Updating skill: ${skillPath}`, 'SkillService');
 
     // Validate path
     const validatedPath = this.pathValidator.validate(skillPath);
 
-    // Write content
+    // Check for concurrent modifications
     const skillFile = path.join(validatedPath, SKILL_FILE_NAME);
+    if (expectedLastModified) {
+      const stats = await fs.promises.stat(skillFile);
+      const actualLastModified = stats.mtimeMs;
+
+      if (actualLastModified > expectedLastModified) {
+        const error = new Error('File has been modified externally');
+        (error as any).code = 'EXTERNAL_MODIFICATION';
+        throw error;
+      }
+    }
+
+    // Write content
     await fs.promises.writeFile(skillFile, content, 'utf-8');
 
     // Parse and return updated skill

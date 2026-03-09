@@ -82,11 +82,11 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
     IPC_CHANNELS.SKILL_UPDATE,
     async (
       _event,
-      { path, content }: { path: string; content: string }
+      { path, content, expectedLastModified }: { path: string; content: string; expectedLastModified?: number }
     ): Promise<IPCResponse<Skill>> => {
       try {
         logger.debug(`Updating skill: ${path}`, 'SkillHandlers');
-        const skill = await skillService!.updateSkill(path, content);
+        const skill = await skillService!.updateSkill(path, content, expectedLastModified);
         logger.info(`Skill updated: ${skill.name}`, 'SkillHandlers');
         return { success: true, data: skill };
       } catch (error) {
