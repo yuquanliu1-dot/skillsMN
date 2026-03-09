@@ -255,10 +255,10 @@
 
 ### Integration
 
-- [ ] T086 [US4] Test edit flow: double-click → editor opens → edit → save → verify file updated
-- [ ] T087 [US4] Test external change: edit in app → modify externally → save → prompt appears
-- [ ] T088 [US4] Test keyboard shortcuts: Ctrl+S saves, Ctrl+W closes
-- [ ] T089 [US4] Verify performance: save completes within 100ms
+- [X] T086 [US4] Test edit flow: double-click → editor opens → edit → save → verify file updated
+- [X] T087 [US4] Test external change: edit in app → modify externally → save → prompt appears
+- [X] T088 [US4] Test keyboard shortcuts: Ctrl+S saves, Ctrl+W closes
+- [X] T089 [US4] Verify performance: save completes within 100ms
 
 **Checkpoint**: User Story 4 complete - users can edit skills with Monaco Editor
 
