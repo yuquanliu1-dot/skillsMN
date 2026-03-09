@@ -1,10 +1,11 @@
 /**
  * SkillList Component
  *
- * Displays list of skills with filtering, sorting, and search
+ * Displays list of skills with filtering, sorting, search, and virtualization
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import type { Skill, FilterSource, SortBy } from '../../shared/types';
 import SkillCard from './SkillCard';
 
@@ -15,10 +16,14 @@ interface SkillListProps {
   onDeleteSkill?: (skill: Skill) => void;
 }
 
+// Card height + gap (80px card + 16px gap)
+const CARD_HEIGHT = 96;
+
 export default function SkillList({ skills, onSkillClick, onCreateSkill, onDeleteSkill }: SkillListProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
+  const listRef = useRef<List>(null);
 
   /**
    * Filter and sort skills based on current state
@@ -56,10 +61,49 @@ export default function SkillList({ skills, onSkillClick, onCreateSkill, onDelet
     return result;
   }, [skills, filterSource, searchQuery, sortBy]);
 
+  /**
+   * Reset scroll when filters change
+   */
+  const handleFilterChange = useCallback((newFilter: FilterSource) => {
+    setFilterSource(newFilter);
+    listRef.current?.scrollTo(0);
+  }, []);
+
+  const handleSortChange = useCallback((newSort: SortBy) => {
+    setSortBy(newSort);
+    listRef.current?.scrollTo(0);
+  }, []);
+
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+    listRef.current?.scrollTo(0);
+  }, []);
+
+  /**
+   * Virtualized row renderer
+   */
+  const Row = useCallback(
+    ({ index, style }: { index: number; style: React.CSSProperties }) => {
+      const skill = filteredAndSortedSkills[index];
+      if (!skill) return null;
+
+      return (
+        <div style={{ ...style, paddingBottom: '16px' }}>
+          <SkillCard
+            skill={skill}
+            onClick={onSkillClick}
+            onDelete={onDeleteSkill}
+          />
+        </div>
+      );
+    },
+    [filteredAndSortedSkills, onSkillClick, onDeleteSkill]
+  );
+
   return (
     <div className="flex flex-col h-full">
       {/* Header with filters and search */}
-      <div className="border-b border-slate-700 p-4 space-y-3">
+      <div className="border-b border-border p-4 space-y-3 flex-shrink-0">
         {/* Top row: Search + New Skill button */}
         <div className="flex items-center gap-3">
           {/* Search */}
@@ -68,12 +112,12 @@ export default function SkillList({ skills, onSkillClick, onCreateSkill, onDelet
               type="text"
               placeholder="Search skills..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="input w-full pl-10"
               aria-label="Search skills"
             />
             <svg
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-muted"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -112,13 +156,13 @@ export default function SkillList({ skills, onSkillClick, onCreateSkill, onDelet
         <div className="flex items-center gap-4 flex-wrap">
           {/* Filter by source */}
           <div className="flex items-center gap-2">
-            <label htmlFor="filter-source" className="text-sm text-slate-400">
+            <label htmlFor="filter-source" className="text-sm text-text-secondary">
               Filter:
             </label>
             <select
               id="filter-source"
               value={filterSource}
-              onChange={(e) => setFilterSource(e.target.value as FilterSource)}
+              onChange={(e) => handleFilterChange(e.target.value as FilterSource)}
               className="select"
               aria-label="Filter by source"
             >
@@ -130,13 +174,13 @@ export default function SkillList({ skills, onSkillClick, onCreateSkill, onDelet
 
           {/* Sort by */}
           <div className="flex items-center gap-2">
-            <label htmlFor="sort-by" className="text-sm text-slate-400">
+            <label htmlFor="sort-by" className="text-sm text-text-secondary">
               Sort by:
             </label>
             <select
               id="sort-by"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              onChange={(e) => handleSortChange(e.target.value as SortBy)}
               className="select"
               aria-label="Sort by"
             >
@@ -146,31 +190,34 @@ export default function SkillList({ skills, onSkillClick, onCreateSkill, onDelet
           </div>
 
           {/* Skill count */}
-          <div className="ml-auto text-sm text-slate-400">
+          <div className="ml-auto text-sm text-text-muted">
             {filteredAndSortedSkills.length} of {skills.length} skills
           </div>
         </div>
       </div>
 
-      {/* Skill list */}
-      <div className="flex-1 overflow-auto p-4">
-        <div className="grid gap-4">
-          {filteredAndSortedSkills.map((skill) => (
-            <SkillCard
-              key={skill.path}
-              skill={skill}
-              onClick={onSkillClick}
-              onDelete={onDeleteSkill}
-            />
-          ))}
-          {filteredAndSortedSkills.length === 0 && (
-            <div className="text-center text-slate-500 py-12">
+      {/* Skill list with virtualization */}
+      <div className="flex-1">
+        {filteredAndSortedSkills.length > 0 ? (
+          <List
+            ref={listRef}
+            height={window.innerHeight - 200} // Approximate visible height
+            itemCount={filteredAndSortedSkills.length}
+            itemSize={CARD_HEIGHT}
+            width="100%"
+            className="p-4"
+          >
+            {Row}
+          </List>
+        ) : (
+          <div className="flex items-center justify-center h-full p-4">
+            <div className="text-center text-text-muted">
               {skills.length === 0
                 ? 'No skills found. Create your first skill to get started.'
                 : 'No skills match your search criteria.'}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

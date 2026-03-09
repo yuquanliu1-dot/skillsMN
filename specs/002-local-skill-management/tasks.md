@@ -137,14 +137,14 @@
 
 ### Main Process - File Watcher
 
-- [ ] T045 [US2] Implement FileWatcher service with chokidar in src/main/services/FileWatcher.ts
-- [ ] T046 [US2] Implement fs:watch-start and fs:watch-stop IPC handlers in src/main/ipc/skillHandlers.ts
-- [ ] T047 [US2] Implement main→renderer event emission for file changes in FileWatcher.ts
+- [X] T045 [US2] Implement FileWatcher service with chokidar in src/main/services/FileWatcher.ts
+- [X] T046 [US2] Implement fs:watch-start and fs:watch-stop IPC handlers in src/main/ipc/skillHandlers.ts
+- [X] T047 [US2] Implement main→renderer event emission for file changes in FileWatcher.ts
 
 ### Renderer - Skill List Display
 
 - [X] T048a [P] [US2] Search UI/UX patterns for virtualized lists and file managers using ui-ux-pro-max skill
-- [ ] T048b [US2] Create SkillList component with react-window virtualization in src/renderer/components/SkillList.tsx
+- [X] T048b [US2] Create SkillList component with react-window virtualization in src/renderer/components/SkillList.tsx
 - [X] T048c [US2] Create SkillCard component to display individual skill metadata in src/renderer/components/SkillCard.tsx
 - [X] T048d [US2] Verify SkillList quality: SVG icons, stable hover states, proper contrast, cursor feedback
 
@@ -156,13 +156,13 @@
 
 ### Renderer - Real-time Updates
 
-- [ ] T052 [US2] Subscribe to fs:change events in App.tsx
-- [ ] T053 [US2] Implement skill list refresh on file changes in App.tsx
-- [ ] T054 [US2] Add debouncing to prevent excessive refreshes (200ms threshold)
+- [X] T052 [US2] Subscribe to fs:change events in App.tsx
+- [X] T053 [US2] Implement skill list refresh on file changes in App.tsx
+- [X] T054 [US2] Add debouncing to prevent excessive refreshes (200ms threshold)
 
 ### Integration
 
-- [ ] T055 [US2] Start file watcher on app initialization in App.tsx
+- [X] T055 [US2] Start file watcher on app initialization in App.tsx
 - [ ] T056 [US2] Test skill list updates: add/modify/delete skills externally → list updates within 500ms
 - [ ] T057 [US2] Test virtual scrolling performance with 500+ skills (60fps scrolling)
 - [ ] T058 [US2] Verify filter and sort performance (reorder within 100ms)
