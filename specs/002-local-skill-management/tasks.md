@@ -428,8 +428,8 @@
 
 ### Documentation
 
-- [ ] T157 [P] Update README.md with installation and usage instructions
-- [ ] T158 [P] Document keyboard shortcuts in UI help section
+- [X] T157 [P] Update README.md with installation and usage instructions
+- [X] T158 [P] Document keyboard shortcuts in UI help section
 - [ ] T159 Run quickstart.md validation scenarios from specs/002-local-skill-management/quickstart.md
 
 ### Code Quality

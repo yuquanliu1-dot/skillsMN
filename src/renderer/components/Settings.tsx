@@ -203,6 +203,33 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
             </label>
           </div>
 
+          {/* Keyboard Shortcuts */}
+          <div className="mb-6 pt-6 border-t border-slate-700">
+            <h3 className="text-sm font-medium text-slate-300 mb-3">Keyboard Shortcuts</h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-400">Create new skill</span>
+                <kbd className="px-2 py-1 bg-slate-700 rounded text-xs text-slate-300 font-mono">Ctrl+N</kbd>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-400">Save skill</span>
+                <kbd className="px-2 py-1 bg-slate-700 rounded text-xs text-slate-300 font-mono">Ctrl+S</kbd>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-400">Close editor</span>
+                <kbd className="px-2 py-1 bg-slate-700 rounded text-xs text-slate-300 font-mono">Ctrl+W</kbd>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-400">Delete selected skill</span>
+                <kbd className="px-2 py-1 bg-slate-700 rounded text-xs text-slate-300 font-mono">Delete</kbd>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-400">Close dialog</span>
+                <kbd className="px-2 py-1 bg-slate-700 rounded text-xs text-slate-300 font-mono">Escape</kbd>
+              </div>
+            </div>
+          </div>
+
           {/* Success message */}
           {success && (
             <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md">
