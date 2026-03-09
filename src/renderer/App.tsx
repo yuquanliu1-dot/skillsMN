@@ -10,6 +10,7 @@ import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
 import CreateSkillDialog from './components/CreateSkillDialog';
+import SkillEditor from './components/SkillEditor';
 
 // ============================================================================
 // State Types
@@ -93,6 +94,7 @@ export default function App(): JSX.Element {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const [showSetup, setShowSetup] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
 
   /**
    * Load configuration on mount
@@ -204,6 +206,28 @@ export default function App(): JSX.Element {
   };
 
   /**
+   * Handle save skill content
+   */
+  const handleSaveSkill = async (content: string): Promise<void> => {
+    if (!editingSkill) return;
+
+    try {
+      const response = await window.electronAPI.updateSkill(editingSkill.path, content);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to save skill');
+      }
+
+      // Refresh skill list to update lastModified
+      await loadSkills();
+
+      console.log('Skill saved successfully:', editingSkill.name);
+    } catch (error) {
+      console.error('Failed to save skill:', error);
+      throw error;
+    }
+  };
+
+  /**
    * Render loading state
    */
   if (state.isLoading) {
@@ -256,8 +280,7 @@ export default function App(): JSX.Element {
           <SkillList
             skills={state.skills}
             onSkillClick={(skill) => {
-              console.log('Skill clicked:', skill.name);
-              // TODO: Open skill editor (User Story 4)
+              setEditingSkill(skill);
             }}
             onCreateSkill={() => setShowCreateDialog(true)}
           />
@@ -271,6 +294,15 @@ export default function App(): JSX.Element {
         onCreateSkill={handleCreateSkill}
         defaultDirectory={state.config?.defaultInstallDirectory || 'project'}
       />
+
+      {/* Skill Editor */}
+      {editingSkill && (
+        <SkillEditor
+          skill={editingSkill}
+          onClose={() => setEditingSkill(null)}
+          onSave={handleSaveSkill}
+        />
+      )}
     </AppContext.Provider>
   );
 }

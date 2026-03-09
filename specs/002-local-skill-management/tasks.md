@@ -219,29 +219,29 @@
 
 ### Main Process - Skill Content Operations
 
-- [ ] T071 [US4] Implement SkillService.getSkill() to read skill.md content in src/main/services/SkillService.ts
-- [ ] T072 [US4] Implement SkillService.updateSkill() with external change detection in SkillService.ts
+- [X] T071 [US4] Implement SkillService.getSkill() to read skill.md content in src/main/services/SkillService.ts
+- [X] T072 [US4] Implement SkillService.updateSkill() with external change detection in src/main/services/SkillService.ts
 - [ ] T073 [US4] Add lastModified timestamp checking for concurrent edit detection in SkillService.ts
 
 ### Main Process - IPC Handlers
 
-- [ ] T074 [US4] Implement skill:get IPC handler in src/main/ipc/skillHandlers.ts
-- [ ] T075 [US4] Implement skill:update IPC handler in src/main/ipc/skillHandlers.ts
+- [X] T074 [US4] Implement skill:get IPC handler in src/main/ipc/skillHandlers.ts
+- [X] T075 [US4] Implement skill:update IPC handler in src/main/ipc/skillHandlers.ts
 
 ### Renderer - Monaco Editor
 
 - [ ] T076a [P] [US4] Search Monaco Editor configuration for YAML + Markdown syntax highlighting
-- [ ] T076b [US4] Create SkillEditor component with Monaco Editor in src/renderer/components/SkillEditor.tsx
-- [ ] T076c [US4] Configure Monaco Editor options: line numbers, word wrap, minimap, dark theme in SkillEditor.tsx
-- [ ] T076d [US4] Verify SkillEditor quality: proper syntax highlighting, smooth performance
+- [X] T076b [US4] Create SkillEditor component with Monaco Editor in src/renderer/components/SkillEditor.tsx
+- [X] T076c [US4] Configure Monaco Editor options: line numbers, word wrap, minimap, dark theme in SkillEditor.tsx
+- [X] T076d [US4] Verify SkillEditor quality: proper syntax highlighting, smooth performance
 
 ### Renderer - Editor Integration
 
 - [ ] T077 [US4] Implement double-click to open skill in editor in SkillCard.tsx
-- [ ] T078 [US4] Implement skill content loading on editor open in SkillEditor.tsx
+- [X] T078 [US4] Implement skill content loading on editor open in SkillEditor.tsx
 - [ ] T079 [US4] Implement auto-save on content change in SkillEditor.tsx
-- [ ] T080 [US4] Implement Ctrl+S keyboard shortcut for save in SkillEditor.tsx
-- [ ] T081 [US4] Implement Ctrl+W keyboard shortcut for close in SkillEditor.tsx
+- [X] T080 [US4] Implement Ctrl+S keyboard shortcut for save in SkillEditor.tsx
+- [X] T081 [US4] Implement Ctrl+W keyboard shortcut for close in SkillEditor.tsx
 
 ### Renderer - External Change Handling
 
