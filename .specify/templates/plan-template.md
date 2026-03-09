@@ -31,17 +31,36 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-Verify compliance with constitution principles (`.specify/memory/constitution.md`):
+[Gates determined based on constitution file]
 
-- [ ] **User-Centric Design**: Does this feature address a documented user pain point?
-- [ ] **Security First**: Are all credential storage, file operations, and external communications secure?
-- [ ] **Performance Excellence**: Can this feature meet performance targets (<3s startup, <100ms saves, etc.)?
-- [ ] **AI-Assisted Development**: If using AI features, are streaming, timeout, and spec compliance handled?
-- [ ] **Cross-Platform Compatibility**: Will this work on Windows, macOS, and Linux?
-- [ ] **Modularity and Testability**: Is the design modular with clear service boundaries? Can core logic be unit tested?
-- [ ] **Observability**: Are critical operations logged with appropriate detail?
+## UI/UX Design Requirements
 
-**Violations Requiring Justification**: [List any principle violations and justify why they are necessary]
+*For features with frontend components, follow the ui-ux-pro-max skill workflow:*
+
+**Design Process** (MUST complete before frontend implementation):
+1. **Product Research**: Search for product type recommendations (e.g., dashboard, landing page, desktop app)
+2. **Style Research**: Search for style guidelines matching project requirements (e.g., dark mode, minimalism, professional)
+3. **Typography**: Search for font pairings appropriate for the product type
+4. **Color Palette**: Search for color palettes by product type or industry
+5. **UX Patterns**: Search for UX best practices (animation, accessibility, interaction patterns)
+6. **Stack Guidelines**: Search for React + Tailwind CSS specific patterns and best practices
+
+**Design Quality Standards** (MUST verify before implementation):
+- [ ] No emoji icons (use SVG icons from Heroicons, Lucide, or Simple Icons)
+- [ ] Stable hover states (no layout shifts, use color/opacity transitions)
+- [ ] Correct brand logos (verified from official sources)
+- [ ] Consistent icon sizing (24x24 viewBox with w-6 h-6 classes)
+- [ ] Cursor pointer on all interactive elements
+- [ ] Smooth transitions (150-300ms, avoid >500ms)
+- [ ] Light/dark mode contrast (4.5:1 minimum for text)
+- [ ] Responsive at 1024x768 minimum resolution
+- [ ] Accessibility compliance (alt text, labels, keyboard navigation)
+
+**Performance Requirements**:
+- UI interactions MUST complete within 100ms
+- List rendering MUST handle 500+ items efficiently (virtual scrolling if needed)
+- No synchronous operations in hot paths
+- Proper error boundaries and loading states
 
 ## Project Structure
 

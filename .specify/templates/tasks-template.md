@@ -52,6 +52,11 @@ description: "Task list template for feature implementation"
 - [ ] T002 Initialize [language] project with [framework] dependencies
 - [ ] T003 [P] Configure linting and formatting tools
 
+**For Frontend Features**: Before implementing UI components, complete UI/UX design phase:
+- [ ] T003a [P] UI/UX Research: Use ui-ux-pro-max skill to search product type, style, typography, color, and UX patterns
+- [ ] T003b [P] UI/UX Design: Generate design specifications following ui-ux-pro-max recommendations
+- [ ] T003c Verify design meets quality standards (icons, contrast, accessibility, performance)
+
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
@@ -92,6 +97,12 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
 - [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
 - [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
+
+**For Frontend Components** (use ui-ux-pro-max skill):
+- [ ] T015a [P] [US1] Search UI/UX patterns for [component type] using ui-ux-pro-max skill
+- [ ] T015b [US1] Implement [UI component] following ui-ux-pro-max design recommendations
+- [ ] T015c [US1] Verify UI quality: SVG icons (no emoji), stable hover, proper contrast, cursor feedback
+
 - [ ] T016 [US1] Add validation and error handling
 - [ ] T017 [US1] Add logging for user story 1 operations
 
@@ -156,6 +167,12 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
+
+**For Frontend Features**:
+- [ ] TXXX [P] UI/UX audit: Verify all components follow ui-ux-pro-max quality standards
+- [ ] TXXX Cross-browser/platform testing (Windows/macOS/Linux for desktop, responsive for web)
+- [ ] TXXX Accessibility review (keyboard navigation, screen readers, color contrast)
+- [ ] TXXX Performance testing (load testing with 500+ items, interaction latency <100ms)
 
 ---
 

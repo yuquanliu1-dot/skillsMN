@@ -1,18 +1,18 @@
 <!--
 Sync Impact Report:
-- Version change: 1.1.0 → 1.1.1 (Added Tailwind CSS to technical architecture)
-- Modified sections: Technical Architecture - Technology Stack (Frontend)
-- Added sections: None
+- Version change: 1.1.1 → 1.2.0 (Added UI/UX Design workflow requirement)
+- Modified sections: Development Workflow - UI/UX Design (NEW)
+- Added sections: UI/UX Design subsection in Development Workflow
 - Removed sections: None
 - Templates status:
-  ✅ constitution.md - Updated with Tailwind CSS requirement
-  ✅ plan-template.md - Constitution Check section already aligned
+  ✅ constitution.md - Added UI/UX design workflow with ui-ux-pro-max skill requirement
+  ✅ plan-template.md - Added UI/UX Design Requirements section with design process and quality standards
+  ✅ tasks-template.md - Added UI/UX design tasks in Setup phase and frontend component implementation
   ⚠ spec-template.md - No changes needed (technology-agnostic)
-  ⚠ tasks-template.md - No changes needed (task structure compatible)
 - Follow-up TODOs: None
 -->
 
-# skillsMM Constitution
+# skillsMN Constitution
 
 ## Core Principles
 
@@ -20,7 +20,7 @@ Sync Impact Report:
 
 Every feature MUST solve a real pain point for Claude Code users identified in the requirements specification. Features MUST be prioritized based on user value, with clear user stories and acceptance criteria. All user interactions MUST provide immediate feedback (loading states, success/error notifications) and maintain consistency across the interface.
 
-**Rationale**: skillsMM exists to streamline skill management for Claude Code users. Every design decision should be validated against the user problems defined in the requirements: scattered skills, lack of team sharing, difficulty discovering community skills, inefficient creation workflows, and the need for AI-assisted generation.
+**Rationale**: skillsMN exists to streamline skill management for Claude Code users. Every design decision should be validated against the user problems defined in the requirements: scattered skills, lack of team sharing, difficulty discovering community skills, inefficient creation workflows, and the need for AI-assisted generation.
 
 ### II. Security First (NON-NEGOTIABLE)
 
@@ -46,13 +46,13 @@ All features MUST meet the performance targets defined in the requirements speci
 
 AI features MUST integrate with Claude Agent SDK and the skill-creator skill. AI generation MUST support streaming responses with real-time display (200ms chunks minimum). Generated content MUST conform to Agent Skills specification (valid YAML frontmatter + Markdown). Users MUST be able to stop generation mid-stream. AI requests MUST timeout gracefully after 30 seconds with user options to continue or cancel.
 
-**Rationale**: AI-assisted skill creation is a core differentiator of skillsMM. Proper integration ensures users can efficiently generate high-quality, standards-compliant skills while maintaining control over the process.
+**Rationale**: AI-assisted skill creation is a core differentiator of skillsMN. Proper integration ensures users can efficiently generate high-quality, standards-compliant skills while maintaining control over the process.
 
 ### V. Cross-Platform Compatibility
 
 All features MUST work identically on Windows 10/11, macOS 12+, and Linux (Ubuntu 20.04+). The UI MUST support minimum resolution 1024x768 with proper scaling. File path handling MUST be platform-aware (use path.join, not string concatenation). Platform-specific code MUST be isolated and conditionally loaded.
 
-**Rationale**: skillsMM targets developers across all major desktop platforms. Platform-specific failures or inconsistencies would exclude portions of the user base.
+**Rationale**: skillsMN targets developers across all major desktop platforms. Platform-specific failures or inconsistencies would exclude portions of the user base.
 
 ### VI. Modularity and Testability
 
@@ -106,6 +106,13 @@ Security violations are NON-NEGOTIABLE and MUST be resolved before any feature c
 - All IPC interfaces must be documented with parameters and return types
 - Service contracts must be clearly defined
 - Configuration schema must be documented
+
+### UI/UX Design
+- All frontend page generation MUST use the ui-ux-pro-max skill for design guidance
+- UI design MUST follow the skill's recommendations for: product type, style, typography, color palettes, and UX best practices
+- Design process MUST include searches across: product domain, style guidelines, typography, color, UX patterns, and stack-specific (React + Tailwind CSS) best practices
+- Generated UI code MUST adhere to professional standards: proper icon usage (SVG, not emoji), stable hover states, correct brand logos, consistent sizing, cursor feedback, and light/dark mode contrast
+- UI MUST maintain performance standards: <100ms interaction latency, efficient rendering for 500+ items, responsive at 1024x768 minimum resolution
 
 ## Technical Architecture
 
@@ -215,4 +222,4 @@ This constitution supersedes all other development practices and guidelines. All
 - Code reviews must verify adherence to principles
 - Performance and security requirements must be validated before feature completion
 
-**Version**: 1.1.1 | **Ratified**: 2026-03-08 | **Last Amended**: 2026-03-08
+**Version**: 1.2.0 | **Ratified**: 2026-03-08 | **Last Amended**: 2026-03-09
