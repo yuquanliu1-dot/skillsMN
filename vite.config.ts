@@ -1,16 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   base: './',
+  root: 'src/renderer',
+  publicDir: path.resolve(__dirname, 'src/renderer/public'),
   build: {
-    outDir: 'dist/renderer',
+    outDir: path.resolve(__dirname, 'dist/renderer'),
     emptyOutDir: false,
     rollupOptions: {
       input: {
-        main: 'src/renderer/index.html'
+        main: path.resolve(__dirname, 'src/renderer/index.html')
       }
     }
   },

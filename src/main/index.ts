@@ -34,7 +34,7 @@ async function createWindow(): Promise<void> {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      sandbox: true,
+      sandbox: false, // Disable sandbox for preload script to work
     },
     title: 'skillsMN - Local Skill Management',
     show: false, // Show when ready to prevent visual flash
