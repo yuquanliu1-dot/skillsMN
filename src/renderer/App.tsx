@@ -9,6 +9,7 @@ import type { Configuration, Skill, UIState, FilterSource, SortBy } from '../sha
 import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
+import CreateSkillDialog from './components/CreateSkillDialog';
 
 // ============================================================================
 // State Types
@@ -91,6 +92,7 @@ export const AppContext = createContext<AppContextValue | null>(null);
 export default function App(): JSX.Element {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const [showSetup, setShowSetup] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   /**
    * Load configuration on mount
@@ -182,6 +184,26 @@ export default function App(): JSX.Element {
   };
 
   /**
+   * Handle create skill
+   */
+  const handleCreateSkill = async (name: string, directory: 'project' | 'global'): Promise<void> => {
+    try {
+      const response = await window.electronAPI.createSkill(name, directory);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to create skill');
+      }
+
+      // Refresh skill list
+      await loadSkills();
+
+      console.log('Skill created successfully:', name);
+    } catch (error) {
+      console.error('Failed to create skill:', error);
+      throw error;
+    }
+  };
+
+  /**
    * Render loading state
    */
   if (state.isLoading) {
@@ -237,9 +259,18 @@ export default function App(): JSX.Element {
               console.log('Skill clicked:', skill.name);
               // TODO: Open skill editor (User Story 4)
             }}
+            onCreateSkill={() => setShowCreateDialog(true)}
           />
         </main>
       </div>
+
+      {/* Create Skill Dialog */}
+      <CreateSkillDialog
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onCreateSkill={handleCreateSkill}
+        defaultDirectory={state.config?.defaultInstallDirectory || 'project'}
+      />
     </AppContext.Provider>
   );
 }

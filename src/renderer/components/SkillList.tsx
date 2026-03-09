@@ -4,16 +4,17 @@
  * Displays list of skills with filtering, sorting, and search
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import type { Skill, FilterSource, SortBy } from '../../shared/types';
 import SkillCard from './SkillCard';
 
 interface SkillListProps {
   skills: Skill[];
   onSkillClick?: (skill: Skill) => void;
+  onCreateSkill?: () => void;
 }
 
-export default function SkillList({ skills, onSkillClick }: SkillListProps): JSX.Element {
+export default function SkillList({ skills, onSkillClick, onCreateSkill }: SkillListProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
@@ -46,8 +47,6 @@ export default function SkillList({ skills, onSkillClick }: SkillListProps): JSX
           return a.name.localeCompare(b.name);
         case 'modified':
           return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
-        case 'description':
-          return (a.description || '').localeCompare(b.description || '');
         default:
           return 0;
       }
@@ -60,30 +59,52 @@ export default function SkillList({ skills, onSkillClick }: SkillListProps): JSX
     <div className="flex flex-col h-full">
       {/* Header with filters and search */}
       <div className="border-b border-slate-700 p-4 space-y-3">
-        {/* Search */}
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search skills..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input w-full pl-10"
-            aria-label="Search skills"
-          />
-          <svg
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        {/* Top row: Search + New Skill button */}
+        <div className="flex items-center gap-3">
+          {/* Search */}
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Search skills..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input w-full pl-10"
+              aria-label="Search skills"
             />
-          </svg>
+            <svg
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+
+          {/* New Skill Button */}
+          {onCreateSkill && (
+            <button
+              onClick={onCreateSkill}
+              className="btn btn-primary flex items-center gap-2"
+              aria-label="Create new skill"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              <span className="hidden sm:inline">New Skill</span>
+            </button>
+          )}
         </div>
 
         {/* Filters and Sort */}
@@ -120,7 +141,6 @@ export default function SkillList({ skills, onSkillClick }: SkillListProps): JSX
             >
               <option value="name">Name</option>
               <option value="modified">Modified</option>
-              <option value="description">Description</option>
             </select>
           </div>
 

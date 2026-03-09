@@ -143,16 +143,16 @@
 
 ### Renderer - Skill List Display
 
-- [ ] T048a [P] [US2] Search UI/UX patterns for virtualized lists and file managers using ui-ux-pro-max skill
+- [X] T048a [P] [US2] Search UI/UX patterns for virtualized lists and file managers using ui-ux-pro-max skill
 - [ ] T048b [US2] Create SkillList component with react-window virtualization in src/renderer/components/SkillList.tsx
-- [ ] T048c [US2] Create SkillCard component to display individual skill metadata in src/renderer/components/SkillCard.tsx
-- [ ] T048d [US2] Verify SkillList quality: SVG icons, stable hover states, proper contrast, cursor feedback
+- [X] T048c [US2] Create SkillCard component to display individual skill metadata in src/renderer/components/SkillCard.tsx
+- [X] T048d [US2] Verify SkillList quality: SVG icons, stable hover states, proper contrast, cursor feedback
 
 ### Renderer - Filtering and Sorting
 
-- [ ] T049 [US2] Implement filter by source (project/global) in SkillList.tsx
-- [ ] T050 [US2] Implement sort by name and modified time in SkillList.tsx
-- [ ] T051 [US2] Implement search by name in SkillList.tsx
+- [X] T049 [US2] Implement filter by source (project/global) in SkillList.tsx
+- [X] T050 [US2] Implement sort by name and modified time in SkillList.tsx
+- [X] T051 [US2] Implement search by name in SkillList.tsx
 
 ### Renderer - Real-time Updates
 
@@ -179,25 +179,25 @@
 
 ### Main Process - Skill Creation
 
-- [ ] T059 [US3] Implement SkillService.createSkill() with kebab-case naming in src/main/services/SkillService.ts
-- [ ] T060 [US3] Implement skill.md template generation with YAML frontmatter in SkillService.ts
-- [ ] T061 [US3] Add validation for skill name (length, characters) in SkillService.ts
+- [X] T059 [US3] Implement SkillService.createSkill() with kebab-case naming in src/main/services/SkillService.ts
+- [X] T060 [US3] Implement skill.md template generation with YAML frontmatter in SkillService.ts
+- [X] T061 [US3] Add validation for skill name (length, characters) in SkillService.ts
 
 ### Main Process - IPC Handler
 
-- [ ] T062 [US3] Implement skill:create IPC handler in src/main/ipc/skillHandlers.ts
+- [X] T062 [US3] Implement skill:create IPC handler in src/main/ipc/skillHandlers.ts
 
 ### Renderer - Create Skill UI
 
-- [ ] T063a [P] [US3] Search UI/UX patterns for create dialogs using ui-ux-pro-max skill
-- [ ] T063b [US3] Add "New Skill" button to SkillList.tsx with icon and hover state
-- [ ] T063c [US3] Create CreateSkillDialog component with name input and directory selection in src/renderer/components/CreateSkillDialog.tsx
-- [ ] T063d [US3] Verify CreateSkillDialog quality: SVG icons, stable hover, cursor feedback, keyboard shortcuts
+- [X] T063a [P] [US3] Search UI/UX patterns for create dialogs using ui-ux-pro-max skill
+- [X] T063b [US3] Add "New Skill" button to SkillList.tsx with icon and hover state
+- [X] T063c [US3] Create CreateSkillDialog component with name input and directory selection in src/renderer/components/CreateSkillDialog.tsx
+- [X] T063d [US3] Verify CreateSkillDialog quality: SVG icons, stable hover, cursor feedback, keyboard shortcuts
 
 ### Renderer - Integration
 
-- [ ] T064 [US3] Wire create skill button to open CreateSkillDialog in SkillList.tsx
-- [ ] T065 [US3] Implement create skill flow: dialog → IPC call → success → refresh list in App.tsx
+- [X] T064 [US3] Wire create skill button to open CreateSkillDialog in SkillList.tsx
+- [X] T065 [US3] Implement create skill flow: dialog → IPC call → success → refresh list in App.tsx
 - [ ] T066 [US3] Add success/error notifications for skill creation using toast or notification component
 - [ ] T067 [US3] Implement Ctrl+N keyboard shortcut for new skill in App.tsx
 
