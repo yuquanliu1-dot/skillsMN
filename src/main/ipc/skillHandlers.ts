@@ -151,7 +151,10 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         const config = await configService.load();
 
         const globalDir = SkillDirectoryModel.getGlobalDirectory();
-        fileWatcher.start(config.projectDirectory, globalDir);
+        const projectSkillsDir = config.projectDirectory
+          ? SkillDirectoryModel.getProjectDirectory(config.projectDirectory)
+          : null;
+        fileWatcher.start(projectSkillsDir, globalDir);
 
         logger.info('File system watcher started', 'SkillHandlers');
         return { success: true };
