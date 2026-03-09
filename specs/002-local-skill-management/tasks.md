@@ -422,9 +422,9 @@
 
 ### Integration Testing
 
-- [ ] T154 Test full user workflow: setup → view → create → edit → delete → settings
-- [ ] T155 Test concurrent file modifications: edit in app, modify externally, verify prompt
-- [ ] T156 Test file system monitoring: add/modify/delete files externally, verify updates
+- [X] T154 Test full user workflow: setup → view → create → edit → delete → settings
+- [X] T155 Test concurrent file modifications: edit in app, modify externally, verify prompt
+- [X] T156 Test file system monitoring: add/modify/delete files externally, verify updates
 
 ### Documentation
 
