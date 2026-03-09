@@ -416,9 +416,9 @@
 
 ### Security Testing
 
-- [ ] T151 Test path traversal prevention: try accessing files outside allowed directories
-- [ ] T152 Verify all file operations validate paths (SC-005)
-- [ ] T153 Test PathValidator with various attack vectors
+- [X] T151 Test path traversal prevention: try accessing files outside allowed directories
+- [X] T152 Verify all file operations validate paths (SC-005)
+- [X] T153 Test PathValidator with various attack vectors
 
 ### Integration Testing
 

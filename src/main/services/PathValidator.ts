@@ -36,11 +36,17 @@ export class PathValidator {
   validate(requestedPath: string): string {
     const resolved = path.resolve(requestedPath);
 
+    // On Windows, file system is case-insensitive, so compare in lowercase
+    const isWindows = process.platform === 'win32';
+    const normalizedResolved = isWindows ? resolved.toLowerCase() : resolved;
+
     // Check each allowed directory
     for (const allowed of this.allowedDirectories) {
-      if (resolved.startsWith(allowed + path.sep) || resolved === allowed) {
+      const normalizedAllowed = isWindows ? allowed.toLowerCase() : allowed;
+
+      if (normalizedResolved.startsWith(normalizedAllowed + path.sep) || normalizedResolved === normalizedAllowed) {
         logger.debug(`Path validated: ${resolved}`, 'PathValidator');
-        return resolved;
+        return resolved; // Return original resolved path (preserves original case)
       }
     }
 
@@ -77,23 +83,28 @@ export class PathValidator {
    */
   getSkillSource(skillPath: string): 'project' | 'global' {
     const resolved = path.resolve(skillPath);
+    const isWindows = process.platform === 'win32';
+    const normalizedResolved = isWindows ? resolved.toLowerCase() : resolved;
 
-    for (const allowed of this.allowedDirectories) {
-      if (resolved.startsWith(allowed + path.sep)) {
-        // Determine if this is project or global based on path
-        // This is a simple heuristic - you might need to adjust based on your actual directory structure
-        const relative = path.relative(allowed, resolved);
-        const parts = relative.split(path.sep);
+    // Get project and global directories
+    const dirs = Array.from(this.allowedDirectories);
 
-        // If the path contains .claude/skills, it's project
-        // Otherwise, it's global
-        if (parts.includes('.claude') && parts.includes('skills')) {
+    // Find which directory this skill belongs to
+    for (const allowed of dirs) {
+      const normalizedAllowed = isWindows ? allowed.toLowerCase() : allowed;
+
+      if (normalizedResolved.startsWith(normalizedAllowed + path.sep)) {
+        // Check if this is the project directory (contains .claude in path)
+        // or global directory (in user home)
+        if (allowed.includes('.claude') && !allowed.includes('Users')) {
           return 'project';
+        } else {
+          return 'global';
         }
       }
     }
 
-    // Default to global
+    // Default to global if not found
     return 'global';
   }
 }
