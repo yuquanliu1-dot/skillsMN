@@ -10,6 +10,7 @@ import { ErrorHandler } from '../utils/ErrorHandler';
 import { SkillService } from '../services/SkillService';
 import { PathValidator } from '../services/PathValidator';
 import { SkillDirectoryModel } from '../models/SkillDirectory';
+import { getConfigService } from './configHandlers';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { IPCResponse, Skill, Configuration } from '../../shared/types';
 import { getFileWatcher } from '../index';
@@ -132,7 +133,7 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
   // Handler for fs:watch-start
   ipcMain.handle(
     IPC_CHANNELS.FS_WATCH_START,
-    async (_event, { config }: { config: Configuration }): Promise<IPCResponse<void>> => {
+    async (): Promise<IPCResponse<void>> => {
       try {
         logger.debug('Starting file system watcher', 'SkillHandlers');
 
@@ -140,6 +141,14 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         if (!fileWatcher) {
           throw new Error('File watcher not initialized');
         }
+
+        // Get current configuration
+        const configService = getConfigService();
+        if (!configService) {
+          throw new Error('ConfigService not initialized');
+        }
+
+        const config = await configService.load();
 
         const globalDir = SkillDirectoryModel.getGlobalDirectory();
         fileWatcher.start(config.projectDirectory, globalDir);
