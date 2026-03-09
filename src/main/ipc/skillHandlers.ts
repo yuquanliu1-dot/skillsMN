@@ -9,8 +9,10 @@ import { logger } from '../utils/Logger';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { SkillService } from '../services/SkillService';
 import { PathValidator } from '../services/PathValidator';
+import { SkillDirectoryModel } from '../models/SkillDirectory';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { IPCResponse, Skill, Configuration } from '../../shared/types';
+import { getFileWatcher } from '../index';
 
 let skillService: SkillService | null = null;
 
@@ -130,12 +132,19 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
   // Handler for fs:watch-start
   ipcMain.handle(
     IPC_CHANNELS.FS_WATCH_START,
-    async (): Promise<IPCResponse<void>> => {
+    async (_event, { config }: { config: Configuration }): Promise<IPCResponse<void>> => {
       try {
         logger.debug('Starting file system watcher', 'SkillHandlers');
-        // TODO: Implement file system watching with chokidar
-        // For now, just return success
-        logger.info('File system watcher started (stub)', 'SkillHandlers');
+
+        const fileWatcher = getFileWatcher();
+        if (!fileWatcher) {
+          throw new Error('File watcher not initialized');
+        }
+
+        const globalDir = SkillDirectoryModel.getGlobalDirectory();
+        fileWatcher.start(config.projectDirectory, globalDir);
+
+        logger.info('File system watcher started', 'SkillHandlers');
         return { success: true };
       } catch (error) {
         const message = ErrorHandler.format(error);
@@ -151,8 +160,15 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
     async (): Promise<IPCResponse<void>> => {
       try {
         logger.debug('Stopping file system watcher', 'SkillHandlers');
-        // TODO: Implement file system watching stop
-        logger.info('File system watcher stopped (stub)', 'SkillHandlers');
+
+        const fileWatcher = getFileWatcher();
+        if (!fileWatcher) {
+          throw new Error('File watcher not initialized');
+        }
+
+        fileWatcher.stop();
+
+        logger.info('File system watcher stopped', 'SkillHandlers');
         return { success: true };
       } catch (error) {
         const message = ErrorHandler.format(error);

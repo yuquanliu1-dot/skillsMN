@@ -10,11 +10,13 @@ import { logger } from './utils/Logger';
 import { registerConfigHandlers, getConfigService } from './ipc/configHandlers';
 import { registerSkillHandlers } from './ipc/skillHandlers';
 import { PathValidator } from './services/PathValidator';
+import { FileWatcher } from './services/FileWatcher';
 import { SkillDirectoryModel } from './models/SkillDirectory';
 
-// Global reference to prevent garbage collection
+// Global references to prevent garbage collection
 let mainWindow: BrowserWindow | null = null;
 let pathValidator: PathValidator | null = null;
+let fileWatcher: FileWatcher | null = null;
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
@@ -102,6 +104,10 @@ async function initialize(): Promise<void> {
       globalDir,
     });
 
+    // Initialize file watcher
+    fileWatcher = new FileWatcher(pathValidator);
+    logger.info('File watcher initialized', 'Main');
+
     // Register skill handlers with path validator
     registerSkillHandlers(pathValidator);
     logger.info('Skill handlers registered', 'Main');
@@ -109,11 +115,23 @@ async function initialize(): Promise<void> {
     // Create main window
     await createWindow();
 
+    // Set main window reference for file watcher
+    if (mainWindow && fileWatcher) {
+      fileWatcher.setMainWindow(mainWindow);
+    }
+
     logger.info('Application initialized successfully', 'Main');
   } catch (error) {
     logger.error('Failed to initialize application', 'Main', error);
     app.quit();
   }
+}
+
+/**
+ * Get file watcher instance
+ */
+export function getFileWatcher(): FileWatcher | null {
+  return fileWatcher;
 }
 
 // Application lifecycle events
