@@ -11,6 +11,7 @@ import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
 import CreateSkillDialog from './components/CreateSkillDialog';
 import SkillEditor from './components/SkillEditor';
+import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 
 // ============================================================================
 // State Types
@@ -95,6 +96,7 @@ export default function App(): JSX.Element {
   const [showSetup, setShowSetup] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
+  const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
 
   /**
    * Load configuration on mount
@@ -228,6 +230,26 @@ export default function App(): JSX.Element {
   };
 
   /**
+   * Handle delete skill
+   */
+  const handleDeleteSkill = async (skill: Skill): Promise<void> => {
+    try {
+      const response = await window.electronAPI.deleteSkill(skill.path);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to delete skill');
+      }
+
+      // Refresh skill list
+      await loadSkills();
+
+      console.log('Skill deleted successfully:', skill.name);
+    } catch (error) {
+      console.error('Failed to delete skill:', error);
+      throw error;
+    }
+  };
+
+  /**
    * Render loading state
    */
   if (state.isLoading) {
@@ -283,6 +305,9 @@ export default function App(): JSX.Element {
               setEditingSkill(skill);
             }}
             onCreateSkill={() => setShowCreateDialog(true)}
+            onDeleteSkill={(skill) => {
+              setDeletingSkill(skill);
+            }}
           />
         </main>
       </div>
@@ -303,6 +328,14 @@ export default function App(): JSX.Element {
           onSave={handleSaveSkill}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        isOpen={deletingSkill !== null}
+        skill={deletingSkill}
+        onClose={() => setDeletingSkill(null)}
+        onConfirm={handleDeleteSkill}
+      />
     </AppContext.Provider>
   );
 }

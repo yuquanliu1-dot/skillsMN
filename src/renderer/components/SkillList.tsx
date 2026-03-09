@@ -12,9 +12,10 @@ interface SkillListProps {
   skills: Skill[];
   onSkillClick?: (skill: Skill) => void;
   onCreateSkill?: () => void;
+  onDeleteSkill?: (skill: Skill) => void;
 }
 
-export default function SkillList({ skills, onSkillClick, onCreateSkill }: SkillListProps): JSX.Element {
+export default function SkillList({ skills, onSkillClick, onCreateSkill, onDeleteSkill }: SkillListProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
@@ -159,6 +160,7 @@ export default function SkillList({ skills, onSkillClick, onCreateSkill }: Skill
               key={skill.path}
               skill={skill}
               onClick={onSkillClick}
+              onDelete={onDeleteSkill}
             />
           ))}
           {filteredAndSortedSkills.length === 0 && (

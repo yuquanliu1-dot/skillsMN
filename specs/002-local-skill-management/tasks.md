@@ -272,25 +272,25 @@
 
 ### Main Process - Skill Deletion
 
-- [ ] T090 [US5] Install and configure trash npm package for recycle bin support
-- [ ] T091 [US5] Implement SkillService.deleteSkill() using trash package in src/main/services/SkillService.ts
-- [ ] T092 [US5] Add logging for deletion operations in SkillService.ts
+- [X] T090 [US5] Install and configure trash npm package for recycle bin support
+- [X] T091 [US5] Implement SkillService.deleteSkill() using trash package in src/main/services/SkillService.ts
+- [X] T092 [US5] Add logging for deletion operations in SkillService.ts
 
 ### Main Process - IPC Handler
 
-- [ ] T093 [US5] Implement skill:delete IPC handler in src/main/ipc/skillHandlers.ts
+- [X] T093 [US5] Implement skill:delete IPC handler in src/main/ipc/skillHandlers.ts
 
 ### Renderer - Delete UI
 
-- [ ] T094a [P] [US5] Search UI/UX patterns for delete confirmation dialogs using ui-ux-pro-max skill
-- [ ] T094b [US5] Add delete button to SkillCard component with icon and hover state in SkillCard.tsx
-- [ ] T094c [US5] Create DeleteConfirmDialog component in src/renderer/components/DeleteConfirmDialog.tsx
-- [ ] T094d [US5] Verify delete UI quality: SVG icons, stable hover, proper warning colors
+- [X] T094a [P] [US5] Search UI/UX patterns for delete confirmation dialogs using ui-ux-pro-max skill
+- [X] T094b [US5] Add delete button to SkillCard component with icon and hover state in SkillCard.tsx
+- [X] T094c [US5] Create DeleteConfirmDialog component in src/renderer/components/DeleteConfirmDialog.tsx
+- [X] T094d [US5] Verify delete UI quality: SVG icons, stable hover, proper warning colors
 
 ### Renderer - Integration
 
-- [ ] T095 [US5] Wire delete button to open confirmation dialog in SkillCard.tsx
-- [ ] T096 [US5] Implement delete flow: confirm → IPC call → success → remove from list in App.tsx
+- [X] T095 [US5] Wire delete button to open confirmation dialog in SkillCard.tsx
+- [X] T096 [US5] Implement delete flow: confirm → IPC call → success → remove from list in App.tsx
 - [ ] T097 [US5] Add success notification on deletion in App.tsx
 - [ ] T098 [US5] Add error notification on deletion failure in App.tsx
 - [ ] T099 [US5] Implement Delete keyboard shortcut when skill is selected in App.tsx
