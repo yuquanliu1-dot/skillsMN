@@ -335,9 +335,9 @@
 
 ### Integration
 
-- [ ] T111 [US6] Test settings flow: open → change → save → verify persisted → verify applied
-- [ ] T112 [US6] Test settings persistence: change → restart app → verify settings retained
-- [ ] T113 [US6] Verify default install directory behavior: set to global → create skill → defaults to global
+- [X] T111 [US6] Test settings flow: open → change → save → verify persisted → verify applied
+- [X] T112 [US6] Test settings persistence: change → restart app → verify settings retained
+- [X] T113 [US6] Verify default install directory behavior: set to global → create skill → defaults to global
 
 **Checkpoint**: User Story 6 complete - users can configure application preferences
 
