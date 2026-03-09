@@ -21,7 +21,9 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saving'>('idle');
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
    * Load skill content on mount
@@ -68,8 +70,43 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
     if (value !== undefined) {
       setContent(value);
       setHasUnsavedChanges(true);
+      setAutoSaveStatus('pending');
+
+      // Clear existing timer
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+
+      // Set new auto-save timer (2 seconds debounce)
+      autoSaveTimerRef.current = setTimeout(() => {
+        handleAutoSave(value);
+      }, 2000);
     }
   }, []);
+
+  /**
+   * Auto-save handler
+   */
+  const handleAutoSave = useCallback(async (contentToSave: string) => {
+    try {
+      setAutoSaveStatus('saving');
+      setIsSaving(true);
+      setError(null);
+
+      await onSave(contentToSave);
+      setHasUnsavedChanges(false);
+      setAutoSaveStatus('idle');
+
+      console.log('Skill auto-saved successfully');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to auto-save';
+      setError(message);
+      setAutoSaveStatus('idle');
+      console.error('Auto-save error:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [onSave]);
 
   /**
    * Save skill content
@@ -77,17 +114,25 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
   const handleSave = useCallback(async () => {
     if (isSaving || !hasUnsavedChanges) return;
 
+    // Cancel auto-save timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
     try {
       setIsSaving(true);
+      setAutoSaveStatus('saving');
       setError(null);
 
       await onSave(content);
       setHasUnsavedChanges(false);
+      setAutoSaveStatus('idle');
 
       console.log('Skill saved successfully');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save skill';
       setError(message);
+      setAutoSaveStatus('idle');
       console.error('Save skill error:', err);
     } finally {
       setIsSaving(false);
@@ -140,6 +185,17 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  /**
+   * Cleanup auto-save timer on unmount
+   */
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 bg-slate-900 flex flex-col z-50">
       {/* Header */}
@@ -178,7 +234,7 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
                       clipRule="evenodd"
                     />
                   </svg>
-                  Unsaved
+                  {autoSaveStatus === 'pending' ? 'Auto-saving in 2s...' : autoSaveStatus === 'saving' ? 'Auto-saving...' : 'Unsaved'}
                 </span>
               )}
             </div>

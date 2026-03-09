@@ -14,7 +14,7 @@ interface SkillCardProps {
 }
 
 export default function SkillCard({ skill, onClick, onDelete }: SkillCardProps): JSX.Element {
-  const handleClick = () => {
+  const handleDoubleClick = () => {
     onClick?.(skill);
   };
 
@@ -26,18 +26,18 @@ export default function SkillCard({ skill, onClick, onDelete }: SkillCardProps):
   };
 
   const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation(); // Prevent card double-click
     onDelete?.(skill);
   };
 
   return (
     <div
       className="card card-interactive group"
-      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onKeyPress={handleKeyPress}
       tabIndex={0}
       role="button"
-      aria-label={`Skill: ${skill.name}`}
+      aria-label={`Skill: ${skill.name}. Double-click to edit.`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
