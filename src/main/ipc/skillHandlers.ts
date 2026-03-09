@@ -127,6 +127,41 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
     }
   );
 
+  // Handler for fs:watch-start
+  ipcMain.handle(
+    IPC_CHANNELS.FS_WATCH_START,
+    async (): Promise<IPCResponse<void>> => {
+      try {
+        logger.debug('Starting file system watcher', 'SkillHandlers');
+        // TODO: Implement file system watching with chokidar
+        // For now, just return success
+        logger.info('File system watcher started (stub)', 'SkillHandlers');
+        return { success: true };
+      } catch (error) {
+        const message = ErrorHandler.format(error);
+        logger.error('Failed to start file watcher', 'SkillHandlers', error);
+        return { success: false, error: message };
+      }
+    }
+  );
+
+  // Handler for fs:watch-stop
+  ipcMain.handle(
+    IPC_CHANNELS.FS_WATCH_STOP,
+    async (): Promise<IPCResponse<void>> => {
+      try {
+        logger.debug('Stopping file system watcher', 'SkillHandlers');
+        // TODO: Implement file system watching stop
+        logger.info('File system watcher stopped (stub)', 'SkillHandlers');
+        return { success: true };
+      } catch (error) {
+        const message = ErrorHandler.format(error);
+        logger.error('Failed to stop file watcher', 'SkillHandlers', error);
+        return { success: false, error: message };
+      }
+    }
+  );
+
   logger.info('Skill IPC handlers registered', 'SkillHandlers');
 }
 

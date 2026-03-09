@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell.exe:*)",
+      "Bash(powershell:*)",
+      "Bash(specs/002-local-skill-management/plan.md:*)",
+      "Bash(python:*)",
+      "Bash(git:*)"
+    ]
+  }
+}

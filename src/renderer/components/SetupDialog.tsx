@@ -47,17 +47,30 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
     setError(null);
 
     try {
-      // For now, we'll just check if the path looks valid
-      // In a real implementation, we'd validate via IPC
-      if (!dir.includes('.claude')) {
-        setError(
-          'Invalid Claude project directory. The directory must contain a .claude folder.'
-        );
+      // Remove trailing slash for consistency
+      const cleanDir = dir.replace(/[\\/]+$/, '');
+
+      // Validate via IPC by checking if the directory exists
+      // For now, we'll check if we can list skills from it
+      const testConfig = {
+        projectDirectory: cleanDir,
+        defaultInstallDirectory: 'project' as const,
+        editorDefaultMode: 'edit' as const,
+        autoRefresh: true,
+      };
+
+      // Try to list skills - if directory is invalid, this will fail
+      const skills = await window.electronAPI.listSkills(testConfig);
+
+      if (!skills.success) {
+        setError('Invalid Claude project directory. The directory must contain a .claude folder.');
         return false;
       }
+
       return true;
     } catch (err) {
-      setError('Failed to validate directory');
+      const message = err instanceof Error ? err.message : 'Failed to validate directory';
+      setError(message);
       console.error('Validation error:', err);
       return false;
     } finally {
