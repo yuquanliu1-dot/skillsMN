@@ -15,7 +15,11 @@ export class SkillModel {
   /**
    * Parse skill directory and extract metadata
    */
-  static async fromDirectory(dirPath: string, source: SkillSource): Promise<Skill> {
+  static async fromDirectory(
+    dirPath: string,
+    source: SkillSource,
+    cache?: Map<string, { data: any; timestamp: number }>
+  ): Promise<Skill> {
     const skillFilePath = path.join(dirPath, SKILL_FILE_NAME);
 
     // Check if skill.md exists
@@ -26,8 +30,8 @@ export class SkillModel {
     // Get directory stats for lastModified
     const dirStats = await fs.promises.stat(dirPath);
 
-    // Parse frontmatter
-    const { frontmatter, isValid } = await this.parseFrontmatter(skillFilePath);
+    // Parse frontmatter (with caching support T127)
+    const { frontmatter, isValid } = await this.parseFrontmatter(skillFilePath, cache);
 
     // Use frontmatter name or fall back to directory name
     const dirName = path.basename(dirPath);
@@ -63,12 +67,22 @@ export class SkillModel {
   }
 
   /**
-   * Parse YAML frontmatter from skill.md
+   * Parse YAML frontmatter from skill.md (with caching support T127)
    */
   private static async parseFrontmatter(
-    skillFilePath: string
+    skillFilePath: string,
+    cache?: Map<string, { data: any; timestamp: number }>
   ): Promise<{ frontmatter: Partial<SkillFrontmatter>; isValid: boolean }> {
     try {
+      // Check cache first (T127)
+      if (cache) {
+        const cached = cache.get(skillFilePath);
+        if (cached) {
+          logger.debug('Using cached frontmatter', 'SkillModel', { skillFilePath });
+          return { frontmatter: cached.data, isValid: true };
+        }
+      }
+
       const content = await fs.promises.readFile(skillFilePath, 'utf-8');
       const { data } = matter(content);
 
@@ -76,6 +90,14 @@ export class SkillModel {
         name: data.name,
         description: data.description,
       };
+
+      // Store in cache (T127)
+      if (cache) {
+        cache.set(skillFilePath, {
+          data: frontmatter,
+          timestamp: Date.now()
+        });
+      }
 
       logger.debug('Frontmatter parsed successfully', 'SkillModel', { skillFilePath });
       return { frontmatter, isValid: true };

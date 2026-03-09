@@ -370,8 +370,8 @@
 
 ### Performance Optimizations
 
-- [ ] T126 Implement lazy loading of skill content (load only on edit) in SkillService.ts
-- [ ] T127 Implement caching of parsed frontmatter in memory in SkillService.ts
+- [X] T126 Implement lazy loading of skill content (load only on edit) in SkillService.ts
+- [X] T127 Implement caching of parsed frontmatter in memory in SkillService.ts
 - [ ] T128 Optimize skill scanning for 500+ skills (read metadata only) in SkillService.ts
 - [ ] T129 Verify memory usage <300MB with 500 skills loaded (SC-007)
 

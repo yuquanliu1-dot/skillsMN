@@ -7,7 +7,6 @@
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../utils/Logger';
-import { ErrorHandler } from '../utils/ErrorHandler';
 import { PathValidator } from './PathValidator';
 import { SkillModel } from '../models/Skill';
 import { SkillDirectoryModel } from '../models/SkillDirectory';
@@ -15,6 +14,9 @@ import { Configuration, Skill } from '../../shared/types';
 import { SKILL_FILE_NAME } from '../../shared/constants';
 
 export class SkillService {
+  private frontmatterCache: Map<string, { data: any; timestamp: number }> = new Map();
+  private readonly CACHE_TTL = 60000; // 1 minute cache TTL
+
   constructor(
     private pathValidator: PathValidator
   ) {}
@@ -70,10 +72,10 @@ export class SkillService {
       const skillDirs = await SkillDirectoryModel.getSkillDirectories(dirPath);
       const skills: Skill[] = [];
 
-      // Parse each skill directory
+      // Parse each skill directory (T127: cached frontmatter)
       for (const skillDir of skillDirs) {
         try {
-          const skill = await SkillModel.fromDirectory(skillDir, source);
+          const skill = await SkillModel.fromDirectory(skillDir, source, this.frontmatterCache);
           skills.push(skill);
         } catch (error) {
           logger.warn(`Failed to parse skill: ${skillDir}`, 'SkillService', { error });
@@ -82,10 +84,26 @@ export class SkillService {
       }
 
       logger.debug(`Found ${skills.length} skills in ${source} directory`, 'SkillService');
+
+      // Clean expired cache entries
+      this.cleanExpiredCache();
+
       return skills;
     } catch (error) {
-      ErrorHandler.log(error, 'SkillService.scanDirectory');
+      logger.error(`Failed to scan ${source} directory`, 'SkillService', { dirPath, error });
       return [];
+    }
+  }
+
+  /**
+   * Clean expired cache entries (T127)
+   */
+  private cleanExpiredCache(): void {
+    const now = Date.now();
+    for (const [path, entry] of this.frontmatterCache.entries()) {
+      if (now - entry.timestamp > this.CACHE_TTL) {
+        this.frontmatterCache.delete(path);
+      }
     }
   }
 
@@ -101,8 +119,8 @@ export class SkillService {
     // Determine source
     const source = this.pathValidator.getSkillSource(validatedPath);
 
-    // Get skill metadata
-    const metadata = await SkillModel.fromDirectory(validatedPath, source);
+    // Get skill metadata (with cache)
+    const metadata = await SkillModel.fromDirectory(validatedPath, source, this.frontmatterCache);
 
     // Read skill content
     const skillFile = path.join(validatedPath, SKILL_FILE_NAME);
@@ -144,8 +162,8 @@ export class SkillService {
     const template = SkillModel.generateTemplate(name);
     await fs.promises.writeFile(skillFile, template, 'utf-8');
 
-    // Parse and return created skill
-    const skill = await SkillModel.fromDirectory(skillDir, directory);
+    // Parse and return created skill (with cache)
+    const skill = await SkillModel.fromDirectory(skillDir, directory, this.frontmatterCache);
 
     logger.info(`Skill created: ${name}`, 'SkillService', { path: skillDir });
     return skill;
@@ -176,9 +194,12 @@ export class SkillService {
     // Write content
     await fs.promises.writeFile(skillFile, content, 'utf-8');
 
+    // Invalidate cache for this skill (T127)
+    this.frontmatterCache.delete(skillFile);
+
     // Parse and return updated skill
     const source = this.pathValidator.getSkillSource(validatedPath);
-    const skill = await SkillModel.fromDirectory(validatedPath, source);
+    const skill = await SkillModel.fromDirectory(validatedPath, source, this.frontmatterCache);
 
     logger.debug(`Skill updated: ${skill.name}`, 'SkillService');
     return skill;
