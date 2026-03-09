@@ -101,7 +101,7 @@
 - [X] T033 [US1] Implement SkillService.listAllSkills() to scan project and global directories in src/main/services/SkillService.ts
 - [X] T034 [US1] Implement SkillService.parseSkillFrontmatter() for YAML parsing in src/main/services/SkillService.ts
 - [X] T035 [US1] Implement SkillService.countResources() to count non-skill.md files in src/main/services/SkillService.ts
-- [ ] T036 [US1] Add unit tests for SkillService in tests/unit/services/SkillService.test.ts
+- [X] T036 [US1] Add unit tests for SkillService in tests/unit/services/SkillService.test.ts
 
 ### Main Process - IPC Handlers (Skill List)
 
@@ -122,8 +122,8 @@
 ### Integration
 
 - [X] T042 [US1] Wire up main process IPC handlers in src/main/index.ts
-- [ ] T043 [US1] Test first-time setup flow: launch app → select directory → skills scan → display
-- [ ] T044 [US1] Verify performance: startup and initial scan <3 seconds for 500 skills
+- [X] T043 [US1] Test first-time setup flow: launch app → select directory → skills scan → display
+- [X] T044 [US1] Verify performance: startup and initial scan <3 seconds for 500 skills
 
 **Checkpoint**: User Story 1 complete - application can initialize, configure, and display skills
 
