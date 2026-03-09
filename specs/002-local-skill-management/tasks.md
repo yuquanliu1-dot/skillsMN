@@ -163,9 +163,9 @@
 ### Integration
 
 - [X] T055 [US2] Start file watcher on app initialization in App.tsx
-- [ ] T056 [US2] Test skill list updates: add/modify/delete skills externally → list updates within 500ms
-- [ ] T057 [US2] Test virtual scrolling performance with 500+ skills (60fps scrolling)
-- [ ] T058 [US2] Verify filter and sort performance (reorder within 100ms)
+- [X] T056 [US2] Test skill list updates: add/modify/delete skills externally → list updates within 500ms
+- [X] T057 [US2] Test virtual scrolling performance with 500+ skills (60fps scrolling)
+- [X] T058 [US2] Verify filter and sort performance (reorder within 100ms)
 
 **Checkpoint**: User Story 2 complete - skill list displays with real-time updates, filtering, and sorting
 
@@ -198,14 +198,14 @@
 
 - [X] T064 [US3] Wire create skill button to open CreateSkillDialog in SkillList.tsx
 - [X] T065 [US3] Implement create skill flow: dialog → IPC call → success → refresh list in App.tsx
-- [ ] T066 [US3] Add success/error notifications for skill creation using toast or notification component
-- [ ] T067 [US3] Implement Ctrl+N keyboard shortcut for new skill in App.tsx
+- [X] T066 [US3] Add success/error notifications for skill creation using toast or notification component
+- [X] T067 [US3] Implement Ctrl+N keyboard shortcut for new skill in App.tsx
 
 ### Integration
 
-- [ ] T068 [US3] Test skill creation: click button → enter name → select directory → verify file created
-- [ ] T069 [US3] Test duplicate name handling (should show error)
-- [ ] T070 [US3] Verify performance: skill appears in list within 100ms of creation
+- [X] T068 [US3] Test skill creation: click button → enter name → select directory → verify file created
+- [X] T069 [US3] Test duplicate name handling (should show error)
+- [X] T070 [US3] Verify performance: skill appears in list within 100ms of creation
 
 **Checkpoint**: User Story 3 complete - users can create new skills with templates
 

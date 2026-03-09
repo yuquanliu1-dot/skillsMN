@@ -13,6 +13,7 @@ import CreateSkillDialog from './components/CreateSkillDialog';
 import SkillEditor from './components/SkillEditor';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import Settings from './components/Settings';
+import ToastContainer, { ToastMessage } from './components/ToastContainer';
 
 // ============================================================================
 // State Types
@@ -99,6 +100,7 @@ export default function App(): JSX.Element {
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   /**
    * Load configuration on mount
@@ -153,6 +155,27 @@ export default function App(): JSX.Element {
   }, [state.config?.projectDirectory]);
 
   /**
+   * Global keyboard shortcuts
+   */
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      // Ctrl+N: Create new skill
+      if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
+        event.preventDefault();
+        if (!showSetup && state.config?.projectDirectory) {
+          setShowCreateDialog(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showSetup, state.config?.projectDirectory]);
+
+  /**
    * Load skills from file system
    */
   async function loadSkills(): Promise<void> {
@@ -190,6 +213,22 @@ export default function App(): JSX.Element {
   };
 
   /**
+   * Show toast notification
+   */
+  const showToast = (message: string, type: ToastMessage['type'] = 'info', duration?: number): void => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newToast: ToastMessage = { id, message, type, duration };
+    setToasts((prev) => [...prev, newToast]);
+  };
+
+  /**
+   * Dismiss toast notification
+   */
+  const dismissToast = (id: string): void => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  /**
    * Handle create skill
    */
   const handleCreateSkill = async (name: string, directory: 'project' | 'global'): Promise<void> => {
@@ -202,9 +241,13 @@ export default function App(): JSX.Element {
       // Refresh skill list
       await loadSkills();
 
+      // Show success notification
+      showToast(`Skill "${name}" created successfully`, 'success');
+
       console.log('Skill created successfully:', name);
     } catch (error) {
       console.error('Failed to create skill:', error);
+      showToast(`Failed to create skill: ${(error as Error).message}`, 'error');
       throw error;
     }
   };
@@ -384,6 +427,9 @@ export default function App(): JSX.Element {
         config={state.config}
         onSave={handleSaveSettings}
       />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </AppContext.Provider>
   );
 }
