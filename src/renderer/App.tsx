@@ -8,6 +8,7 @@ import React, { createContext, useReducer, useEffect, useState } from 'react';
 import type { Configuration, Skill, UIState, FilterSource, SortBy } from '../shared/types';
 import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
+import SkillList from './components/SkillList';
 
 // ============================================================================
 // State Types
@@ -228,44 +229,15 @@ export default function App(): JSX.Element {
       <div className="h-screen bg-slate-900 text-slate-100 flex flex-col">
         <header className="border-b border-slate-700 p-4 flex items-center justify-between">
           <h1 className="text-xl font-semibold">skillsMN</h1>
-          <div className="text-sm text-slate-400">
-            {state.skills.length} skills
-          </div>
         </header>
-        <main className="flex-1 overflow-auto p-4">
-          <div className="grid gap-4">
-            {state.skills.map((skill) => (
-              <div
-                key={skill.path}
-                className="card hover:bg-slate-700 cursor-pointer transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg">{skill.name}</h3>
-                    {skill.description && (
-                      <p className="text-sm text-slate-400 mt-1">
-                        {skill.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                      <span className="badge badge-{skill.source}">
-                        {skill.source === 'project' ? 'Project' : 'Global'}
-                      </span>
-                      <span>Modified: {new Date(skill.lastModified).toLocaleString()}</span>
-                      {skill.resourceCount > 0 && (
-                        <span>{skill.resourceCount} resources</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {state.skills.length === 0 && (
-              <div className="text-center text-slate-500 py-12">
-                No skills found. Create your first skill to get started.
-              </div>
-            )}
-          </div>
+        <main className="flex-1 overflow-hidden">
+          <SkillList
+            skills={state.skills}
+            onSkillClick={(skill) => {
+              console.log('Skill clicked:', skill.name);
+              // TODO: Open skill editor (User Story 4)
+            }}
+          />
         </main>
       </div>
     </AppContext.Provider>
