@@ -313,25 +313,25 @@
 
 ### Main Process - Configuration Updates
 
-- [ ] T103 [US6] Extend ConfigService to handle all settings fields in src/main/services/ConfigService.ts
-- [ ] T104 [US6] Add validation for all configuration fields in ConfigService.ts
+- [X] T103 [US6] Extend ConfigService to handle all settings fields in src/main/services/ConfigService.ts
+- [X] T104 [US6] Add validation for all configuration fields in ConfigService.ts
 
 ### Renderer - Settings UI
 
-- [ ] T105a [P] [US6] Search UI/UX patterns for settings panels using ui-ux-pro-max skill
-- [ ] T105b [US6] Create Settings component with form fields in src/renderer/components/Settings.tsx
-- [ ] T105c [US6] Add dropdown for default install directory (project/global) in Settings.tsx
-- [ ] T105d [US6] Add dropdown for editor default mode (edit/preview) in Settings.tsx
-- [ ] T105e [US6] Add toggle for auto-refresh in Settings.tsx
-- [ ] T105f [US6] Verify Settings quality: SVG icons, stable hover, proper form controls, cursor feedback
+- [X] T105a [P] [US6] Search UI/UX patterns for settings panels using ui-ux-pro-max skill
+- [X] T105b [US6] Create Settings component with form fields in src/renderer/components/Settings.tsx
+- [X] T105c [US6] Add dropdown for default install directory (project/global) in Settings.tsx
+- [X] T105d [US6] Add dropdown for editor default mode (edit/preview) in Settings.tsx
+- [X] T105e [US6] Add toggle for auto-refresh in Settings.tsx
+- [X] T105f [US6] Verify Settings quality: SVG icons, stable hover, proper form controls, cursor feedback
 
 ### Renderer - Settings Integration
 
-- [ ] T106 [US6] Add "Settings" button to main toolbar in App.tsx
-- [ ] T107 [US6] Load current settings on Settings component mount in Settings.tsx
-- [ ] T108 [US6] Implement save settings flow: change → save → IPC call → success in Settings.tsx
-- [ ] T109 [US6] Add success notification on settings save in Settings.tsx
-- [ ] T110 [US6] Apply settings immediately (e.g., default directory for new skills) in App.tsx
+- [X] T106 [US6] Add "Settings" button to main toolbar in App.tsx
+- [X] T107 [US6] Load current settings on Settings component mount in Settings.tsx
+- [X] T108 [US6] Implement save settings flow: change → save → IPC call → success in Settings.tsx
+- [X] T109 [US6] Add success notification on settings save in Settings.tsx
+- [X] T110 [US6] Apply settings immediately (e.g., default directory for new skills) in App.tsx
 
 ### Integration
 
