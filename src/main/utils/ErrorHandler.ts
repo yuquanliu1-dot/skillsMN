@@ -1,211 +1,124 @@
 /**
- * Error handling utility with actionable error messages
+ * Error Handler Utility
+ *
+ * Provides structured error handling with actionable error messages
  */
 
-import { ERROR_CODES } from '../../shared/constants';
 import { logger } from './Logger';
 
-/**
- * Application error class with actionable guidance
- */
-export class AppError extends Error {
-  public readonly code: string;
-  public readonly userMessage: string;
-  public readonly action: string;
-  public readonly data?: Record<string, any>;
-
-  constructor(
-    code: string,
-    message: string,
-    userMessage: string,
-    action: string,
-    data?: Record<string, any>
-  ) {
-    super(message);
-    this.code = code;
-    this.userMessage = userMessage;
-    this.action = action;
-    this.data = data;
-
-    // Ensure proper prototype chain
-    Object.setPrototypeOf(this, AppError.prototype);
-  }
-
-  /**
-   * Convert to IPC error response format
-   */
-  public toIPCError(): { code: string; message: string; userMessage: string; action: string } {
-    return {
-      code: this.code,
-      message: this.message,
-      userMessage: this.userMessage,
-      action: this.action,
-    };
+export class FileNotFoundError extends Error {
+  constructor(public readonly path: string) {
+    super(`File not found: ${path}`);
+    this.name = 'FileNotFoundError';
   }
 }
 
-/**
- * Error handler utility
- */
+export class PermissionError extends Error {
+  constructor(public readonly path: string, public readonly operation: string) {
+    super(`Permission denied: Cannot ${operation} ${path}`);
+    this.name = 'PermissionError';
+  }
+}
+
+export class PathTraversalError extends Error {
+  constructor(public readonly path: string) {
+    super(`Path traversal detected: ${path}`);
+    this.name = 'PathTraversalError';
+  }
+}
+
+export class YAMLParseError extends Error {
+  constructor(
+    public readonly file: string,
+    public readonly line: number,
+    message: string
+  ) {
+    super(`Invalid YAML in ${file} at line ${line}: ${message}`);
+    this.name = 'YAMLParseError';
+  }
+}
+
+export class ConfigurationError extends Error {
+  constructor(message: string, public readonly field?: string) {
+    super(message);
+    this.name = 'ConfigurationError';
+  }
+}
+
+export class SkillExistsError extends Error {
+  constructor(public readonly name: string, public readonly path: string) {
+    super(`Skill already exists: ${name} at ${path}`);
+    this.name = 'SkillExistsError';
+  }
+}
+
 export class ErrorHandler {
   /**
-   * Create file not found error
+   * Format error into actionable user-friendly message
    */
-  public static fileNotFound(filePath: string): AppError {
-    return new AppError(
-      ERROR_CODES.ENOENT,
-      `File not found: ${filePath}`,
-      'File not found',
-      'The file may have been moved or deleted. Try refreshing the skill list.'
-    );
+  static format(error: unknown): string {
+    logger.error('Error occurred', 'ErrorHandler', error);
+
+    if (error instanceof FileNotFoundError) {
+      return `Skill not found: ${error.path}. The skill may have been moved or deleted. Try refreshing the skill list.`;
+    }
+
+    if (error instanceof PermissionError) {
+      return `Permission denied: Cannot ${error.operation} ${error.path}. Check file permissions and ensure you have the necessary access rights.`;
+    }
+
+    if (error instanceof PathTraversalError) {
+      return `Security error: Invalid file path. The operation has been blocked for security reasons.`;
+    }
+
+    if (error instanceof YAMLParseError) {
+      return `Invalid YAML in ${error.file}: ${error.message}. Check syntax at line ${error.line}. Common issues: missing quotes, incorrect indentation, or invalid characters.`;
+    }
+
+    if (error instanceof ConfigurationError) {
+      const fieldHint = error.field
+        ? ` Check the "${error.field}" setting.`
+        : '';
+      return `Configuration error: ${error.message}${fieldHint} Try resetting to defaults if the issue persists.`;
+    }
+
+    if (error instanceof SkillExistsError) {
+      return `A skill named "${error.name}" already exists at ${error.path}. Choose a different name or delete the existing skill first.`;
+    }
+
+    if (error instanceof Error) {
+      // Generic error with message
+      return `Error: ${error.message}. If this issue persists, check the logs for more details.`;
+    }
+
+    // Unknown error type
+    return 'An unexpected error occurred. Check the application logs for more information.';
   }
 
   /**
-   * Create permission denied error
+   * Log error with context
    */
-  public static permissionDenied(filePath: string, operation: string): AppError {
-    return new AppError(
-      ERROR_CODES.EACCES,
-      `Permission denied: Cannot ${operation} ${filePath}`,
-      'Permission denied',
-      'Check file permissions or run the application with appropriate privileges.'
-    );
+  static log(error: unknown, context: string): void {
+    if (error instanceof Error) {
+      logger.error(error.message, context, {
+        name: error.name,
+        stack: error.stack,
+      });
+    } else {
+      logger.error('Unknown error', context, error);
+    }
   }
 
   /**
-   * Create invalid input error
+   * Check if error is actionable (has specific guidance)
    */
-  public static invalidInput(field: string, value: any, reason: string): AppError {
-    return new AppError(
-      ERROR_CODES.EINVAL,
-      `Invalid ${field}: ${reason}`,
-      `Invalid ${field}`,
-      `Please provide a valid ${field}. ${reason}`
+  static isActionable(error: unknown): boolean {
+    return (
+      error instanceof FileNotFoundError ||
+      error instanceof PermissionError ||
+      error instanceof YAMLParseError ||
+      error instanceof ConfigurationError ||
+      error instanceof SkillExistsError
     );
-  }
-
-  /**
-   * Create file already exists error
-   */
-  public static fileAlreadyExists(filePath: string): AppError {
-    return new AppError(
-      ERROR_CODES.EEXIST,
-      `File already exists: ${filePath}`,
-      'File already exists',
-      'Choose a different name or delete the existing file first.'
-    );
-  }
-
-  /**
-   * Create not a directory error
-   */
-  public static notADirectory(path: string): AppError {
-    return new AppError(
-      ERROR_CODES.ENOTDIR,
-      `Not a directory: ${path}`,
-      'Not a directory',
-      'The selected path is not a directory. Please choose a valid directory.'
-    );
-  }
-
-  /**
-   * Create path validation error (security violation)
-   */
-  public static pathValidationFailed(attemptedPath: string): AppError {
-    logger.warn('Security', 'Path validation failed', { attemptedPath });
-
-    return new AppError(
-      ERROR_CODES.EPATH,
-      `Path validation failed: ${attemptedPath} is outside allowed directories`,
-      'Access denied for security',
-      'You can only access files within your project or global skill directories.'
-    );
-  }
-
-  /**
-   * Create parse error (invalid YAML/markdown)
-   */
-  public static parseError(filePath: string, details: string): AppError {
-    return new AppError(
-      ERROR_CODES.EPARSE,
-      `Failed to parse ${filePath}: ${details}`,
-      'Failed to parse file',
-      'Check that the file has valid YAML frontmatter and Markdown syntax.'
-    );
-  }
-
-  /**
-   * Create configuration error
-   */
-  public static configurationError(message: string, action: string): AppError {
-    return new AppError(
-      ERROR_CODES.ECONFIG,
-      message,
-      'Configuration error',
-      action
-    );
-  }
-
-  /**
-   * Create skill operation error
-   */
-  public static skillError(operation: string, skillName: string, reason: string): AppError {
-    return new AppError(
-      ERROR_CODES.ESKILL,
-      `Failed to ${operation} skill "${skillName}": ${reason}`,
-      `Failed to ${operation} skill`,
-      `Please try again or check the skill file for issues.`
-    );
-  }
-
-  /**
-   * Create directory operation error
-   */
-  public static directoryError(operation: string, dirPath: string, reason: string): AppError {
-    return new AppError(
-      ERROR_CODES.EDIRECTORY,
-      `Failed to ${operation} directory "${dirPath}": ${reason}`,
-      `Failed to ${operation} directory`,
-      'Check that the directory exists and you have the necessary permissions.'
-    );
-  }
-
-  /**
-   * Wrap unknown errors with context
-   */
-  public static wrapUnknown(error: unknown, context: string): AppError {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error('ErrorHandler', `Unexpected error in ${context}`, {
-      error: message,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-
-    return new AppError(
-      'EUNKNOWN',
-      `Unexpected error in ${context}: ${message}`,
-      'An unexpected error occurred',
-      'Please try again. If the problem persists, check the logs for details.'
-    );
-  }
-
-  /**
-   * Handle errors in IPC handlers
-   */
-  public static handleIPCError(error: unknown, operation: string): { success: false; error: any } {
-    const appError =
-      error instanceof AppError
-        ? error
-        : ErrorHandler.wrapUnknown(error, operation);
-
-    logger.error('IPC', `Error in ${operation}`, {
-      code: appError.code,
-      message: appError.message,
-    });
-
-    return {
-      success: false,
-      error: appError.toIPCError(),
-    };
   }
 }

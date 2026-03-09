@@ -3,7 +3,7 @@
 **Feature Branch**: `001-skill-manager`
 **Created**: 2026-03-07
 **Status**: Draft
-**Input**: User description: "根据 skillsMM 需求规格说明书 V1.2.md 生成spec"
+**Input**: User description: "根据 skillsMN 需求规格说明书 V1.2.md 生成spec"
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -18,7 +18,7 @@ As a Claude Code user, I want to view, create, edit, and delete all my local ski
 **Acceptance Scenarios**:
 
 1. **Given** the application is launched for the first time, **When** the user selects a project directory, **Then** the system scans and displays all skills from both project and global directories within 2 seconds
-2. **Given** the skill list is displayed, **When** the user clicks "New Skill", **Then** a new skill file with proper frontmatter template is created and opened in the editor
+2. **Given** the skill list is displayed, **When** the user clicks "New Skill", **Then** a new skill directory with kebab-case name is created containing a `skill.md` file with proper frontmatter template and opened in the editor
 3. **Given** a skill exists in the list, **When** the user edits and saves it, **Then** the file is updated within 100ms and the list refreshes with new metadata
 4. **Given** a skill exists, **When** the user deletes it, **Then** the file moves to system recycle bin and disappears from the list after confirmation
 
@@ -51,9 +51,9 @@ As a skill explorer, I want to search GitHub for publicly available skills and p
 
 **Acceptance Scenarios**:
 
-1. **Given** the user is on the "Public Search" tab, **When** they type "React hooks" and wait 500ms, **Then** GitHub search results display repositories containing .skill files with names, descriptions, and update times
+1. **Given** the user is on the "Public Search" tab, **When** they type "React hooks" and wait 500ms, **Then** GitHub search results display repositories containing skill directories (directories with `skill.md` files) with names, descriptions, and update times
 2. **Given** search results are shown, **When** the user clicks a skill file, **Then** a preview window displays the full skill content fetched from GitHub raw URL without downloading the entire repository
-3. **Given** a skill is previewed, **When** the user clicks "Install" and selects target directory, **Then** the skill file downloads and appears in the local skill list with appropriate conflict handling (overwrite/rename/skip)
+3. **Given** a skill is previewed, **When** the user clicks "Install" and selects target directory, **Then** the entire skill directory downloads and appears in the local skill list with appropriate conflict handling (overwrite/rename/skip)
 
 ---
 
@@ -68,9 +68,9 @@ As a team developer, I want to connect to my team's private GitHub repositories,
 **Acceptance Scenarios**:
 
 1. **Given** the user is in Settings, **When** they add a private repository URL and valid PAT, **Then** the system verifies access and saves the configuration with encrypted credentials
-2. **Given** a private repository is configured, **When** the user selects it from the "Private Repos" tab, **Then** all .skill files in the repository are listed with paths and last commit times within 5 seconds
-3. **Given** a private repository skill is shown, **When** the user clicks "Install", **Then** it downloads to the selected local directory and marks the source as that private repository
-4. **Given** a skill installed from a private repo, **When** the remote version is updated and the user clicks "Update", **Then** the local file is replaced with the latest version after confirmation and optional backup
+2. **Given** a private repository is configured, **When** the user selects it from the "Private Repos" tab, **Then** all skill directories (directories containing `skill.md` files) in the repository are listed with paths and last commit times within 5 seconds
+3. **Given** a private repository skill is shown, **When** the user clicks "Install", **Then** the entire skill directory downloads to the selected local directory and marks the source as that private repository
+4. **Given** a skill installed from a private repo, **When** the remote version is updated and the user clicks "Update", **Then** the local skill directory is replaced with the latest version after confirmation and optional backup
 
 ---
 
@@ -111,7 +111,7 @@ As a user, I want to configure default behaviors, manage credentials, and custom
 
 - **FR-001**: System MUST scan and display all skills from user-specified project directory and Claude Code global directory (`~/.claude/skills/`)
 - **FR-002**: System MUST detect Claude project directories by verifying `.claude` folder existence
-- **FR-003**: Users MUST be able to create new skills with auto-generated filenames (kebab-case) and frontmatter templates
+- **FR-003**: Users MUST be able to create new skills with auto-generated directory names (kebab-case) and frontmatter templates in `skill.md` files
 - **FR-004**: System MUST provide an embedded editor (Monaco Editor) with YAML and Markdown syntax highlighting
 - **FR-005**: Users MUST be able to save skill files with <100ms latency
 - **FR-006**: System MUST move deleted skills to system recycle bin (not permanent deletion)
@@ -119,9 +119,9 @@ As a user, I want to configure default behaviors, manage credentials, and custom
 - **FR-008**: AI generation MUST support streaming responses with chunks arriving every 200ms minimum
 - **FR-009**: System MUST support multiple AI generation modes: new skill, modify existing, insert at cursor, replace selection
 - **FR-010**: System MUST encrypt and store GitHub PATs and AI API keys using Electron safeStorage
-- **FR-011**: System MUST search GitHub for repositories containing `.skill` files with 500ms debounce
-- **FR-012**: System MUST display skill previews from GitHub raw URLs without full repository downloads
-- **FR-013**: System MUST handle installation conflicts with options: overwrite, rename with timestamp, or skip
+- **FR-011**: System MUST search GitHub for repositories containing skill directories (directories with `skill.md` files) with 500ms debounce
+- **FR-012**: System MUST display skill previews by fetching and showing the `skill.md` file content from GitHub raw URLs without downloading the entire skill directory or repository
+- **FR-013**: System MUST detect installation conflicts by checking for directory name collisions and provide resolution options: overwrite, rename with timestamp, or skip
 - **FR-014**: System MUST validate all file operations are within authorized directories (project/global skill directories) to prevent path traversal
 - **FR-015**: System MUST monitor local skill directories for real-time changes and refresh the skill list
 - **FR-016**: System MUST support configuration of multiple private GitHub repositories with individual PATs
@@ -132,7 +132,7 @@ As a user, I want to configure default behaviors, manage credentials, and custom
 
 ### Key Entities
 
-- **Skill**: A markdown file with YAML frontmatter containing name and description, representing a Claude Code capability or knowledge domain. Key attributes: file path, name, description, source (project/global/private/public), last modified time, file size.
+- **Skill**: A directory containing a `skill.md` file with YAML frontmatter (name and description) and markdown body, representing a Claude Code capability or knowledge domain. The directory may contain supporting files and nested subdirectories (e.g., `examples/`, `templates/`). Key attributes: directory path, name, description, source (project/global/private/public), last modified time, total directory size.
 - **Skill Directory**: A folder containing skill files. Two types: project directory (user-specified, typically `skills/` in project root) and global directory (Claude Code default, `~/.claude/skills/`).
 - **Private Repository**: A GitHub repository configured by the user for team skill sharing. Attributes: URL, associated PAT, last sync time, list of available skills.
 - **Search Result**: A GitHub repository or file match from public search. Attributes: repository name, description, skill file list with download URLs.
@@ -148,7 +148,7 @@ As a user, I want to configure default behaviors, manage credentials, and custom
 - **SC-003**: AI-generated skills contain valid YAML frontmatter and markdown structure in 95% of generations (validated by automated tests)
 - **SC-004**: AI streaming responses deliver first content chunk within 2 seconds and subsequent chunks every 200ms, with 90% of users reporting satisfaction with generation speed
 - **SC-005**: GitHub search returns results within 5 seconds with 500ms debounce, handling rate limit errors with clear guidance
-- **SC-006**: Skill installation from public or private repositories completes within 10 seconds for files under 1MB, with progress indication and conflict resolution
+- **SC-006**: Skill installation from public or private repositories completes within 10 seconds for skill directories under 1MB total size, with progress indication and conflict resolution
 - **SC-007**: Private repository skill updates are detected within 5 seconds of manual refresh, with one-click update completion
 - **SC-008**: Application startup completes in <3 seconds, with memory usage <300MB and idle CPU usage <5%
 - **SC-009**: 90% of error messages are actionable (contain specific problem description and suggested solution)
@@ -156,15 +156,25 @@ As a user, I want to configure default behaviors, manage credentials, and custom
 - **SC-011**: All file operations validate path boundaries, preventing path traversal attacks (verified by penetration testing)
 - **SC-012**: Users can complete core tasks (create, edit, install, AI-generate) without referring to documentation on first attempt, achieving 80% task success rate in usability testing
 
+## Clarifications
+
+### Session 2026-03-09
+
+- Q: What constitutes a "skill" - a single file or a directory structure? → A: A directory containing a `skill.md` file (with YAML frontmatter and markdown)
+- Q: When installing a skill from GitHub, what should be downloaded? → A: The entire skill directory (including any supporting files like examples, templates, etc.)
+- Q: What should be named in kebab-case when creating new skills? → A: The skill directory name (e.g., `my-skill/skill.md`)
+- Q: How are installation conflicts detected? → A: Directory name collision (e.g., installing `react-review/` when that directory already exists)
+- Q: Can skill directories contain nested subdirectories? → A: Yes, allow nested subdirectories within skill directories (e.g., `my-skill/examples/code.ts`)
+
 ## Assumptions
 
 - Users have Claude Code installed and are familiar with skill concepts
 - Users have GitHub accounts for accessing public and private repositories
 - Users have Anthropic API access for AI generation features
-- Default skill directory structure follows Agent Skills specification (SKILL.md files)
+- Default skill directory structure follows Agent Skills specification (skill.md files in skill directories)
 - Network connectivity is available for GitHub and AI service access
 - Users are developers comfortable with desktop applications and basic Git concepts
-- Skill files are typically under 1MB in size (larger files may have degraded performance)
+- Skill directories (including all contents and subdirectories) are typically under 1MB in total size (larger skill packages may have degraded performance)
 - The application runs on Windows 10/11, macOS 12+, or Linux (Ubuntu 20.04+)
 - Users accept dark theme as the default interface (light theme not in initial scope)
 - AI generation quality is acceptable with Claude 3 Sonnet model (Opus available for higher quality if needed)

@@ -1,23 +1,35 @@
 /**
- * Type declarations for Electron renderer APIs
+ * Electron API Type Definitions
+ *
+ * Type definitions for the Electron API exposed by preload script
  */
 
-import { IPCResponse } from './shared/types';
+import type {
+  Configuration,
+  Skill,
+  IPCResponse,
+  FSEvent,
+  SkillSource,
+} from '../../shared/types';
 
 export interface ElectronAPI {
-  configGet: () => Promise<IPCResponse<any>>;
-  configSet: (updates: any) => Promise<IPCResponse<any>>;
-  configValidateProjectDir: (path: string) => Promise<IPCResponse<any>>;
-  skillList: (filter?: any, sort?: any) => Promise<IPCResponse<any>>;
-  skillCreate: (name: string, targetDirectory: string, description?: string) => Promise<IPCResponse<any>>;
-  skillRead: (filePath: string) => Promise<IPCResponse<any>>;
-  skillUpdate: (filePath: string, content: string) => Promise<IPCResponse<any>>;
-  skillDelete: (filePath: string) => Promise<IPCResponse<any>>;
-  directoryScan: (directoryPath: string, recursive?: boolean) => Promise<IPCResponse<any>>;
-  directoryStartWatch: (directoryPath: string) => Promise<IPCResponse<any>>;
-  directoryStopWatch: (watcherId: string) => Promise<IPCResponse<any>>;
-  onDirectoryChange: (callback: (event: any) => void) => void;
-  removeDirectoryChangeListener: () => void;
+  // Skill operations
+  listSkills: (config?: Configuration) => Promise<IPCResponse<Skill[]>>;
+  getSkill: (path: string) => Promise<IPCResponse<{ metadata: Skill; content: string }>>;
+  createSkill: (name: string, directory: SkillSource) => Promise<IPCResponse<Skill>>;
+  updateSkill: (path: string, content: string) => Promise<IPCResponse<Skill>>;
+  deleteSkill: (path: string) => Promise<IPCResponse<void>>;
+  openFolder: (path: string) => Promise<IPCResponse<void>>;
+
+  // Configuration operations
+  loadConfig: () => Promise<IPCResponse<Configuration>>;
+  saveConfig: (config: Partial<Configuration>) => Promise<IPCResponse<Configuration>>;
+
+  // File system watching
+  startWatching: () => Promise<IPCResponse<void>>;
+  stopWatching: () => Promise<IPCResponse<void>>;
+  onFSChange: (callback: (event: FSEvent) => void) => void;
+  removeFSChangeListener: () => void;
 }
 
 declare global {
@@ -25,3 +37,5 @@ declare global {
     electronAPI: ElectronAPI;
   }
 }
+
+export {};

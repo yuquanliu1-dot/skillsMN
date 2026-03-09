@@ -1,108 +1,100 @@
 /**
- * Application configuration model
+ * Configuration Model
+ *
+ * User preferences and application settings
  */
 
-import * as path from 'path';
-import * as os from 'os';
+import {
+  Configuration,
+  InstallDirectory,
+  EditorMode,
+} from '../../shared/types';
+import {
+  DEFAULT_INSTALL_DIRECTORY,
+  DEFAULT_EDITOR_MODE,
+  DEFAULT_AUTO_REFRESH,
+} from '../../shared/constants';
 
-/**
- * Configuration with default values and validation
- */
-export class Configuration {
+export class ConfigurationModel {
   /**
-   * Absolute path to project skills directory
+   * Create default configuration
    */
-  public readonly projectSkillDir: string;
-
-  /**
-   * Absolute path to global skills directory
-   */
-  public readonly globalSkillDir: string;
-
-  /**
-   * Where new skills install by default
-   */
-  public readonly defaultInstallTarget: 'project' | 'global';
-
-  /**
-   * Default behavior when opening skills
-   */
-  public readonly editorDefaultMode: 'edit' | 'preview';
-
-  /**
-   * Whether to watch for file system changes
-   */
-  public readonly autoRefresh: boolean;
-
-  constructor(data: {
-    projectSkillDir: string;
-    globalSkillDir?: string;
-    defaultInstallTarget?: 'project' | 'global';
-    editorDefaultMode?: 'edit' | 'preview';
-    autoRefresh?: boolean;
-  }) {
-    this.projectSkillDir = data.projectSkillDir;
-    this.globalSkillDir = data.globalSkillDir || this.getDefaultGlobalSkillDir();
-    this.defaultInstallTarget = data.defaultInstallTarget ?? 'project';
-    this.editorDefaultMode = data.editorDefaultMode ?? 'edit';
-    this.autoRefresh = data.autoRefresh ?? true;
-  }
-
-  /**
-   * Get default global skill directory
-   */
-  private getDefaultGlobalSkillDir(): string {
-    const homeDir = os.homedir();
-    return path.join(homeDir, '.claude', 'skills');
+  static createDefault(): Configuration {
+    return {
+      projectDirectory: null,
+      defaultInstallDirectory: DEFAULT_INSTALL_DIRECTORY,
+      editorDefaultMode: DEFAULT_EDITOR_MODE,
+      autoRefresh: DEFAULT_AUTO_REFRESH,
+    };
   }
 
   /**
    * Validate configuration
    */
-  public validate(): { isValid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    if (!this.projectSkillDir && typeof this.projectSkillDir !== 'string') {
-      errors.push('Project skill directory must be a string (can be empty for initial setup)');
+  static validate(config: Partial<Configuration>): Configuration {
+    // Validate projectDirectory
+    if (config.projectDirectory !== null && config.projectDirectory !== undefined) {
+      if (typeof config.projectDirectory !== 'string') {
+        throw new Error('Project directory must be a string or null');
+      }
+      // Additional validation can be added here (e.g., check if directory exists)
     }
 
-    if (this.projectSkillDir && !path.isAbsolute(this.projectSkillDir)) {
-      errors.push('Project skill directory must be an absolute path');
+    // Validate defaultInstallDirectory
+    const validInstallDirs: InstallDirectory[] = ['project', 'global'];
+    if (
+      config.defaultInstallDirectory &&
+      !validInstallDirs.includes(config.defaultInstallDirectory)
+    ) {
+      throw new Error('Default install directory must be "project" or "global"');
     }
 
-    if (!this.globalSkillDir || typeof this.globalSkillDir !== 'string') {
-      errors.push('Global skill directory must be a string');
+    // Validate editorDefaultMode
+    const validEditorModes: EditorMode[] = ['edit', 'preview'];
+    if (
+      config.editorDefaultMode &&
+      !validEditorModes.includes(config.editorDefaultMode)
+    ) {
+      throw new Error('Editor default mode must be "edit" or "preview"');
     }
 
-    if (!path.isAbsolute(this.globalSkillDir)) {
-      errors.push('Global skill directory must be an absolute path');
+    // Validate autoRefresh
+    if (
+      config.autoRefresh !== undefined &&
+      typeof config.autoRefresh !== 'boolean'
+    ) {
+      throw new Error('Auto-refresh must be a boolean');
     }
 
-    if (this.defaultInstallTarget !== 'project' && this.defaultInstallTarget !== 'global') {
-      errors.push('Default install target must be "project" or "global"');
-    }
-
-    if (this.editorDefaultMode !== 'edit' && this.editorDefaultMode !== 'preview') {
-      errors.push('Editor default mode must be "edit" or "preview"');
-    }
-
-    if (typeof this.autoRefresh !== 'boolean') {
-      errors.push('Auto refresh must be a boolean');
-    }
-
-    return { isValid: errors.length === 0, errors };
+    // Return validated config with defaults
+    return {
+      projectDirectory: config.projectDirectory ?? null,
+      defaultInstallDirectory: config.defaultInstallDirectory ?? DEFAULT_INSTALL_DIRECTORY,
+      editorDefaultMode: config.editorDefaultMode ?? DEFAULT_EDITOR_MODE,
+      autoRefresh: config.autoRefresh ?? DEFAULT_AUTO_REFRESH,
+    };
   }
 
   /**
-   * Create default configuration
+   * Merge partial configuration with existing configuration
    */
-  public static createDefault(): Configuration {
-    return new Configuration({
-      projectSkillDir: '',
-      globalSkillDir: '',
-      defaultInstallTarget: 'project',
-      editorDefaultMode: 'edit',
-      autoRefresh: true,
-    });
+  static merge(
+    existing: Configuration,
+    updates: Partial<Configuration>
+  ): Configuration {
+    return {
+      projectDirectory: updates.projectDirectory ?? existing.projectDirectory,
+      defaultInstallDirectory:
+        updates.defaultInstallDirectory ?? existing.defaultInstallDirectory,
+      editorDefaultMode: updates.editorDefaultMode ?? existing.editorDefaultMode,
+      autoRefresh: updates.autoRefresh ?? existing.autoRefresh,
+    };
+  }
+
+  /**
+   * Check if configuration is complete (has project directory)
+   */
+  static isComplete(config: Configuration): boolean {
+    return config.projectDirectory !== null;
   }
 }

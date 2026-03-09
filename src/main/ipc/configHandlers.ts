@@ -1,108 +1,68 @@
 /**
+ * Configuration IPC Handlers
+ *
  * IPC handlers for configuration operations
  */
 
 import { ipcMain } from 'electron';
-import {
-  ConfigSetRequest,
-  ConfigValidateProjectDirRequest,
-} from '../../shared/types';
-import { ConfigService } from '../services/ConfigService';
-import { ErrorHandler } from '../utils/ErrorHandler';
 import { logger } from '../utils/Logger';
+import { ErrorHandler } from '../utils/ErrorHandler';
+import { ConfigService } from '../services/ConfigService';
+import { IPC_CHANNELS } from '../../shared/constants';
+import { IPCResponse, Configuration } from '../../shared/types';
 
 let configService: ConfigService | null = null;
 
 /**
- * Get or create ConfigService instance
- */
-function getConfigService(): ConfigService {
-  if (!configService) {
-    configService = new ConfigService();
-  }
-  return configService;
-}
-
-/**
- * Register configuration IPC handlers
+ * Initialize configuration service and register IPC handlers
  */
 export function registerConfigHandlers(): void {
-  logger.info('ConfigHandlers', 'Registering configuration IPC handlers');
+  // Initialize config service
+  configService = new ConfigService();
+  logger.info('Configuration service initialized', 'ConfigHandlers');
 
-  // config:get - Get current configuration
-  ipcMain.handle('config:get', async () => {
-    try {
-      const service = getConfigService();
-      const config = service.get();
-
-      return {
-        success: true,
-        data: config,
-      };
-    } catch (error) {
-      return ErrorHandler.handleIPCError(error, 'config:get');
-    }
-  });
-
-  // config:set - Update configuration
-  ipcMain.handle('config:set', async (_event, updates: ConfigSetRequest) => {
-    const startTime = Date.now();
-
-    try {
-      logger.info('ConfigHandlers', 'Updating configuration', { updates });
-
-      const service = getConfigService();
-      const updated = service.set(updates);
-
-      logger.perf('ConfigHandlers', 'config:set', Date.now() - startTime);
-
-      return {
-        success: true,
-        data: updated,
-      };
-    } catch (error) {
-      return ErrorHandler.handleIPCError(error, 'config:set');
-    }
-  });
-
-  // config:validate-project-dir - Validate a project directory
+  // Handler for config:load
   ipcMain.handle(
-    'config:validate-project-dir',
-    async (_event, request: ConfigValidateProjectDirRequest) => {
-      const startTime = Date.now();
-
+    IPC_CHANNELS.CONFIG_LOAD,
+    async (): Promise<IPCResponse<Configuration>> => {
       try {
-        logger.info('ConfigHandlers', 'Validating project directory', {
-          path: request.path,
-        });
-
-        const service = getConfigService();
-        const result = service.validateProjectDirectory(request.path);
-
-        logger.perf('ConfigHandlers', 'config:validate-project-dir', Date.now() - startTime, {
-          isValid: result.isValid,
-        });
-
-        return {
-          success: true,
-          data: result,
-        };
+        logger.debug('Loading configuration', 'ConfigHandlers');
+        const config = await configService!.load();
+        return { success: true, data: config };
       } catch (error) {
-        return ErrorHandler.handleIPCError(error, 'config:validate-project-dir');
+        const message = ErrorHandler.format(error);
+        logger.error('Failed to load configuration', 'ConfigHandlers', error);
+        return { success: false, error: message };
       }
     }
   );
 
-  logger.info('ConfigHandlers', 'Configuration IPC handlers registered');
+  // Handler for config:save
+  ipcMain.handle(
+    IPC_CHANNELS.CONFIG_SAVE,
+    async (
+      _event,
+      { config }: { config: Partial<Configuration> }
+    ): Promise<IPCResponse<Configuration>> => {
+      try {
+        logger.debug('Saving configuration', 'ConfigHandlers', config);
+        const updated = await configService!.save(config);
+        logger.info('Configuration saved successfully', 'ConfigHandlers');
+        return { success: true, data: updated };
+      } catch (error) {
+        const message = ErrorHandler.format(error);
+        logger.error('Failed to save configuration', 'ConfigHandlers', error);
+        return { success: false, error: message };
+      }
+    }
+  );
+
+  logger.info('Configuration IPC handlers registered', 'ConfigHandlers');
 }
 
 /**
- * Clean up config handlers
+ * Get config service instance
  */
-export function cleanupConfigHandlers(): void {
-  configService = null;
-  ipcMain.removeHandler('config:get');
-  ipcMain.removeHandler('config:set');
-  ipcMain.removeHandler('config:validate-project-dir');
-  logger.info('ConfigHandlers', 'Configuration IPC handlers cleaned up');
+export function getConfigService(): ConfigService | null {
+  return configService;
 }

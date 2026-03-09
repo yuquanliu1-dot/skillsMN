@@ -1,90 +1,108 @@
 /**
- * Represents a directory containing skill files
+ * Skill Directory Model
+ *
+ * Represents a parent folder containing skill directories
  */
 
-import * as path from 'path';
-import * as fs from 'fs';
+import fs from 'fs';
+import path from 'path';
+import { logger } from '../utils/Logger';
+import { SkillDirectory, SkillSource } from '../../shared/types';
+import { CLAUDE_DIR_NAME, SKILLS_DIR_NAME, SKILL_FILE_NAME } from '../../shared/constants';
 
-/**
- * Skill directory with metadata
- */
-export class SkillDirectory {
+export class SkillDirectoryModel {
   /**
-   * Unique identifier (canonical path)
+   * Create a skill directory model from a path
    */
-  public readonly id: string;
+  static fromPath(dirPath: string, type: SkillSource): SkillDirectory {
+    const resolved = path.resolve(dirPath);
+    const exists = fs.existsSync(resolved);
 
-  /**
-   * Absolute canonical directory path
-   */
-  public readonly path: string;
+    const directory: SkillDirectory = {
+      path: resolved,
+      type,
+      exists,
+    };
 
-  /**
-   * Directory type
-   */
-  public readonly type: 'project' | 'global';
+    logger.debug(`Skill directory model created: ${type}`, 'SkillDirectoryModel', {
+      path: resolved,
+      exists,
+    });
 
-  /**
-   * Whether directory currently exists on disk
-   */
-  public readonly exists: boolean;
-
-  /**
-   * Number of skills in directory (cached)
-   */
-  public readonly skillCount: number = 0;
-
-  /**
-   * Last scan timestamp
-   */
-  public readonly lastScanned: Date | null;
-
-  constructor(data: {
-    id: string;
-    path: string;
-    type: 'project' | 'global';
-    exists: boolean;
-    skillCount?: number;
-    lastScanned?: Date | null;
-  }) {
-    this.id = data.id;
-    this.path = data.path;
-    this.type = data.type;
-    this.exists = data.exists;
-    this.skillCount = data.skillCount ?? 0;
-    this.lastScanned = data.lastScanned ?? null;
+    return directory;
   }
 
   /**
-   * Validate directory data
+   * Get global skills directory path (~/.claude/skills)
    */
-  public validate(): { isValid: boolean; errors: string[] } {
-    const errors: string[] = [];
+  static getGlobalDirectory(): string {
+    const homeDir = process.env.HOME || process.env.USERPROFILE;
+    if (!homeDir) {
+      throw new Error('Could not determine home directory');
+    }
+    return path.join(homeDir, CLAUDE_DIR_NAME, SKILLS_DIR_NAME);
+  }
 
-    if (!this.path || typeof this.path !== 'string') {
-      errors.push('Directory path must to be a string');
+  /**
+   * Get project skills directory path (<project>/.claude/skills)
+   */
+  static getProjectDirectory(projectDir: string): string {
+    return path.join(projectDir, CLAUDE_DIR_NAME, SKILLS_DIR_NAME);
+  }
+
+  /**
+   * Validate that a directory is a valid Claude project directory
+   */
+  static isValidProjectDirectory(dirPath: string): boolean {
+    try {
+      const claudeDir = path.join(dirPath, CLAUDE_DIR_NAME);
+      return fs.existsSync(claudeDir) && fs.statSync(claudeDir).isDirectory();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Ensure directory exists, create if necessary
+   */
+  static async ensureDirectory(dirPath: string): Promise<void> {
+    if (!fs.existsSync(dirPath)) {
+      await fs.promises.mkdir(dirPath, { recursive: true });
+      logger.info(`Created skill directory: ${dirPath}`, 'SkillDirectoryModel');
+    }
+  }
+
+  /**
+   * Get list of skill directories (subdirectories containing skill.md)
+   */
+  static async getSkillDirectories(dirPath: string): Promise<string[]> {
+    if (!fs.existsSync(dirPath)) {
+      logger.warn(`Directory does not exist: ${dirPath}`, 'SkillDirectoryModel');
+      return [];
     }
 
-    if (!path.isAbsolute(this.path)) {
-      errors.push('Directory path needs to be absolute');
-    }
+    try {
+      const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+      const skillDirs: string[] = [];
 
-    if (this.exists && !fs.existsSync(this.path)) {
-      errors.push('Directory does not exist on disk');
-    }
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        if (entry.name.startsWith('.')) continue;
 
-    if (this.exists && !fs.statSync(this.path).isDirectory()) {
-      errors.push('Path exists but is not a directory');
-    }
+        const skillPath = path.join(dirPath, entry.name);
+        const skillFile = path.join(skillPath, SKILL_FILE_NAME);
 
-    if (this.type !== 'project' && this.type !== 'global') {
-      errors.push('Directory type needs to be either "project" or "global"');
-    }
+        // Only include directories that contain skill.md
+        if (fs.existsSync(skillFile)) {
+          skillDirs.push(skillPath);
+        }
+      }
 
-    if (typeof this.skillCount !== 'number' || this.skillCount < 0) {
-      errors.push('Skill count needs to be a non-negative number');
+      logger.debug(`Found ${skillDirs.length} skill directories`, 'SkillDirectoryModel', { dirPath });
+      return skillDirs;
+    } catch (error) {
+      logger.error('Failed to read skill directories', 'SkillDirectoryModel', { dirPath, error });
+      return [];
     }
-
-    return { isValid: errors.length === 0, errors };
   }
 }

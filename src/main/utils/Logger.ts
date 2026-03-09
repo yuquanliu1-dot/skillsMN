@@ -1,154 +1,87 @@
 /**
- * Logger utility for structured logging
+ * Logger Utility
+ *
+ * Provides structured logging with timestamps and context for the main process
  */
-
-import * as fs from 'fs';
-import * as path from 'path';
-import { app } from 'electron';
 
 export enum LogLevel {
-  DEBUG = 'debug',
-  INFO = 'info',
-  WARN = 'warn',
-  ERROR = 'error',
+  DEBUG = 'DEBUG',
+  INFO = 'INFO',
+  WARN = 'WARN',
+  ERROR = 'ERROR',
 }
 
-export interface LogEntry {
+interface LogEntry {
   timestamp: string;
   level: LogLevel;
-  context: string;
+  context?: string;
   message: string;
-  data?: Record<string, any>;
-  duration?: number;
+  data?: unknown;
 }
 
-/**
- * Structured logger with file output
- */
-export class Logger {
-  private static instance: Logger;
-  private logFile: string;
-  private logBuffer: LogEntry[] = [];
-  private flushInterval: NodeJS.Timeout | null = null;
+class Logger {
+  private formatTimestamp(): string {
+    return new Date().toISOString();
+  }
 
-  private constructor() {
-    const logDir = path.join(app.getPath('userData'), 'logs');
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
+  private formatEntry(entry: LogEntry): string {
+    const parts = [
+      `[${entry.timestamp}]`,
+      `[${entry.level}]`,
+      entry.context ? `[${entry.context}]` : '',
+      entry.message,
+    ].filter(Boolean);
+
+    let output = parts.join(' ');
+
+    if (entry.data !== undefined) {
+      output += ` | ${JSON.stringify(entry.data, null, 2)}`;
     }
-    this.logFile = path.join(logDir, 'app.log');
-    this.startFlushInterval();
+
+    return output;
   }
 
-  public static getInstance(): Logger {
-    if (!Logger.instance) {
-      Logger.instance = new Logger();
-    }
-    return Logger.instance;
-  }
-
-  /**
-   * Log debug message
-   */
-  public debug(context: string, message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.DEBUG, context, message, data);
-  }
-
-  /**
-   * Log info message
-   */
-  public info(context: string, message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.INFO, context, message, data);
-  }
-
-  /**
-   * Log warning message
-   */
-  public warn(context: string, message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.WARN, context, message, data);
-  }
-
-  /**
-   * Log error message
-   */
-  public error(context: string, message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.ERROR, context, message, data);
-  }
-
-  /**
-   * Log performance metric
-   */
-  public perf(context: string, operation: string, duration: number, data?: Record<string, any>): void {
-    this.log(LogLevel.INFO, context, operation, { ...data, duration });
-  }
-
-  /**
-   * Core logging method
-   */
-  private log(level: LogLevel, context: string, message: string, data?: Record<string, any>): void {
+  private log(level: LogLevel, message: string, context?: string, data?: unknown): void {
     const entry: LogEntry = {
-      timestamp: new Date().toISOString(),
+      timestamp: this.formatTimestamp(),
       level,
       context,
       message,
       data,
     };
 
-    // Add to buffer
-    this.logBuffer.push(entry);
+    const formatted = this.formatEntry(entry);
 
-    // Also log to console for errors and warnings
-    if (level === LogLevel.ERROR || level === LogLevel.WARN) {
-      console.error(`[${level.toUpperCase()}] [${context}] ${message}`, data || '');
-    } else {
-      console.log(`[${level.toUpperCase()}] [${context}] ${message}`, data || '');
-    }
-
-    // Flush if buffer is large
-    if (this.logBuffer.length >= 10) {
-      this.flush();
-    }
-  }
-
-  /**
-   * Start interval to flush logs to file
-   */
-  private startFlushInterval(): void {
-    this.flushInterval = setInterval(() => {
-      this.flush();
-    }, 5000); // Flush every 5 seconds
-  }
-
-  /**
-   * Flush log buffer to file
-   */
-  public flush(): void {
-    if (this.logBuffer.length === 0) {
-      return;
-    }
-
-    try {
-      const logLines = this.logBuffer
-        .map(entry => JSON.stringify(entry))
-        .join('\n');
-
-      fs.appendFileSync(this.logFile, logLines + '\n', 'utf8');
-      this.logBuffer = [];
-    } catch (error) {
-      console.error('Failed to write logs to file:', error);
+    switch (level) {
+      case LogLevel.ERROR:
+        console.error(formatted);
+        break;
+      case LogLevel.WARN:
+        console.warn(formatted);
+        break;
+      case LogLevel.DEBUG:
+        console.debug(formatted);
+        break;
+      default:
+        console.log(formatted);
     }
   }
 
-  /**
-   * Clean up on app shutdown
-   */
-  public cleanup(): void {
-    if (this.flushInterval) {
-      clearInterval(this.flushInterval);
-    }
-    this.flush();
+  debug(message: string, context?: string, data?: unknown): void {
+    this.log(LogLevel.DEBUG, message, context, data);
+  }
+
+  info(message: string, context?: string, data?: unknown): void {
+    this.log(LogLevel.INFO, message, context, data);
+  }
+
+  warn(message: string, context?: string, data?: unknown): void {
+    this.log(LogLevel.WARN, message, context, data);
+  }
+
+  error(message: string, context?: string, data?: unknown): void {
+    this.log(LogLevel.ERROR, message, context, data);
   }
 }
 
-// Export singleton instance
-export const logger = Logger.getInstance();
+export const logger = new Logger();

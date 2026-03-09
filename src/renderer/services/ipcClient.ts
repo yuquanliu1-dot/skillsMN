@@ -1,148 +1,115 @@
 /**
- * IPC Client - Wrapper for renderer-to-main communication
- * Provides typed methods for all IPC operations
+ * IPC Client Service
+ *
+ * Provides type-safe IPC communication from renderer to main process
  */
 
-import {
-  ConfigGetResponse,
-  ConfigSetRequest,
-  ConfigSetResponse,
-  ConfigValidateProjectDirResponse,
-  SkillListResponse,
-  SkillCreateRequest,
-  SkillCreateResponse,
-  SkillReadRequest,
-  SkillReadResponse,
-  SkillUpdateRequest,
-  SkillUpdateResponse,
-  SkillDeleteRequest,
-  SkillDeleteResponse,
-  DirectoryScanResponse,
-  DirectoryStartWatchResponse,
-  DirectoryStopWatchResponse,
-  DirectoryChangeEvent,
+import type {
+  Configuration,
+  Skill,
+  FSEvent,
+  SkillSource,
 } from '../../shared/types';
 
 /**
- * IPC Client wrapper with typed methods
+ * IPC Client
+ *
+ * Wrapper around electronAPI with error handling
  */
-export class IPCClient {
-  /**
-   * Configuration operations
-   */
-  config = {
-    /**
-     * Get current configuration
-     */
-    get: async (): Promise<ConfigGetResponse> => {
-      return window.electronAPI.configGet();
-    },
+export const ipcClient = {
+  // ============================================================================
+  // Skill Operations
+  // ============================================================================
 
-    /**
-     * Update configuration
-     */
-    set: async (updates: ConfigSetRequest): Promise<ConfigSetResponse> => {
-      return window.electronAPI.configSet(updates);
-    },
+  async listSkills(config?: Configuration): Promise<Skill[]> {
+    const response = await window.electronAPI.listSkills(config);
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+    return response.data!;
+  },
 
-    /**
-     * Validate project directory
-     */
-    validateProjectDir: async (path: string): Promise<ConfigValidateProjectDirResponse> => {
-        return window.electronAPI.configValidateProjectDir(path);
-      },
-  };
+  async getSkill(path: string): Promise<{ metadata: Skill; content: string }> {
+    const response = await window.electronAPI.getSkill(path);
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+    return response.data!;
+  },
 
-  /**
-   * Skill operations
-   */
-  skill = {
-    /**
-     * List all skills
-     */
-    list: async (
-      filter?: { source?: 'project' | 'global'; searchTerm?: string },
-      sort?: { field: 'name' | 'modifiedAt'; direction: 'asc' | 'desc' }
-    ): Promise<SkillListResponse> => {
-      return window.electronAPI.skillList(filter, sort);
-    },
+  async createSkill(name: string, directory: SkillSource): Promise<Skill> {
+    const response = await window.electronAPI.createSkill(name, directory);
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+    return response.data!;
+  },
 
-    /**
-     * Create a new skill
-     */
-    create: async (
-      name: string,
-      targetDirectory: string,
-      description?: string
-    ): Promise<SkillCreateResponse> => {
-      return window.electronAPI.skillCreate(name, targetDirectory, description);
-    },
+  async updateSkill(path: string, content: string): Promise<Skill> {
+    const response = await window.electronAPI.updateSkill(path, content);
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+    return response.data!;
+  },
 
-    /**
-     * Read skill content
-     */
-    read: async (filePath: string): Promise<SkillReadResponse> => {
-      return window.electronAPI.skillRead(filePath);
-    },
+  async deleteSkill(path: string): Promise<void> {
+    const response = await window.electronAPI.deleteSkill(path);
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+  },
 
-    /**
-     * Update skill content
-     */
-    update: async (filePath: string, content: string): Promise<SkillUpdateResponse> => {
-      return window.electronAPI.skillUpdate(filePath, content);
-    },
+  async openFolder(path: string): Promise<void> {
+    const response = await window.electronAPI.openFolder(path);
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+  },
 
-    /**
-     * Delete a skill
-     */
-    delete: async (filePath: string): Promise<SkillDeleteResponse> => {
-      return window.electronAPI.skillDelete(filePath);
-    },
-  };
+  // ============================================================================
+  // Configuration Operations
+  // ============================================================================
 
-  /**
-   * Directory operations
-   */
-  directory = {
-    /**
-     * Scan directory for skills
-     */
-    scan: async (
-      directoryPath: string,
-      recursive = false
-    ): Promise<DirectoryScanResponse> => {
-      return window.electronAPI.directoryScan(directoryPath, recursive);
-    },
+  async loadConfig(): Promise<Configuration> {
+    const response = await window.electronAPI.loadConfig();
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+    return response.data!;
+  },
 
-    /**
-     * Start watching directory for changes
-     */
-    startWatch: async (directoryPath: string): Promise<DirectoryStartWatchResponse> => {
-      return window.electronAPI.directoryStartWatch(directoryPath);
-    },
+  async saveConfig(config: Partial<Configuration>): Promise<Configuration> {
+    const response = await window.electronAPI.saveConfig(config);
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+    return response.data!;
+  },
 
-    /**
-     * Stop watching directory
-     */
-    stopWatch: async (watcherId: string): Promise<DirectoryStopWatchResponse> => {
-      return window.electronAPI.directoryStopWatch(watcherId);
-    },
+  // ============================================================================
+  // File System Watching
+  // ============================================================================
 
-    /**
-     * Subscribe to directory change events
-     */
-    onChange: (callback: (event: DirectoryChangeEvent) => void): (() => void) => {
-      window.electronAPI.onDirectoryChange(callback);
+  async startWatching(): Promise<void> {
+    const response = await window.electronAPI.startWatching();
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+  },
 
-      // Return unsubscribe function
-      return () => {
-        window.electronAPI.removeDirectoryChangeListener();
-      };
-    },
-  };
-}
+  async stopWatching(): Promise<void> {
+    const response = await window.electronAPI.stopWatching();
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+  },
 
-/**
- * Singleton instance
- */
-export const ipcClient = new IPCClient();
+  onFSChange(callback: (event: FSEvent) => void): void {
+    window.electronAPI.onFSChange(callback);
+  },
+
+  removeFSChangeListener(): void {
+    window.electronAPI.removeFSChangeListener();
+  },
+};

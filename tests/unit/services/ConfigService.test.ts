@@ -1,272 +1,163 @@
 /**
- * Unit tests for ConfigService
+ * ConfigService Unit Tests
  */
 
-import { ConfigService } from '../../../src/main/services/ConfigService';
-import { Configuration } from '../../../src/main/models/Configuration';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import fs from 'fs';
+import { ConfigService } from '../../src/main/services/ConfigService';
+import { Configuration } from '../../src/shared/types';
+
+// Mock Electron app
+jest.mock('electron', () => ({
+  app: {
+    getPath: jest.fn(() => '/Users/test/.config/skillsmn'),
+  },
+}));
+
+// Mock fs
+jest.mock('fs', () => ({
+  existsSync: jest.fn(),
+  promises: {
+    readFile: jest.fn(),
+    writeFile: jest.fn(),
+  },
+}));
 
 describe('ConfigService', () => {
   let configService: ConfigService;
-  let tempDir: string;
-  let configPath: string;
 
   beforeEach(() => {
-    // Create temp directory for testing
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skillsmm-config-test-'));
-    configPath = path.join(tempDir, 'config.json');
-    configService = new ConfigService(configPath);
-  });
-
-  afterEach(() => {
-    // Cleanup temp directory
-    if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
-
-  afterAll(() => {
-    // Cleanup logger to prevent open handles
-    const { logger } = require('../../../src/main/utils/Logger');
-    logger.cleanup();
+    jest.clearAllMocks();
+    configService = new ConfigService();
   });
 
   describe('load', () => {
-    it('should create default config if file does not exist', () => {
-      const config = configService.load();
+    it('should create default config when file does not exist', async () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(false);
 
-      expect(config).toBeDefined();
-      expect(config.projectSkillDir).toBe('');
-      expect(config.globalSkillDir).toContain('.claude');
-      expect(config.defaultInstallTarget).toBe('project');
-      expect(config.editorDefaultMode).toBe('edit');
-      expect(config.autoRefresh).toBe(true);
-    });
+      const config = await configService.load();
 
-    it('should load existing config from file', () => {
-      const testConfig = new Configuration({
-        projectSkillDir: '/test/project',
-        globalSkillDir: '/test/global',
-        defaultInstallTarget: 'global',
-        editorDefaultMode: 'preview',
-        autoRefresh: false,
+      expect(config).toEqual({
+        projectDirectory: null,
+        defaultInstallDirectory: 'project',
+        editorDefaultMode: 'edit',
+        autoRefresh: true,
       });
 
-      fs.writeFileSync(configPath, JSON.stringify(testConfig), 'utf8');
-
-      const config = configService.load();
-
-      expect(config.projectSkillDir).toBe(testConfig.projectSkillDir);
-      expect(config.globalSkillDir).toBe(testConfig.globalSkillDir);
-      expect(config.defaultInstallTarget).toBe(testConfig.defaultInstallTarget);
-      expect(config.editorDefaultMode).toBe(testConfig.editorDefaultMode);
-      expect(config.autoRefresh).toBe(testConfig.autoRefresh);
+      expect(fs.promises.writeFile).toHaveBeenCalled();
     });
 
-    it('should handle invalid JSON gracefully', () => {
-      fs.writeFileSync(configPath, 'invalid json', 'utf8');
+    it('should load and validate existing config', async () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      (fs.promises.readFile as jest.Mock).mockResolvedValue(
+        JSON.stringify({
+          projectDirectory: '/Users/test/project',
+          defaultInstallDirectory: 'global',
+          editorDefaultMode: 'preview',
+          autoRefresh: false,
+        })
+      );
 
-      // Should return default config instead of throwing
-      const config = configService.load();
-      expect(config).toBeDefined();
-      expect(config.projectSkillDir).toBe('');
+      const config = await configService.load();
+
+      expect(config.projectDirectory).toBe('/Users/test/project');
+      expect(config.defaultInstallDirectory).toBe('global');
+      expect(config.editorDefaultMode).toBe('preview');
+      expect(config.autoRefresh).toBe(false);
     });
 
-    it('should validate config on load', () => {
-      const invalidConfig = {
-        projectSkillDir: 123, // Should be string
-        globalSkillDir: '/test/global',
-      };
+    it('should return defaults when config file is corrupted', async () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      (fs.promises.readFile as jest.Mock).mockRejectedValue(new Error('Read error'));
 
-      fs.writeFileSync(configPath, JSON.stringify(invalidConfig), 'utf8');
+      const config = await configService.load();
 
-      // Should return default config for invalid data
-      const config = configService.load();
-      expect(config.projectSkillDir).toBe('');
+      expect(config).toEqual({
+        projectDirectory: null,
+        defaultInstallDirectory: 'project',
+        editorDefaultMode: 'edit',
+        autoRefresh: true,
+      });
     });
   });
 
   describe('save', () => {
-    it('should save config to file', () => {
-      const testConfig = new Configuration({
-        projectSkillDir: '/test/project',
-        globalSkillDir: '/test/global',
-        defaultInstallTarget: 'project',
-        editorDefaultMode: 'edit',
-        autoRefresh: true,
-      });
+    it('should save valid configuration', async () => {
+      const updates: Partial<Configuration> = {
+        projectDirectory: '/Users/test/new-project',
+      };
 
-      configService.save(testConfig);
+      const config = await configService.save(updates);
 
-      const saved = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      expect(saved).toEqual(testConfig);
+      expect(config.projectDirectory).toBe('/Users/test/new-project');
+      expect(fs.promises.writeFile).toHaveBeenCalled();
     });
 
-    it('should create parent directories if needed', () => {
-      const nestedPath = path.join(tempDir, 'nested', 'dir', 'config.json');
-      const nestedService = new ConfigService(nestedPath);
+    it('should merge updates with existing config', async () => {
+      // Load initial config
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      (fs.promises.readFile as jest.Mock).mockResolvedValue(
+        JSON.stringify({
+          projectDirectory: '/Users/test/project',
+          autoRefresh: false,
+        })
+      );
 
-      const testConfig = new Configuration({
-        projectSkillDir: '/test',
-        globalSkillDir: '/global',
-        defaultInstallTarget: 'project',
-        editorDefaultMode: 'edit',
-        autoRefresh: true,
-      });
+      await configService.load();
 
-      nestedService.save(testConfig);
+      // Save partial update
+      const updates: Partial<Configuration> = {
+        defaultInstallDirectory: 'global',
+      };
 
-      expect(fs.existsSync(nestedPath)).toBe(true);
+      const config = await configService.save(updates);
+
+      expect(config.projectDirectory).toBe('/Users/test/project');
+      expect(config.defaultInstallDirectory).toBe('global');
+      expect(config.autoRefresh).toBe(false);
     });
 
-    it('should write atomically (temp file + rename)', () => {
-      const testConfig = new Configuration({
-        projectSkillDir: '/test/project',
-        globalSkillDir: '/test/global',
-        defaultInstallTarget: 'project',
-        editorDefaultMode: 'edit',
-        autoRefresh: true,
-      });
+    it('should validate configuration before saving', async () => {
+      const invalidUpdates: Partial<Configuration> = {
+        defaultInstallDirectory: 'invalid' as any,
+      };
 
-      configService.save(testConfig);
-
-      // Should not have temp files left behind
-      const files = fs.readdirSync(tempDir);
-      const tempFiles = files.filter(f => f.includes('.tmp') || f.includes('.bak'));
-      expect(tempFiles).toHaveLength(0);
+      await expect(configService.save(invalidUpdates)).rejects.toThrow();
     });
   });
 
-  describe('get', () => {
-    it('should return current config', () => {
-      const testConfig = new Configuration({
-        projectSkillDir: '/test/project',
-        globalSkillDir: '/test/global',
-        defaultInstallTarget: 'project',
+  describe('reset', () => {
+    it('should reset configuration to defaults', async () => {
+      const config = await configService.reset();
+
+      expect(config).toEqual({
+        projectDirectory: null,
+        defaultInstallDirectory: 'project',
         editorDefaultMode: 'edit',
         autoRefresh: true,
       });
-
-      configService.save(testConfig);
-      const config = configService.get();
-
-      expect(config).toEqual(testConfig);
-    });
-
-    it('should load config if not in memory', () => {
-      const testConfig = new Configuration({
-        projectSkillDir: '/test/project',
-        globalSkillDir: '/test/global',
-        defaultInstallTarget: 'project',
-        editorDefaultMode: 'edit',
-        autoRefresh: true,
-      });
-
-      fs.writeFileSync(configPath, JSON.stringify(testConfig), 'utf8');
-
-      const config = configService.get();
-      expect(config.projectSkillDir).toBe(testConfig.projectSkillDir);
     });
   });
 
-  describe('set', () => {
-    it('should update specific config fields', () => {
-      configService.load();
+  describe('isConfigured', () => {
+    it('should return false when project directory is null', async () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(false);
 
-      configService.set({ defaultInstallTarget: 'global' });
+      const isConfigured = await configService.isConfigured();
 
-      const config = configService.get();
-      expect(config.defaultInstallTarget).toBe('global');
-      // Other fields should remain unchanged
-      expect(config.editorDefaultMode).toBe('edit');
+      expect(isConfigured).toBe(false);
     });
 
-    it('should persist changes to file', () => {
-      configService.load();
+    it('should return true when project directory is set', async () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      (fs.promises.readFile as jest.Mock).mockResolvedValue(
+        JSON.stringify({
+          projectDirectory: '/Users/test/project',
+        })
+      );
 
-      configService.set({ autoRefresh: false });
+      const isConfigured = await configService.isConfigured();
 
-      // Reload from file
-      const saved = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      expect(saved.autoRefresh).toBe(false);
-    });
-
-    it('should validate new values before saving', () => {
-      configService.load();
-
-      expect(() => {
-        configService.set({ defaultInstallTarget: 'invalid' as any });
-      }).toThrow();
-    });
-  });
-
-  describe('validateProjectDirectory', () => {
-    it('should return valid for directory with .claude folder', () => {
-      const projectDir = path.join(tempDir, 'my-project');
-      const claudeDir = path.join(projectDir, '.claude');
-      const skillsDir = path.join(claudeDir, 'skills');
-
-      fs.mkdirSync(skillsDir, { recursive: true });
-
-      const result = configService.validateProjectDirectory(projectDir);
-
-      expect(result.isValid).toBe(true);
-      expect(result.hasClaudeFolder).toBe(true);
-      expect(result.skillsDir).toBe(skillsDir);
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it('should return invalid for directory without .claude folder', () => {
-      const projectDir = path.join(tempDir, 'no-claude');
-      fs.mkdirSync(projectDir, { recursive: true });
-
-      const result = configService.validateProjectDirectory(projectDir);
-
-      expect(result.isValid).toBe(false);
-      expect(result.hasClaudeFolder).toBe(false);
-      expect(result.skillsDir).toBeNull();
-      expect(result.errors.length).toBeGreaterThan(0);
-    });
-
-    it('should return invalid for non-existent directory', () => {
-      const result = configService.validateProjectDirectory('/nonexistent/path');
-
-      expect(result.isValid).toBe(false);
-      expect(result.errors.length).toBeGreaterThan(0);
-    });
-
-    it('should return invalid for file path (not directory)', () => {
-      const filePath = path.join(tempDir, 'file.txt');
-      fs.writeFileSync(filePath, 'test', 'utf8');
-
-      const result = configService.validateProjectDirectory(filePath);
-
-      expect(result.isValid).toBe(false);
-      expect(result.errors.some((e: string) => e.includes('not a directory'))).toBe(true);
-    });
-
-    it('should suggest creating .claude folder if missing', () => {
-      const projectDir = path.join(tempDir, 'project');
-      fs.mkdirSync(projectDir, { recursive: true });
-
-      const result = configService.validateProjectDirectory(projectDir);
-
-      expect(result.isValid).toBe(false);
-      expect(result.errors.some((e: string) => e.includes('.claude folder'))).toBe(true);
-    });
-  });
-
-  describe('error handling', () => {
-    it('should provide actionable error messages', () => {
-      const result = configService.validateProjectDirectory('/nonexistent');
-
-      expect(result.errors.length).toBeGreaterThan(0);
-      // Error should suggest a solution
-      expect(result.errors.some(e =>
-        e.includes('select') || e.includes('create') || e.includes('check')
-      )).toBe(true);
+      expect(isConfigured).toBe(true);
     });
   });
 });

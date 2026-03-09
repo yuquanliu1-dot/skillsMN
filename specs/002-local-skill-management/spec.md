@@ -6,6 +6,16 @@
 **Input**: Split from 001-skill-manager for better implementation granularity
 **Depends On**: None (foundation feature)
 
+## Clarifications
+
+### Session 2026-03-09
+
+- Q: What is the canonical definition of a "skill" entity? → A: A skill is a directory containing a `skill.md` file (with optional additional resources like templates, examples, or assets)
+- Q: How should the system handle directories in the skill folders that don't contain a `skill.md` file? → A: Ignore them completely (don't display or process)
+- Q: How should skill display names be determined in the UI? → A: Use YAML frontmatter `name` field, fallback to directory name if missing/invalid
+- Q: How should the system handle skill resource files (templates, examples, assets) within a skill directory? → A: Scan and display resource count only (e.g., "3 resources"), allow opening containing folder
+- Q: How should the system handle duplicate skill names when the same skill exists in both project and global directories? → A: Display both with clear source badges (e.g., "My Skill [Project]" and "My Skill [Global]")
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Application Initialization (Priority: P1)
@@ -34,7 +44,7 @@ As a user, I want to see all my local skills from both project and global direct
 
 **Acceptance Scenarios**:
 
-1. **Given** the application is running, **When** the skill list loads, **Then** all skills from project directory and global directory (`~/.claude/skills/`) are displayed with names, descriptions, source labels, and last modified times
+1. **Given** the application is running, **When** the skill list loads, **Then** all skills from project directory and global directory (`~/.claude/skills/`) are displayed with names, descriptions, source labels (badges like "[Project]" or "[Global]"), last modified times, and resource counts
 2. **Given** the skill list is displayed, **When** the user filters by source (project/global), **Then** only skills from the selected source are shown
 3. **Given** the skill list is displayed, **When** the user sorts by name or modified time, **Then** the list reorders accordingly within 100ms
 4. **Given** a skill file is added/modified/deleted externally, **When** the file system change occurs, **Then** the skill list updates automatically within 500ms
@@ -51,7 +61,7 @@ As a skill creator, I want to quickly create a new skill file with proper struct
 
 **Acceptance Scenarios**:
 
-1. **Given** the skill list is displayed, **When** the user clicks "New Skill" and enters a name, **Then** a new skill file is created with kebab-case filename (e.g., `my-awesome-skill.skill`) in the selected directory
+1. **Given** the skill list is displayed, **When** the user clicks "New Skill" and enters a name, **Then** a new skill directory is created with kebab-case name (e.g., `my-awesome-skill/`) containing a `skill.md` file in the selected directory
 2. **Given** the new skill file is created, **When** it opens, **Then** it contains YAML frontmatter with name and description placeholders
 3. **Given** the skill is created, **When** the user saves it, **Then** the file appears in the skill list within 100ms with updated metadata
 
@@ -84,7 +94,7 @@ As a skill manager, I want to safely delete skills I no longer need so that I ca
 
 **Acceptance Scenarios**:
 
-1. **Given** a skill exists, **When** the user clicks "Delete" and confirms, **Then** the file moves to the system recycle bin (not permanent deletion)
+1. **Given** a skill exists, **When** the user clicks "Delete" and confirms, **Then** the skill directory moves to the system recycle bin (not permanent deletion)
 2. **Given** the skill is deleted, **When** the operation completes, **Then** the skill disappears from the list and a success notification appears
 3. **Given** the user wants to recover a deleted skill, **When** they restore it from the recycle bin, **Then** it reappears in the skill list within 500ms
 
@@ -111,11 +121,15 @@ As a user, I want to configure default behaviors and preferences so that the app
 - What happens when the project directory is deleted or moved while the app is running?
   - System detects missing directory, prompts user to select a new project directory
 - How does the system handle skill files with invalid YAML frontmatter?
-  - System displays skill with warning icon, allows editing but shows validation errors
+  - System displays skill with warning icon, allows editing but shows validation errors in the skill.md file
 - What happens when file permissions prevent reading/writing skill files?
   - System displays clear error message: "Permission denied: Cannot access [file path]. Check file permissions."
 - How does the system handle extremely long skill lists (1000+ items)?
   - System uses virtual scrolling to maintain performance, search/filter remains responsive
+- How does the system handle directories without `skill.md` files in skill folders?
+  - System ignores them completely (doesn't display or process non-skill directories)
+- How does the system handle duplicate skill names across project and global directories?
+  - System displays both versions with clear source badges (e.g., "My Skill [Project]" and "My Skill [Global]")
 
 ## Requirements *(mandatory)*
 
@@ -136,11 +150,12 @@ As a user, I want to configure default behaviors and preferences so that the app
 - **FR-013**: Users MUST be able to filter skills by source (project/global) and search by name
 - **FR-014**: Users MUST be able to sort skills by name or last modified time
 - **FR-015**: System MUST handle concurrent file modifications by detecting external changes and prompting user to reload or overwrite
+- **FR-016**: System MUST scan and display resource file count for each skill directory, providing a shortcut to open the containing folder in the file explorer
 
 ### Key Entities
 
-- **Skill**: A markdown file with YAML frontmatter containing name and description. Attributes: file path, name, description, source (project/global), last modified time, file size.
-- **Skill Directory**: A folder containing skill files. Two types: project directory (user-specified) and global directory (Claude Code default).
+- **Skill**: A directory containing a `skill.md` file (markdown with YAML frontmatter) and optional additional resources (templates, examples, assets). Attributes: directory path, name (from YAML frontmatter `name` field, fallback to directory name), description, source (project/global), last modified time, total size including resources.
+- **Skill Directory**: A parent folder containing skill directories. Two types: project directory (user-specified) and global directory (Claude Code default `~/.claude/skills/`).
 - **Configuration**: User preferences. Attributes: project directory path, default install directory, editor default mode, auto-refresh toggle.
 
 ## Success Criteria *(mandatory)*
@@ -153,7 +168,7 @@ As a user, I want to configure default behaviors and preferences so that the app
 - **SC-004**: 90% of error messages are actionable (contain specific problem description and suggested solution)
 - **SC-005**: All file operations validate path boundaries, preventing path traversal attacks (verified by security testing)
 - **SC-006**: Users can complete core tasks (create, edit, delete) without documentation on first attempt, achieving 85% task success rate
-- **SC-007**: Application maintains <200MB memory usage with 500 skills loaded
+- **SC-007**: Application maintains <300MB memory usage with 500 skills loaded (aligned with Constitution Principle III)
 - **SC-008**: All user configuration persists across sessions with zero data loss
 
 ## Assumptions

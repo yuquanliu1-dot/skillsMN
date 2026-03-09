@@ -6,6 +6,17 @@
 **Input**: Split from 001-skill-manager for better implementation granularity
 **Depends On**: 002-local-skill-management (requires skill list and installation capabilities)
 
+## Clarifications
+
+### Session 2026-03-09
+
+- Q: What defines a "skill" in terms of file/directory structure? → A: A skill is a directory containing a `skill.md` file
+- Q: When searching GitHub for skills (directories with `skill.md` files), how should the system identify and locate these directories given GitHub API limitations? → A: Search for repositories containing `skill.md` files using GitHub Code Search API (`filename:skill.md` query), then extract parent directory names as skill names
+- Q: When a user installs a skill (a directory containing `skill.md`), what content should be downloaded to the local system? → A: Download the entire skill directory and all its contents (preserves assets, templates, subdirectories that may be referenced by the skill)
+- Q: GitHub API doesn't support downloading entire directories directly. How should the system download a skill directory with all its contents? → A: Use GitHub Git Data API (Trees/Contents endpoints) to enumerate all files in the skill directory, then download each file individually via raw URLs while preserving directory structure
+- Q: When displaying search results, what granularity should be shown to users? → A: Show one search result per individual skill directory (each skill appears as its own result, even if multiple skills come from same repository)
+- Q: When a user previews a skill (directory with `skill.md`), what content should be displayed in the preview window? → A: Show both the `skill.md` content (rendered) and a collapsible directory tree showing all files in the skill directory
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Search Public Skills (Priority: P1)
@@ -18,7 +29,7 @@ As a skill explorer, I want to search GitHub for publicly available skills so th
 
 **Acceptance Scenarios**:
 
-1. **Given** the user is on the "Public Search" tab, **When** they type "React hooks" and wait 500ms (debounce), **Then** GitHub search results display repositories containing .skill files with names, descriptions, and update times
+1. **Given** the user is on the "Public Search" tab, **When** they type "React hooks" and wait 500ms (debounce), **Then** GitHub search results display individual skill directories (each skill appears as its own result) with skill names, descriptions, repository information, and update times
 2. **Given** search results are shown, **When** the user scrolls to the bottom, **Then** the next page of results loads automatically (pagination)
 3. **Given** a search is in progress, **When** the user types a new query, **Then** the previous search is cancelled and a new search starts after 500ms debounce
 4. **Given** search returns no results, **When** the results display, **Then** a helpful message appears with suggestions to broaden the search
@@ -35,11 +46,12 @@ As a skill evaluator, I want to preview skill content before installing so that 
 
 **Acceptance Scenarios**:
 
-1. **Given** search results are shown, **When** the user clicks a skill file name, **Then** a preview window displays the full skill content fetched from GitHub raw URL
+1. **Given** search results are shown, **When** the user clicks a skill directory name, **Then** a preview window displays both the rendered `skill.md` content and a collapsible directory tree showing all files in the skill directory
 2. **Given** the preview is loading, **When** content is being fetched, **Then** a loading indicator appears
-3. **Given** the preview displays content, **When** the user scrolls, **Then** the content scrolls smoothly without lag
+3. **Given** the preview displays content, **When** the user scrolls through the skill.md content or expands/collapses the directory tree, **Then** the interface responds smoothly without lag
 4. **Given** the preview is open, **When** the user clicks outside the preview or presses Escape, **Then** the preview closes
 5. **Given** the preview fails to load (network error, 404), **When** the error occurs, **Then** a clear error message displays with retry option
+6. **Given** the directory tree is shown, **When** the user clicks a file in the tree, **Then** the file content displays (for text files) or a placeholder shows (for binary files)
 
 ---
 
@@ -54,7 +66,7 @@ As a skill adopter, I want to install skills I find through search so that I can
 **Acceptance Scenarios**:
 
 1. **Given** a skill is shown in search results or preview, **When** the user clicks "Install", **Then** a dialog appears to select target directory (project/global)
-2. **Given** the install dialog is open, **When** the user selects a directory and confirms, **Then** the skill file downloads from GitHub and saves to the selected directory
+2. **Given** the install dialog is open, **When** the user selects a directory and confirms, **Then** the entire skill directory and all its contents download from GitHub and save to the selected local directory (preserving structure including assets, templates, and subdirectories)
 3. **Given** installation is in progress, **When** the download occurs, **Then** a progress indicator shows completion percentage
 4. **Given** installation completes, **When** the file is saved, **Then** a success notification appears and the skill appears in the local skill list
 5. **Given** installation fails (network error, permission denied), **When** the error occurs, **Then** a clear error message displays with retry option and partial downloads are cleaned up
@@ -71,9 +83,9 @@ As a user, I want to handle cases where a skill with the same name already exist
 
 **Acceptance Scenarios**:
 
-1. **Given** the user is installing a skill, **When** a file with the same name exists in the target directory, **Then** a conflict dialog appears with options: "Overwrite", "Rename" (auto-add timestamp), "Skip"
-2. **Given** the conflict dialog is shown, **When** the user selects "Overwrite", **Then** the existing file is replaced with the new skill
-3. **Given** the conflict dialog is shown, **When** the user selects "Rename", **Then** the new skill is saved with a timestamp suffix (e.g., `react-hooks-20260307.skill`)
+1. **Given** the user is installing a skill, **When** a directory with the same name exists in the target location, **Then** a conflict dialog appears with options: "Overwrite", "Rename" (auto-add timestamp), "Skip"
+2. **Given** the conflict dialog is shown, **When** the user selects "Overwrite", **Then** the existing directory is replaced with the new skill directory
+3. **Given** the conflict dialog is shown, **When** the user selects "Rename", **Then** the new skill directory is saved with a timestamp suffix (e.g., `react-hooks-20260307/`)
 4. **Given** the conflict dialog is shown, **When** the user selects "Skip", **Then** the installation is cancelled and no changes are made
 5. **Given** the user checks "Apply to all" in the conflict dialog, **When** installing multiple skills, **Then** the selected action applies to all subsequent conflicts
 
@@ -101,12 +113,12 @@ As a new user, I want to browse curated lists of high-quality skill repositories
   - System displays: "GitHub API rate limit exceeded. Wait 10 minutes or add a Personal Access Token in Settings for higher limits."
 - How does the system handle network failures during search?
   - System displays: "Network error. Please check your connection and try again." with retry button
-- What happens when a skill file is very large (>1MB)?
-  - System displays file size warning in preview: "Large file (X MB). Download may take longer." before installation
-- How does the system handle GitHub repositories with many skill files (>50)?
+- What happens when a skill directory is very large (>1MB)?
+  - System displays size warning in preview: "Large directory (X MB). Download may take longer." before installation
+- How does the system handle GitHub repositories with many skill directories (>50)?
   - System paginates results within the repository, showing 20 skills per page
 - What happens when a skill's download URL becomes invalid (404)?
-  - System displays: "Skill file not found. It may have been moved or deleted from the repository."
+  - System displays: "Skill directory not found. It may have been moved or deleted from the repository."
 - How does the system handle very slow GitHub responses (>5 seconds)?
   - System displays loading indicator with "Taking longer than expected..." message and cancel option
 - What happens when the user's internet connection is lost during installation?
@@ -116,18 +128,19 @@ As a new user, I want to browse curated lists of high-quality skill repositories
 
 ### Functional Requirements
 
-- **FR-001**: System MUST search GitHub for repositories containing `.skill` files using GitHub Search API
+- **FR-001**: System MUST search GitHub for repositories containing skill directories (directories with `skill.md` files) using GitHub Code Search API with `filename:skill.md` query, extracting parent directory names as skill identifiers
 - **FR-002**: System MUST debounce search input by 500ms to avoid excessive API calls
-- **FR-003**: System MUST display search results with repository names, descriptions, skill file counts, and last update times
+- **FR-003**: System MUST display search results with individual skill directory names, descriptions, repository names, and last update times (each skill directory appears as its own result)
 - **FR-004**: System MUST support pagination for search results (20 items per page)
-- **FR-005**: System MUST fetch and display skill file content from GitHub raw URLs for preview without downloading entire repository
-- **FR-006**: System MUST allow users to install skills by downloading from GitHub to selected local directory (project/global)
-- **FR-007**: System MUST display download progress indicator for installations
+- **FR-005**: System MUST fetch and display `skill.md` file content (rendered markdown) and directory structure (collapsible file tree) from GitHub for preview without downloading entire repository
+- **FR-006**: System MUST allow users to install skills by downloading skill directories from GitHub to selected local directory (project/global) using Git Data API to enumerate files and download individually via raw URLs
+- **FR-006a**: System MUST preserve directory structure when downloading skill directories (maintain subdirectories, relative paths)
+- **FR-007**: System MUST display download progress indicator for installations (showing progress for multi-file downloads)
 - **FR-008**: System MUST handle installation conflicts with three options: overwrite, rename with timestamp, or skip
 - **FR-009**: System MUST display curated skill source list in sidebar with names, descriptions, and repository URLs
 - **FR-010**: System MUST handle GitHub API errors (rate limits, network failures, 404s) with actionable error messages
 - **FR-011**: System MUST clean up partial downloads if installation fails or is cancelled
-- **FR-012**: System MUST validate downloaded skill files before saving (check for valid file extension and non-empty content)
+- **FR-012**: System MUST validate downloaded skill directories before saving (check for `skill.md` file and non-empty content)
 - **FR-013**: System MUST support canceling in-progress searches and downloads
 - **FR-014**: System MUST allow users to open repository URL in browser from search results
 - **FR-015**: System MUST use HTTPS for all GitHub API and download requests
@@ -135,9 +148,9 @@ As a new user, I want to browse curated lists of high-quality skill repositories
 ### Key Entities
 
 - **Search Query**: User's search terms for finding skills. Attributes: query text, timestamp.
-- **Search Result**: A GitHub repository or file match. Attributes: repository full name, URL, description, skill file list with names and download URLs, last update time, star count.
+- **Search Result**: An individual skill directory match. Attributes: skill directory name, repository full name, repository URL, skill description (extracted from skill.md or repository), skill.md file path, download URL for the directory, last update time, star count.
 - **Curated Source**: A pre-selected high-quality skill repository. Attributes: source ID, display name, repository URL, description, tags.
-- **Installation Request**: User's intent to install a skill. Attributes: skill file download URL, target directory, conflict resolution preference.
+- **Installation Request**: User's intent to install a skill. Attributes: skill directory download URL, target directory, conflict resolution preference.
 
 ## Success Criteria *(mandatory)*
 
@@ -157,13 +170,13 @@ As a new user, I want to browse curated lists of high-quality skill repositories
 - Users have GitHub accounts (optional for public search, required for higher rate limits with PAT)
 - GitHub API is available 99%+ of the time (occasional outages handled gracefully)
 - GitHub rate limits (60 requests/hour unauthenticated, 5000/hour with PAT) are sufficient for typical usage
-- Skill files are typically under 1MB (larger files may have degraded performance)
+- Skill directories are typically under 1MB (larger directories may have degraded performance)
 - Users have stable internet connection for search and download operations
-- Curated sources are maintained and contain valid skill files
+- Curated sources are maintained and contain valid skill directories with `skill.md` files
 - GitHub raw URLs are accessible without authentication for public repositories
 - Users understand basic Git/GitHub concepts (repositories, files)
 - HTTPS is available and not blocked by user's network
-- Skill file extensions are `.skill` (other extensions ignored by search)
+- Skills are defined as directories containing `skill.md` files (other structures ignored by search)
 
 ## Dependencies
 

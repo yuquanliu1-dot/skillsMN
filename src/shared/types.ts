@@ -1,248 +1,106 @@
 /**
- * Shared type definitions used across main and renderer processes
+ * Shared Type Definitions for Local Skill Management
+ *
+ * These types are used across main and renderer processes
  */
 
-// =============================================================================
-// Core Domain Types
-// =============================================================================
+// ============================================================================
+// Skill Types
+// ============================================================================
 
-/**
- * Represents a Claude Code skill file
- */
+export type SkillSource = 'project' | 'global';
+
 export interface Skill {
-  /** Unique identifier (file path hash or canonical path) */
-  id: string;
-  /** Skill name from frontmatter or filename */
-  name: string;
-  /** Skill description from frontmatter */
-  description: string;
-  /** Absolute canonical path to skill file */
-  filePath: string;
-  /** Which directory the skill belongs to */
-  source: 'project' | 'global';
-  /** Last modification timestamp */
-  modifiedAt: string; // ISO 8601
-  /** File size in bytes */
-  fileSize: number;
-  /** Whether frontmatter is valid YAML */
-  isValid: boolean;
-  /** Frontmatter validation errors (if any) */
-  validationErrors: string[];
-}
-
-/**
- * Represents a directory containing skill files
- */
-export interface SkillDirectory {
-  /** Unique identifier (canonical path) */
-  id: string;
-  /** Absolute canonical directory path */
+  /** Canonical path to skill directory */
   path: string;
-  /** Directory type */
-  type: 'project' | 'global';
-  /** Whether directory currently exists on disk */
-  exists: boolean;
-  /** Number of skills in directory (cached) */
-  skillCount: number;
-  /** Last scan timestamp */
-  lastScanned: string | null; // ISO 8601
+  /** Display name from YAML frontmatter or directory name */
+  name: string;
+  /** Skill description from YAML frontmatter */
+  description?: string;
+  /** Origin directory type */
+  source: SkillSource;
+  /** Last modification timestamp */
+  lastModified: Date;
+  /** Count of non-skill.md files in directory */
+  resourceCount: number;
 }
 
-/**
- * Application configuration
- */
+export interface SkillDirectory {
+  /** Canonical path to directory */
+  path: string;
+  /** Directory classification */
+  type: SkillSource;
+  /** Whether directory exists on file system */
+  exists: boolean;
+}
+
+export interface SkillFrontmatter {
+  /** Skill display name */
+  name: string;
+  /** Skill description */
+  description?: string;
+}
+
+// ============================================================================
+// Configuration Types
+// ============================================================================
+
+export type InstallDirectory = 'project' | 'global';
+export type EditorMode = 'edit' | 'preview';
+
 export interface Configuration {
-  /** Absolute path to project skills directory */
-  projectSkillDir: string;
-  /** Absolute path to global skills directory */
-  globalSkillDir: string;
-  /** Where new skills install by default */
-  defaultInstallTarget: 'project' | 'global';
+  /** Path to Claude project directory (null if not configured) */
+  projectDirectory: string | null;
+  /** Default location for new skills */
+  defaultInstallDirectory: InstallDirectory;
   /** Default behavior when opening skills */
-  editorDefaultMode: 'edit' | 'preview';
-  /** Whether to watch for file system changes */
+  editorDefaultMode: EditorMode;
+  /** Auto-refresh skill list on file changes */
   autoRefresh: boolean;
 }
 
-// =============================================================================
-// IPC Request/Response Types
-// =============================================================================
+// ============================================================================
+// IPC Types
+// ============================================================================
 
-/**
- * Standard IPC response wrapper
- */
-export type IPCResponse<T> = IPCSuccessResponse<T> | IPCErrorResponse;
-
-export interface IPCSuccessResponse<T> {
-  success: true;
-  data: T;
+export interface IPCResponse<T> {
+  /** Whether operation succeeded */
+  success: boolean;
+  /** Response data (if success) */
+  data?: T;
+  /** Error message (if failed) */
+  error?: string;
 }
 
-export interface IPCErrorResponse {
-  success: false;
-  error: AppError;
-}
+// ============================================================================
+// File System Event Types
+// ============================================================================
 
-/**
- * Application error with actionable guidance
- */
-export interface AppError {
-  /** Machine-readable error code */
-  code: string;
-  /** Technical error message */
-  message: string;
-  /** User-friendly error description */
-  userMessage: string;
-  /** Suggested action to resolve */
-  action: string;
-}
+export type FSEventType = 'add' | 'change' | 'unlink';
 
-// =============================================================================
-// Skill Operations
-// =============================================================================
-
-export interface SkillListRequest {
-  filter?: SkillFilter;
-  sort?: SkillSortOption;
-}
-
-export interface SkillListResponse {
-  skills: Skill[];
-  totalCount: number;
-  projectCount: number;
-  globalCount: number;
-}
-
-export interface SkillFilter {
-  source?: 'project' | 'global';
-  searchTerm?: string;
-}
-
-export interface SkillSortOption {
-  field: 'name' | 'modifiedAt';
-  direction: 'asc' | 'desc';
-}
-
-export interface SkillCreateRequest {
-  name: string;
-  targetDirectory: 'project' | 'global';
-  initialContent?: string;
-}
-
-export interface SkillCreateResponse {
-  id: string;
-  filePath: string;
-  name: string;
-}
-
-export interface SkillReadRequest {
-  filePath: string;
-}
-
-export interface SkillReadResponse {
-  filePath: string;
-  content: string;
-  metadata: {
-    name: string;
-    description: string;
-  };
-}
-
-export interface SkillUpdateRequest {
-  filePath: string;
-  content: string;
-}
-
-export interface SkillUpdateResponse {
-  filePath: string;
-  modifiedAt: string;
-  fileSize: number;
-}
-
-export interface SkillDeleteRequest {
-  filePath: string;
-}
-
-export interface SkillDeleteResponse {
-  filePath: string;
-  recycled: boolean;
-}
-
-// =============================================================================
-// Config Operations
-// =============================================================================
-
-export interface ConfigGetRequest {}
-
-export type ConfigGetResponse = Configuration;
-
-export interface ConfigSetRequest {
-  projectSkillDir?: string;
-  globalSkillDir?: string;
-  defaultInstallTarget?: 'project' | 'global';
-  editorDefaultMode?: 'edit' | 'preview';
-  autoRefresh?: boolean;
-}
-
-export type ConfigSetResponse = Configuration;
-
-export interface ConfigValidateProjectDirRequest {
+export interface FSEvent {
+  /** Type of file system event */
+  type: FSEventType;
+  /** Path to affected file/directory */
   path: string;
+  /** Which skill directory was affected */
+  directory: SkillSource;
 }
 
-export interface ConfigValidateProjectDirResponse {
-  isValid: boolean;
-  hasClaudeFolder: boolean;
-  skillsDir: string | null;
-  errors: string[];
-}
+// ============================================================================
+// UI State Types
+// ============================================================================
 
-// =============================================================================
-// Directory Operations
-// =============================================================================
+export type FilterSource = 'all' | 'project' | 'global';
+export type SortBy = 'name' | 'modified';
 
-export interface DirectoryScanRequest {
-  directoryPath: string;
-  recursive?: boolean;
-}
-
-export interface DirectoryScanResponse {
-  directory: string;
-  skills: Array<{
-    id: string;
-    name: string;
-    filePath: string;
-    modifiedAt: string;
-    fileSize: number;
-  }>;
-  totalCount: number;
-  scanDuration: number; // milliseconds
-}
-
-export interface DirectoryStartWatchRequest {
-  directoryPath: string;
-}
-
-export interface DirectoryStartWatchResponse {
-  watcherId: string;
-  directory: string;
-}
-
-export interface DirectoryStopWatchRequest {
-  watcherId: string;
-}
-
-export interface DirectoryStopWatchResponse {
-  watcherId: string;
-  stopped: boolean;
-}
-
-export interface DirectoryChangeEvent {
-  watcherId: string;
-  directory: string;
-  changes: Array<{
-    type: 'add' | 'modify' | 'delete';
-    filePath: string;
-    timestamp: string; // ISO 8601
-  }>;
+export interface UIState {
+  /** Currently selected skill path */
+  selectedSkill: string | null;
+  /** Current filter setting */
+  filterSource: FilterSource;
+  /** Current sort setting */
+  sortBy: SortBy;
+  /** Search query */
+  searchQuery: string;
 }

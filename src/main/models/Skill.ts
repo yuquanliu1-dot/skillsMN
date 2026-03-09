@@ -1,165 +1,153 @@
 /**
- * Represents a Claude Code skill file
+ * Skill Model
+ *
+ * Represents a skill directory containing skill.md and optional resources
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
+import matter from 'gray-matter';
+import { logger } from '../utils/Logger';
+import { Skill, SkillFrontmatter, SkillSource } from '../../shared/types';
+import { SKILL_FILE_NAME, MAX_SKILL_NAME_LENGTH, MAX_SKILL_DESCRIPTION_LENGTH } from '../../shared/constants';
 
-/**
- * Skill metadata structure
- */
-export interface SkillMetadata {
-  id: string;
-  name: string;
-  description: string;
-  filePath: string;
-  source: 'project' | 'global';
-  modifiedAt: Date;
-  fileSize: number;
-  isValid: boolean;
-  validationErrors: string[];
-}
-
-/**
- * Parse skill file from disk
- */
-export class Skill {
+export class SkillModel {
   /**
-   * Unique identifier (file path hash or canonical path)
+   * Parse skill directory and extract metadata
    */
-  public readonly id: string;
+  static async fromDirectory(dirPath: string, source: SkillSource): Promise<Skill> {
+    const skillFilePath = path.join(dirPath, SKILL_FILE_NAME);
 
-  /**
-   * Skill name from frontmatter or filename
-   */
-  public readonly name: string;
+    // Check if skill.md exists
+    if (!fs.existsSync(skillFilePath)) {
+      throw new Error(`Skill file not found: ${skillFilePath}`);
+    }
 
-  /**
-   * Skill description from frontmatter
-   */
-  public readonly description: string;
+    // Get directory stats for lastModified
+    const dirStats = await fs.promises.stat(dirPath);
 
-  /**
-   * Absolute canonical path to skill file
-   */
-  public readonly filePath: string;
+    // Parse frontmatter
+    const { frontmatter, isValid } = await this.parseFrontmatter(skillFilePath);
 
-  /**
-   * Which directory the skill belongs to
-   */
-  public readonly source: 'project' | 'global';
+    // Use frontmatter name or fall back to directory name
+    const dirName = path.basename(dirPath);
+    const name = isValid && frontmatter.name
+      ? frontmatter.name.trim()
+      : dirName;
 
-  /**
-   * Last modification timestamp
-   */
-  public readonly modifiedAt: Date;
+    // Validate name length
+    const validatedName = name.length > MAX_SKILL_NAME_LENGTH
+      ? name.substring(0, MAX_SKILL_NAME_LENGTH)
+      : name;
 
-  /**
-   * File size in bytes
-   */
-  public readonly fileSize: number;
+    // Validate description length
+    let description = frontmatter.description?.trim();
+    if (description && description.length > MAX_SKILL_DESCRIPTION_LENGTH) {
+      description = description.substring(0, MAX_SKILL_DESCRIPTION_LENGTH);
+    }
 
-  /**
-   * Whether frontmatter is valid YAML
-   */
-  public readonly isValid: boolean;
+    // Count resources (all files except skill.md)
+    const resourceCount = await this.countResources(dirPath);
+
+    const skill: Skill = {
+      path: dirPath,
+      name: validatedName,
+      description,
+      source,
+      lastModified: dirStats.mtime,
+      resourceCount,
+    };
+
+    logger.debug(`Skill model created: ${validatedName}`, 'SkillModel', { path: dirPath, source });
+    return skill;
+  }
 
   /**
-   * Frontmatter validation errors (if any)
+   * Parse YAML frontmatter from skill.md
    */
-  public readonly validationErrors: string[];
+  private static async parseFrontmatter(
+    skillFilePath: string
+  ): Promise<{ frontmatter: Partial<SkillFrontmatter>; isValid: boolean }> {
+    try {
+      const content = await fs.promises.readFile(skillFilePath, 'utf-8');
+      const { data } = matter(content);
 
-  constructor(data: {
-    id?: string;
-    name: string;
-    description: string;
-    filePath: string;
-    source: 'project' | 'global';
-    modifiedAt: Date | string;
-    fileSize: number;
-    isValid: boolean;
-    validationErrors?: string[];
-  }) {
-    this.id = data.id || uuidv4();
-    this.name = data.name;
-    this.description = data.description;
-    this.filePath = data.filePath;
-    this.source = data.source;
-    this.modifiedAt = typeof data.modifiedAt === 'string' ? new Date(data.modifiedAt) : data.modifiedAt;
-    this.fileSize = data.fileSize;
-    this.isValid = data.isValid;
-    this.validationErrors = data.validationErrors || [];
+      const frontmatter: Partial<SkillFrontmatter> = {
+        name: data.name,
+        description: data.description,
+      };
+
+      logger.debug('Frontmatter parsed successfully', 'SkillModel', { skillFilePath });
+      return { frontmatter, isValid: true };
+    } catch (error) {
+      logger.warn('Failed to parse frontmatter, using defaults', 'SkillModel', {
+        skillFilePath,
+        error: error instanceof Error ? error.message : error,
+      });
+      return { frontmatter: {}, isValid: false };
+    }
+  }
+
+  /**
+   * Count resource files in skill directory (excluding skill.md)
+   */
+  private static async countResources(dirPath: string): Promise<number> {
+    try {
+      const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+      const resources = entries.filter(entry => {
+        // Exclude skill.md and hidden files
+        return entry.isFile() && entry.name !== SKILL_FILE_NAME && !entry.name.startsWith('.');
+      });
+      return resources.length;
+    } catch (error) {
+      logger.warn('Failed to count resources', 'SkillModel', { dirPath, error });
+      return 0;
+    }
   }
 
   /**
    * Validate skill data
    */
-  public validate(): { isValid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    if (!this.name || this.name.trim().length === 0) {
-      errors.push('Skill name cannot be empty');
+  static validate(skill: Partial<Skill>): skill is Skill {
+    if (!skill.path || typeof skill.path !== 'string') {
+      throw new Error('Skill path is required and must be a string');
     }
 
-    if (!this.filePath.endsWith('.skill')) {
-      errors.push('Skill file must .skill extension');
+    if (!skill.name || skill.name.trim().length === 0) {
+      throw new Error('Skill name is required');
     }
 
-    if (this.fileSize > 1024 * 1024) {
-      errors.push(`File size (${this.fileSize} bytes) should be <1MB (warning)`);
+    if (skill.name.length > MAX_SKILL_NAME_LENGTH) {
+      throw new Error(`Skill name must be ${MAX_SKILL_NAME_LENGTH} characters or less`);
     }
 
-    if (this.fileSize > 5 * 1024 * 1024) {
-      errors.push('File size exceeds recommended maximum');
+    if (skill.description && skill.description.length > MAX_SKILL_DESCRIPTION_LENGTH) {
+      throw new Error(`Skill description must be ${MAX_SKILL_DESCRIPTION_LENGTH} characters or less`);
     }
 
-    if (!this.modifiedAt) {
-      errors.push('Modified date is required');
+    if (!['project', 'global'].includes(skill.source!)) {
+      throw new Error('Skill source must be "project" or "global"');
     }
 
-    if (!(this.modifiedAt instanceof Date)) {
-      errors.push('Modified date must to be a valid Date object');
+    if (typeof skill.resourceCount !== 'number' || skill.resourceCount < 0) {
+      throw new Error('Resource count must be a non-negative number');
     }
 
-    if (typeof this.modifiedAt !== 'string') {
-      errors.push('Modified date must to be an ISO 8601 date string');
-    }
-
-    if (typeof this.modifiedAt !== 'number') {
-      errors.push('Modified date needs to be a number');
-    }
-
-    if (typeof this.fileSize !== 'number') {
-      errors.push('File size needs to be a number');
-    }
-
-    if (typeof this.validationErrors !== 'object') {
-      errors.push('Validation errors need to be an array of strings');
-    }
-
-    return { isValid: errors.length === 0, errors };
+    return true;
   }
 
   /**
-   * Extract skill metadata from frontmatter
+   * Generate skill.md template content
    */
-  public extractMetadata(content: string): { name: string; description: string } | null {
-    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-    if (!frontmatterMatch || !frontmatterMatch[1]) {
-      return null;
-    }
+  static generateTemplate(name: string): string {
+    return `---
+name: ${name}
+description: ''
+---
 
-    // Simple YAML parsing for name and description
-    const frontmatter = frontmatterMatch[1];
-    const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
-    const descMatch = frontmatter.match(/^description:\s*(.+)$/m);
+# ${name}
 
-    if (!nameMatch) {
-      return null;
-    }
-
-    return {
-      name: nameMatch[1]!.trim(),
-      description: descMatch ? descMatch[1]!.trim() : '',
-    };
+Skill content goes here...
+`;
   }
 }

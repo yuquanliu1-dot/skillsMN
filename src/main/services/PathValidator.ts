@@ -1,117 +1,99 @@
 /**
- * Path validation service - CRITICAL for security
- * Prevent path traversal attacks by validating all file operations
- * are within whitelisted directories
+ * Path Validator Service
+ *
+ * CRITICAL SECURITY COMPONENT
+ * Validates all file system paths to prevent path traversal attacks.
+ * Ensures all file operations occur within allowed directories only.
  */
 
-import * as path from 'path';
-import * as fs from 'fs';
+import path from 'path';
+import { logger } from '../utils/Logger';
+import { PathTraversalError } from '../utils/ErrorHandler';
 
 export class PathValidator {
-  private whitelistedDirs: Set<string> = new Set();
+  private allowedDirectories: Set<string>;
 
-  /**
-   * Initialize with whitelisted directories
-   */
-  constructor(allowedDirectories: string[]) {
-    this.whitelistedDirs = new Set(
-      allowedDirectories.map(dir => this.getCanonicalPath(dir)).filter(Boolean)
-    );
+  constructor(projectDir: string | null, globalDir: string) {
+    this.allowedDirectories = new Set();
+
+    // Add global directory (always allowed)
+    const resolvedGlobal = path.resolve(globalDir);
+    this.allowedDirectories.add(resolvedGlobal);
+    logger.info(`Global directory allowed: ${resolvedGlobal}`, 'PathValidator');
+
+    // Add project directory if configured
+    if (projectDir) {
+      const resolvedProject = path.resolve(projectDir);
+      this.allowedDirectories.add(resolvedProject);
+      logger.info(`Project directory allowed: ${resolvedProject}`, 'PathValidator');
+    }
   }
 
   /**
-   * Get canonical path (resolve symlinks, .., etc.)
+   * Validate that a path is within allowed directories
+   * @throws PathTraversalError if path is outside allowed directories
    */
-  private getCanonicalPath(filePath: string): string {
+  validate(requestedPath: string): string {
+    const resolved = path.resolve(requestedPath);
+
+    // Check each allowed directory
+    for (const allowed of this.allowedDirectories) {
+      if (resolved.startsWith(allowed + path.sep) || resolved === allowed) {
+        logger.debug(`Path validated: ${resolved}`, 'PathValidator');
+        return resolved;
+      }
+    }
+
+    // Path is outside all allowed directories
+    logger.error(`Path traversal attempt blocked: ${requestedPath}`, 'PathValidator', {
+      requested: requestedPath,
+      resolved,
+      allowed: Array.from(this.allowedDirectories),
+    });
+    throw new PathTraversalError(requestedPath);
+  }
+
+  /**
+   * Check if a path is within allowed directories (non-throwing version)
+   */
+  isWithinAllowedDir(filePath: string): boolean {
     try {
-      // Resolve the directory part to handle symlinks in parent directories
-      const dir = path.dirname(filePath);
-      const base = path.basename(filePath);
-
-      // Resolve symlinks in the directory path
-      const realDir = fs.existsSync(dir) ? fs.realpathSync(dir) : path.resolve(dir);
-      const realPath = path.join(realDir, base);
-
-      // Normalize for the current platform
-      let normalized = path.normalize(realPath);
-
-      // On Windows, normalize case for case-insensitive comparison
-      if (process.platform === 'win32') {
-        normalized = normalized.toLowerCase();
-      }
-
-      return normalized;
-    } catch (error) {
-      // If path doesn't exist, still resolve relative paths
-      let normalized = path.normalize(path.resolve(filePath));
-
-      // On Windows, normalize case for case-insensitive comparison
-      if (process.platform === 'win32') {
-        normalized = normalized.toLowerCase();
-      }
-
-      return normalized;
+      this.validate(filePath);
+      return true;
+    } catch {
+      return false;
     }
   }
 
   /**
-   * Validate that a path is within whitelisted directories
+   * Get all allowed directories
    */
-  public validate(filePath: string): { isValid: boolean; error?: string } {
-    try {
-      const canonicalPath = this.getCanonicalPath(filePath);
+  getAllowedDirectories(): string[] {
+    return Array.from(this.allowedDirectories);
+  }
 
-      // Check if path starts with any whitelisted directory
-      const isAllowed = Array.from(this.whitelistedDirs).some(whitelisted => {
-        return canonicalPath.startsWith(whitelisted + path.sep);
-      });
+  /**
+   * Determine skill source from path
+   */
+  getSkillSource(skillPath: string): 'project' | 'global' {
+    const resolved = path.resolve(skillPath);
 
-      if (!isAllowed) {
-        return {
-          isValid: false,
-          error: `Path "${filePath}" is outside allowed directories. Access denied for security reasons.`,
-        };
+    for (const allowed of this.allowedDirectories) {
+      if (resolved.startsWith(allowed + path.sep)) {
+        // Determine if this is project or global based on path
+        // This is a simple heuristic - you might need to adjust based on your actual directory structure
+        const relative = path.relative(allowed, resolved);
+        const parts = relative.split(path.sep);
+
+        // If the path contains .claude/skills, it's project
+        // Otherwise, it's global
+        if (parts.includes('.claude') && parts.includes('skills')) {
+          return 'project';
+        }
       }
-
-      return { isValid: true };
-    } catch (error) {
-      return {
-        isValid: false,
-        error: `Failed to validate path: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
     }
-  }
 
-  /**
-   * Add a directory to whitelist
-   */
-  public addToWhitelist(directoryPath: string): void {
-    const canonical = this.getCanonicalPath(directoryPath);
-    if (canonical) {
-      this.whitelistedDirs.add(canonical);
-    }
-  }
-
-  /**
-   * Remove a directory from whitelist
-   */
-  public removeFromWhitelist(directoryPath: string): void {
-    const canonical = this.getCanonicalPath(directoryPath);
-    this.whitelistedDirs.delete(canonical);
-  }
-
-  /**
-   * Get all whitelisted directories
-   */
-  public getWhitelistedDirectories(): string[] {
-    return Array.from(this.whitelistedDirs);
-  }
-
-  /**
-   * Check if a path is whitelisted
-   */
-  public isWhitelisted(filePath: string): boolean {
-    const result = this.validate(filePath);
-    return result.isValid;
+    // Default to global
+    return 'global';
   }
 }

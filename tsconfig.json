@@ -1,21 +1,12 @@
 {
   "compilerOptions": {
-    /* Visit https://aka.ms/tsconfig to read more about this file */
-
-    /* Projects */
-    "incremental": true,
-
     /* Language and Environment */
     "target": "ES2020",
     "lib": ["ES2020", "DOM"],
-    "jsx": "react-jsx",
     "module": "commonjs",
     "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "allowJs": false,
-    "checkJs": false,
 
-    /* Type Checking - STRICT MODE */
+    /* Strict Type-Checking */
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -23,57 +14,31 @@
     "strictBindCallApply": true,
     "strictPropertyInitialization": true,
     "noImplicitThis": true,
-    "useUnknownInCatchVariables": true,
     "alwaysStrict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "exactOptionalPropertyTypes": false,
+
+    /* Additional Checks */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": false,
 
-    /* Emit */
+    /* Module Resolution */
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Output */
+    "outDir": "./dist",
+    "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "removeComments": false,
-    "noEmit": false,
-    "noEmitOnError": true,
-    "importHelpers": false,
-    "downlevelIteration": false,
 
-    /* Interop Constraints */
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "preserveSymlinks": true,
-    "forceConsistentCasingInFileNames": true,
-
-    /* Completeness */
-    "skipLibCheck": true,
-
-    /* Path Mapping */
-    "baseUrl": ".",
-    "paths": {
-      "@shared/*": ["src/shared/*"],
-      "@main/*": ["src/main/*"],
-      "@renderer/*": ["src/renderer/*"]
-    }
+    /* JSX */
+    "jsx": "react-jsx"
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "release"
-  ],
-  "ts-node": {
-    "compilerOptions": {
-      "module": "commonjs"
-    }
-  }
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
 }

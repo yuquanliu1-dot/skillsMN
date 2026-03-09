@@ -1,65 +1,92 @@
 /**
- * Preload script - Exposes selected Node.js APIs to renderer process
- * via contextBridge for secure IPC communication
+ * Preload Script
+ *
+ * Provides secure IPC communication between renderer and main processes
+ * using contextBridge to expose a limited API surface
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPCResponse } from '../shared/types';
+import type {
+  Configuration,
+  Skill,
+  IPCResponse,
+  FSEvent,
+  SkillSource,
+} from '../shared/types';
+import { IPC_CHANNELS } from '../shared/constants';
 
 // Expose protected methods to renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Configuration operations
-  configGet: async (): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('config:get');
+  // ============================================================================
+  // Skill Operations
+  // ============================================================================
+
+  listSkills: (config?: Configuration): Promise<IPCResponse<Skill[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_LIST, { config });
   },
 
-  configSet: async (updates: any): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('config:set', updates);
+  getSkill: (path: string): Promise<IPCResponse<{ metadata: Skill; content: string }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GET, { path });
   },
 
-  configValidateProjectDir: async (path: string): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('config:validate-project-dir', { path });
+  createSkill: (
+    name: string,
+    directory: SkillSource
+  ): Promise<IPCResponse<Skill>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_CREATE, { name, directory });
   },
 
-  // Skill operations
-  skillList: async (filter?: any, sort?: any): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('skill:list', { filter, sort });
+  updateSkill: (
+    path: string,
+    content: string
+  ): Promise<IPCResponse<Skill>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_UPDATE, { path, content });
   },
 
-  skillCreate: async (name: string, targetDirectory: string, description?: string): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('skill:create', { name, targetDirectory, description });
+  deleteSkill: (path: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_DELETE, { path });
   },
 
-  skillRead: async (filePath: string): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('skill:read', { filePath });
+  openFolder: (path: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_OPEN_FOLDER, { path });
   },
 
-  skillUpdate: async (filePath: string, content: string): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('skill:update', { filePath, content });
+  // ============================================================================
+  // Configuration Operations
+  // ============================================================================
+
+  loadConfig: (): Promise<IPCResponse<Configuration>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.CONFIG_LOAD);
   },
 
-  skillDelete: async (filePath: string): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('skill:delete', { filePath });
+  saveConfig: (
+    config: Partial<Configuration>
+  ): Promise<IPCResponse<Configuration>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.CONFIG_SAVE, { config });
   },
 
-  // Directory operations
-  directoryScan: async (directoryPath: string, recursive?: boolean): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('directory:scan', { directoryPath, recursive });
+  // ============================================================================
+  // File System Watching
+  // ============================================================================
+
+  startWatching: (): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.FS_WATCH_START);
   },
 
-  directoryStartWatch: async (directoryPath: string): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('directory:start-watch', { directoryPath });
+  stopWatching: (): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.FS_WATCH_STOP);
   },
 
-  directoryStopWatch: async (watcherId: string): Promise<IPCResponse<any>> => {
-    return await ipcRenderer.invoke('directory:stop-watch', { watcherId });
+  onFSChange: (callback: (event: FSEvent) => void): void => {
+    ipcRenderer.on(IPC_CHANNELS.FS_CHANGE, (_event, change) => {
+      callback(change as FSEvent);
+    });
   },
 
-  onDirectoryChange: (callback: (event: any) => void): void => {
-    ipcRenderer.on('directory:change', callback);
-  },
-
-  removeDirectoryChangeListener: (): void => {
-    ipcRenderer.removeAllListeners('directory:change');
+  removeFSChangeListener: (): void => {
+    ipcRenderer.removeAllListeners(IPC_CHANNELS.FS_CHANGE);
   },
 });
+
+// Log successful preload
+console.log('Preload script executed successfully');
