@@ -401,18 +401,18 @@
 
 ### Cross-Platform Testing
 
-- [ ] T142 [P] Test on Windows 10/11: file paths, recycle bin, file explorer
+- [X] T142 [P] Test on Windows 10/11: file paths, recycle bin, file explorer
 - [ ] T143 [P] Test on macOS 12+: file paths, trash, Finder
 - [ ] T144 [P] Test on Linux Ubuntu 20.04+: file paths, trash folder, Nautilus
 
 ### Performance Testing
 
-- [ ] T145 Test application startup <3s for 500 skills (SC-001)
-- [ ] T146 Test skill list loading ≤2s (SC-002)
-- [ ] T147 Test skill list real-time updates <500ms (SC-002)
-- [ ] T148 Test CRUD operations <100ms (SC-003)
-- [ ] T149 Test memory usage <300MB (SC-007)
-- [ ] T150 Test CPU usage <5% when idle
+- [X] T145 Test application startup <3s for 500 skills (SC-001)
+- [X] T146 Test skill list loading ≤2s (SC-002)
+- [X] T147 Test skill list real-time updates <500ms (SC-002)
+- [X] T148 Test CRUD operations <100ms (SC-003)
+- [X] T149 Test memory usage <300MB (SC-007)
+- [X] T150 Test CPU usage <5% when idle
 
 ### Security Testing
 
