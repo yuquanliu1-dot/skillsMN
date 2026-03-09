@@ -12,14 +12,16 @@ import SkillCard from './SkillCard';
 interface SkillListProps {
   skills: Skill[];
   onSkillClick?: (skill: Skill) => void;
+  onSkillSelect?: (skill: Skill) => void;
   onCreateSkill?: () => void;
   onDeleteSkill?: (skill: Skill) => void;
+  selectedSkillPath?: string | null;
 }
 
 // Card height + gap (80px card + 16px gap)
 const CARD_HEIGHT = 96;
 
-export default function SkillList({ skills, onSkillClick, onCreateSkill, onDeleteSkill }: SkillListProps): JSX.Element {
+export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreateSkill, onDeleteSkill, selectedSkillPath }: SkillListProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
@@ -92,12 +94,14 @@ export default function SkillList({ skills, onSkillClick, onCreateSkill, onDelet
           <SkillCard
             skill={skill}
             onClick={onSkillClick}
+            onSelect={onSkillSelect}
             onDelete={onDeleteSkill}
+            isSelected={skill.path === selectedSkillPath}
           />
         </div>
       );
     },
-    [filteredAndSortedSkills, onSkillClick, onDeleteSkill]
+    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, selectedSkillPath]
   );
 
   return (

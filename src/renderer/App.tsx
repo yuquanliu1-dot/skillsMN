@@ -101,6 +101,7 @@ export default function App(): JSX.Element {
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [selectedSkillPath, setSelectedSkillPath] = useState<string | null>(null);
 
   /**
    * Load configuration on mount
@@ -166,6 +167,15 @@ export default function App(): JSX.Element {
           setShowCreateDialog(true);
         }
       }
+
+      // Delete: Delete selected skill (T099)
+      if (event.key === 'Delete' && selectedSkillPath) {
+        event.preventDefault();
+        const selectedSkill = state.skills.find(s => s.path === selectedSkillPath);
+        if (selectedSkill) {
+          setDeletingSkill(selectedSkill);
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -173,7 +183,7 @@ export default function App(): JSX.Element {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showSetup, state.config?.projectDirectory]);
+  }, [showSetup, state.config?.projectDirectory, selectedSkillPath, state.skills]);
 
   /**
    * Load skills from file system
@@ -298,9 +308,16 @@ export default function App(): JSX.Element {
       // Refresh skill list
       await loadSkills();
 
+      // Show success notification (T097)
+      showToast(`Skill "${skill.name}" moved to recycle bin`, 'success');
+
       console.log('Skill deleted successfully:', skill.name);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete skill:', error);
+
+      // Show error notification (T098)
+      showToast(`Failed to delete skill: ${error.message}`, 'error');
+
       throw error;
     }
   };
@@ -398,10 +415,14 @@ export default function App(): JSX.Element {
             onSkillClick={(skill) => {
               setEditingSkill(skill);
             }}
+            onSkillSelect={(skill) => {
+              setSelectedSkillPath(skill.path);
+            }}
             onCreateSkill={() => setShowCreateDialog(true)}
             onDeleteSkill={(skill) => {
               setDeletingSkill(skill);
             }}
+            selectedSkillPath={selectedSkillPath}
           />
         </main>
       </div>

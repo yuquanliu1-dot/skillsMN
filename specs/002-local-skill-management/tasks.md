@@ -291,15 +291,15 @@
 
 - [X] T095 [US5] Wire delete button to open confirmation dialog in SkillCard.tsx
 - [X] T096 [US5] Implement delete flow: confirm → IPC call → success → remove from list in App.tsx
-- [ ] T097 [US5] Add success notification on deletion in App.tsx
-- [ ] T098 [US5] Add error notification on deletion failure in App.tsx
-- [ ] T099 [US5] Implement Delete keyboard shortcut when skill is selected in App.tsx
+- [X] T097 [US5] Add success notification on deletion in App.tsx
+- [X] T098 [US5] Add error notification on deletion failure in App.tsx
+- [X] T099 [US5] Implement Delete keyboard shortcut when skill is selected in App.tsx
 
 ### Integration
 
-- [ ] T100 [US5] Test delete flow: click delete → confirm → verify in recycle bin → not in list
-- [ ] T101 [US5] Test restore: delete skill → restore from recycle bin → verify reappears in list
-- [ ] T102 [US5] Verify performance: skill disappears from list within 200ms
+- [X] T100 [US5] Test delete flow: click delete → confirm → verify in recycle bin → not in list
+- [X] T101 [US5] Test restore: delete skill → restore from recycle bin → verify reappears in list
+- [X] T102 [US5] Verify performance: skill disappears from list within 200ms
 
 **Checkpoint**: User Story 5 complete - users can safely delete skills
 

@@ -11,10 +11,18 @@ interface SkillCardProps {
   skill: Skill;
   onClick?: (skill: Skill) => void;
   onDelete?: (skill: Skill) => void;
+  onSelect?: (skill: Skill) => void;
+  isSelected?: boolean;
 }
 
-export default function SkillCard({ skill, onClick, onDelete }: SkillCardProps): JSX.Element {
-  const handleDoubleClick = () => {
+export default function SkillCard({ skill, onClick, onDelete, onSelect, isSelected }: SkillCardProps): JSX.Element {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onSelect?.(skill);
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     onClick?.(skill);
   };
 
@@ -22,22 +30,28 @@ export default function SkillCard({ skill, onClick, onDelete }: SkillCardProps):
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick?.(skill);
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      onDelete?.(skill);
     }
   };
 
   const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card double-click
+    e.stopPropagation(); // Prevent card click
+    e.preventDefault();
     onDelete?.(skill);
   };
 
   return (
     <div
-      className="card card-interactive group"
+      className={`card card-interactive group ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
+      onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onKeyPress={handleKeyPress}
       tabIndex={0}
       role="button"
-      aria-label={`Skill: ${skill.name}. Double-click to edit.`}
+      aria-label={`Skill: ${skill.name}. ${isSelected ? 'Selected. ' : ''}Double-click to edit.`}
+      aria-selected={isSelected}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
