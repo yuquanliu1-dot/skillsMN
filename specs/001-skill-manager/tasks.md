@@ -122,24 +122,24 @@
 
 ### Backend Implementation for User Story 2
 
-- [ ] T050 [P] [US2] Create AIGenerationRequest model in src/main/models/AIGenerationRequest.ts
-- [ ] T051 [US2] Implement AIService with Claude Agent SDK integration in src/main/services/AIService.ts
-- [ ] T052 [US2] Implement streaming support in AIService with 200ms chunk delivery in src/main/services/AIService.ts
-- [ ] T053 [US2] Implement ai:generate IPC handler with streaming events in src/main/ipc/aiHandlers.ts
-- [ ] T054 [US2] Implement ai:cancel IPC handler in src/main/ipc/aiHandlers.ts
-- [ ] T055 [US2] Implement config:test-ai IPC handler for connection validation in src/main/ipc/configHandlers.ts
+- [X] T050 [P] [US2] Create AIGenerationRequest model in src/main/models/AIGenerationRequest.ts
+- [X] T051 [US2] Implement AIService with Claude Agent SDK integration in src/main/services/AIService.ts
+- [X] T052 [US2] Implement streaming support in AIService with 200ms chunk delivery in src/main/services/AIService.ts
+- [X] T053 [US2] Implement ai:generate IPC handler with streaming events in src/main/ipc/aiHandlers.ts
+- [X] T054 [US2] Implement ai:cancel IPC handler in src/main/ipc/aiHandlers.ts
+- [X] T055 [US2] Implement config:test-ai IPC handler for connection validation in src/main/ipc/configHandlers.ts
 
 ### Frontend Implementation for User Story 2
 
 - [ ] T056 [P] [US2] Search UI/UX patterns for AI assistant panels and streaming text display using ui-ux-pro-max skill
-- [ ] T057 [US2] Implement AIPanel component with prompt input in src/renderer/components/AIPanel.tsx
-- [ ] T058 [US2] Implement streaming text display in AIPanel with 200ms updates in src/renderer/components/AIPanel.tsx
-- [ ] T059 [US2] Implement generation mode selector (new/modify/insert/replace) in src/renderer/components/AIPanel.tsx
-- [ ] T060 [US2] Add stop generation button with cancellation logic in src/renderer/components/AIPanel.tsx
-- [ ] T061 [US2] Add IPC hooks for AI generation in src/renderer/hooks/useAIGeneration.ts
-- [ ] T062 [US2] Integrate AIPanel with SkillEditor in src/renderer/App.tsx
-- [ ] T063 [US2] Implement "Apply" button to insert/replace content in editor in src/renderer/components/AIPanel.tsx
-- [ ] T064 [US2] Add timeout handling UI with continue/cancel options in src/renderer/components/AIPanel.tsx
+- [X] T057 [US2] Implement AIPanel component with prompt input in src/renderer/components/AIPanel.tsx
+- [X] T058 [US2] Implement streaming text display in AIPanel with 200ms updates in src/renderer/components/AIPanel.tsx
+- [X] T059 [US2] Implement generation mode selector (new/modify/insert/replace) in src/renderer/components/AIPanel.tsx
+- [X] T060 [US2] Add stop generation button with cancellation logic in src/renderer/components/AIPanel.tsx
+- [X] T061 [US2] Add IPC hooks for AI generation in src/renderer/hooks/useAIGeneration.ts
+- [X] T062 [US2] Integrate AIPanel with SkillEditor in src/renderer/App.tsx
+- [X] T063 [US2] Implement "Apply" button to insert/replace content in editor in src/renderer/components/AIPanel.tsx
+- [X] T064 [US2] Add timeout handling UI with continue/cancel options in src/renderer/components/AIPanel.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - AI generation enhances local management
 

@@ -1,7 +1,5 @@
 /**
- * Electron API Type Definitions
- *
- * Type definitions for the Electron API exposed by preload script
+ * Electron API Type Definitions for Renderer Process
  */
 
 import type {
@@ -9,27 +7,40 @@ import type {
   Skill,
   IPCResponse,
   FSEvent,
-  SkillSource,
+  AIGenerationRequest,
 } from '../../shared/types';
 
 export interface ElectronAPI {
-  // Skill operations
+  // Skill Operations
   listSkills: (config?: Configuration) => Promise<IPCResponse<Skill[]>>;
   getSkill: (path: string) => Promise<IPCResponse<{ metadata: Skill; content: string }>>;
-  createSkill: (name: string, directory: SkillSource) => Promise<IPCResponse<Skill>>;
-  updateSkill: (path: string, content: string, expectedLastModified?: number) => Promise<IPCResponse<Skill>>;
+  createSkill: (name: string, directory: string) => Promise<IPCResponse<Skill>>;
+  updateSkill: (
+    path: string,
+    content: string,
+    expectedLastModified?: number
+  ) => Promise<IPCResponse<Skill>>;
   deleteSkill: (path: string) => Promise<IPCResponse<void>>;
   openFolder: (path: string) => Promise<IPCResponse<void>>;
 
-  // Configuration operations
+  // Configuration Operations
   loadConfig: () => Promise<IPCResponse<Configuration>>;
   saveConfig: (config: Partial<Configuration>) => Promise<IPCResponse<Configuration>>;
 
-  // File system watching
+  // File System Watching
   startWatching: () => Promise<IPCResponse<void>>;
   stopWatching: () => Promise<IPCResponse<void>>;
   onFSChange: (callback: (event: FSEvent) => void) => void;
   removeFSChangeListener: () => void;
+
+  // AI Operations
+  generateAI: (params: {
+    requestId: string;
+    request: AIGenerationRequest;
+  }) => Promise<IPCResponse<void>>;
+  cancelAI: (requestId: string) => Promise<IPCResponse<void>>;
+  onAIChunk: (callback: (event: any, chunk: any) => void) => void;
+  removeAIChunkListener: () => void;
 }
 
 declare global {

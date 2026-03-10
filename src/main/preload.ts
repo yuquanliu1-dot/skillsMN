@@ -12,6 +12,7 @@ import type {
   IPCResponse,
   FSEvent,
   SkillSource,
+  AIGenerationRequest,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
@@ -86,6 +87,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   removeFSChangeListener: (): void => {
     ipcRenderer.removeAllListeners(IPC_CHANNELS.FS_CHANGE);
+  },
+
+  // ============================================================================
+  // AI Operations
+  // ============================================================================
+
+  generateAI: (params: {
+    requestId: string;
+    request: AIGenerationRequest;
+  }): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.AI_GENERATE, params);
+  },
+
+  cancelAI: (requestId: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.AI_CANCEL, { requestId });
+  },
+
+  onAIChunk: (callback: (event: any, chunk: any) => void): void => {
+    ipcRenderer.on(IPC_CHANNELS.AI_CHUNK, callback);
+  },
+
+  removeAIChunkListener: (): void => {
+    ipcRenderer.removeAllListeners(IPC_CHANNELS.AI_CHUNK);
   },
 });
 

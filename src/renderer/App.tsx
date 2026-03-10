@@ -5,7 +5,7 @@
  */
 
 import React, { createContext, useReducer, useEffect, useState } from 'react';
-import type { Configuration, Skill, UIState, FilterSource, SortBy } from '../shared/types';
+import type { Configuration, Skill, UIState, FilterSource, SortBy, AIGenerationMode } from '../shared/types';
 import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
@@ -13,6 +13,7 @@ import CreateSkillDialog from './components/CreateSkillDialog';
 import SkillEditor from './components/SkillEditor';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import Settings from './components/Settings';
+import AIPanel from './components/AIPanel';
 import ToastContainer, { ToastMessage } from './components/ToastContainer';
 
 // ============================================================================
@@ -100,8 +101,14 @@ export default function App(): JSX.Element {
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | null>(null);
+  const [editorContent, _setEditorContent] = useState<string>('');
+  const [editorSelection, _setEditorSelection] = useState<{ start: number; end: number }>({
+    start: 0,
+    end: 0,
+  });
 
   /**
    * Load configuration on mount
@@ -198,6 +205,14 @@ export default function App(): JSX.Element {
         if (!showSetup && state.config?.projectDirectory) {
           loadSkills();
           showToast('Skills refreshed', 'success');
+        }
+      }
+
+      // Ctrl+Shift+N: Open AI assistant panel
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'N') {
+        event.preventDefault();
+        if (!showSetup && state.config?.projectDirectory && editingSkill) {
+          setShowAIPanel(true);
         }
       }
 
@@ -390,6 +405,38 @@ export default function App(): JSX.Element {
   };
 
   /**
+   * Handle AI content application
+   */
+  const handleApplyAIContent = async (content: string, mode: AIGenerationMode): Promise<void> => {
+    if (!editingSkill) return;
+
+    try {
+      let newContent = content;
+
+      if (mode === 'insert') {
+        // Insert at cursor position
+        const before = editorContent.substring(0, editorSelection.start);
+        const after = editorContent.substring(editorSelection.start);
+        newContent = before + content + after;
+      } else if (mode === 'replace') {
+        // Replace selected text
+        const before = editorContent.substring(0, editorSelection.start);
+        const after = editorContent.substring(editorSelection.end);
+        newContent = before + content + after;
+      }
+      // For 'new' and 'modify' modes, use content as-is
+
+      // Save the updated content
+      await handleSaveSkill(newContent);
+
+      showToast('AI content applied successfully', 'success');
+    } catch (error) {
+      console.error('Failed to apply AI content:', error);
+      showToast('Failed to apply AI content', 'error');
+    }
+  };
+
+  /**
    * Render loading state
    */
   if (state.isLoading) {
@@ -509,6 +556,16 @@ export default function App(): JSX.Element {
         onClose={() => setShowSettings(false)}
         config={state.config}
         onSave={handleSaveSettings}
+      />
+
+      {/* AI Assistant Panel */}
+      <AIPanel
+        isOpen={showAIPanel}
+        onClose={() => setShowAIPanel(false)}
+        onApply={handleApplyAIContent}
+        currentContent={editorContent}
+        selectionStart={editorSelection.start}
+        selectionEnd={editorSelection.end}
       />
 
       {/* Toast Notifications */}
