@@ -98,17 +98,58 @@ export class PathValidator {
         // Check if this is the global directory (contains .claude/skills in path and in Users/home directory)
         const globalPattern = isWindows ? '.claude\\skills' : '.claude/skills';
         const isGlobal = normalizedAllowed.includes(globalPattern.toLowerCase()) &&
-                         (normalizedAllowed.includes('users') || normalizedAllowed.includes('home'));
+                        (normalizedAllowed.includes('users\\') || normalizedAllowed.includes('home/'));
 
-        if (isGlobal) {
-          return 'global';
-        } else {
-          return 'project';
-        }
+        return isGlobal ? 'global' : 'project';
       }
     }
 
-    // Default to global if not found
-    return 'global';
+    // Default to project if we can't determine
+    return 'project';
+  }
+
+  /**
+   * Get project directory path
+   */
+  getProjectDirectory(): string | null {
+    const dirs = Array.from(this.allowedDirectories);
+    const isWindows = process.platform === 'win32';
+
+    // Find project directory (not global)
+    for (const dir of dirs) {
+      const normalizedDir = isWindows ? dir.toLowerCase() : dir;
+      const globalPattern = isWindows ? '.claude\\skills' : '.claude/skills';
+      const isGlobal = normalizedDir.includes(globalPattern.toLowerCase()) &&
+                      (normalizedDir.includes('users\\') || normalizedDir.includes('home/'));
+
+      if (!isGlobal) {
+        return dir;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get global directory path
+   */
+  getGlobalDirectory(): string {
+    const dirs = Array.from(this.allowedDirectories);
+    const isWindows = process.platform === 'win32';
+
+    // Find global directory
+    for (const dir of dirs) {
+      const normalizedDir = isWindows ? dir.toLowerCase() : dir;
+      const globalPattern = isWindows ? '.claude\\skills' : '.claude/skills';
+      const isGlobal = normalizedDir.includes(globalPattern.toLowerCase()) &&
+                      (normalizedDir.includes('users\\') || normalizedDir.includes('home/'));
+
+      if (isGlobal) {
+        return dir;
+      }
+    }
+
+    // Fallback to first directory if global not found
+    return dirs[0] || '';
   }
 }

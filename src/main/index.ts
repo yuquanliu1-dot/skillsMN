@@ -10,6 +10,7 @@ import { logger } from './utils/Logger';
 import { registerConfigHandlers, getConfigService } from './ipc/configHandlers';
 import { registerSkillHandlers } from './ipc/skillHandlers';
 import { registerAIHandlers, registerAITestHandler } from './ipc/aiHandlers';
+import { registerGitHubHandlers } from './ipc/gitHubHandlers';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
 import { SkillDirectoryModel } from './models/SkillDirectory';
@@ -140,6 +141,10 @@ async function initialize(): Promise<void> {
     registerAIHandlers();
     registerAITestHandler();
     logger.info('AI handlers registered', 'Main');
+
+    // Register GitHub handlers
+    registerGitHubHandlers(pathValidator);
+    logger.info('GitHub handlers registered', 'Main');
 
     // Create main window
     await createWindow();

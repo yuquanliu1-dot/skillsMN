@@ -153,13 +153,13 @@
 
 ### Backend Implementation for User Story 3
 
-- [ ] T065 [P] [US3] Create SearchResult model with nested SkillFileMatch in src/main/models/SearchResult.ts
-- [ ] T066 [US3] Implement GitHubService with search, preview, install methods in src/main/services/GitHubService.ts
-- [ ] T067 [US3] Implement github:search IPC handler with 500ms debounce in src/main/ipc/gitHubHandlers.ts
-- [ ] T068 [US3] Implement github:preview IPC handler with raw URL fetch in src/main/ipc/gitHubHandlers.ts
-- [ ] T069 [US3] Implement github:install IPC handler with conflict detection in src/main/ipc/gitHubHandlers.ts
-- [ ] T070 [US3] Add rate limit handling with exponential backoff in src/main/services/GitHubService.ts
-- [ ] T071 [US3] Implement conflict resolution (overwrite/rename/skip) in src/main/services/GitHubService.ts
+- [X] T065 [P] [US3] Create SearchResult model with nested SkillFileMatch in src/main/models/SearchResult.ts
+- [X] T066 [US3] Implement GitHubService with search, preview, install methods in src/main/services/GitHubService.ts
+- [X] T067 [US3] Implement github:search IPC handler with 500ms debounce in src/main/ipc/gitHubHandlers.ts
+- [X] T068 [US3] Implement github:preview IPC handler with raw URL fetch in src/main/ipc/gitHubHandlers.ts
+- [X] T069 [US3] Implement github:install IPC handler with conflict detection in src/main/ipc/gitHubHandlers.ts
+- [X] T070 [US3] Add rate limit handling with exponential backoff in src/main/services/GitHubService.ts
+- [X] T071 [US3] Implement conflict resolution (overwrite/rename/skip) in src/main/services/GitHubService.ts
 
 ### Frontend Implementation for User Story 3
 

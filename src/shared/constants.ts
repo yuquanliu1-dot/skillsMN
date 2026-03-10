@@ -132,6 +132,11 @@ export const IPC_CHANNELS = {
   AI_GENERATE: 'ai:generate',
   AI_CANCEL: 'ai:cancel',
   AI_CHUNK: 'ai:chunk',
+
+  // GitHub operations
+  GITHUB_SEARCH: 'github:search',
+  GITHUB_PREVIEW: 'github:preview',
+  GITHUB_INSTALL: 'github:install',
 } as const;
 
 // ============================================================================
