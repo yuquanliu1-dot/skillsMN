@@ -79,7 +79,7 @@ As a user, I want to handle cases where a skill with the same name already exist
 
 **Why this priority**: Conflicts are common when installing skills. Users need control to avoid accidental overwrites or clutter from duplicate names.
 
-**Independent Test**: Can be tested by installing a skill when a同名 file exists, selecting a conflict resolution option, and verifying the expected outcome.
+**Independent Test**: Can be tested by installing a skill when a file with the same name already exists, selecting a conflict resolution option, and verifying the expected outcome.
 
 **Acceptance Scenarios**:
 
@@ -116,7 +116,7 @@ As a new user, I want to browse curated lists of high-quality skill repositories
 - What happens when a skill directory is very large (>1MB)?
   - System displays size warning in preview: "Large directory (X MB). Download may take longer." before installation
 - How does the system handle GitHub repositories with many skill directories (>50)?
-  - System paginates results within the repository, showing 20 skills per page
+  - System paginates GitHub Code Search results globally (20 skills per page across all repositories). If a single repository contains >50 skills, users can narrow search with additional keywords to find specific skills from that repository.
 - What happens when a skill's download URL becomes invalid (404)?
   - System displays: "Skill directory not found. It may have been moved or deleted from the repository."
 - How does the system handle very slow GitHub responses (>5 seconds)?
@@ -144,6 +144,16 @@ As a new user, I want to browse curated lists of high-quality skill repositories
 - **FR-013**: System MUST support canceling in-progress searches and downloads
 - **FR-014**: System MUST allow users to open repository URL in browser from search results
 - **FR-015**: System MUST use HTTPS for all GitHub API and download requests
+
+### UI/UX Requirements
+
+- **UI-001**: Search panel MUST display in main content area with white background, featuring large search input with gray-50 background and search icon
+- **UI-002**: Search results MUST display as cards with white backgrounds, gray-100 borders on hover, and blue-600 action buttons
+- **UI-003**: Skill preview MUST use split-panel layout with file tree on left (gray-50 background) and content preview on right (white background)
+- **UI-004**: Installation progress MUST display as blue-600 progress bar with percentage indicator in gray-500 text
+- **UI-005**: Curated sources sidebar MUST display with rounded-xl cards, white backgrounds, and gray-300 hover states
+- **UI-006**: Empty states MUST display centered icons with gray-100 backgrounds and gray-600 text
+- **UI-007**: Conflict resolution dialog MUST use white background with option cards (gray-50 hover) for overwrite/rename/skip choices
 
 ### Key Entities
 

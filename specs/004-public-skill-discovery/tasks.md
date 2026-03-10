@@ -68,17 +68,20 @@ This feature uses Electron architecture:
 **Backend (IPC)**:
 - [ ] T016 [US1] Implement github:search-skills IPC handler in src/main/ipc/gitHubHandlers.ts
 - [ ] T017 [US1] Add rate limit error handling with user-friendly messages in src/main/ipc/gitHubHandlers.ts
+- [ ] T017a [US1] Implement search cancellation logic in SearchPanel to abort in-progress search when query changes in src/renderer/components/SearchPanel.tsx
 
 **Frontend (UI Components)**:
 - [ ] T018 [P] [US1] Search UI/UX: Implement SearchPanel component with debounced input (500ms) in src/renderer/components/SearchPanel.tsx
 - [ ] T019 [P] [US1] Create SearchResultCard component displaying skill info in src/renderer/components/SearchResultCard.tsx
 - [ ] T020 [US1] Implement infinite scroll pagination with Intersection Observer in src/renderer/components/SearchPanel.tsx
 - [ ] T021 [US1] Add loading states and empty state messaging in src/renderer/components/SearchPanel.tsx
+- [ ] T021a [US1] Design empty state component with centered gray-100 background icon and gray-600 text for no-results scenario in src/renderer/components/SearchPanel.tsx
 - [ ] T022 [US1] Implement error handling with retry buttons in src/renderer/components/SearchPanel.tsx
 
 **Frontend (Integration)**:
 - [ ] T023 [US1] Create githubClient wrapper for IPC calls in src/renderer/services/githubClient.ts
 - [ ] T024 [US1] Wire SearchPanel to github:search-skills IPC channel in src/renderer/components/SearchPanel.tsx
+- [ ] T024a [US1] Add "Open in GitHub" button to SearchResultCard that opens repository URL in external browser in src/renderer/components/SearchResultCard.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can search GitHub and view paginated results independently
 
@@ -162,7 +165,7 @@ This feature uses Electron architecture:
 
 **Goal**: Enable users to handle cases where a skill with the same name already exists
 
-**Independent Test**: Install a skill when a 同名 file exists, select conflict resolution option, verify expected outcome
+**Independent Test**: Install a skill when a file with the same name already exists, select conflict resolution option, verify expected outcome
 
 ### Implementation for User Story 4
 
@@ -384,12 +387,12 @@ With multiple developers:
 
 ## Task Summary
 
-**Total Tasks**: 106
+**Total Tasks**: 109
 
 **Tasks by Phase**:
 - Phase 1 (Setup): 5 tasks
 - Phase 2 (Foundational): 6 tasks
-- Phase 3 (User Story 1 - Search): 13 tasks
+- Phase 3 (User Story 1 - Search): 16 tasks
 - Phase 4 (User Story 2 - Preview): 14 tasks
 - Phase 5 (User Story 3 - Install): 20 tasks
 - Phase 6 (User Story 4 - Conflicts): 13 tasks
@@ -398,7 +401,7 @@ With multiple developers:
 
 **Tasks by User Story**:
 - Setup/Foundational: 11 tasks
-- User Story 1 (Search - P1): 13 tasks
+- User Story 1 (Search - P1): 16 tasks
 - User Story 2 (Preview - P1): 14 tasks
 - User Story 3 (Install - P1): 20 tasks
 - User Story 4 (Conflicts - P1): 13 tasks
@@ -406,11 +409,11 @@ With multiple developers:
 - Polish: 23 tasks
 
 **Parallel Opportunities**:
-- 45 tasks marked [P] can run in parallel with other tasks
+- 48 tasks marked [P] can run in parallel with other tasks
 - After Phase 2, up to 3 user stories can be worked on simultaneously
 - Multiple team members can work on different user stories independently
 
-**MVP Scope**: Phase 1 + Phase 2 + Phase 3 (Setup + Foundational + User Story 1) = 24 tasks
+**MVP Scope**: Phase 1 + Phase 2 + Phase 3 (Setup + Foundational + User Story 1) = 27 tasks
 
 **Format Validation**: ✅ All tasks follow checklist format (checkbox, ID, [P] marker where applicable, [Story] labels for user story tasks, file paths)
 
