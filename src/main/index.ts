@@ -4,7 +4,7 @@
  * Initializes and manages the application lifecycle
  */
 
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, Menu } from 'electron';
 import * as path from 'path';
 import { logger } from './utils/Logger';
 import { registerConfigHandlers, getConfigService } from './ipc/configHandlers';
@@ -40,6 +40,7 @@ async function createWindow(): Promise<void> {
     },
     title: 'skillsMN - Local Skill Management',
     show: false, // Show when ready to prevent visual flash
+    center: true, // Center the window on screen
   });
 
   // Load the app
@@ -47,8 +48,15 @@ async function createWindow(): Promise<void> {
     // In development, load from Vite dev server or dist
     const rendererPath = path.join(__dirname, '../renderer/index.html');
     await mainWindow.loadFile(rendererPath);
-    mainWindow.webContents.openDevTools();
     logger.info('Loaded renderer in development mode', 'Main');
+
+    // Open DevTools after window is shown (don't steal focus)
+    mainWindow.webContents.once('did-finish-load', () => {
+      setTimeout(() => {
+        mainWindow?.webContents?.openDevTools({ mode: 'detach' });
+        logger.info('DevTools opened', 'Main');
+      }, 1000);
+    });
   } else {
     // In production, load from built files
     const rendererPath = path.join(__dirname, '../renderer/index.html');
@@ -56,17 +64,32 @@ async function createWindow(): Promise<void> {
     logger.info('Loaded renderer in production mode', 'Main');
   }
 
-  // Show window when ready
-  mainWindow.once('ready-to-show', () => {
+  // Show window immediately after loading
+  mainWindow.webContents.on('did-finish-load', () => {
     mainWindow?.show();
-    logger.info('Main window shown', 'Main');
+    mainWindow?.focus();
+    mainWindow?.moveTop();
+    logger.info('Main window shown after load', 'Main');
   });
+
+  // Fallback: show window after 2 seconds if still not visible
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isVisible()) {
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.moveTop();
+      logger.info('Main window shown (fallback)', 'Main');
+    }
+  }, 2000);
 
   // Handle external links
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
   });
+
+  // Remove default Electron menu
+  Menu.setApplicationMenu(null);
 
   // Clean up on close
   mainWindow.on('closed', () => {

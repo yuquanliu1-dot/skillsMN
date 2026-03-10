@@ -14,6 +14,7 @@ import {
   DEFAULT_EDITOR_MODE,
   DEFAULT_AUTO_REFRESH,
 } from '../../shared/constants';
+import * as path from 'path';
 
 export class ConfigurationModel {
   /**
@@ -37,6 +38,8 @@ export class ConfigurationModel {
       if (typeof config.projectDirectory !== 'string') {
         throw new Error('Project directory must be a string or null');
       }
+      // Normalize path separators for cross-platform compatibility
+      config.projectDirectory = path.normalize(config.projectDirectory);
       // Additional validation can be added here (e.g., check if directory exists)
     }
 

@@ -5,9 +5,13 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import Editor, { OnMount } from '@monaco-editor/react';
+import Editor, { OnMount, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
+import * as monaco from 'monaco-editor';
 import type { Skill } from '../../shared/types';
+
+// Configure Monaco to use local installation instead of CDN
+loader.config({ monaco });
 
 interface SkillEditorProps {
   skill: Skill;
@@ -31,29 +35,69 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
    * Load skill content on mount
    */
   useEffect(() => {
+    let isMounted = true;
+
     async function loadContent() {
       try {
         setIsLoading(true);
         setError(null);
 
-        const response = await window.electronAPI.getSkill(skill.path);
-        if (!response.success || !response.data) {
-          throw new Error(response.error || 'Failed to load skill');
+        console.log('[SkillEditor] Starting to load skill:', skill.path);
+        console.log('[SkillEditor] Skill object:', skill);
+
+        // Check if electronAPI is available
+        if (!window.electronAPI || !window.electronAPI.getSkill) {
+          throw new Error('Electron API not available. This should not happen in production.');
         }
 
+        console.log('[SkillEditor] Calling getSkill API...');
+        const response = await window.electronAPI.getSkill(skill.path);
+        console.log('[SkillEditor] API Response:', response);
+        console.log('[SkillEditor] Response success?', response.success);
+        console.log('[SkillEditor] Response data?', response.data);
+        console.log('[SkillEditor] Response data type?', typeof response.data);
+        if (response.data) {
+          console.log('[SkillEditor] Response data keys:', Object.keys(response.data));
+          console.log('[SkillEditor] Has content?', 'content' in response.data);
+          console.log('[SkillEditor] Has metadata?', 'metadata' in response.data);
+        }
+
+        if (!isMounted) {
+          console.log('[SkillEditor] Component unmounted, aborting');
+          return;
+        }
+
+        if (!response.success) {
+          throw new Error(response.error || 'API returned failure');
+        }
+
+        if (!response.data) {
+          throw new Error('API returned success but no data');
+        }
+
+        console.log('[SkillEditor] Content loaded successfully, length:', response.data.content.length);
         setContent(response.data.content);
         setLoadedLastModified(new Date(skill.lastModified).getTime());
         setHasUnsavedChanges(false);
       } catch (err) {
+        if (!isMounted) return;
+
         const message = err instanceof Error ? err.message : 'Failed to load skill content';
-        setError(message);
-        console.error('Load skill error:', err);
+        console.error('[SkillEditor] Load error:', err);
+        setError(`Failed to load skill: ${message}`);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+          console.log('[SkillEditor] Loading complete, isLoading set to false');
+        }
       }
     }
 
     loadContent();
+
+    return () => {
+      isMounted = false;
+    };
   }, [skill.path, skill.lastModified]);
 
   /**

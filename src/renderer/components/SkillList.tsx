@@ -4,8 +4,7 @@
  * Displays list of skills with filtering, sorting, search, and virtualization
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import { useState, useMemo, useCallback } from 'react';
 import type { Skill, FilterSource, SortBy } from '../../shared/types';
 import SkillCard from './SkillCard';
 
@@ -19,14 +18,10 @@ interface SkillListProps {
   selectedSkillPath?: string | null;
 }
 
-// Card height + gap (80px card + 16px gap)
-const CARD_HEIGHT = 96;
-
 export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreateSkill, onDeleteSkill, onOpenFolder, selectedSkillPath }: SkillListProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
-  const listRef = useRef<List>(null);
 
   /**
    * Filter and sort skills based on current state
@@ -69,42 +64,15 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
    */
   const handleFilterChange = useCallback((newFilter: FilterSource) => {
     setFilterSource(newFilter);
-    listRef.current?.scrollTo(0);
   }, []);
 
   const handleSortChange = useCallback((newSort: SortBy) => {
     setSortBy(newSort);
-    listRef.current?.scrollTo(0);
   }, []);
 
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
-    listRef.current?.scrollTo(0);
   }, []);
-
-  /**
-   * Virtualized row renderer
-   */
-  const Row = useCallback(
-    ({ index, style }: { index: number; style: React.CSSProperties }) => {
-      const skill = filteredAndSortedSkills[index];
-      if (!skill) return null;
-
-      return (
-        <div style={{ ...style, paddingBottom: '16px' }}>
-          <SkillCard
-            skill={skill}
-            onClick={onSkillClick}
-            onSelect={onSkillSelect}
-            onDelete={onDeleteSkill}
-            onOpenFolder={onOpenFolder}
-            isSelected={skill.path === selectedSkillPath}
-          />
-        </div>
-      );
-    },
-    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath]
-  );
 
   return (
     <div className="flex flex-col h-full">
@@ -202,21 +170,22 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
         </div>
       </div>
 
-      {/* Skill list with virtualization */}
-      <div className="flex-1">
+      {/* Skill list */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {filteredAndSortedSkills.length > 0 ? (
-          <List
-            ref={listRef}
-            height={window.innerHeight - 200} // Approximate visible height
-            itemCount={filteredAndSortedSkills.length}
-            itemSize={CARD_HEIGHT}
-            width="100%"
-            className="p-4"
-          >
-            {Row}
-          </List>
+          filteredAndSortedSkills.map((skill) => (
+            <SkillCard
+              key={skill.path}
+              skill={skill}
+              onClick={onSkillClick}
+              onSelect={onSkillSelect}
+              onDelete={onDeleteSkill}
+              onOpenFolder={onOpenFolder}
+              isSelected={skill.path === selectedSkillPath}
+            />
+          ))
         ) : (
-          <div className="flex items-center justify-center h-full p-4">
+          <div className="flex items-center justify-center h-full">
             <div className="text-center text-text-muted">
               {skills.length === 0
                 ? 'No skills found. Create your first skill to get started.'

@@ -89,17 +89,21 @@ export class PathValidator {
     // Get project and global directories
     const dirs = Array.from(this.allowedDirectories);
 
-    // Find which directory this skill belongs to
+    // Check if skill is in global directory first (more specific)
+    // Global directory is typically in user home (e.g., C:\Users\...\.claude\skills)
     for (const allowed of dirs) {
       const normalizedAllowed = isWindows ? allowed.toLowerCase() : allowed;
 
       if (normalizedResolved.startsWith(normalizedAllowed + path.sep)) {
-        // Check if this is the project directory (contains .claude in path)
-        // or global directory (in user home)
-        if (allowed.includes('.claude') && !allowed.includes('Users')) {
-          return 'project';
-        } else {
+        // Check if this is the global directory (contains .claude/skills in path and in Users/home directory)
+        const globalPattern = isWindows ? '.claude\\skills' : '.claude/skills';
+        const isGlobal = normalizedAllowed.includes(globalPattern.toLowerCase()) &&
+                         (normalizedAllowed.includes('users') || normalizedAllowed.includes('home'));
+
+        if (isGlobal) {
           return 'global';
+        } else {
+          return 'project';
         }
       }
     }

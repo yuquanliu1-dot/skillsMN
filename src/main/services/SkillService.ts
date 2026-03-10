@@ -138,9 +138,20 @@ export class SkillService {
 
     // Get target directory
     const config = await this.getConfig();
+    logger.debug(`Config loaded`, 'SkillService', {
+      hasProjectDirectory: !!config.projectDirectory,
+      projectDirectory: config.projectDirectory,
+      requestedDirectory: directory
+    });
+
     const targetBase = directory === 'project' && config.projectDirectory
       ? SkillDirectoryModel.getProjectDirectory(config.projectDirectory)
       : SkillDirectoryModel.getGlobalDirectory();
+
+    logger.debug(`Target directory selected`, 'SkillService', {
+      targetBase,
+      isProject: directory === 'project' && !!config.projectDirectory
+    });
 
     // Generate kebab-case directory name
     const kebabName = this.toKebabCase(name);
