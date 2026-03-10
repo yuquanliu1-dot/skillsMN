@@ -28,7 +28,7 @@
 - [ ] T007 [P] Create React root component in src/renderer/App.tsx
 - [ ] T008 Create shared types directory structure in src/shared/types/
 - [ ] T009 [P] Configure Electron BrowserWindow with security settings (contextIsolation, sandbox) in src/main/index.ts
-- [ ] T010 [P] Create preload script with IPC bridge in src/preload.ts
+- [ ] T010 [P] Create preload script with IPC bridge in src/main/preload.ts
 
 **UI/UX Design Phase** (Required before frontend implementation):
 - [ ] T011 [P] UI/UX Research: Use ui-ux-pro-max skill to search for desktop application design patterns (skill management interfaces, code editors)
@@ -99,12 +99,15 @@
 - [ ] T040 [US1] Implement SkillList component with virtual scrolling in src/renderer/components/SkillList.tsx
 - [ ] T041 [US1] Implement SkillCard component with metadata display in src/renderer/components/SkillCard.tsx
 - [ ] T042 [US1] Implement SkillEditor component with Monaco Editor integration in src/renderer/components/SkillEditor.tsx
-- [ ] T043 [US1] Implement NewSkillDialog component with name and description inputs in src/renderer/components/NewSkillDialog.tsx
+- [ ] T043 [US1] Implement CreateSkillDialog component with name and description inputs in src/renderer/components/CreateSkillDialog.tsx
 - [ ] T044 [US1] Implement DeleteConfirmDialog component in src/renderer/components/DeleteConfirmDialog.tsx
-- [ ] T045 [US1] Implement ProjectSelector component for directory selection in src/renderer/components/ProjectSelector.tsx
+- [ ] T045 [US1] Implement SetupDialog component for directory selection and initial configuration in src/renderer/components/SetupDialog.tsx
 - [ ] T046 [US1] Add IPC hooks for skill operations in src/renderer/hooks/useSkills.ts
 - [ ] T047 [US1] Integrate SkillList, SkillEditor, and dialogs in main App layout in src/renderer/App.tsx
 - [ ] T048 [US1] Implement keyboard shortcuts (Ctrl+N new, Ctrl+S save, Delete) in src/renderer/App.tsx
+- [ ] T048a [US1] Create useKeyboardShortcuts hook in src/renderer/hooks/useKeyboardShortcuts.ts
+- [ ] T048b [US1] Add Ctrl+R for refresh, Ctrl+Shift+N for AI generate in src/renderer/App.tsx
+- [ ] T048c [US1] Display keyboard shortcuts in tooltips and help overlay in src/renderer/components/KeyboardShortcutsHelp.tsx
 - [ ] T049 [US1] Verify UI quality: SVG icons from Heroicons/Lucide, stable hover states, cursor pointer, dark mode contrast 4.5:1
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can manage local skills independently
