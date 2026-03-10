@@ -178,14 +178,30 @@ export default function App(): JSX.Element {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       // Ctrl+N: Create new skill
-      if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'n' && !event.shiftKey) {
         event.preventDefault();
         if (!showSetup && state.config?.projectDirectory) {
           setShowCreateDialog(true);
         }
       }
 
-      // Delete: Delete selected skill (T099)
+      // Ctrl+S: Save current skill
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        // Save is handled within SkillEditor component
+        // This prevents browser's default save dialog
+      }
+
+      // Ctrl+R: Refresh skill list
+      if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
+        event.preventDefault();
+        if (!showSetup && state.config?.projectDirectory) {
+          loadSkills();
+          showToast('Skills refreshed', 'success');
+        }
+      }
+
+      // Delete: Delete selected skill
       if (event.key === 'Delete' && selectedSkillPath) {
         event.preventDefault();
         const selectedSkill = state.skills.find(s => s.path === selectedSkillPath);

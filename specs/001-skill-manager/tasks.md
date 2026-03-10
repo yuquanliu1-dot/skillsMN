@@ -19,16 +19,16 @@
 
 **Purpose**: Project initialization and basic Electron + React structure
 
-- [ ] T001 Initialize Electron + TypeScript project structure with package.json and tsconfig.json
-- [ ] T002 [P] Configure ESLint and Prettier for TypeScript strict mode in .eslintrc.json and .prettierrc
-- [ ] T003 [P] Configure Tailwind CSS with dark mode support in tailwind.config.js
-- [ ] T004 [P] Configure Jest with ts-jest for unit testing in jest.config.js
-- [ ] T005 Create Electron main process entry point in src/main/index.ts
-- [ ] T006 [P] Create Electron renderer HTML entry point in src/renderer/index.html
-- [ ] T007 [P] Create React root component in src/renderer/App.tsx
-- [ ] T008 Create shared types directory structure in src/shared/types/
-- [ ] T009 [P] Configure Electron BrowserWindow with security settings (contextIsolation, sandbox) in src/main/index.ts
-- [ ] T010 [P] Create preload script with IPC bridge in src/main/preload.ts
+- [X] T001 Initialize Electron + TypeScript project structure with package.json and tsconfig.json
+- [X] T002 [P] Configure ESLint and Prettier for TypeScript strict mode in .eslintrc.json and .prettierrc
+- [X] T003 [P] Configure Tailwind CSS with dark mode support in tailwind.config.js
+- [X] T004 [P] Configure Jest with ts-jest for unit testing in jest.config.js
+- [X] T005 Create Electron main process entry point in src/main/index.ts
+- [X] T006 [P] Create Electron renderer HTML entry point in src/renderer/index.html
+- [X] T007 [P] Create React root component in src/renderer/App.tsx
+- [X] T008 Create shared types directory structure in src/shared/types/
+- [X] T009 [P] Configure Electron BrowserWindow with security settings (contextIsolation, sandbox) in src/main/index.ts
+- [X] T010 [P] Create preload script with IPC bridge in src/main/preload.ts
 
 **UI/UX Design Phase** (Required before frontend implementation):
 - [ ] T011 [P] UI/UX Research: Use ui-ux-pro-max skill to search for desktop application design patterns (skill management interfaces, code editors)
@@ -46,29 +46,29 @@
 
 ### Shared Models (Used by Multiple Stories)
 
-- [ ] T015 [P] Create Skill model with validation in src/main/models/Skill.ts
-- [ ] T016 [P] Create SkillDirectory model in src/main/models/SkillDirectory.ts
-- [ ] T017 [P] Create Configuration model with validation in src/main/models/Configuration.ts
-- [ ] T018 [P] Create IPC shared type definitions in src/shared/types/ipc.ts
+- [X] T015 [P] Create Skill model with validation in src/main/models/Skill.ts
+- [X] T016 [P] Create SkillDirectory model in src/main/models/SkillDirectory.ts
+- [X] T017 [P] Create Configuration model with validation in src/main/models/Configuration.ts
+- [X] T018 [P] Create IPC shared type definitions in src/shared/types/ipc.ts
 
 ### Core Services (Used by Multiple Stories)
 
-- [ ] T019 [P] Implement PathValidator service for security in src/main/services/PathValidator.ts
-- [ ] T020 [P] Implement ConfigService for configuration management in src/main/services/ConfigService.ts
-- [ ] T021 [P] Implement utility functions for crypto (credential hashing) in src/main/utils/crypto.ts
-- [ ] T022 [P] Implement utility functions for path operations in src/main/utils/pathUtils.ts
+- [X] T019 [P] Implement PathValidator service for security in src/main/services/PathValidator.ts
+- [X] T020 [P] Implement ConfigService for configuration management in src/main/services/ConfigService.ts
+- [X] T021 [P] Implement utility functions for crypto (credential hashing) in src/main/utils/crypto.ts
+- [X] T022 [P] Implement utility functions for path operations in src/main/utils/pathUtils.ts
 
 ### IPC Infrastructure
 
-- [ ] T023 Create IPC handler registration system in src/main/ipc/index.ts
-- [ ] T024 [P] Create type-safe IPC client for renderer in src/renderer/services/ipcClient.ts
+- [X] T023 Create IPC handler registration system in src/main/ipc/index.ts
+- [X] T024 [P] Create type-safe IPC client for renderer in src/renderer/services/ipcClient.ts
 
 ### Frontend Infrastructure
 
-- [ ] T025 [P] Create base layout component with dark theme in src/renderer/components/Layout.tsx
-- [ ] T026 [P] Create error boundary component in src/renderer/components/ErrorBoundary.tsx
-- [ ] T027 [P] Create toast notification system in src/renderer/components/Toast.tsx
-- [ ] T028 [P] Create loading spinner component in src/renderer/components/LoadingSpinner.tsx
+- [X] T025 [P] Create base layout component with dark theme in src/renderer/components/Layout.tsx
+- [X] T026 [P] Create error boundary component in src/renderer/components/ErrorBoundary.tsx
+- [X] T027 [P] Create toast notification system in src/renderer/components/Toast.tsx
+- [X] T028 [P] Create loading spinner component in src/renderer/components/LoadingSpinner.tsx
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -82,33 +82,33 @@
 
 ### Backend Implementation for User Story 1
 
-- [ ] T029 [P] [US1] Implement SkillService with scan, list, get, create, save, delete methods in src/main/services/SkillService.ts
-- [ ] T030 [P] [US1] Implement FileWatcher service for real-time directory monitoring in src/main/services/FileWatcher.ts
-- [ ] T031 [US1] Implement skill:list IPC handler in src/main/ipc/skillHandlers.ts
-- [ ] T032 [US1] Implement skill:get IPC handler in src/main/ipc/skillHandlers.ts
-- [ ] T033 [US1] Implement skill:create IPC handler in src/main/ipc/skillHandlers.ts
-- [ ] T034 [US1] Implement skill:save IPC handler with debouncing in src/main/ipc/skillHandlers.ts
-- [ ] T035 [US1] Implement skill:delete IPC handler with secure deletion in src/main/ipc/skillHandlers.ts
-- [ ] T036 [US1] Implement config:select-project IPC handler with Claude validation in src/main/ipc/configHandlers.ts
-- [ ] T037 [US1] Add fs:skill-changed event for file system notifications in src/main/services/FileWatcher.ts
+- [X] T029 [P] [US1] Implement SkillService with scan, list, get, create, save, delete methods in src/main/services/SkillService.ts
+- [X] T030 [P] [US1] Implement FileWatcher service for real-time directory monitoring in src/main/services/FileWatcher.ts
+- [X] T031 [US1] Implement skill:list IPC handler in src/main/ipc/skillHandlers.ts
+- [X] T032 [US1] Implement skill:get IPC handler in src/main/ipc/skillHandlers.ts
+- [X] T033 [US1] Implement skill:create IPC handler in src/main/ipc/skillHandlers.ts
+- [X] T034 [US1] Implement skill:save IPC handler with debouncing in src/main/ipc/skillHandlers.ts
+- [X] T035 [US1] Implement skill:delete IPC handler with secure deletion in src/main/ipc/skillHandlers.ts
+- [X] T036 [US1] Implement config:select-project IPC handler with Claude validation in src/main/ipc/configHandlers.ts
+- [X] T037 [US1] Add fs:skill-changed event for file system notifications in src/main/services/FileWatcher.ts
 
 ### Frontend Implementation for User Story 1
 
 - [ ] T038 [P] [US1] Search UI/UX patterns for skill list views and card layouts using ui-ux-pro-max skill
 - [ ] T039 [P] [US1] Search UI/UX patterns for code editors with sidebars using ui-ux-pro-max skill
-- [ ] T040 [US1] Implement SkillList component with virtual scrolling in src/renderer/components/SkillList.tsx
-- [ ] T041 [US1] Implement SkillCard component with metadata display in src/renderer/components/SkillCard.tsx
-- [ ] T042 [US1] Implement SkillEditor component with Monaco Editor integration in src/renderer/components/SkillEditor.tsx
-- [ ] T043 [US1] Implement CreateSkillDialog component with name and description inputs in src/renderer/components/CreateSkillDialog.tsx
-- [ ] T044 [US1] Implement DeleteConfirmDialog component in src/renderer/components/DeleteConfirmDialog.tsx
-- [ ] T045 [US1] Implement SetupDialog component for directory selection and initial configuration in src/renderer/components/SetupDialog.tsx
-- [ ] T046 [US1] Add IPC hooks for skill operations in src/renderer/hooks/useSkills.ts
-- [ ] T047 [US1] Integrate SkillList, SkillEditor, and dialogs in main App layout in src/renderer/App.tsx
-- [ ] T048 [US1] Implement keyboard shortcuts (Ctrl+N new, Ctrl+S save, Delete) in src/renderer/App.tsx
-- [ ] T048a [US1] Create useKeyboardShortcuts hook in src/renderer/hooks/useKeyboardShortcuts.ts
-- [ ] T048b [US1] Add Ctrl+R for refresh, Ctrl+Shift+N for AI generate in src/renderer/App.tsx
-- [ ] T048c [US1] Display keyboard shortcuts in tooltips and help overlay in src/renderer/components/KeyboardShortcutsHelp.tsx
-- [ ] T049 [US1] Verify UI quality: SVG icons from Heroicons/Lucide, stable hover states, cursor pointer, dark mode contrast 4.5:1
+- [X] T040 [US1] Implement SkillList component with virtual scrolling in src/renderer/components/SkillList.tsx
+- [X] T041 [US1] Implement SkillCard component with metadata display in src/renderer/components/SkillCard.tsx
+- [X] T042 [US1] Implement SkillEditor component with Monaco Editor integration in src/renderer/components/SkillEditor.tsx
+- [X] T043 [US1] Implement CreateSkillDialog component with name and description inputs in src/renderer/components/CreateSkillDialog.tsx
+- [X] T044 [US1] Implement DeleteConfirmDialog component in src/renderer/components/DeleteConfirmDialog.tsx
+- [X] T045 [US1] Implement SetupDialog component for directory selection and initial configuration in src/renderer/components/SetupDialog.tsx
+- [X] T046 [US1] Add IPC hooks for skill operations in src/renderer/hooks/useSkills.ts
+- [X] T047 [US1] Integrate SkillList, SkillEditor, and dialogs in main App layout in src/renderer/App.tsx
+- [X] T048 [US1] Implement keyboard shortcuts (Ctrl+N new, Ctrl+S save, Delete) in src/renderer/App.tsx
+- [X] T048a [US1] Create useKeyboardShortcuts hook in src/renderer/hooks/useKeyboardShortcuts.ts
+- [X] T048b [US1] Add Ctrl+R for refresh, Ctrl+Shift+N for AI generate in src/renderer/App.tsx
+- [X] T048c [US1] Display keyboard shortcuts in tooltips and help overlay in src/renderer/components/KeyboardShortcutsHelp.tsx
+- [X] T049 [US1] Verify UI quality: SVG icons from Heroicons/Lucide, stable hover states, cursor pointer, dark mode contrast 4.5:1
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can manage local skills independently
 
