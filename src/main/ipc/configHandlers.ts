@@ -9,9 +9,23 @@ import { logger } from '../utils/Logger';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { ConfigService } from '../services/ConfigService';
 import { IPC_CHANNELS } from '../../shared/constants';
-import { IPCResponse, Configuration } from '../../shared/types';
+import { IPCResponse, IPCError, Configuration } from '../../shared/types';
 
 let configService: ConfigService | null = null;
+
+/**
+ * Convert error to IPCError format
+ */
+function toIPCError(error: unknown): IPCError {
+  const message = ErrorHandler.format(error);
+  let code = 'UNKNOWN_ERROR';
+
+  if (error instanceof Error) {
+    code = 'GENERAL_ERROR';
+  }
+
+  return { code, message };
+}
 
 /**
  * Initialize configuration service and register IPC handlers
@@ -30,9 +44,8 @@ export function registerConfigHandlers(): void {
         const config = await configService!.load();
         return { success: true, data: config };
       } catch (error) {
-        const message = ErrorHandler.format(error);
         logger.error('Failed to load configuration', 'ConfigHandlers', error);
-        return { success: false, error: message };
+        return { success: false, error: toIPCError(error) };
       }
     }
   );
@@ -50,9 +63,8 @@ export function registerConfigHandlers(): void {
         logger.info('Configuration saved successfully', 'ConfigHandlers');
         return { success: true, data: updated };
       } catch (error) {
-        const message = ErrorHandler.format(error);
         logger.error('Failed to save configuration', 'ConfigHandlers', error);
-        return { success: false, error: message };
+        return { success: false, error: toIPCError(error) };
       }
     }
   );

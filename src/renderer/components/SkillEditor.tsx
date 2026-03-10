@@ -68,7 +68,7 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
         }
 
         if (!response.success) {
-          throw new Error(response.error || 'API returned failure');
+          throw new Error(response.error?.message || 'API returned failure');
         }
 
         if (!response.data) {

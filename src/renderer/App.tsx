@@ -127,7 +127,7 @@ export default function App(): JSX.Element {
           const response = await window.electronAPI.listSkills(config);
           if (!response.success) {
             // Project directory might be missing or inaccessible
-            if (response.error?.includes('does not exist') || response.error?.includes('not found')) {
+            if (response.error?.message.includes('does not exist') || response.error?.message.includes('not found')) {
               showToast('Project directory not found. Please reconfigure.', 'error');
               setShowSetup(true);
               dispatch({ type: 'SET_LOADING', payload: false });
@@ -278,7 +278,7 @@ export default function App(): JSX.Element {
     try {
       const response = await window.electronAPI.createSkill(name, directory);
       if (!response.success) {
-        throw new Error(response.error || 'Failed to create skill');
+        throw new Error(response.error?.message || 'Failed to create skill');
       }
 
       // Refresh skill list
@@ -304,8 +304,8 @@ export default function App(): JSX.Element {
     try {
       const response = await window.electronAPI.updateSkill(editingSkill.path, content, loadedLastModified);
       if (!response.success) {
-        const error = new Error(response.error || 'Failed to save skill');
-        (error as any).code = response.error?.includes('externally') ? 'EXTERNAL_MODIFICATION' : undefined;
+        const error = new Error(response.error?.message || 'Failed to save skill');
+        (error as any).code = response.error?.message.includes('externally') ? 'EXTERNAL_MODIFICATION' : undefined;
         throw error;
       }
 
@@ -335,7 +335,7 @@ export default function App(): JSX.Element {
     try {
       const response = await window.electronAPI.deleteSkill(skill.path);
       if (!response.success) {
-        throw new Error(response.error || 'Failed to delete skill');
+        throw new Error(response.error?.message || 'Failed to delete skill');
       }
 
       // Refresh skill list
@@ -362,7 +362,7 @@ export default function App(): JSX.Element {
     try {
       const response = await window.electronAPI.openFolder(skill.path);
       if (!response.success) {
-        throw new Error(response.error || 'Failed to open folder');
+        throw new Error(response.error?.message || 'Failed to open folder');
       }
 
       console.log('Folder opened successfully:', skill.name);

@@ -63,13 +63,22 @@ export interface Configuration {
 // IPC Types
 // ============================================================================
 
+export interface IPCError {
+  /** Error code for programmatic handling */
+  code: string;
+  /** Human-readable error message */
+  message: string;
+  /** Additional error details */
+  details?: any;
+}
+
 export interface IPCResponse<T> {
   /** Whether operation succeeded */
   success: boolean;
   /** Response data (if success) */
   data?: T;
-  /** Error message (if failed) */
-  error?: string;
+  /** Error object (if failed) */
+  error?: IPCError;
 }
 
 // ============================================================================

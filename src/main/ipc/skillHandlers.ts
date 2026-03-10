@@ -6,16 +6,50 @@
 
 import { ipcMain } from 'electron';
 import { logger } from '../utils/Logger';
-import { ErrorHandler } from '../utils/ErrorHandler';
+import {
+  ErrorHandler,
+  FileNotFoundError,
+  PermissionError,
+  PathTraversalError,
+  YAMLParseError,
+  ConfigurationError,
+  SkillExistsError
+} from '../utils/ErrorHandler';
 import { SkillService } from '../services/SkillService';
 import { PathValidator } from '../services/PathValidator';
 import { SkillDirectoryModel } from '../models/SkillDirectory';
 import { getConfigService } from './configHandlers';
 import { IPC_CHANNELS } from '../../shared/constants';
-import { IPCResponse, Skill, Configuration } from '../../shared/types';
+import { IPCResponse, IPCError, Skill, Configuration } from '../../shared/types';
 import { getFileWatcher } from '../index';
 
 let skillService: SkillService | null = null;
+
+/**
+ * Convert error to IPCError format
+ */
+function toIPCError(error: unknown): IPCError {
+  const message = ErrorHandler.format(error);
+  let code = 'UNKNOWN_ERROR';
+
+  if (error instanceof FileNotFoundError) {
+    code = 'FILE_NOT_FOUND';
+  } else if (error instanceof PermissionError) {
+    code = 'PERMISSION_DENIED';
+  } else if (error instanceof PathTraversalError) {
+    code = 'PATH_TRAVERSAL';
+  } else if (error instanceof YAMLParseError) {
+    code = 'YAML_PARSE_ERROR';
+  } else if (error instanceof ConfigurationError) {
+    code = 'CONFIGURATION_ERROR';
+  } else if (error instanceof SkillExistsError) {
+    code = 'SKILL_EXISTS';
+  } else if (error instanceof Error) {
+    code = 'GENERAL_ERROR';
+  }
+
+  return { code, message };
+}
 
 /**
  * Initialize skill service and register IPC handlers
@@ -34,9 +68,8 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         const skills = await skillService!.listAllSkills(config);
         return { success: true, data: skills };
       } catch (error) {
-        const message = ErrorHandler.format(error);
         logger.error('Failed to list skills', 'SkillHandlers', error);
-        return { success: false, error: message };
+        return { success: false, error: toIPCError(error) };
       }
     }
   );
@@ -50,9 +83,8 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         const skill = await skillService!.getSkill(path);
         return { success: true, data: skill };
       } catch (error) {
-        const message = ErrorHandler.format(error);
         logger.error('Failed to get skill', 'SkillHandlers', error);
-        return { success: false, error: message };
+        return { success: false, error: toIPCError(error) };
       }
     }
   );
@@ -70,9 +102,8 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         logger.info(`Skill created: ${name}`, 'SkillHandlers');
         return { success: true, data: skill };
       } catch (error) {
-        const message = ErrorHandler.format(error);
         logger.error('Failed to create skill', 'SkillHandlers', error);
-        return { success: false, error: message };
+        return { success: false, error: toIPCError(error) };
       }
     }
   );
@@ -90,9 +121,8 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         logger.info(`Skill updated: ${skill.name}`, 'SkillHandlers');
         return { success: true, data: skill };
       } catch (error) {
-        const message = ErrorHandler.format(error);
         logger.error('Failed to update skill', 'SkillHandlers', error);
-        return { success: false, error: message };
+        return { success: false, error: toIPCError(error) };
       }
     }
   );
@@ -107,9 +137,8 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         logger.info(`Skill deleted: ${path}`, 'SkillHandlers');
         return { success: true };
       } catch (error) {
-        const message = ErrorHandler.format(error);
         logger.error('Failed to delete skill', 'SkillHandlers', error);
-        return { success: false, error: message };
+        return { success: false, error: toIPCError(error) };
       }
     }
   );
@@ -123,9 +152,8 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         await skillService!.openFolder(path);
         return { success: true };
       } catch (error) {
-        const message = ErrorHandler.format(error);
         logger.error('Failed to open folder', 'SkillHandlers', error);
-        return { success: false, error: message };
+        return { success: false, error: toIPCError(error) };
       }
     }
   );
@@ -159,9 +187,8 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         logger.info('File system watcher started', 'SkillHandlers');
         return { success: true };
       } catch (error) {
-        const message = ErrorHandler.format(error);
         logger.error('Failed to start file watcher', 'SkillHandlers', error);
-        return { success: false, error: message };
+        return { success: false, error: toIPCError(error) };
       }
     }
   );
@@ -183,9 +210,8 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         logger.info('File system watcher stopped', 'SkillHandlers');
         return { success: true };
       } catch (error) {
-        const message = ErrorHandler.format(error);
         logger.error('Failed to stop file watcher', 'SkillHandlers', error);
-        return { success: false, error: message };
+        return { success: false, error: toIPCError(error) };
       }
     }
   );
