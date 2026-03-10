@@ -3,12 +3,12 @@
 Auto-generated from all feature plans. Last updated: 2026-03-10
 
 ## Active Technologies
-- [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION] (master)
-- [if applicable, e.g., PostgreSQL, CoreData, files or N/A] (master)
-
-- TypeScript 5.x (strict mode) + Node.js LTS (v20+) + Electron (001-skill-manager, 002-local-skill-management)
-- React 18+ + Tailwind CSS + Monaco Editor + Claude Agent SDK + GitHub REST API v3 (001-skill-manager)
+- TypeScript 5.x (strict mode) + Node.js LTS (v20+) + Electron (master, 001-skill-manager, 002-local-skill-management, 003-ai-skill-generation)
+- React 18+ + Tailwind CSS + Monaco Editor + Claude Agent SDK + skill-creator skill (001-skill-manager, 003-ai-skill-generation)
 - React + Tailwind CSS + Monaco Editor (002-local-skill-management)
+- GitHub REST API v3 (004-public-skill-discovery)
+- Jest + Spectron/Playwright (003-ai-skill-generation)
+- GitHub REST API v3 (004-public-skill-discovery)
 
 ## Project Structure
 
@@ -43,10 +43,9 @@ TypeScript 5.x (strict mode): Use strict type checking, avoid `any`, prefer inte
 
 ## Recent Changes
 - master: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
+- 004-public-skill-discovery: Added GitHub REST API v3 integration for public skill discovery
 - master: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
 
-- 001-skill-manager: Added TypeScript 5.x + Node.js LTS + Electron + React 18+ + Tailwind CSS + Monaco Editor + Claude Agent SDK + GitHub REST API v3
-- 002-local-skill-management: Added TypeScript 5.x + Electron + React + Tailwind CSS + Monaco Editor
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
