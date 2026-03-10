@@ -113,3 +113,31 @@ export interface UIState {
   /** Search query */
   searchQuery: string;
 }
+
+// ============================================================================
+// AI Types
+// ============================================================================
+
+export type AIGenerationMode = 'new' | 'modify' | 'insert' | 'replace';
+
+export interface AIGenerationRequest {
+  /** The prompt describing what to generate */
+  prompt: string;
+  /** Generation mode */
+  mode: AIGenerationMode;
+  /** Current skill content (for modify/insert/replace modes) */
+  currentContent?: string;
+  /** Selection start position (for insert/replace modes) */
+  selectionStart?: number;
+  /** Selection end position (for insert/replace modes) */
+  selectionEnd?: number;
+}
+
+export interface AIStreamChunk {
+  /** Chunk of generated text */
+  text: string;
+  /** Whether this is the final chunk */
+  isComplete: boolean;
+  /** Error message if generation failed */
+  error?: string;
+}

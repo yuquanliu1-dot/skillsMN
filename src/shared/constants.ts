@@ -121,11 +121,17 @@ export const IPC_CHANNELS = {
   // Configuration operations
   CONFIG_LOAD: 'config:load',
   CONFIG_SAVE: 'config:save',
+  CONFIG_TEST_AI: 'config:test-ai',
 
   // File system watching
   FS_WATCH_START: 'fs:watch-start',
   FS_WATCH_STOP: 'fs:watch-stop',
   FS_CHANGE: 'fs:change',
+
+  // AI operations
+  AI_GENERATE: 'ai:generate',
+  AI_CANCEL: 'ai:cancel',
+  AI_CHUNK: 'ai:chunk',
 } as const;
 
 // ============================================================================

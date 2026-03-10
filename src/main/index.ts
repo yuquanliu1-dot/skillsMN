@@ -9,6 +9,7 @@ import * as path from 'path';
 import { logger } from './utils/Logger';
 import { registerConfigHandlers, getConfigService } from './ipc/configHandlers';
 import { registerSkillHandlers } from './ipc/skillHandlers';
+import { registerAIHandlers, registerAITestHandler } from './ipc/aiHandlers';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
 import { SkillDirectoryModel } from './models/SkillDirectory';
@@ -134,6 +135,11 @@ async function initialize(): Promise<void> {
     // Register skill handlers with path validator
     registerSkillHandlers(pathValidator);
     logger.info('Skill handlers registered', 'Main');
+
+    // Register AI handlers
+    registerAIHandlers();
+    registerAITestHandler();
+    logger.info('AI handlers registered', 'Main');
 
     // Create main window
     await createWindow();
