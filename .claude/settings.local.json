@@ -20,7 +20,8 @@
       "Bash(node test-auth-methods.js)",
       "Bash(node test-sdk-fetch.js)",
       "Bash(node test-sdk-custom-headers.js)",
-      "Bash(node test-fix.js)"
+      "Bash(node test-fix.js)",
+      "Bash(node test-github-search.js)"
     ]
   }
 }

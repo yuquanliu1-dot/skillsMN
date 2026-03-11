@@ -23,14 +23,17 @@ export function registerGitHubHandlers(validator: PathValidator): void {
   // Handler for github:search
   ipcMain.handle(
     IPC_CHANNELS.GITHUB_SEARCH_SKILLS,
-    async (_event, { query, page }: { query: string; page?: number }): Promise<GitHubSearchResponse> => {
+    async (_event, { query, page }: { query: string; page?: number }) => {
       try {
         logger.debug('Searching GitHub for skills', 'GitHubHandlers', { query, page });
 
         // Validate query
         const validationError = validateSearchQuery(query);
         if (validationError) {
-          throw new Error(validationError);
+          return {
+            success: false,
+            error: { code: 'VALIDATION_ERROR', message: validationError },
+          };
         }
 
         const response = await GitHubService.searchSkills(query, page || 1);
@@ -40,10 +43,17 @@ export function registerGitHubHandlers(validator: PathValidator): void {
           resultsCount: response.results.length,
         });
 
-        return response;
+        return {
+          success: true,
+          data: response,
+        };
       } catch (error) {
         logger.error('GitHub search failed', 'GitHubHandlers', error);
-        throw error;
+        const errorMessage = error instanceof Error ? error.message : 'Search failed';
+        return {
+          success: false,
+          error: { code: 'SEARCH_ERROR', message: errorMessage },
+        };
       }
     }
   );
