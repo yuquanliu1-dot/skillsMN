@@ -69,6 +69,37 @@ export function registerGitHubHandlers(validator: PathValidator): void {
     }
   );
 
+  // Handler for github:set-conflict-preference
+  ipcMain.handle(
+    IPC_CHANNELS.GITHUB_SET_CONFLICT_PREFERENCE,
+    async (_event, { resolution }: { resolution: 'overwrite' | 'rename' | 'skip' }) => {
+      try {
+        logger.debug('Setting conflict preference', 'GitHubHandlers', { resolution });
+
+        GitHubService.setConflictPreference(resolution);
+
+        return { success: true };
+      } catch (error) {
+        logger.error('Failed to set conflict preference', 'GitHubHandlers', error);
+        throw error;
+      }
+    }
+  );
+
+  // Handler for github:clear-conflict-preference
+  ipcMain.handle(IPC_CHANNELS.GITHUB_CLEAR_CONFLICT_PREFERENCE, async () => {
+    try {
+      logger.debug('Clearing conflict preference', 'GitHubHandlers');
+
+      GitHubService.clearConflictPreference();
+
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to clear conflict preference', 'GitHubHandlers', error);
+      throw error;
+    }
+  });
+
   // Handler for github:install
   ipcMain.handle(
     IPC_CHANNELS.GITHUB_INSTALL_SKILL,
@@ -80,12 +111,14 @@ export function registerGitHubHandlers(validator: PathValidator): void {
         downloadUrl,
         targetDirectory,
         conflictResolution,
+        applyToAll,
       }: {
         repositoryName: string;
         skillFilePath: string;
         downloadUrl: string;
         targetDirectory: 'project' | 'global';
         conflictResolution?: 'overwrite' | 'rename' | 'skip';
+        applyToAll?: boolean;
       }
     ) => {
       try {
@@ -94,10 +127,16 @@ export function registerGitHubHandlers(validator: PathValidator): void {
           skillFilePath,
           targetDirectory,
           conflictResolution,
+          applyToAll,
         });
 
         if (!pathValidator) {
           throw new Error('PathValidator not initialized');
+        }
+
+        // Set conflict preference if "Apply to all" is checked
+        if (applyToAll && conflictResolution) {
+          GitHubService.setConflictPreference(conflictResolution);
         }
 
         const result = await GitHubService.installSkill(
@@ -114,10 +153,17 @@ export function registerGitHubHandlers(validator: PathValidator): void {
             repositoryName,
             newPath: result.newPath,
           });
+
+          // Clear preference after successful installation
+          if (applyToAll) {
+            GitHubService.clearConflictPreference();
+          }
         } else {
           logger.warn('Skill installation failed', 'GitHubHandlers', {
             error: result.error,
           });
+
+          // Don't clear preference on failure - allow retry
         }
 
         return result;

@@ -79,9 +79,22 @@ interface RateLimitState {
 }
 
 /**
+ * Conflict resolution preference (for "Apply to all" feature)
+ */
+interface ConflictPreference {
+  resolution: 'overwrite' | 'rename' | 'skip';
+  timestamp: number;
+}
+
+/**
  * Active requests for cancellation
  */
 const activeRequests = new Map<string, AbortController>();
+
+/**
+ * Conflict resolution preference storage (session-scoped)
+ */
+let conflictPreference: ConflictPreference | null = null;
 
 /**
  * GitHub Service for public skill discovery
@@ -93,6 +106,34 @@ export class GitHubService {
     resetTime: 0,
     lastUpdated: 0,
   };
+
+  /**
+   * Set conflict resolution preference for "Apply to all" feature
+   * This preference is session-scoped and cleared after installation completes
+   */
+  static setConflictPreference(resolution: 'overwrite' | 'rename' | 'skip'): void {
+    conflictPreference = {
+      resolution,
+      timestamp: Date.now(),
+    };
+    logger.info('Conflict preference set', 'GitHubService', { resolution });
+  }
+
+  /**
+   * Get current conflict resolution preference
+   */
+  static getConflictPreference(): 'overwrite' | 'rename' | 'skip' | null {
+    return conflictPreference?.resolution || null;
+  }
+
+  /**
+   * Clear conflict resolution preference
+   * Called after installation session completes
+   */
+  static clearConflictPreference(): void {
+    conflictPreference = null;
+    logger.debug('Conflict preference cleared', 'GitHubService');
+  }
 
   /**
    * Search for public repositories containing Claude Code skills
@@ -315,6 +356,9 @@ export class GitHubService {
     });
 
     try {
+      // Use stored preference if no explicit resolution provided
+      const resolution = conflictResolution || GitHubService.getConflictPreference();
+
       // Determine target directory path
       const baseDir =
         targetDirectory === 'project'
@@ -332,9 +376,9 @@ export class GitHubService {
 
       // Check for conflicts
       if (await fs.pathExists(targetPath)) {
-        if (conflictResolution === 'skip') {
+        if (resolution === 'skip') {
           return { success: false, error: 'Skill already exists and conflict resolution is skip' };
-        } else if (conflictResolution === 'rename') {
+        } else if (resolution === 'rename') {
           // Generate unique name
           let counter = 1;
           let newPath = `${targetPath}-${counter}`;
@@ -348,7 +392,7 @@ export class GitHubService {
             repositoryName,
             skillFilePath
           );
-        } else if (conflictResolution === 'overwrite') {
+        } else if (resolution === 'overwrite') {
           // Remove existing directory
           await fs.remove(targetPath);
         } else {

@@ -111,11 +111,11 @@ export default function SkillCard({
         aria-selected={isSelected}
       >
         {/* Header Row: Title + Badges + Actions */}
-        <div className="flex items-start justify-between gap-4 mb-2">
+        <div className="flex items-start justify-between gap-3 mb-1">
           {/* Left: Title + Badges */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h3 className="font-semibold text-lg text-text-primary truncate">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-base text-slate-100">
                 {skill.name}
               </h3>
 
@@ -125,7 +125,7 @@ export default function SkillCard({
                   skill.source === 'project' ? 'badge-project' : 'badge-global'
                 } flex-shrink-0`}
               >
-                {skill.source === 'project' ? 'Project' : 'Global'}
+                {skill.source === 'project' ? 'P' : 'G'}
               </span>
 
               {/* Private Repo Badge */}
@@ -212,7 +212,7 @@ export default function SkillCard({
         {skill.description && (
           <p
             ref={descriptionRef}
-            className="text-sm text-text-secondary w-full mb-2 truncate-2"
+            className="text-sm text-text-secondary w-full mb-1 truncate-2"
             title={isTruncated ? skill.description : undefined}
           >
             {skill.description}
@@ -221,7 +221,7 @@ export default function SkillCard({
 
         {/* Update Error Message */}
         {updateProgress === 'error' && errorMessage && (
-          <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+          <div className="mb-1 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
             <div className="flex items-start gap-2">
               <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

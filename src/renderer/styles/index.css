@@ -75,7 +75,7 @@
     background: #FFFFFF;              /* White */
     border: 1px solid #E5E7EB;        /* Gray-200 */
     border-radius: 12px;
-    padding: 16px;
+    padding: 10px;
     transition: all 0.2s ease-out;
   }
 

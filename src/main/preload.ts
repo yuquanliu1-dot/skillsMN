@@ -228,8 +228,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     downloadUrl: string;
     targetDirectory: 'project' | 'global';
     conflictResolution?: 'overwrite' | 'rename' | 'skip';
+    applyToAll?: boolean;
   }): Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.GITHUB_INSTALL_SKILL, params);
+  },
+
+  setGitHubConflictPreference: (resolution: 'overwrite' | 'rename' | 'skip'): Promise<void> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.GITHUB_SET_CONFLICT_PREFERENCE, { resolution });
+  },
+
+  clearGitHubConflictPreference: (): Promise<void> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.GITHUB_CLEAR_CONFLICT_PREFERENCE);
   },
 
   getCuratedSources: (): Promise<IPCResponse<{ sources: CuratedSource[] }>> => {

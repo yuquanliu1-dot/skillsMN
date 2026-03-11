@@ -150,6 +150,8 @@ export const IPC_CHANNELS = {
   GITHUB_INSTALL_COMPLETE: 'github:install-complete',
   GITHUB_INSTALL_CONFLICT: 'github:install-conflict',
   GITHUB_INSTALL_ERROR: 'github:install-error',
+  GITHUB_SET_CONFLICT_PREFERENCE: 'github:set-conflict-preference',
+  GITHUB_CLEAR_CONFLICT_PREFERENCE: 'github:clear-conflict-preference',
 
   // Private Repository operations (Feature 005)
   PRIVATE_REPO_ADD: 'private-repo:add',

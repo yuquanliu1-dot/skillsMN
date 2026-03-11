@@ -106,7 +106,10 @@ export interface ElectronAPI {
     downloadUrl: string;
     targetDirectory: 'project' | 'global';
     conflictResolution?: 'overwrite' | 'rename' | 'skip';
+    applyToAll?: boolean;
   }) => Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>>;
+  setGitHubConflictPreference: (resolution: 'overwrite' | 'rename' | 'skip') => Promise<void>;
+  clearGitHubConflictPreference: () => Promise<void>;
   getCuratedSources: () => Promise<IPCResponse<{ sources: CuratedSource[] }>>;
   getSkillsFromSource: (params: {
     repositoryUrl: string;

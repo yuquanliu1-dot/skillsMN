@@ -49,7 +49,7 @@ async function createWindow(): Promise<void> {
   // Load the app
   if (isDev) {
     // In development, load from Vite dev server or dist
-    const rendererPath = path.join(__dirname, '../renderer/index.html');
+    const rendererPath = path.join(__dirname, '../../renderer/index.html');
     await mainWindow.loadFile(rendererPath);
     logger.info('Loaded renderer in development mode', 'Main');
 
@@ -62,7 +62,7 @@ async function createWindow(): Promise<void> {
     });
   } else {
     // In production, load from built files
-    const rendererPath = path.join(__dirname, '../renderer/index.html');
+    const rendererPath = path.join(__dirname, '../../renderer/index.html');
     await mainWindow.loadFile(rendererPath);
     logger.info('Loaded renderer in production mode', 'Main');
   }
