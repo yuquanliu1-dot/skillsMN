@@ -12,6 +12,7 @@ import { PathTraversalError } from '../utils/ErrorHandler';
 
 export class PathValidator {
   private allowedDirectories: Set<string>;
+  private static instance: PathValidator | null = null;
 
   constructor(projectDir: string | null, globalDir: string) {
     this.allowedDirectories = new Set();
@@ -30,8 +31,57 @@ export class PathValidator {
   }
 
   /**
+   * Get singleton instance (for backward compatibility with static calls)
+   * @internal
+   */
+  static getInstance(): PathValidator | null {
+    return PathValidator.instance;
+  }
+
+  /**
+   * Set singleton instance
+   * @internal
+   */
+  static setInstance(instance: PathValidator): void {
+    PathValidator.instance = instance;
+  }
+
+  /**
+   * Get allowed directories (static method for backward compatibility)
+   * @returns Object with 'project' and 'global' directory paths
+   */
+  static getAllowedDirectories(): { project?: string; global: string } {
+    if (!PathValidator.instance) {
+      throw new Error('PathValidator not initialized. Call setInstance() first.');
+    }
+    const dirs = PathValidator.instance.getAllowedDirectories();
+    const result: { project?: string; global: string } = { global: '' };
+
+    // Assuming the first directory is global, second is project (if exists)
+    const dirArray = Array.from(PathValidator.instance['allowedDirectories']);
+    if (dirArray.length >= 1) {
+      result.global = dirArray[0];
+    }
+    if (dirArray.length >= 2) {
+      result.project = dirArray[1];
+    }
+
+    return result;
+  }
+
+  /**
    * Validate that a path is within allowed directories
+   * Critical security method to prevent path traversal attacks
+   * @param requestedPath - Path to validate (can be relative or absolute)
+   * @returns Resolved absolute path if valid
    * @throws PathTraversalError if path is outside allowed directories
+   * @example
+   * try {
+   *   const validPath = pathValidator.validate(userInput);
+   *   // Safe to use validPath for file operations
+   * } catch (error) {
+   *   console.error('Invalid path:', error.message);
+   * }
    */
   validate(requestedPath: string): string {
     const resolved = path.resolve(requestedPath);
@@ -61,6 +111,15 @@ export class PathValidator {
 
   /**
    * Check if a path is within allowed directories (non-throwing version)
+   * Safe alternative to validate() when you need a boolean result
+   * @param filePath - Path to check
+   * @returns True if path is within allowed directories, false otherwise
+   * @example
+   * if (pathValidator.isWithinAllowedDir(path)) {
+   *   // Path is safe to use
+   * } else {
+   *   console.warn('Path outside allowed directories');
+   * }
    */
   isWithinAllowedDir(filePath: string): boolean {
     try {
@@ -73,13 +132,23 @@ export class PathValidator {
 
   /**
    * Get all allowed directories
+   * @returns Array of absolute paths that are allowed for file operations
+   * @example
+   * const allowed = pathValidator.getAllowedDirectories();
+   * console.log('Allowed dirs:', allowed);
    */
   getAllowedDirectories(): string[] {
     return Array.from(this.allowedDirectories);
   }
 
   /**
-   * Determine skill source from path
+   * Determine skill source directory type from path
+   * Analyzes path to determine if it's in project or global directory
+   * @param skillPath - Absolute path to skill directory
+   * @returns 'project' if in project directory, 'global' if in global directory
+   * @example
+   * const source = pathValidator.getSkillSource('/home/user/.claude/skills/my-skill');
+   * console.log(source); // 'global'
    */
   getSkillSource(skillPath: string): 'project' | 'global' {
     const resolved = path.resolve(skillPath);
@@ -109,7 +178,13 @@ export class PathValidator {
   }
 
   /**
-   * Get project directory path
+   * Get project directory path from allowed directories
+   * @returns Project directory path or null if not configured
+   * @example
+   * const projectDir = pathValidator.getProjectDirectory();
+   * if (projectDir) {
+   *   console.log('Project skills at:', projectDir);
+   * }
    */
   getProjectDirectory(): string | null {
     const dirs = Array.from(this.allowedDirectories);
@@ -131,7 +206,11 @@ export class PathValidator {
   }
 
   /**
-   * Get global directory path
+   * Get global directory path from allowed directories
+   * @returns Global directory path (always exists)
+   * @example
+   * const globalDir = pathValidator.getGlobalDirectory();
+   * console.log('Global skills at:', globalDir);
    */
   getGlobalDirectory(): string {
     const dirs = Array.from(this.allowedDirectories);

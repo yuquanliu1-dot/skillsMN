@@ -35,6 +35,9 @@ global.window.electronAPI = {
   deleteSkill: jest.fn(),
   openFolder: jest.fn(),
 
+  // Dialog Operations
+  selectDirectory: jest.fn(),
+
   // Configuration Operations
   loadConfig: jest.fn(),
   saveConfig: jest.fn(),

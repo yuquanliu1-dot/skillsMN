@@ -5,11 +5,13 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { safeStorage } from 'electron';
 import { logger } from '../utils/Logger';
 import type { AIGenerationRequest, AIStreamChunk } from '../models/AIGenerationRequest';
 import { validateAIGenerationRequest } from '../models/AIGenerationRequest';
+import type { AIConfiguration } from '../../shared/types';
 
-const anthropic = new Anthropic();
+let anthropic: Anthropic | null = null;
 
 /**
  * Active generation streams (for cancellation)
@@ -21,7 +23,106 @@ const activeStreams = new Map<string, AbortController>();
  */
 export class AIService {
   /**
-   * Generate skill content with streaming
+   * Encrypt API key using Electron safeStorage for secure storage
+   * Falls back to base64 encoding if encryption is not available (not recommended for production)
+   * @param apiKey - Plain text API key to encrypt
+   * @returns Encrypted API key as base64 string
+   * @example
+   * const encrypted = AIService.encryptAPIKey('sk-ant-...');
+   * // Store encrypted key in configuration
+   */
+  static encryptAPIKey(apiKey: string): string {
+    if (!safeStorage.isEncryptionAvailable()) {
+      logger.warn('Encryption not available, storing API key in plaintext (NOT RECOMMENDED)');
+      return Buffer.from(apiKey).toString('base64');
+    }
+
+    const encrypted = safeStorage.encryptString(apiKey);
+    return encrypted.toString('base64');
+  }
+
+  /**
+   * Decrypt API key using Electron safeStorage
+   * Decrypts a previously encrypted API key for use with the Anthropic SDK
+   * @param encryptedKey - Encrypted API key as base64 string
+   * @returns Decrypted plain text API key
+   * @example
+   * const config = await AIConfigService.loadConfig();
+   * const decryptedKey = AIService.decryptAPIKey(config.apiKey);
+   */
+  static decryptAPIKey(encryptedKey: string): string {
+    if (!safeStorage.isEncryptionAvailable()) {
+      logger.warn('Encryption not available, decrypting from base64');
+      return Buffer.from(encryptedKey, 'base64').toString('utf-8');
+    }
+
+    const buffer = Buffer.from(encryptedKey, 'base64');
+    return safeStorage.decryptString(buffer);
+  }
+
+  /**
+   * Initialize AI service with configuration
+   * Decrypts the API key and creates an Anthropic client instance
+   * Must be called before using generateStream or testConnection
+   * @param config - AI configuration containing encrypted API key and settings
+   * @throws Error if API key decryption fails or initialization fails
+   * @example
+   * const config = await AIConfigService.loadConfig();
+   * await AIService.initialize(config);
+   */
+  static async initialize(config: AIConfiguration): Promise<void> {
+    try {
+      const apiKey = AIService.decryptAPIKey(config.apiKey);
+      anthropic = new Anthropic({ apiKey });
+      logger.info('AI service initialized successfully', 'AIService');
+    } catch (error) {
+      logger.error('Failed to initialize AI service', 'AIService', error);
+      throw new Error('Failed to initialize AI service. Please check your API key.');
+    }
+  }
+
+  /**
+   * Update AI service configuration
+   * Re-initializes the service with new configuration
+   * @param config - New AI configuration to apply
+   * @throws Error if initialization fails
+   * @example
+   * await AIService.updateConfiguration(newConfig);
+   */
+  static async updateConfiguration(config: AIConfiguration): Promise<void> {
+    await AIService.initialize(config);
+  }
+
+  /**
+   * Check if AI service is initialized and ready to use
+   * @returns True if Anthropic client is initialized, false otherwise
+   * @example
+   * if (!AIService.isInitialized()) {
+   *   await AIService.initialize(config);
+   * }
+   */
+  static isInitialized(): boolean {
+    return anthropic !== null;
+  }
+
+  /**
+   * Generate skill content with streaming support
+   * Creates an async generator that yields chunks of generated text
+   * Supports new skill creation, modification, insertion, and replacement modes
+   * @param requestId - Unique identifier for this generation request (used for cancellation)
+   * @param request - AI generation request containing mode, prompt, and optional current content
+   * @yields AIStreamChunk objects containing text chunks, completion status, and potential errors
+   * @example
+   * for await (const chunk of AIService.generateStream('req-1', {
+   *   mode: 'new',
+   *   prompt: 'Create a skill for code review'
+   * })) {
+   *   if (chunk.error) {
+   *     console.error(chunk.error);
+   *     break;
+   *   }
+   *   process.stdout.write(chunk.text);
+   * }
    */
   static async *generateStream(
     requestId: string,
@@ -101,7 +202,16 @@ export class AIService {
   }
 
   /**
-   * Cancel active generation
+   * Cancel an active AI generation stream
+   * Aborts the ongoing generation request and cleans up resources
+   * @param requestId - ID of the generation request to cancel
+   * @returns True if cancellation was successful, false if request not found
+   * @example
+   * // Start generation
+   * const generator = AIService.generateStream('req-1', request);
+   *
+   * // Later, cancel it
+   * AIService.cancelGeneration('req-1');
    */
   static cancelGeneration(requestId: string): boolean {
     const controller = activeStreams.get(requestId);
@@ -115,11 +225,22 @@ export class AIService {
   }
 
   /**
-   * Test AI connection
+   * Test AI connection by making a simple API request
+   * Verifies that the API key is valid and the service is accessible
+   * @returns Object with success status, optional error message, and latency in milliseconds
+   * @example
+   * const result = await AIService.testConnection();
+   * if (result.success) {
+   *   console.log(`Connection OK (${result.latency}ms)`);
+   * } else {
+   *   console.error(`Connection failed: ${result.error}`);
+   * }
    */
-  static async testConnection(): Promise<{ success: boolean; error?: string }> {
+  static async testConnection(): Promise<{ success: boolean; error?: string; latency?: number }> {
     try {
       logger.info('Testing AI connection', 'AIService');
+
+      const startTime = Date.now();
 
       // Simple test request
       await anthropic.messages.create({
@@ -133,8 +254,10 @@ export class AIService {
         ],
       });
 
+      const latency = Date.now() - startTime;
+
       logger.info('AI connection test successful', 'AIService');
-      return { success: true };
+      return { success: true, latency };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('AI connection test failed', 'AIService', error);

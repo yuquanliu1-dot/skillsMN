@@ -288,7 +288,14 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
    * Handle remove repository
    */
   const handleRemoveRepo = async (repoId: string) => {
-    if (!window.confirm('Are you sure you want to remove this repository?')) {
+    const repo = privateRepos.find(r => r.id === repoId);
+    const repoName = repo?.displayName || `${repo?.owner}/${repo?.repo}` || 'this repository';
+
+    if (!window.confirm(
+      `Remove "${repoName}"?\n\n` +
+      `Note: Locally installed skills from this repository will be preserved and can still be used.\n\n` +
+      `You can re-add this repository later if needed.`
+    )) {
       return;
     }
 
@@ -298,7 +305,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
     try {
       const response = await window.electronAPI.removePrivateRepo(repoId);
       if (response.success) {
-        setSuccess('Repository removed successfully');
+        setSuccess('Repository removed successfully. Installed skills have been preserved.');
         await loadPrivateRepos();
       } else {
         setError(response.error?.message || 'Failed to remove repository');
@@ -346,7 +353,8 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
       }
 
       if (editPAT.trim()) {
-        updates.pat = editPAT.trim();
+        // PAT will be encrypted by the backend service
+        updates.patEncrypted = editPAT.trim();
       }
 
       if (Object.keys(updates).length === 0) {

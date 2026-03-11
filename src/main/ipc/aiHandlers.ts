@@ -7,8 +7,10 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import { logger } from '../utils/Logger';
 import { AIService } from '../services/AIService';
+import { AIConfigService } from '../services/AIConfigService';
 import { IPC_CHANNELS } from '../../shared/constants';
 import type { AIGenerationRequest } from '../models/AIGenerationRequest';
+import type { AIConfiguration } from '../../shared/types';
 
 /**
  * Register AI IPC handlers
@@ -97,4 +99,87 @@ export function registerAITestHandler(): void {
   });
 
   logger.info('AI test handler registered', 'AIHandlers');
+}
+
+/**
+ * Register AI Configuration handlers (T015)
+ */
+export function registerAIConfigHandlers(): void {
+  // Handler for ai:config:get
+  ipcMain.handle(IPC_CHANNELS.AI_CONFIG_GET, async () => {
+    try {
+      logger.debug('Loading AI configuration', 'AIHandlers');
+
+      const config = await AIConfigService.loadConfig();
+
+      return { success: true, data: config };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to load AI configuration', 'AIHandlers', error);
+      return { success: false, error: { code: 'CONFIG_LOAD_ERROR', message: errorMessage } };
+    }
+  });
+
+  // Handler for ai:config:save
+  ipcMain.handle(
+    IPC_CHANNELS.AI_CONFIG_SAVE,
+    async (_event, { config }: { config: AIConfiguration }) => {
+      try {
+        logger.debug('Saving AI configuration', 'AIHandlers');
+
+        await AIConfigService.saveConfig(config);
+
+        // Re-initialize AI service with new config
+        await AIService.initialize(config);
+
+        return { success: true };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to save AI configuration', 'AIHandlers', error);
+        return { success: false, error: { code: 'CONFIG_SAVE_ERROR', message: errorMessage } };
+      }
+    }
+  );
+
+  // Handler for ai:config:test
+  ipcMain.handle(
+    IPC_CHANNELS.AI_CONFIG_TEST,
+    async (_event, { config }: { config: AIConfiguration }) => {
+      try {
+        logger.debug('Testing AI configuration', 'AIHandlers');
+
+        // Temporarily initialize with test config
+        const originalConfig = await AIConfigService.loadConfig().catch(() => null);
+
+        try {
+          await AIService.initialize(config);
+          const result = await AIService.testConnection();
+
+          return { success: result.success, error: result.error ? { code: 'CONNECTION_ERROR', message: result.error } : undefined, latency: result.latency };
+        } finally {
+          // Restore original config if it existed
+          if (originalConfig) {
+            await AIService.initialize(originalConfig).catch(err => {
+              logger.error('Failed to restore original config', 'AIHandlers', err);
+            });
+          }
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to test AI configuration', 'AIHandlers', error);
+        return { success: false, error: { code: 'CONFIG_TEST_ERROR', message: errorMessage } };
+      }
+    }
+  );
+
+  logger.info('AI configuration handlers registered', 'AIHandlers');
+}
+
+/**
+ * Register all AI handlers
+ */
+export function registerAllAIHandlers(): void {
+  registerAIHandlers();
+  registerAITestHandler();
+  registerAIConfigHandlers();
 }
