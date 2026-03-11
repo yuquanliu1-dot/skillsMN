@@ -171,7 +171,8 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
 
     try {
       const startTime = Date.now();
-      const response = await window.electronAPI.testAIConnection();
+      // Pass current config to test (allows testing before saving)
+      const response = await window.electronAPI.testAIConnection(aiConfig);
       const latency = Date.now() - startTime;
 
       if (response.success) {
@@ -997,16 +998,17 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Model
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={aiConfig.model}
                     onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value as any })}
-                    className="select w-full"
+                    className="input w-full"
                     disabled={isSavingAI}
-                  >
-                    <option value="claude-3-opus-20240229">Claude 3 Opus (Most capable)</option>
-                    <option value="claude-3-sonnet-20240229">Claude 3 Sonnet (Balanced)</option>
-                    <option value="claude-3-haiku-20240307">Claude 3 Haiku (Fastest)</option>
-                  </select>
+                    placeholder="e.g., claude-3-sonnet-20240229, glm-5, glm-4"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Supported models: claude-3-opus, claude-3-sonnet, claude-3-haiku, glm-5, glm-4
+                  </p>
                 </div>
 
                 {/* Streaming Toggle */}
