@@ -248,12 +248,12 @@ This feature uses Electron architecture:
 - [X] T094 Preserve search query and results when switching tabs in src/renderer/App.tsx
 
 **UI/UX Audit**:
-- [ ] T095 [P] UI/UX audit: Verify all components follow ui-ux-pro-max quality standards
-- [ ] T096 [P] Verify SVG icons (Heroicons/Lucide) used throughout, no emoji
-- [ ] T097 [P] Test stable hover states (no layout shifts, color/opacity transitions only)
-- [ ] T098 [P] Verify light/dark mode contrast (4.5:1 minimum for text)
-- [ ] T099 [P] Test responsive layout at 1024x768 minimum resolution
-- [ ] T100 Verify accessibility compliance (alt text, labels, keyboard navigation)
+- [X] T095 [P] UI/UX audit: Verify all components follow ui-ux-pro-max quality standards
+- [X] T096 [P] Verify SVG icons (Heroicons/Lucide) used throughout, no emoji
+- [X] T097 [P] Test stable hover states (no layout shifts, color/opacity transitions only)
+- [X] T098 [P] Verify light/dark mode contrast (4.5:1 minimum for text)
+- [X] T099 [P] Test responsive layout at 1024x768 minimum resolution
+- [X] T100 Verify accessibility compliance (alt text, labels, keyboard navigation)
 
 **Cross-Platform Testing**:
 - [ ] T101 [P] Test on Windows 10/11 - verify path handling and file operations
