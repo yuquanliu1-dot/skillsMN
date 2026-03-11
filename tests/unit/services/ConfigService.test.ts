@@ -3,8 +3,9 @@
  */
 
 import fs from 'fs';
-import { ConfigService } from '../../src/main/services/ConfigService';
-import { Configuration } from '../../src/shared/types';
+import path from 'path';
+import { ConfigService } from '../../../src/main/services/ConfigService';
+import { Configuration } from '../../../src/shared/types';
 
 // Mock Electron app
 jest.mock('electron', () => ({
@@ -59,7 +60,7 @@ describe('ConfigService', () => {
 
       const config = await configService.load();
 
-      expect(config.projectDirectory).toBe('/Users/test/project');
+      expect(config.projectDirectory).toBe(path.normalize('/Users/test/project'));
       expect(config.defaultInstallDirectory).toBe('global');
       expect(config.editorDefaultMode).toBe('preview');
       expect(config.autoRefresh).toBe(false);
@@ -88,7 +89,7 @@ describe('ConfigService', () => {
 
       const config = await configService.save(updates);
 
-      expect(config.projectDirectory).toBe('/Users/test/new-project');
+      expect(config.projectDirectory).toBe(path.normalize('/Users/test/new-project'));
       expect(fs.promises.writeFile).toHaveBeenCalled();
     });
 
@@ -111,7 +112,7 @@ describe('ConfigService', () => {
 
       const config = await configService.save(updates);
 
-      expect(config.projectDirectory).toBe('/Users/test/project');
+      expect(config.projectDirectory).toBe(path.normalize('/Users/test/project'));
       expect(config.defaultInstallDirectory).toBe('global');
       expect(config.autoRefresh).toBe(false);
     });

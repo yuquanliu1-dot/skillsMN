@@ -3,8 +3,8 @@
  */
 
 import path from 'path';
-import { PathValidator } from '../../src/main/services/PathValidator';
-import { PathTraversalError } from '../../src/main/utils/ErrorHandler';
+import { PathValidator } from '../../../src/main/services/PathValidator';
+import { PathTraversalError } from '../../../src/main/utils/ErrorHandler';
 
 describe('PathValidator', () => {
   const projectDir = '/Users/test/project/.claude/skills';
