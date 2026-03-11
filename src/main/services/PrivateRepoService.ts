@@ -56,6 +56,17 @@ export class PrivateRepoService {
       const data = await fs.readFile(this.configPath, 'utf-8');
       const parsed = JSON.parse(data);
 
+      // Convert date strings back to Date objects
+      if (parsed.repositories && Array.isArray(parsed.repositories)) {
+        parsed.repositories = parsed.repositories.map((repo: any) => ({
+          ...repo,
+          addedAt: repo.addedAt ? new Date(repo.addedAt) : new Date(),
+          createdAt: repo.createdAt ? new Date(repo.createdAt) : new Date(),
+          updatedAt: repo.updatedAt ? new Date(repo.updatedAt) : new Date(),
+          lastSyncTime: repo.lastSyncTime ? new Date(repo.lastSyncTime) : undefined,
+        }));
+      }
+
       if (!PrivateRepoModel.validateConfig(parsed)) {
         logger.warn('Invalid config format, creating new config', 'PrivateRepoService');
         this.config = PrivateRepoModel.createDefaultConfig();
