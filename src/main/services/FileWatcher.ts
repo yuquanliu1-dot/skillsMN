@@ -24,7 +24,11 @@ export class FileWatcher {
   }
 
   /**
-   * Set the main window reference for sending events
+   * Set the main window reference for sending IPC events
+   * Must be called before starting the watcher
+   * @param window - BrowserWindow instance to send events to
+   * @example
+   * fileWatcher.setMainWindow(mainWindow);
    */
   setMainWindow(window: BrowserWindow): void {
     this.mainWindow = window;
@@ -32,7 +36,13 @@ export class FileWatcher {
   }
 
   /**
-   * Start watching skill directories
+   * Start watching skill directories for file system changes
+   * Monitors both project and global skill directories
+   * Emits FS_CHANGE IPC events to renderer on file changes
+   * @param projectDir - Project directory path or null if not configured
+   * @param globalDir - Global skill directory path (required)
+   * @example
+   * fileWatcher.start('/path/to/project/skills', '/home/user/.claude/skills');
    */
   start(projectDir: string | null, globalDir: string): void {
     if (this.watcher) {
@@ -84,7 +94,11 @@ export class FileWatcher {
   }
 
   /**
-   * Stop watching
+   * Stop watching directories and clean up resources
+   * Clears all watched paths and pending debounce timers
+   * Safe to call multiple times
+   * @example
+   * fileWatcher.stop();
    */
   stop(): void {
     if (this.watcher) {
@@ -156,14 +170,23 @@ export class FileWatcher {
   }
 
   /**
-   * Check if watcher is running
+   * Check if the file watcher is currently running
+   * @returns True if watcher is active, false otherwise
+   * @example
+   * if (fileWatcher.isRunning()) {
+   *   console.log('Watching for changes...');
+   * }
    */
   isRunning(): boolean {
     return this.watcher !== null;
   }
 
   /**
-   * Get list of watched paths
+   * Get list of currently watched directory paths
+   * @returns Array of absolute paths being watched
+   * @example
+   * const paths = fileWatcher.getWatchedPaths();
+   * console.log('Watching:', paths.join(', '));
    */
   getWatchedPaths(): string[] {
     return Array.from(this.watchedPaths);

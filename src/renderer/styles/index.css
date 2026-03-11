@@ -15,8 +15,8 @@
   /* Body defaults */
   body {
     font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-    background: #0F172A;
-    color: #F1F5F9;
+    background: #F9FAFB;
+    color: #111827;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -26,23 +26,23 @@
     font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
   }
 
-  /* Scrollbar styling for dark mode */
+  /* Scrollbar styling for light mode */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    background: #1E293B;  /* Slate-800 */
+    background: #F3F4F6;  /* Gray-100 */
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #475569;  /* Slate-600 */
+    background: #D1D5DB;  /* Gray-300 */
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #64748B;  /* Slate-500 */
+    background: #9CA3AF;  /* Gray-400 */
   }
 
   /* Focus visible for keyboard navigation */
@@ -72,8 +72,8 @@
      Card Component
      -------------------------------------------------------------------------- */
   .card {
-    background: #1E293B;              /* Slate-800 */
-    border: 1px solid #334155;        /* Slate-700 */
+    background: #FFFFFF;              /* White */
+    border: 1px solid #E5E7EB;        /* Gray-200 */
     border-radius: 12px;
     padding: 16px;
     transition: all 0.2s ease-out;
@@ -84,9 +84,9 @@
   }
 
   .card-interactive:hover {
-    background: #334155;              /* Slate-700 */
-    border-color: #475569;            /* Slate-600 */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: #F9FAFB;              /* Gray-50 */
+    border-color: #D1D5DB;            /* Gray-300 */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
 
   /* --------------------------------------------------------------------------
@@ -129,27 +129,27 @@
 
   /* Secondary Button */
   .btn-secondary {
-    background: #334155;              /* Slate-700 */
-    color: #F1F5F9;
+    background: #F3F4F6;              /* Gray-100 */
+    color: #111827;
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #475569;              /* Slate-600 */
+    background: #E5E7EB;              /* Gray-200 */
   }
 
   .btn-secondary:active:not(:disabled) {
-    background: #64748B;              /* Slate-500 */
+    background: #D1D5DB;              /* Gray-300 */
   }
 
   /* Ghost Button */
   .btn-ghost {
     background: transparent;
-    color: #94A3B8;                   /* Slate-400 */
+    color: #6B7280;                   /* Gray-500 */
   }
 
   .btn-ghost:hover:not(:disabled) {
-    background: #1E293B;              /* Slate-800 */
-    color: #F1F5F9;
+    background: #F3F4F6;              /* Gray-100 */
+    color: #111827;
   }
 
   /* Danger Button */
@@ -173,20 +173,20 @@
   .input {
     width: 100%;
     padding: 10px 14px;
-    background: #0F172A;              /* Slate-900 */
-    border: 1px solid #334155;        /* Slate-700 */
+    background: #FFFFFF;              /* White */
+    border: 1px solid #E5E7EB;        /* Gray-200 */
     border-radius: 8px;
-    color: #F1F5F9;                   /* Slate-50 */
+    color: #111827;                   /* Gray-900 */
     font-size: 14px;
     transition: all 0.2s ease-out;
   }
 
   .input::placeholder {
-    color: #64748B;                   /* Slate-500 */
+    color: #9CA3AF;                   /* Gray-400 */
   }
 
   .input:hover:not(:disabled) {
-    border-color: #475569;            /* Slate-600 */
+    border-color: #D1D5DB;            /* Gray-300 */
   }
 
   .input:focus {
@@ -247,15 +247,15 @@
      Dialog/Modal System
      -------------------------------------------------------------------------- */
   .dialog-overlay {
-    background: rgba(0, 0, 0, 0.75);
+    background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
   }
 
   .dialog-content {
-    background: #1E293B;              /* Slate-800 */
-    border: 1px solid #334155;        /* Slate-700 */
+    background: #FFFFFF;              /* White */
+    border: 1px solid #E5E7EB;        /* Gray-200 */
     border-radius: 16px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
     animation: dialog-enter 0.2s ease-out;
   }
 
@@ -285,9 +285,9 @@
   .skeleton {
     background: linear-gradient(
       90deg,
-      #1E293B 0%,
-      #334155 50%,
-      #1E293B 100%
+      #F3F4F6 0%,
+      #E5E7EB 50%,
+      #F3F4F6 100%
     );
     background-size: 200% 100%;
     animation: skeleton-loading 1.5s ease-in-out infinite;
@@ -309,9 +309,9 @@
      Glass Effect
      -------------------------------------------------------------------------- */
   .glass {
-    background: rgba(30, 41, 59, 0.8);
+    background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(51, 65, 85, 0.5);
+    border: 1px solid rgba(229, 231, 235, 0.8);
   }
 
   /* --------------------------------------------------------------------------

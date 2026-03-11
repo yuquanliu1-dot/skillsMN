@@ -17,9 +17,10 @@ interface SkillEditorProps {
   skill: Skill;
   onClose: () => void;
   onSave: (content: string, loadedLastModified: number) => Promise<void>;
+  isInline?: boolean;
 }
 
-export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps): JSX.Element {
+export default function SkillEditor({ skill, onClose, onSave, isInline = false }: SkillEditorProps): JSX.Element {
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -304,14 +305,22 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
     }
   }, [skill.lastModified, loadedLastModified, hasUnsavedChanges, skill.path, isLoading]);
 
+  const containerClasses = isInline
+    ? "h-full flex flex-col bg-white"
+    : "fixed inset-0 bg-gray-50 flex flex-col z-50";
+
+  const headerBg = isInline ? "bg-white border-gray-200" : "bg-white border-gray-200";
+  const borderColor = isInline ? "border-gray-200" : "border-gray-200";
+  const footerBg = isInline ? "bg-gray-50 border-gray-200" : "bg-gray-50 border-gray-200";
+
   return (
-    <div className="fixed inset-0 bg-slate-900 flex flex-col z-50">
+    <div className={containerClasses}>
       {/* Header */}
-      <div className="border-b border-slate-700 px-4 py-3 flex items-center justify-between bg-slate-800">
+      <div className={`border-b ${borderColor} px-4 py-3 flex items-center justify-between ${headerBg}`}>
         <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
+          <div className="flex-shrink-0 w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
             <svg
-              className="w-5 h-5 text-blue-400"
+              className="w-5 h-5 text-blue-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -326,15 +335,15 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-slate-100">{skill.name}</h2>
-            <div className="flex items-center gap-2 text-sm text-slate-400">
+            <h2 className="text-lg font-semibold text-gray-900">{skill.name}</h2>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
               <span
                 className={`badge ${skill.source === 'project' ? 'badge-project' : 'badge-global'}`}
               >
                 {skill.source === 'project' ? 'Project' : 'Global'}
               </span>
               {hasUnsavedChanges && (
-                <span className="text-yellow-400 flex items-center gap-1">
+                <span className="text-yellow-600 flex items-center gap-1">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
@@ -420,10 +429,10 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
 
       {/* Error message */}
       {error && (
-        <div className="px-4 py-3 bg-red-500/10 border-b border-red-500/30">
+        <div className="px-4 py-3 bg-red-50 border-b border-red-200">
           <div className="flex items-center gap-2">
             <svg
-              className="w-5 h-5 text-red-400 flex-shrink-0"
+              className="w-5 h-5 text-red-500 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -435,18 +444,18 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-sm text-red-400">{error}</p>
+            <p className="text-sm text-red-600">{error}</p>
           </div>
         </div>
       )}
 
       {/* External change warning (T082) */}
       {externalChangeDetected && (
-        <div className="px-4 py-3 bg-yellow-500/10 border-b border-yellow-500/30">
+        <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <svg
-                className="w-5 h-5 text-yellow-400 flex-shrink-0"
+                className="w-5 h-5 text-yellow-600 flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -458,7 +467,7 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
-              <p className="text-sm text-yellow-400">
+              <p className="text-sm text-yellow-700">
                 This file has been modified externally. You have unsaved changes.
               </p>
             </div>
@@ -478,13 +487,13 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
                     console.error('Failed to reload skill:', err);
                   }
                 }}
-                className="px-3 py-1.5 text-sm bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded transition-colors cursor-pointer"
               >
                 Reload
               </button>
               <button
                 onClick={() => setExternalChangeDetected(false)}
-                className="px-3 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors cursor-pointer"
               >
                 Keep Changes
               </button>
@@ -495,10 +504,10 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
 
       {/* Loading state */}
       {isLoading && (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center bg-white">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <div className="text-slate-300">Loading skill content...</div>
+            <div className="text-gray-600">Loading skill content...</div>
           </div>
         </div>
       )}
@@ -512,13 +521,13 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
             value={content}
             onChange={handleContentChange}
             onMount={handleEditorDidMount}
-            theme="vs-dark"
+            theme="light"
             options={{
               fontSize: 14,
               fontFamily: "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
               fontLigatures: true,
               lineNumbers: 'on',
-              minimap: { enabled: true },
+              minimap: { enabled: false },
               wordWrap: 'on',
               scrollBeyondLastLine: false,
               automaticLayout: true,
@@ -533,22 +542,22 @@ export default function SkillEditor({ skill, onClose, onSave }: SkillEditorProps
       )}
 
       {/* Keyboard shortcuts hint */}
-      <div className="border-t border-slate-700 px-4 py-2 bg-slate-800 flex items-center justify-between text-xs text-slate-400">
+      <div className={`border-t ${borderColor} px-4 py-2 ${footerBg} flex items-center justify-between text-xs text-gray-500`}>
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-slate-300">Ctrl</kbd>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
             <span>+</span>
-            <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-slate-300">S</kbd>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">S</kbd>
             <span>Save</span>
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-slate-300">Ctrl</kbd>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
             <span>+</span>
-            <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-slate-300">W</kbd>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">W</kbd>
             <span>Close</span>
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-slate-300">Esc</kbd>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Esc</kbd>
             <span>Close</span>
           </span>
         </div>

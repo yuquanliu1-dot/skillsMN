@@ -165,14 +165,14 @@
 
 - [ ] T072 [P] [US3] Search UI/UX patterns for search interfaces and result lists using ui-ux-pro-max skill
 - [ ] T073 [P] [US3] Search UI/UX patterns for preview modals and installation wizards using ui-ux-pro-max skill
-- [ ] T074 [US3] Implement SearchPanel component with debounced input in src/renderer/components/SearchPanel.tsx
-- [ ] T075 [US3] Implement SearchResultCard component with repository info in src/renderer/components/SearchResultCard.tsx
-- [ ] T076 [US3] Implement SkillPreview component with modal display in src/renderer/components/SkillPreview.tsx
-- [ ] T077 [US3] Implement InstallDialog component with directory selection in src/renderer/components/InstallDialog.tsx
-- [ ] T078 [US3] Implement ConflictResolutionDialog component in src/renderer/components/ConflictResolutionDialog.tsx
-- [ ] T079 [US3] Add IPC hooks for GitHub operations in src/renderer/hooks/useGitHubSearch.ts
-- [ ] T080 [US3] Add rate limit status display in SearchPanel in src/renderer/components/SearchPanel.tsx
-- [ ] T081 [US3] Integrate SearchPanel with main navigation in src/renderer/App.tsx
+- [X] T074 [US3] Implement SearchPanel component with debounced input in src/renderer/components/SearchPanel.tsx
+- [X] T075 [US3] Implement SearchResultCard component with repository info in src/renderer/components/SearchResultCard.tsx
+- [X] T076 [US3] Implement SkillPreview component with modal display in src/renderer/components/SkillPreview.tsx
+- [X] T077 [US3] Implement InstallDialog component with directory selection in src/renderer/components/InstallDialog.tsx
+- [X] T078 [US3] Implement ConflictResolutionDialog component in src/renderer/components/ConflictResolutionDialog.tsx
+- [X] T079 [US3] Add IPC hooks for GitHub operations in src/renderer/hooks/useGitHubSearch.ts
+- [X] T080 [US3] Add rate limit status display in SearchPanel in src/renderer/components/SearchPanel.tsx
+- [X] T081 [US3] Integrate SearchPanel with main navigation in src/renderer/App.tsx
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently - public discovery extends local management
 
@@ -186,24 +186,24 @@
 
 ### Backend Implementation for User Story 4
 
-- [ ] T082 [P] [US4] Create PrivateRepository model with SkillMetadata in src/main/models/PrivateRepository.ts
-- [ ] T083 [US4] Extend GitHubService with private repository methods in src/main/services/GitHubService.ts
-- [ ] T084 [US4] Implement github:configure-private IPC handler with PAT validation in src/main/ipc/gitHubHandlers.ts
-- [ ] T085 [US4] Implement github:list-private IPC handler in src/main/ipc/gitHubHandlers.ts
-- [ ] T086 [US4] Implement github:update-private IPC handler with commit hash comparison in src/main/ipc/gitHubHandlers.ts
-- [ ] T087 [US4] Add PAT encryption and storage in ConfigService in src/main/services/ConfigService.ts
-- [ ] T088 [US4] Implement update detection logic in GitHubService in src/main/services/GitHubService.ts
+- [X] T082 [P] [US4] Create PrivateRepository model with SkillMetadata in src/main/models/PrivateRepository.ts
+- [X] T083 [US4] Extend GitHubService with private repository methods in src/main/services/GitHubService.ts
+- [X] T084 [US4] Implement github:configure-private IPC handler with PAT validation in src/main/ipc/gitHubHandlers.ts
+- [X] T085 [US4] Implement github:list-private IPC handler in src/main/ipc/privateRepoHandlers.ts
+- [X] T086 [US4] Implement github:update-private IPC handler with commit hash comparison in src/main/ipc/privateRepoHandlers.ts
+- [X] T087 [US4] Add PAT encryption and storage in ConfigService in src/main/services/PrivateRepoService.ts
+- [X] T088 [US4] Implement update detection logic in GitHubService in src/main/services/GitHubService.ts
 
 ### Frontend Implementation for User Story 4
 
-- [ ] T089 [P] [US4] Search UI/UX patterns for repository configuration forms using ui-ux-pro-max skill
-- [ ] T090 [US4] Implement PrivateRepoList component in src/renderer/components/PrivateRepoList.tsx
-- [ ] T091 [US4] Implement PrivateRepoCard component with sync status in src/renderer/components/PrivateRepoCard.tsx
-- [ ] T092 [US4] Implement AddPrivateRepoDialog component with PAT input in src/renderer/components/AddPrivateRepoDialog.tsx
-- [ ] T093 [US4] Implement UpdateAvailableBadge component in src/renderer/components/UpdateAvailableBadge.tsx
-- [ ] T094 [US4] Add IPC hooks for private repository operations in src/renderer/hooks/usePrivateRepos.ts
-- [ ] T095 [US4] Integrate PrivateRepoList with main navigation in src/renderer/App.tsx
-- [ ] T096 [US4] Add update notification and one-click update flow in src/renderer/App.tsx
+- [X] T089 [P] [US4] UI/UX Research: Repository configuration forms using ui-ux-pro-max skill
+- [X] T090 [US4] Implement PrivateRepoList component in src/renderer/components/PrivateRepoList.tsx
+- [X] T091 [US4] Implement PrivateSkillCard component with sync status in src/renderer/components/PrivateSkillCard.tsx
+- [X] T092 [US4] Implement PrivateInstallDialog component with PAT input in src/renderer/components/PrivateInstallDialog.tsx
+- [X] T093 [US4] Implement UpdateAvailableBadge component in src/renderer/components/PrivateSkillCard.tsx
+- [X] T094 [US4] Add IPC hooks for private repository operations in src/renderer/hooks/usePrivateRepos.ts
+- [X] T095 [US4] Integrate PrivateRepoList with main navigation in src/renderer/App.tsx
+- [X] T096 [US4] Add update notification and one-click update flow in src/renderer/App.tsx
 
 **Checkpoint**: At this point, all core user stories (1-4) should work independently
 
@@ -217,22 +217,22 @@
 
 ### Backend Implementation for User Story 5
 
-- [ ] T097 [US5] Implement config:get IPC handler in src/main/ipc/configHandlers.ts
-- [ ] T098 [US5] Implement config:update IPC handler with validation in src/main/ipc/configHandlers.ts
-- [ ] T099 [US5] Add AI API key encryption and storage in ConfigService in src/main/services/ConfigService.ts
-- [ ] T100 [US5] Add GitHub PAT encryption for public search rate limit increase in src/main/services/ConfigService.ts
+- [X] T097 [US5] Implement config:get IPC handler in src/main/ipc/configHandlers.ts
+- [X] T098 [US5] Implement config:update IPC handler with validation in src/main/ipc/configHandlers.ts
+- [X] T099 [US5] Add AI API key encryption and storage in ConfigService in src/main/services/AIConfigService.ts
+- [X] T100 [US5] Add GitHub PAT encryption for public search rate limit increase in src/main/services/ConfigService.ts
 
 ### Frontend Implementation for User Story 5
 
-- [ ] T101 [P] [US5] Search UI/UX patterns for settings panels and forms using ui-ux-pro-max skill
-- [ ] T102 [US5] Implement SettingsPanel component with tabbed interface in src/renderer/components/SettingsPanel.tsx
-- [ ] T103 [US5] Implement AIConfigSection component with API key input in src/renderer/components/AIConfigSection.tsx
-- [ ] T104 [US5] Implement GitHubConfigSection component with PAT management in src/renderer/components/GitHubConfigSection.tsx
-- [ ] T105 [US5] Implement EditorConfigSection component for Monaco settings in src/renderer/components/EditorConfigSection.tsx
-- [ ] T106 [US5] Add test connection button and validation feedback in src/renderer/components/AIConfigSection.tsx
-- [ ] T107 [US5] Add IPC hooks for configuration in src/renderer/hooks/useConfig.ts
-- [ ] T108 [US5] Integrate SettingsPanel with main navigation in src/renderer/App.tsx
-- [ ] T109 [US5] Implement theme switcher (dark/light/system) in src/renderer/components/ThemeSwitcher.tsx
+- [X] T101 [P] [US5] Search UI/UX patterns for settings panels and forms using ui-ux-pro-max skill
+- [X] T102 [US5] Implement SettingsPanel component with tabbed interface in src/renderer/components/SettingsPanel.tsx
+- [X] T103 [US5] Implement AIConfigSection component with API key input in src/renderer/components/Settings.tsx
+- [X] T104 [US5] Implement GitHubConfigSection component with PAT management in src/renderer/components/Settings.tsx
+- [X] T105 [US5] Implement EditorConfigSection component for Monaco settings in src/renderer/components/Settings.tsx
+- [X] T106 [US5] Add test connection button and validation feedback in src/renderer/components/Settings.tsx
+- [X] T107 [US5] Add IPC hooks for configuration in src/renderer/hooks/useConfig.ts
+- [X] T108 [US5] Integrate SettingsPanel with main navigation in src/renderer/App.tsx
+- [X] T109 [US5] Implement theme switcher (dark/light/system) in src/renderer/components/Settings.tsx
 
 **Checkpoint**: At this point, all user stories (1-5) should work independently and be fully functional
 
@@ -244,24 +244,24 @@
 
 ### Documentation & Cleanup
 
-- [ ] T110 [P] Update README.md with setup instructions and usage guide
-- [ ] T111 [P] Create user documentation in docs/user-guide.md
-- [ ] T112 Code cleanup and remove unused dependencies
-- [ ] T113 [P] Add JSDoc comments to all public service methods
+- [X] T110 [P] Update README.md with setup instructions and usage guide
+- [X] T111 [P] Create user documentation in docs/user-guide.md
+- [X] T112 Code cleanup and remove unused dependencies
+- [X] T113 [P] Add JSDoc comments to all public service methods
 
 ### Performance Optimization
 
-- [ ] T114 Implement skill list virtual scrolling with react-window in src/renderer/components/SkillList.tsx
-- [ ] T115 [P] Add lazy loading for Monaco Editor in src/renderer/components/SkillEditor.tsx
-- [ ] T116 [P] Implement metadata caching for skill scanning in src/main/services/SkillService.ts
-- [ ] T117 Optimize file watching with debouncing in src/main/services/FileWatcher.ts
-- [ ] T118 Profile and optimize memory usage to stay under 300MB
+- [X] T114 Implement skill list virtual scrolling with react-window in src/renderer/components/SkillList.tsx
+- [X] T115 [P] Add lazy loading for Monaco Editor in src/renderer/components/SkillEditor.tsx
+- [X] T116 [P] Implement metadata caching for skill scanning in src/main/services/SkillService.ts
+- [X] T117 Optimize file watching with debouncing in src/main/services/FileWatcher.ts
+- [X] T118 Profile and optimize memory usage to stay under 300MB
 
 ### Security Hardening
 
-- [ ] T119 Security audit: Verify all credentials use safeStorage encryption
-- [ ] T120 Security audit: Verify all file operations validate paths in src/main/services/PathValidator.ts
-- [ ] T121 Security audit: Verify IPC whitelist in preload script in src/preload.ts
+- [X] T119 Security audit: Verify all credentials use safeStorage encryption
+- [X] T120 Security audit: Verify all file operations validate paths in src/main/services/PathValidator.ts
+- [X] T121 Security audit: Verify IPC whitelist in preload script in src/preload.ts
 
 ### UI/UX Polish
 

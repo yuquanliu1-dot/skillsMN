@@ -2,10 +2,13 @@
  * SkillList Component
  *
  * Displays list of skills with filtering, sorting, search, and virtualization
+ * Uses react-window for performance with large skill lists (500+ skills)
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import type { Skill, FilterSource, SortBy } from '../../shared/types';
+import { SKILL_LIST_ITEM_HEIGHT } from '../../shared/constants';
 import SkillCard from './SkillCard';
 
 interface SkillListProps {
@@ -22,6 +25,8 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
+  const listRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(600); // Default height
 
   /**
    * Filter and sort skills based on current state
@@ -72,6 +77,50 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
 
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
+  }, []);
+
+  /**
+   * Row renderer for virtualized list
+   */
+  const Row = useCallback(
+    ({ index, style }: { index: number; style: React.CSSProperties }) => {
+      const skill = filteredAndSortedSkills[index];
+      return (
+        <div style={style} className="px-4 py-2">
+          <SkillCard
+            skill={skill}
+            onClick={onSkillClick}
+            onSelect={onSkillSelect}
+            onDelete={onDeleteSkill}
+            onOpenFolder={onOpenFolder}
+            isSelected={skill.path === selectedSkillPath}
+          />
+        </div>
+      );
+    },
+    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath]
+  );
+
+  /**
+   * Update list height on container resize
+   */
+  useEffect(() => {
+    const updateHeight = () => {
+      if (listRef.current) {
+        const rect = listRef.current.getBoundingClientRect();
+        setListHeight(rect.height);
+      }
+    };
+
+    updateHeight();
+
+    // Use ResizeObserver for accurate height updates
+    const resizeObserver = new ResizeObserver(updateHeight);
+    if (listRef.current) {
+      resizeObserver.observe(listRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
   }, []);
 
   return (
@@ -170,20 +219,18 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
         </div>
       </div>
 
-      {/* Skill list */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Skill list with virtualization */}
+      <div ref={listRef} className="flex-1 overflow-hidden">
         {filteredAndSortedSkills.length > 0 ? (
-          filteredAndSortedSkills.map((skill) => (
-            <SkillCard
-              key={skill.path}
-              skill={skill}
-              onClick={onSkillClick}
-              onSelect={onSkillSelect}
-              onDelete={onDeleteSkill}
-              onOpenFolder={onOpenFolder}
-              isSelected={skill.path === selectedSkillPath}
-            />
-          ))
+          <List
+            height={listHeight}
+            itemCount={filteredAndSortedSkills.length}
+            itemSize={SKILL_LIST_ITEM_HEIGHT}
+            width="100%"
+            className="scrollbar-thin"
+          >
+            {Row}
+          </List>
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-text-muted">

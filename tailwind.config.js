@@ -7,7 +7,7 @@ module.exports = {
   darkMode: 'class',
   theme: {
     extend: {
-      // Developer Tools Color System - Dark Mode OLED
+      // Developer Tools Color System - Light Mode
       colors: {
         primary: {
           DEFAULT: '#3B82F6',   // Blue-500 - Primary actions
@@ -23,36 +23,36 @@ module.exports = {
           900: '#1E3A8A',
         },
         secondary: {
-          DEFAULT: '#1E293B',   // Slate-800 - Secondary background
-          50: '#F8FAFC',
-          100: '#F1F5F9',
-          200: '#E2E8F0',
-          300: '#CBD5E1',
-          400: '#94A3B8',
-          500: '#64748B',
-          600: '#475569',
-          700: '#334155',
-          800: '#1E293B',
-          900: '#0F172A',
+          DEFAULT: '#6B7280',   // Gray-500 - Secondary text
+          50: '#F9FAFB',
+          100: '#F3F4F6',
+          200: '#E5E7EB',
+          300: '#D1D5DB',
+          400: '#9CA3AF',
+          500: '#6B7280',
+          600: '#4B5563',
+          700: '#374151',
+          800: '#1F2937',
+          900: '#111827',
         },
         background: {
-          DEFAULT: '#0F172A',   // Slate-900 - App background
-          secondary: '#1E293B', // Slate-800 - Cards/panels
-          tertiary: '#334155',  // Slate-700 - Hover states
+          DEFAULT: '#F9FAFB',   // Gray-50 - App background
+          secondary: '#FFFFFF', // White - Cards/panels
+          tertiary: '#F3F4F6',  // Gray-100 - Hover states
         },
         surface: {
-          DEFAULT: '#1E293B',   // Slate-800 - Surfaces
-          elevated: '#334155',  // Slate-700 - Elevated surfaces
+          DEFAULT: '#FFFFFF',   // White - Surfaces
+          elevated: '#F9FAFB',  // Gray-50 - Elevated surfaces
         },
         text: {
-          primary: '#F1F5F9',   // Slate-50 - Primary text
-          secondary: '#CBD5E1', // Slate-300 - Secondary text
-          muted: '#94A3B8',     // Slate-400 - Muted text
-          disabled: '#64748B',  // Slate-500 - Disabled text
+          primary: '#111827',   // Gray-900 - Primary text
+          secondary: '#6B7280', // Gray-500 - Secondary text
+          muted: '#9CA3AF',     // Gray-400 - Muted text
+          disabled: '#D1D5DB',  // Gray-300 - Disabled text
         },
         border: {
-          DEFAULT: '#334155',   // Slate-700 - Default borders
-          light: '#475569',     // Slate-600 - Light borders
+          DEFAULT: '#E5E7EB',   // Gray-200 - Default borders
+          light: '#F3F4F6',     // Gray-100 - Light borders
           focus: '#3B82F6',     // Blue-500 - Focus borders
         },
         // Status colors
@@ -117,16 +117,16 @@ module.exports = {
         '2xl': '20px',
         'full': '9999px',
       },
-      // Box Shadows for Dark Mode
+      // Box Shadows for Light Mode
       boxShadow: {
-        'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
-        'DEFAULT': '0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3)',
-        'md': '0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
-        'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3)',
-        'xl': '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3)',
-        '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
-        'glow': '0 0 20px rgba(59, 130, 246, 0.3)',
-        'glow-lg': '0 0 30px rgba(59, 130, 246, 0.4)',
+        'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'DEFAULT': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        'md': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        'xl': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        'glow': '0 0 20px rgba(59, 130, 246, 0.15)',
+        'glow-lg': '0 0 30px rgba(59, 130, 246, 0.2)',
       },
       // Transitions
       transitionDuration: {

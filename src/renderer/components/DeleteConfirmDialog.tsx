@@ -78,14 +78,14 @@ export default function DeleteConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isDeleting) {
           onClose();
         }
       }}
     >
-      <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+      <div className="bg-white border border-slate-300 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -105,12 +105,12 @@ export default function DeleteConfirmDialog({
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-slate-100">Delete Skill</h2>
+            <h2 className="text-xl font-semibold text-slate-900">Delete Skill</h2>
           </div>
           <button
             onClick={onClose}
             disabled={isDeleting}
-            className="text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50 cursor-pointer"
+            className="text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
             aria-label="Close dialog"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -126,8 +126,8 @@ export default function DeleteConfirmDialog({
 
         {/* Warning message */}
         <div className="mb-6">
-          <p className="text-slate-300 mb-4">
-            Are you sure you want to delete <strong className="text-slate-100">{skill.name}</strong>?
+          <p className="text-slate-600 mb-4">
+            Are you sure you want to delete <strong className="text-slate-900">{skill.name}</strong>?
           </p>
 
           <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-md mb-4">
@@ -152,8 +152,8 @@ export default function DeleteConfirmDialog({
             </div>
           </div>
 
-          <div className="p-3 bg-slate-700/50 rounded-md">
-            <p className="text-sm text-slate-400">
+          <div className="p-3 bg-slate-100 rounded-md">
+            <p className="text-sm text-slate-500">
               <span
                 className={`badge ${
                   skill.source === 'project' ? 'badge-project' : 'badge-global'
