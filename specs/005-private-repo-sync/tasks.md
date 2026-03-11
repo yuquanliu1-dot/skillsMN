@@ -252,9 +252,9 @@ This feature extends an existing Electron application:
 
 ### Performance
 
-- [ ] T104 [P] Implement virtual scrolling for large skill lists (>100 skills) in src/renderer/components/PrivateRepoList.tsx
+- [X] T104 [P] Implement virtual scrolling for large skill lists (>100 skills) in src/renderer/components/PrivateRepoList.tsx
 - [X] T105 Optimize skill directory scanning (parallel API calls if possible) in src/main/services/GitHubService.ts
-- [ ] T106 [P] Validate all UI interactions complete within 100ms in src/renderer/components/
+- [X] T106 [P] Validate all UI interactions complete within 100ms in src/renderer/components/
 
 ### Security
 

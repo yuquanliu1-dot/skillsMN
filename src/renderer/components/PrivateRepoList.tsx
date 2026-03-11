@@ -30,6 +30,16 @@ function isAuthenticationError(message: string): boolean {
   return authErrorPatterns.some(pattern => lowerMessage.includes(pattern));
 }
 
+/**
+ * Log performance warning if operation exceeds target time
+ */
+function logPerformance(operation: string, startTime: number, targetMs: number = 100): void {
+  const elapsed = performance.now() - startTime;
+  if (elapsed > targetMs) {
+    console.warn(`[Performance] ${operation} took ${elapsed.toFixed(2)}ms (target: <${targetMs}ms)`);
+  }
+}
+
 export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps): JSX.Element {
   const [repositories, setRepositories] = useState<PrivateRepo[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
@@ -40,6 +50,7 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAuthError, setIsAuthError] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(50); // Pagination for large lists
 
   /**
    * Load repositories on mount
@@ -47,6 +58,13 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
   useEffect(() => {
     loadRepositories();
   }, []);
+
+  /**
+   * Reset visible count when skills are loaded
+   */
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [skills.length]);
 
   /**
    * Load skills when repository is selected
@@ -60,6 +78,7 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
   }, [selectedRepoId]);
 
   const loadRepositories = async () => {
+    const startTime = performance.now();
     setIsLoadingRepos(true);
     setError(null);
     try {
@@ -79,10 +98,12 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
       console.error('Load repos error:', err);
     } finally {
       setIsLoadingRepos(false);
+      logPerformance('loadRepositories', startTime);
     }
   };
 
   const loadSkills = async (repoId: string, forceRefresh: boolean = false) => {
+    const startTime = performance.now();
     setIsLoadingSkills(true);
     setError(null);
     setIsAuthError(false);
@@ -114,6 +135,7 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
       console.error('Load skills error:', err);
     } finally {
       setIsLoadingSkills(false);
+      logPerformance('loadSkills', startTime);
     }
   };
 
@@ -375,21 +397,43 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
           </p>
         </div>
       ) : (
-        <ul
-          className="flex-1 overflow-y-auto space-y-3"
-          role="list"
-          aria-label="Available skills from repository"
-        >
-          {skills.map((skill) => (
-            <li key={skill.path}>
-              <PrivateSkillCard
-                skill={skill}
-                repo={selectedRepo!}
-                onInstallComplete={() => loadSkills(selectedRepo!.id)}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul
+            className="flex-1 overflow-y-auto space-y-3"
+            role="list"
+            aria-label="Available skills from repository"
+          >
+            {skills.slice(0, visibleCount).map((skill) => (
+              <li key={skill.path}>
+                <PrivateSkillCard
+                  skill={skill}
+                  repo={selectedRepo!}
+                  onInstallComplete={() => loadSkills(selectedRepo!.id)}
+                />
+              </li>
+            ))}
+          </ul>
+
+          {/* Load More Button for Large Lists */}
+          {skills.length > visibleCount && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => setVisibleCount(prev => prev + 50)}
+                className="btn btn-secondary"
+                aria-label={`Load more skills (${skills.length - visibleCount} remaining)`}
+              >
+                Load More ({skills.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
+
+          {/* Skills Count Indicator */}
+          {skills.length > 50 && (
+            <div className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
+              Showing {Math.min(visibleCount, skills.length)} of {skills.length} skills
+            </div>
+          )}
+        </>
       )}
     </div>
   );
