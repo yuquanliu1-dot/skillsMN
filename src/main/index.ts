@@ -11,6 +11,7 @@ import { registerConfigHandlers, getConfigService } from './ipc/configHandlers';
 import { registerSkillHandlers } from './ipc/skillHandlers';
 import { registerAIHandlers, registerAITestHandler } from './ipc/aiHandlers';
 import { registerGitHubHandlers } from './ipc/gitHubHandlers';
+import { registerPrivateRepoHandlers } from './ipc/privateRepoHandlers';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
 import { SkillDirectoryModel } from './models/SkillDirectory';
@@ -33,14 +34,14 @@ async function createWindow(): Promise<void> {
     height: 800,
     minWidth: 1024,
     minHeight: 768,
-    backgroundColor: '#0F172A', // Dark background matching design spec
+    backgroundColor: '#F9FAFB', // Light background matching light theme
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
       sandbox: false, // Disable sandbox for preload script to work
     },
-    title: 'skillsMN - Local Skill Management',
+    title: 'skillsMN',
     show: false, // Show when ready to prevent visual flash
     center: true, // Center the window on screen
   });
@@ -140,11 +141,17 @@ async function initialize(): Promise<void> {
     // Register AI handlers
     registerAIHandlers();
     registerAITestHandler();
+    const { registerAIConfigHandlers } = require('./ipc/aiHandlers');
+    registerAIConfigHandlers();
     logger.info('AI handlers registered', 'Main');
 
     // Register GitHub handlers
     registerGitHubHandlers(pathValidator);
     logger.info('GitHub handlers registered', 'Main');
+
+    // Register Private Repository handlers
+    registerPrivateRepoHandlers(pathValidator);
+    logger.info('Private repository handlers registered', 'Main');
 
     // Create main window
     await createWindow();
@@ -155,8 +162,13 @@ async function initialize(): Promise<void> {
     }
 
     logger.info('Application initialized successfully', 'Main');
-  } catch (error) {
-    logger.error('Failed to initialize application', 'Main', error);
+  } catch (error: any) {
+    logger.error('Failed to initialize application', 'Main', {
+      message: error?.message || 'Unknown error',
+      stack: error?.stack,
+      name: error?.name,
+      error
+    });
     app.quit();
   }
 }

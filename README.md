@@ -1,19 +1,28 @@
 # skillsMN
 
-**Desktop application for managing Claude Code skills locally**
+**Claude Code Skill Management Center - A comprehensive desktop application for managing, generating, discovering, and sharing Claude Code skills**
 
-skillsMN is an Electron-based desktop application that provides a user-friendly interface for creating, editing, organizing, and managing Claude Code skills stored locally on your file system.
+skillsMN is an Electron-based desktop application that provides a unified interface for Claude Code users to manage local skills, discover community skills from GitHub, and leverage AI-assisted skill generation.
 
 ## Features
 
-- 📁 **Local Skill Management**: Create, edit, and delete skills stored in your local file system
-- 🔄 **Real-time Sync**: Changes are automatically detected and reflected in the UI
-- 📝 **Markdown Editor**: Full-featured Monaco editor with syntax highlighting for skill content
-- 🎨 **Modern UI**: Clean, dark-mode interface inspired by VS Code
-- ⌨️ **Keyboard Shortcuts**: Efficient workflow with keyboard navigation
-- 🗂️ **Dual Directory Support**: Manage skills in both project and global directories
-- 🗑️ **Safe Deletion**: Skills are moved to recycle bin, not permanently deleted
-- 🔍 **Search & Filter**: Quickly find skills by name, source, or content
+### 🎯 Core Features
+
+- 📁 **Local Skill Management**: Create, edit, delete, and organize skills from project and global directories
+- 🤖 **AI-Assisted Generation**: Generate or modify skills using natural language prompts with real-time streaming
+- 🔍 **Public Skill Discovery**: Search GitHub for public skills, preview content, and install with one click
+- 🔒 **Private Repository Sync**: Connect to private GitHub repositories for team skill sharing with update detection
+- ⚙️ **Comprehensive Settings**: Configure default behaviors, manage credentials, and customize AI settings
+
+### ✨ Key Capabilities
+
+- 🔄 **Real-time Sync**: Changes are automatically detected and reflected in the UI with file system watching
+- 📝 **Monaco Editor**: Full-featured code editor with YAML and Markdown syntax highlighting
+- 🎨 **Modern UI**: Clean, dark-mode interface with responsive design
+- ⌨️ **Keyboard Shortcuts**: Efficient workflow with Ctrl+N (new), Ctrl+S (save), Ctrl+R (refresh)
+- 🔐 **Secure Storage**: API keys and PATs encrypted using Electron safeStorage
+- 🌐 **GitHub Integration**: Search public skills, browse private repos, handle conflicts intelligently
+- 🎨 **AI Streaming**: Watch AI generate content in real-time with 200ms chunk delivery
 
 ## Screenshots
 
@@ -144,6 +153,77 @@ Click the **Settings** button (⚙️) to configure:
 - **Default Install Directory**: Choose whether new skills default to Project or Global
 - **Editor Default Mode**: Choose between Edit or View mode
 - **Auto Refresh**: Enable/disable automatic file system refresh
+
+### Private Repository Management
+
+skillsMN allows you to connect to private GitHub repositories for team skill sharing with automatic update detection.
+
+#### Configuring a Private Repository
+
+1. Open **Settings** → **Repositories** tab
+2. Click **"Add Repository"**
+3. Enter the repository URL (e.g., `https://github.com/your-org/team-skills`)
+4. Provide a GitHub Personal Access Token (PAT) with `repo` scope
+5. (Optional) Enter a display name for easy identification
+6. Click **"Add Repository"** - the connection will be tested automatically
+
+**Creating a GitHub PAT**:
+1. Go to GitHub.com → Settings → Developer settings → Personal access tokens
+2. Generate new token (classic)
+3. Select `repo` scope for private repository access
+4. Copy the token and paste it into skillsMN
+
+#### Browsing Private Repository Skills
+
+1. Navigate to the **"Private Repos"** tab in the main window
+2. Select a repository from the dropdown
+3. Browse available skills with metadata:
+   - Skill name and description
+   - Last commit information
+   - File count and size
+4. Use the search bar to filter skills by name
+5. Click **"Refresh"** to force re-scan (bypasses 5-minute cache)
+
+#### Installing Skills from Private Repositories
+
+1. Browse to the desired skill in a private repository
+2. Click the **"Install"** button
+3. Choose target directory:
+   - **Project**: Installs to `.claude/skills/` (shared with team)
+   - **Global**: Installs to `~/.claude/skills/` (personal)
+4. If skill already exists, choose conflict resolution:
+   - **Overwrite**: Replace existing skill
+   - **Rename**: Install with new name
+   - **Skip**: Cancel installation
+5. Monitor installation progress in-line
+
+#### Detecting and Installing Updates
+
+1. Skills installed from private repos show a **"Private"** badge
+2. When updates are available, an **"Update Available"** badge appears with pulse animation
+3. Click the **"Update"** button to install the latest version
+4. Optionally, create a backup before updating (timestamped copy)
+5. Installed skills track:
+   - Source repository ID
+   - Original path in repository
+   - Installed commit SHA (for update detection)
+   - Installation timestamp
+
+#### Managing Multiple Repositories
+
+- Add unlimited private repositories
+- Switch between repositories using the dropdown
+- Test repository connections from Settings
+- Edit repository display names or update PATs
+- Remove repositories (keeps installed skills intact)
+
+**Security Notes**:
+- PATs are encrypted using Electron's safeStorage (platform-specific)
+  - Windows: DPAPI
+  - macOS: Keychain Access
+  - Linux: Secret Service API (libsecret)
+- PATs are never exposed to the renderer process
+- All file operations validate paths to prevent traversal attacks
 
 ## File Structure
 

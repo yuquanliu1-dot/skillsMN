@@ -4,10 +4,12 @@
  * Handles GitHub API interactions for public skill discovery
  */
 
+import { safeStorage } from 'electron';
 import fetch from 'node-fetch';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { logger } from '../utils/Logger';
+import { retryWithBackoff } from '../utils/retry';
 import type {
   SearchResult,
   GitHubSearchResponse,
@@ -18,6 +20,53 @@ import { PathValidator } from './PathValidator';
 import { toKebabCase } from '../utils/pathUtils';
 
 const GITHUB_API_BASE = 'https://api.github.com';
+
+/**
+ * Cache entry
+ */
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
+
+/**
+ * Simple in-memory cache with TTL
+ */
+class Cache {
+  private entries = new Map<string, CacheEntry<any>>();
+
+  set<T>(key: string, data: T, ttlMs: number): void {
+    this.entries.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl: ttlMs,
+    });
+  }
+
+  get<T>(key: string): T | null {
+    const entry = this.entries.get(key);
+    if (!entry) {
+      return null;
+    }
+
+    // Check if expired
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.entries.delete(key);
+      return null;
+    }
+
+    return entry.data as T;
+  }
+
+  clear(): void {
+    this.entries.clear();
+  }
+}
+
+// Cache instance (5-minute TTL)
+const cache = new Cache();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Rate limit state
@@ -47,9 +96,27 @@ export class GitHubService {
 
   /**
    * Search for public repositories containing Claude Code skills
+   * Uses GitHub code search API to find repositories with skill.md files
+   * Results are cached for 5 minutes to reduce API calls
+   * @param query - Search query string
+   * @param page - Page number for pagination (default: 1)
+   * @returns GitHubSearchResponse with results, total count, and rate limit info
+   * @throws Error if GitHub API rate limit is exceeded or request fails
+   * @example
+   * const results = await GitHubService.searchSkills('code review', 1);
+   * console.log(`Found ${results.totalCount} results`);
+   * results.results.forEach(skill => console.log(skill.name));
    */
   static async searchSkills(query: string, page: number = 1): Promise<GitHubSearchResponse> {
     logger.info('Searching GitHub for skills', 'GitHubService', { query, page });
+
+    // Check cache first
+    const cacheKey = `search:${query}:${page}`;
+    const cached = cache.get<GitHubSearchResponse>(cacheKey);
+    if (cached) {
+      logger.debug('Returning cached search results', 'GitHubService', { query, page });
+      return cached;
+    }
 
     // Check rate limit before making request
     await GitHubService.checkRateLimit();
@@ -63,13 +130,32 @@ export class GitHubService {
       const searchQuery = `${query} "skill.md" in:path`;
       const url = `${GITHUB_API_BASE}/search/code?q=${encodeURIComponent(searchQuery)}&page=${page}&per_page=30`;
 
-      const response = await fetch(url, {
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'skillsMN-App',
+      // Use retry logic for network resilience
+      const response = await retryWithBackoff(
+        async () => {
+          const res = await fetch(url, {
+            headers: {
+              Accept: 'application/vnd.github.v3+json',
+              'User-Agent': 'skillsMN-App',
+            },
+            signal: controller.signal,
+          });
+
+          // Throw error for non-OK responses (will be caught by retry logic if retryable)
+          if (!res.ok) {
+            const error: any = new Error(`GitHub API error: ${res.status} ${res.statusText}`);
+            error.status = res.status;
+            throw error;
+          }
+
+          return res;
         },
-        signal: controller.signal,
-      });
+        {
+          maxAttempts: 3,
+          initialDelay: 1000,
+          maxDelay: 10000,
+        }
+      );
 
       // Update rate limit state from response headers
       GitHubService.updateRateLimitFromHeaders(response.headers);
@@ -119,12 +205,17 @@ export class GitHubService {
         totalCount: data.total_count || results.length,
       });
 
-      return {
+      const searchResponse: GitHubSearchResponse = {
         results,
         totalCount: data.total_count || results.length,
         incomplete: data.incomplete_results || false,
         rateLimit: GitHubService.getRateLimitInfo(),
       };
+
+      // Cache the results
+      cache.set(cacheKey, searchResponse, CACHE_TTL_MS);
+
+      return searchResponse;
     } catch (error) {
       logger.error('GitHub search failed', 'GitHubService', error);
       throw error;
@@ -135,9 +226,27 @@ export class GitHubService {
 
   /**
    * Preview skill content from raw GitHub URL
+   * Downloads skill.md content for preview before installation
+   * Results are cached for 5 minutes
+   * @param downloadUrl - Raw GitHub URL to skill.md file
+   * @returns Skill content as string
+   * @throws Error if download fails
+   * @example
+   * const content = await GitHubService.previewSkill(
+   *   'https://raw.githubusercontent.com/user/repo/main/skill.md'
+   * );
+   * console.log(content);
    */
   static async previewSkill(downloadUrl: string): Promise<string> {
     logger.info('Previewing skill from GitHub', 'GitHubService', { downloadUrl });
+
+    // Check cache first
+    const cacheKey = `preview:${downloadUrl}`;
+    const cached = cache.get<string>(cacheKey);
+    if (cached) {
+      logger.debug('Returning cached preview content', 'GitHubService', { downloadUrl });
+      return cached;
+    }
 
     try {
       const response = await fetch(downloadUrl, {
@@ -156,6 +265,9 @@ export class GitHubService {
         length: content.length,
       });
 
+      // Cache the content
+      cache.set(cacheKey, content, CACHE_TTL_MS);
+
       return content;
     } catch (error) {
       logger.error('Failed to preview skill', 'GitHubService', error);
@@ -165,6 +277,27 @@ export class GitHubService {
 
   /**
    * Install skill from GitHub to local directory
+   * Downloads skill content and saves to project or global directory
+   * Handles conflicts based on resolution strategy
+   * @param repositoryName - Full repository name (owner/repo)
+   * @param skillFilePath - Path to skill.md in repository
+   * @param downloadUrl - Raw GitHub URL to skill.md file
+   * @param targetDirectory - 'project' or 'global' directory
+   * @param pathValidator - PathValidator instance for security checks
+   * @param conflictResolution - Strategy for handling conflicts: 'overwrite', 'rename', or 'skip'
+   * @returns Object with success status, new path if successful, or error message
+   * @example
+   * const result = await GitHubService.installSkill(
+   *   'user/repo',
+   *   'skills/my-skill/skill.md',
+   *   'https://raw.githubusercontent.com/user/repo/main/skills/my-skill/skill.md',
+   *   'project',
+   *   pathValidator,
+   *   'rename'
+   * );
+   * if (result.success) {
+   *   console.log('Installed to:', result.newPath);
+   * }
    */
   static async installSkill(
     repositoryName: string,
@@ -332,7 +465,12 @@ export class GitHubService {
   }
 
   /**
-   * Get current rate limit info
+   * Get current GitHub API rate limit information
+   * @returns RateLimitInfo with remaining requests, limit, and reset time
+   * @example
+   * const rateLimit = GitHubService.getRateLimitInfo();
+   * console.log(`${rateLimit.remaining}/${rateLimit.limit} requests remaining`);
+   * console.log('Resets at:', rateLimit.resetDate);
    */
   static getRateLimitInfo(): RateLimitInfo {
     const { remaining, limit, resetTime } = GitHubService.rateLimitState;
@@ -345,7 +483,13 @@ export class GitHubService {
   }
 
   /**
-   * Cancel active request
+   * Cancel an active GitHub API request
+   * Aborts the request if it's still in progress
+   * @param requestId - ID of the request to cancel
+   * @returns True if request was cancelled, false if not found
+   * @example
+   * const cancelled = GitHubService.cancelRequest('search-123');
+   * console.log(cancelled ? 'Request cancelled' : 'Request not found');
    */
   static cancelRequest(requestId: string): boolean {
     const controller = activeRequests.get(requestId);
@@ -356,5 +500,331 @@ export class GitHubService {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Get repository tree structure with authentication
+   * Fetches recursive tree of all files and directories in the repository
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param pat - Personal Access Token with repo access
+   * @param branch - Branch name (default: 'main')
+   * @returns Array of tree items with path, type, and SHA
+   * @throws Error if fetch fails or authentication is invalid
+   * @example
+   * const tree = await GitHubService.getRepoTree('user', 'repo', pat, 'main');
+   * tree.forEach(item => console.log(item.path, item.type));
+   */
+  static async getRepoTree(
+    owner: string,
+    repo: string,
+    pat: string,
+    branch: string = 'main'
+  ): Promise<any[]> {
+    try {
+      const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `token ${pat}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'skillsMN-App',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repository tree: ${response.status}`);
+      }
+
+      const data: any = await response.json();
+      return data.tree || [];
+    } catch (error) {
+      logger.error('Failed to get repository tree', 'GitHubService', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find skill directories in repository tree
+   */
+  static findSkillDirectories(tree: any[]): any[] {
+    const skillFiles = tree.filter((item: any) => {
+      return item.type === 'blob' && item.path.endsWith('skill.md');
+    });
+
+    const skillDirectories = skillFiles.map((file: any) => {
+      const pathParts = file.path.split('/');
+      pathParts.pop();
+      const dirPath = pathParts.join('/');
+      const depth = pathParts.length;
+
+      return {
+        path: dirPath,
+        name: pathParts[pathParts.length - 1] || 'root',
+        skillFilePath: file.path,
+        depth,
+      };
+    });
+
+    return skillDirectories.filter((dir: any) => dir.depth <= 5);
+  }
+
+  /**
+   * Download directory from private repository with authentication
+   * Fetches all files in a directory preserving structure
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param directoryPath - Path to directory in repository
+   * @param pat - Personal Access Token with repo access
+   * @param branch - Branch name (default: 'main')
+   * @returns Map of file paths to file contents
+   * @throws Error if download fails or authentication is invalid
+   * @example
+   * const files = await GitHubService.downloadPrivateDirectory(
+   *   'user', 'repo', 'skills/my-skill', pat
+   * );
+   * files.forEach((content, path) => console.log(path, content.length));
+   */
+  static async downloadPrivateDirectory(
+    owner: string,
+    repo: string,
+    directoryPath: string,
+    pat: string,
+    branch: string = 'main'
+  ): Promise<Map<string, string>> {
+    try {
+      const tree = await GitHubService.getRepoTree(owner, repo, pat, branch);
+
+      const directoryFiles = tree.filter((item: any) => {
+        return item.type === 'blob' && item.path.startsWith(directoryPath);
+      });
+
+      const files = new Map<string, string>();
+
+      await Promise.all(
+        directoryFiles.map(async (file: any) => {
+          const downloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file.path}`;
+          const response = await fetch(downloadUrl, {
+            headers: {
+              'Authorization': `token ${pat}`,
+              'User-Agent': 'skillsMN-App',
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to download ${file.path}: ${response.status}`);
+          }
+
+          const content = await response.text();
+          files.set(file.path, content);
+        })
+      );
+
+      logger.info('Downloaded directory from private repo', 'GitHubService', {
+        owner,
+        repo,
+        directoryPath,
+        fileCount: files.size,
+      });
+
+      return files;
+    } catch (error) {
+      logger.error('Failed to download private directory', 'GitHubService', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Test repository connection with Personal Access Token
+   * Validates PAT permissions and repository access
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param pat - Personal Access Token to test
+   * @returns Object with valid status, repository info if successful, or error message
+   * @example
+   * const result = await GitHubService.testConnection('user', 'repo', pat);
+   * if (result.valid) {
+   *   console.log('Connected to:', result.repository.name);
+   *   console.log('Default branch:', result.repository.defaultBranch);
+   * } else {
+   *   console.error('Failed:', result.error);
+   * }
+   */
+  static async testConnection(
+    owner: string,
+    repo: string,
+    pat: string
+  ): Promise<{
+    valid: boolean;
+    repository?: {
+      name: string;
+      description: string;
+      defaultBranch: string;
+    };
+    error?: string;
+  }> {
+    try {
+      const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `token ${pat}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'skillsMN-App',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            valid: false,
+            error: 'Authentication failed. Please check your PAT.',
+          };
+        } else if (response.status === 404) {
+          return {
+            valid: false,
+            error: 'Repository not found. Please check the URL.',
+          };
+        } else if (response.status === 403) {
+          return {
+            valid: false,
+            error: 'Access forbidden. Please check your PAT permissions.',
+          };
+        }
+        return {
+          valid: false,
+          error: `GitHub API error: ${response.status} ${response.statusText}`,
+        };
+      }
+
+      const data: any = await response.json();
+      return {
+        valid: true,
+        repository: {
+          name: data.name,
+          description: data.description || '',
+          defaultBranch: data.default_branch || 'main',
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to test repository connection', 'GitHubService', error);
+      return {
+        valid: false,
+        error: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
+  /**
+   * Get directory commit history from private repository
+   * Fetches recent commits for a specific directory path
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param pat - Personal Access Token with repo access
+   * @param directoryPath - Path to directory in repository
+   * @param branch - Branch name (default: 'main')
+   * @returns Array of commit objects (max 10), empty array on error
+   * @example
+   * const commits = await GitHubService.getDirectoryCommits(
+   *   'user', 'repo', pat, 'skills/my-skill'
+   * );
+   * const latestCommit = commits[0];
+   * console.log('Latest commit:', latestCommit.sha, latestCommit.commit.message);
+   */
+  static async getDirectoryCommits(
+    owner: string,
+    repo: string,
+    pat: string,
+    directoryPath: string,
+    branch: string = 'main'
+  ): Promise<any[]> {
+    try {
+      const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits?path=${encodeURIComponent(directoryPath)}&sha=${branch}&per_page=10`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `token ${pat}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'skillsMN-App',
+        },
+      });
+
+      if (!response.ok) {
+        logger.warn(`Failed to fetch commits for ${directoryPath}`, 'GitHubService', {
+          status: response.status,
+        });
+        return [];
+      }
+
+      const data: any = await response.json();
+      return data || [];
+    } catch (error) {
+      logger.error('Failed to get directory commits', 'GitHubService', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get skills from private repository with metadata
+   * Finds all skill directories and fetches commit history for each
+   * Results are cached for 5 minutes
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param pat - Personal Access Token with repo access
+   * @param branch - Branch name (optional, defaults to 'main')
+   * @returns Array of skill objects with path, commit info, and metadata
+   * @throws Error if fetch fails
+   * @example
+   * const skills = await GitHubService.getPrivateRepoSkills('user', 'repo', pat);
+   * skills.forEach(skill => {
+   *   console.log(skill.name, skill.lastCommitDate, skill.directoryCommitSHA);
+   * });
+   */
+  static async getPrivateRepoSkills(
+    owner: string,
+    repo: string,
+    pat: string,
+    branch?: string
+  ): Promise<any[]> {
+    const cacheKey = `private-skills:${owner}/${repo}`;
+    const cached = cache.get<any[]>(cacheKey);
+    if (cached) {
+      logger.debug('Returning cached private repo skills', 'GitHubService', { owner, repo });
+      return cached;
+    }
+
+    try {
+      const actualBranch = branch || 'main';
+      const tree = await GitHubService.getRepoTree(owner, repo, pat, actualBranch);
+      const skillDirs = GitHubService.findSkillDirectories(tree);
+
+      const skillsWithMetadata = await Promise.all(
+        skillDirs.map(async (dir: any) => {
+          const commits = await GitHubService.getDirectoryCommits(owner, repo, pat, dir.path, actualBranch);
+          const latestCommit = commits[0];
+
+          return {
+            path: dir.path,
+            name: dir.name,
+            skillFilePath: dir.skillFilePath,
+            directoryCommitSHA: latestCommit?.sha || '',
+            lastCommitMessage: latestCommit?.commit?.message || '',
+            lastCommitAuthor: latestCommit?.commit?.author?.name || '',
+            lastCommitDate: latestCommit?.commit?.author?.date
+              ? new Date(latestCommit.commit.author.date)
+              : null,
+          };
+        })
+      );
+
+      cache.set(cacheKey, skillsWithMetadata, CACHE_TTL_MS);
+
+      logger.info('Retrieved private repo skills', 'GitHubService', {
+        owner,
+        repo,
+        count: skillsWithMetadata.length,
+      });
+
+      return skillsWithMetadata;
+    } catch (error) {
+      logger.error('Failed to get private repo skills', 'GitHubService', error);
+      throw error;
+    }
   }
 }

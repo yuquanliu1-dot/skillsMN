@@ -10,11 +10,17 @@ import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
 import CreateSkillDialog from './components/CreateSkillDialog';
-import SkillEditor from './components/SkillEditor';
+import { lazy, Suspense } from 'react';
+const SkillEditor = lazy(() => import('./components/SkillEditor'));
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import Settings from './components/Settings';
 import AIPanel from './components/AIPanel';
 import ToastContainer, { ToastMessage } from './components/ToastContainer';
+import PrivateRepoList from './components/PrivateRepoList';
+import Sidebar, { ViewType } from './components/Sidebar';
+import SearchPanel from './components/SearchPanel';
+
+type MainTab = 'local' | 'private-repos';
 
 // ============================================================================
 // State Types
@@ -102,6 +108,7 @@ export default function App(): JSX.Element {
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | null>(null);
   const [editorContent, _setEditorContent] = useState<string>('');
@@ -441,10 +448,10 @@ export default function App(): JSX.Element {
    */
   if (state.isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
+      <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <div className="text-slate-300">Loading...</div>
+          <div className="text-gray-600">Loading...</div>
         </div>
       </div>
     );
@@ -455,9 +462,9 @@ export default function App(): JSX.Element {
    */
   if (state.error && !showSetup) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
-        <div className="max-w-md p-6 bg-slate-800 rounded-lg border border-slate-700">
-          <div className="text-red-400 mb-4">{state.error}</div>
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="max-w-md p-6 bg-white rounded-lg border border-gray-200 shadow-lg">
+          <div className="text-red-500 mb-4">{state.error}</div>
           <button
             onClick={() => window.location.reload()}
             className="btn btn-primary"
@@ -481,48 +488,84 @@ export default function App(): JSX.Element {
    */
   return (
     <AppContext.Provider value={{ state, dispatch, loadSkills }}>
-      <div className="h-screen bg-slate-900 text-slate-100 flex flex-col">
-        <header className="border-b border-slate-700 p-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">skillsMN</h1>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="btn btn-secondary flex items-center gap-2"
-            aria-label="Open settings"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+      <div className="flex h-screen bg-gray-50 text-gray-900">
+        {/* Sidebar - Column 1 (fixed width) */}
+        <Sidebar
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          config={state.config}
+        />
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Skills List - Column 2 (flexible) */}
+          <div className="flex-1 max-w-[360px] border-r border-gray-200 bg-white overflow-hidden flex flex-col">
+            {/* Keep all views mounted but hidden to preserve state */}
+            <div style={{ display: currentView === 'skills' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
+              <SkillList
+                skills={state.skills}
+                onSkillClick={(skill) => setEditingSkill(skill)}
+                onSkillSelect={(skill) => setSelectedSkillPath(skill.path)}
+                onCreateSkill={() => setShowCreateDialog(true)}
+                onDeleteSkill={(skill) => setDeletingSkill(skill)}
+                onOpenFolder={handleOpenFolder}
+                selectedSkillPath={selectedSkillPath}
               />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            </div>
+
+            <div style={{ display: currentView === 'discover' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
+              <SearchPanel
+                isOpen={true}
+                onClose={() => setCurrentView('skills')}
+                onInstallComplete={loadSkills}
+                isInline={true}
               />
-            </svg>
-            Settings
-          </button>
-        </header>
-        <main className="flex-1 overflow-hidden">
-          <SkillList
-            skills={state.skills}
-            onSkillClick={(skill) => {
-              setEditingSkill(skill);
-            }}
-            onSkillSelect={(skill) => {
-              setSelectedSkillPath(skill.path);
-            }}
-            onCreateSkill={() => setShowCreateDialog(true)}
-            onDeleteSkill={(skill) => {
-              setDeletingSkill(skill);
-            }}
-            onOpenFolder={handleOpenFolder}
-            selectedSkillPath={selectedSkillPath}
-          />
-        </main>
+            </div>
+
+            <div style={{ display: currentView === 'private-repos' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
+              <PrivateRepoList />
+            </div>
+
+            <div style={{ display: currentView === 'settings' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
+              <Settings
+                isOpen={true}
+                onClose={() => setCurrentView('skills')}
+                config={state.config}
+                onSave={handleSaveSettings}
+              />
+            </div>
+          </div>
+
+          {/* Detail Panel - Column 3 (adaptive width) */}
+          <div className="flex-1 border-l border-gray-200 bg-white overflow-hidden">
+            {editingSkill ? (
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-text-muted">Loading editor...</div>
+                  </div>
+                }
+              >
+                <SkillEditor
+                  skill={editingSkill}
+                  onClose={() => setEditingSkill(null)}
+                  onSave={handleSaveSkill}
+                  isInline={true}
+                />
+              </Suspense>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-lg font-medium">No Skill Selected</p>
+                  <p className="text-sm text-gray-400 mt-2">Select a skill to view details</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Create Skill Dialog */}
@@ -533,29 +576,12 @@ export default function App(): JSX.Element {
         defaultDirectory={state.config?.defaultInstallDirectory || 'project'}
       />
 
-      {/* Skill Editor */}
-      {editingSkill && (
-        <SkillEditor
-          skill={editingSkill}
-          onClose={() => setEditingSkill(null)}
-          onSave={handleSaveSkill}
-        />
-      )}
-
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
         isOpen={deletingSkill !== null}
         skill={deletingSkill}
         onClose={() => setDeletingSkill(null)}
         onConfirm={handleDeleteSkill}
-      />
-
-      {/* Settings Dialog */}
-      <Settings
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-        config={state.config}
-        onSave={handleSaveSettings}
       />
 
       {/* AI Assistant Panel */}

@@ -1,0 +1,309 @@
+/**
+ * PrivateRepoList Component
+ *
+ * Displays and browses skills from configured private repositories
+ */
+
+import { useState, useEffect } from 'react';
+import type { PrivateRepo, PrivateSkill } from '../../shared/types';
+import PrivateSkillCard from './PrivateSkillCard';
+
+interface PrivateRepoListProps {
+  onInstallSkill?: (skill: PrivateSkill, repo: PrivateRepo) => void;
+}
+
+export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps): JSX.Element {
+  const [repositories, setRepositories] = useState<PrivateRepo[]>([]);
+  const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
+  const [skills, setSkills] = useState<PrivateSkill[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoadingRepos, setIsLoadingRepos] = useState(true);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Load repositories on mount
+   */
+  useEffect(() => {
+    loadRepositories();
+  }, []);
+
+  /**
+   * Load skills when repository is selected
+   */
+  useEffect(() => {
+    if (selectedRepoId) {
+      loadSkills(selectedRepoId);
+    } else {
+      setSkills([]);
+    }
+  }, [selectedRepoId]);
+
+  const loadRepositories = async () => {
+    setIsLoadingRepos(true);
+    setError(null);
+    try {
+      const response = await window.electronAPI.listPrivateRepos();
+      if (response.success && response.data) {
+        setRepositories(response.data);
+        // Auto-select first repository if available
+        if (response.data.length > 0 && !selectedRepoId) {
+          setSelectedRepoId(response.data[0].id);
+        }
+      } else {
+        setError(response.error?.message || 'Failed to load repositories');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load repositories';
+      setError(message);
+      console.error('Load repos error:', err);
+    } finally {
+      setIsLoadingRepos(false);
+    }
+  };
+
+  const loadSkills = async (repoId: string, forceRefresh: boolean = false) => {
+    setIsLoadingSkills(true);
+    setError(null);
+    try {
+      const response = await window.electronAPI.getPrivateRepoSkills(repoId);
+      if (response.success && response.data) {
+        setSkills(response.data);
+      } else {
+        setError(response.error?.message || 'Failed to load skills');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load skills';
+      setError(message);
+      console.error('Load skills error:', err);
+    } finally {
+      setIsLoadingSkills(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!selectedRepoId || !searchQuery.trim()) {
+      // If no query, reload all skills
+      loadSkills(selectedRepoId!);
+      return;
+    }
+
+    setIsLoadingSkills(true);
+    setError(null);
+    try {
+      const response = await window.electronAPI.searchPrivateRepoSkills({
+        repoId: selectedRepoId,
+        query: searchQuery.trim(),
+      });
+      if (response.success && response.data) {
+        setSkills(response.data);
+      } else {
+        setError(response.error?.message || 'Failed to search skills');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to search skills';
+      setError(message);
+      console.error('Search skills error:', err);
+    } finally {
+      setIsLoadingSkills(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!selectedRepoId) return;
+
+    setIsRefreshing(true);
+    setError(null);
+    try {
+      await loadSkills(selectedRepoId, true);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleInstallSkill = (skill: PrivateSkill) => {
+    const repo = repositories.find(r => r.id === selectedRepoId);
+    if (repo && onInstallSkill) {
+      onInstallSkill(skill, repo);
+    }
+  };
+
+  const selectedRepo = repositories.find(r => r.id === selectedRepoId);
+
+  if (isLoadingRepos) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+      </div>
+    );
+  }
+
+  if (repositories.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <svg
+          className="mx-auto h-12 w-12 text-slate-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+          />
+        </svg>
+        <h3 className="mt-2 text-sm font-medium text-slate-300">No repositories configured</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Add a private repository in Settings to get started.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-slate-100 mb-2">Private Repositories</h2>
+        <p className="text-sm text-slate-400">
+          Browse and install skills from your team's private repositories
+        </p>
+      </div>
+
+      {/* Repository Selector */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-slate-300 mb-2">
+          Select Repository
+        </label>
+        <select
+          value={selectedRepoId || ''}
+          onChange={(e) => setSelectedRepoId(e.target.value)}
+          className="select w-full"
+          disabled={isLoadingSkills}
+        >
+          {repositories.map((repo) => (
+            <option key={repo.id} value={repo.id}>
+              {repo.displayName || `${repo.owner}/${repo.repo}`}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Search and Refresh Controls */}
+      {selectedRepoId && (
+        <div className="mb-4 flex gap-3">
+          <div className="flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="Search skills..."
+              className="input w-full"
+              disabled={isLoadingSkills}
+            />
+          </div>
+          <button
+            onClick={handleSearch}
+            disabled={isLoadingSkills || !searchQuery.trim()}
+            className="btn btn-secondary"
+          >
+            Search
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={isLoadingSkills || isRefreshing}
+            className="btn btn-secondary"
+            title="Refresh skills list"
+          >
+            {isRefreshing ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-300"></div>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+            <button
+              onClick={() => selectedRepoId && loadSkills(selectedRepoId)}
+              className="btn btn-secondary text-xs"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Skills List */}
+      {isLoadingSkills ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+        </div>
+      ) : skills.length === 0 ? (
+        <div className="text-center py-12">
+          <svg
+            className="mx-auto h-12 w-12 text-slate-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <h3 className="mt-2 text-sm font-medium text-slate-300">No skills found</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            {searchQuery
+              ? 'Try a different search term'
+              : 'This repository does not contain any skill directories'}
+          </p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto space-y-3">
+          {skills.map((skill) => (
+            <PrivateSkillCard
+              key={skill.path}
+              skill={skill}
+              repo={selectedRepo!}
+              onInstallComplete={() => loadSkills(selectedRepo!.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

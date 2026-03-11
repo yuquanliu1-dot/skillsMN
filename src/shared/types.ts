@@ -23,6 +23,14 @@ export interface Skill {
   lastModified: Date;
   /** Count of non-skill.md files in directory */
   resourceCount: number;
+  /** Source repository ID for installed skills */
+  sourceRepoId?: string;
+  /** Source repository path (owner/repo) */
+  sourceRepoPath?: string;
+  /** Installed directory commit SHA */
+  installedDirectoryCommitSHA?: string;
+  /** Installation timestamp */
+  installedAt?: Date;
 }
 
 export interface SkillDirectory {
@@ -39,6 +47,12 @@ export interface SkillFrontmatter {
   name: string;
   /** Skill description */
   description?: string;
+  /** Skill version */
+  version?: string;
+  /** Skill author */
+  author?: string;
+  /** Skill tags */
+  tags?: string[];
 }
 
 // ============================================================================
@@ -79,6 +93,39 @@ export interface IPCResponse<T> {
   data?: T;
   /** Error object (if failed) */
   error?: IPCError;
+}
+
+/**
+ * Helper functions for creating IPC responses
+ */
+export namespace IPCResponse {
+  /**
+   * Create a successful response
+   */
+  export function success<T>(data: T): IPCResponse<T> {
+    return { success: true, data };
+  }
+
+  /**
+   * Create an error response
+   */
+  export function error<T = never>(code: string, message: string, details?: any): IPCResponse<T> {
+    return { success: false, error: { code, message, details } };
+  }
+
+  /**
+   * Type guard for checking if response is successful
+   */
+  export function isSuccess<T>(response: IPCResponse<T>): response is IPCResponse<T> & { data: T } {
+    return response.success && response.data !== undefined;
+  }
+
+  /**
+   * Type guard for checking if response is an error
+   */
+  export function isError<T>(response: IPCResponse<T>): response is IPCResponse<T> & { error: IPCError } {
+    return !response.success && response.error !== undefined;
+  }
 }
 
 // ============================================================================
@@ -131,6 +178,14 @@ export interface AIGenerationRequest {
   selectionStart?: number;
   /** Selection end position (for insert/replace modes) */
   selectionEnd?: number;
+  /** Skill context for AI */
+  skillContext?: {
+    name?: string;
+    description?: string;
+    content?: string;
+    cursorPosition?: number;
+    selectedText?: string;
+  };
 }
 
 export interface AIStreamChunk {
@@ -141,3 +196,200 @@ export interface AIStreamChunk {
   /** Error message if generation failed */
   error?: string;
 }
+
+export type AIProvider = 'anthropic';
+
+export type AIModel =
+  | 'claude-3-sonnet-20240229'
+  | 'claude-3-opus-20240229'
+  | 'claude-3-haiku-20240307';
+
+export interface AIConfiguration {
+  /** AI service provider */
+  provider: AIProvider;
+  /** API key (encrypted in storage) */
+  apiKey: string;
+  /** Selected AI model */
+  model: AIModel;
+  /** Whether to stream responses */
+  streamingEnabled: boolean;
+  /** Generation timeout in ms */
+  timeout: number;
+  /** Max retry attempts */
+  maxRetries: number;
+  /** Custom API base URL (optional) */
+  baseUrl?: string;
+}
+
+// ============================================================================
+// GitHub Search Types (Feature 004)
+// ============================================================================
+
+export interface SkillFileMatch {
+  /** Path to skill.md file within repository */
+  path: string;
+  /** Directory path containing the skill */
+  directoryPath: string;
+  /** Raw GitHub URL for file content */
+  downloadUrl: string;
+  /** Last modification timestamp */
+  lastModified: Date;
+}
+
+export interface SearchResult {
+  /** Full repository name (owner/repo) */
+  repositoryName: string;
+  /** GitHub repository URL */
+  repositoryUrl: string;
+  /** Repository description */
+  description: string;
+  /** Star count */
+  stars: number;
+  /** Fork count */
+  forks: number;
+  /** Whether repository is archived */
+  archived: boolean;
+  /** Primary language */
+  language: string | null;
+  /** Default branch name */
+  defaultBranch: string;
+  /** Array of skill files found in repository */
+  skillFiles: SkillFileMatch[];
+  /** Total number of skill files found */
+  totalSkills: number;
+}
+
+export interface GitHubSearchResponse {
+  /** Search results */
+  results: SearchResult[];
+  /** Total count of results */
+  totalCount: number;
+  /** Whether results are incomplete due to rate limiting */
+  incomplete: boolean;
+  /** Rate limit information */
+  rateLimit: RateLimitInfo;
+}
+
+export interface RateLimitInfo {
+  /** Remaining requests */
+  remaining: number;
+  /** Total requests allowed */
+  limit: number;
+  /** Reset time as Unix timestamp */
+  resetTime: number;
+  /** Reset time as Date */
+  resetDate: Date;
+}
+
+export interface CuratedSource {
+  id: string;
+  displayName: string;
+  repositoryUrl: string;
+  description: string;
+  tags: string[];
+}
+
+export interface InstallRequest {
+  skillName: string;
+  repositoryFullName: string;
+  skillPath: string;
+  targetDirectory: string;
+  branch: string;
+  conflictResolution?: 'overwrite' | 'rename' | 'skip' | null;
+}
+
+export interface InstallProgress {
+  stage: 'checking' | 'downloading' | 'validating' | 'saving' | 'completed' | 'failed';
+  filesCompleted: number;
+  filesTotal: number;
+  percentage: number;
+  error?: string;
+}
+
+export interface ConflictInfo {
+  skillName: string;
+  existingPath: string;
+  newSource: string;
+  resolution?: 'overwrite' | 'rename' | 'skip' | null;
+  applyToAll: boolean;
+}
+
+export interface PreviewContent {
+  skillName: string;
+  repositoryFullName: string;
+  skillMdContent: string;
+  directoryTree: DirectoryTreeNode[];
+}
+
+export interface DirectoryTreeNode {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  children?: DirectoryTreeNode[];
+  size?: number;
+  downloadUrl?: string;
+}
+
+export type GitHubErrorCode =
+  | 'RATE_LIMIT_EXCEEDED'
+  | 'NETWORK_ERROR'
+  | 'INVALID_QUERY'
+  | 'SKILL_NOT_FOUND'
+  | 'INVALID_CONTENT'
+  | 'CONFLICT_DETECTED'
+  | 'INVALID_TARGET'
+  | 'DOWNLOAD_FAILED'
+  | 'VALIDATION_FAILED'
+  | 'PERMISSION_DENIED'
+  | 'INSTALL_NOT_FOUND'
+  | 'GITHUB_API_ERROR';
+
+// ============================================================================
+// Private Repository Types (Feature 005)
+// ============================================================================
+
+export interface PrivateRepo {
+  id: string;
+  url: string;
+  owner: string;
+  repo: string;
+  displayName?: string;
+  description?: string;
+  defaultBranch?: string;
+  patEncrypted: string;
+  skillCount?: number;
+  lastSyncTime?: Date;
+  addedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PrivateRepoConfig {
+  version: number;
+  repositories: PrivateRepo[];
+}
+
+export interface PrivateSkill {
+  name: string;
+  path: string;
+  directoryPath: string;
+  downloadUrl: string;
+  lastModified: Date;
+  repoId: string;
+  repoName: string;
+  lastCommitMessage?: string;
+  lastCommitAuthor?: string;
+  lastCommitDate?: Date;
+  fileCount?: number;
+  directoryCommitSHA?: string;
+}
+
+export interface ContentValidationResult {
+  isValid: boolean;
+  valid?: boolean;
+  errors: string[];
+  warnings: string[];
+  frontmatter?: SkillFrontmatter;
+}
+
+

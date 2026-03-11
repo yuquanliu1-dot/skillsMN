@@ -22,7 +22,7 @@ export function registerGitHubHandlers(validator: PathValidator): void {
 
   // Handler for github:search
   ipcMain.handle(
-    IPC_CHANNELS.GITHUB_SEARCH,
+    IPC_CHANNELS.GITHUB_SEARCH_SKILLS,
     async (_event, { query, page }: { query: string; page?: number }): Promise<GitHubSearchResponse> => {
       try {
         logger.debug('Searching GitHub for skills', 'GitHubHandlers', { query, page });
@@ -50,7 +50,7 @@ export function registerGitHubHandlers(validator: PathValidator): void {
 
   // Handler for github:preview
   ipcMain.handle(
-    IPC_CHANNELS.GITHUB_PREVIEW,
+    IPC_CHANNELS.GITHUB_PREVIEW_SKILL,
     async (_event, { downloadUrl }: { downloadUrl: string }): Promise<{ content: string }> => {
       try {
         logger.debug('Previewing skill from GitHub', 'GitHubHandlers', { downloadUrl });
@@ -71,7 +71,7 @@ export function registerGitHubHandlers(validator: PathValidator): void {
 
   // Handler for github:install
   ipcMain.handle(
-    IPC_CHANNELS.GITHUB_INSTALL,
+    IPC_CHANNELS.GITHUB_INSTALL_SKILL,
     async (
       _event,
       {

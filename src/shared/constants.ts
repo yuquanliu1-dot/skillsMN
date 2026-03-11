@@ -18,6 +18,9 @@ export const SKILLS_DIR_NAME = 'skills';
 /** Configuration file name */
 export const CONFIG_FILE_NAME = 'config.json';
 
+/** Private repositories configuration file name */
+export const PRIVATE_REPOS_FILE_NAME = 'private-repos.json';
+
 // ============================================================================
 // Default Values
 // ============================================================================
@@ -132,11 +135,35 @@ export const IPC_CHANNELS = {
   AI_GENERATE: 'ai:generate',
   AI_CANCEL: 'ai:cancel',
   AI_CHUNK: 'ai:chunk',
+  AI_CONFIG_GET: 'ai:config:get',
+  AI_CONFIG_SAVE: 'ai:config:save',
+  AI_CONFIG_TEST: 'ai:config:test',
 
-  // GitHub operations
-  GITHUB_SEARCH: 'github:search',
-  GITHUB_PREVIEW: 'github:preview',
-  GITHUB_INSTALL: 'github:install',
+  // GitHub operations (Public Skill Discovery - Feature 004)
+  GITHUB_SEARCH_SKILLS: 'github:search-skills',
+  GITHUB_PREVIEW_SKILL: 'github:preview-skill',
+  GITHUB_INSTALL_SKILL: 'github:install-skill',
+  GITHUB_GET_CURATED_SOURCES: 'github:get-curated-sources',
+  GITHUB_GET_SKILLS_FROM_SOURCE: 'github:get-skills-from-source',
+  GITHUB_CANCEL_INSTALL: 'github:cancel-install',
+  GITHUB_INSTALL_PROGRESS: 'github:install-progress',
+  GITHUB_INSTALL_COMPLETE: 'github:install-complete',
+  GITHUB_INSTALL_CONFLICT: 'github:install-conflict',
+  GITHUB_INSTALL_ERROR: 'github:install-error',
+
+  // Private Repository operations (Feature 005)
+  PRIVATE_REPO_ADD: 'private-repo:add',
+  PRIVATE_REPO_LIST: 'private-repo:list',
+  PRIVATE_REPO_GET: 'private-repo:get',
+  PRIVATE_REPO_UPDATE: 'private-repo:update',
+  PRIVATE_REPO_REMOVE: 'private-repo:remove',
+  PRIVATE_REPO_TEST_CONNECTION: 'private-repo:test-connection',
+  PRIVATE_REPO_GET_SKILLS: 'private-repo:get-skills',
+  PRIVATE_REPO_SEARCH_SKILLS: 'private-repo:search-skills',
+  PRIVATE_REPO_INSTALL_SKILL: 'private-repo:install-skill',
+  PRIVATE_REPO_CHECK_UPDATES: 'private-repo:check-updates',
+  PRIVATE_REPO_UPDATE_SKILL: 'private-repo:update-skill',
+  PRIVATE_REPO_GET_SKILL_METADATA: 'private-repo:get-skill-metadata',
 } as const;
 
 // ============================================================================

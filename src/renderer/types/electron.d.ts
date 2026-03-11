@@ -8,6 +8,9 @@ import type {
   IPCResponse,
   FSEvent,
   AIGenerationRequest,
+  PrivateRepo,
+  PrivateSkill,
+  AIConfiguration,
 } from '../../shared/types';
 
 export interface ElectronAPI {
@@ -22,6 +25,9 @@ export interface ElectronAPI {
   ) => Promise<IPCResponse<Skill>>;
   deleteSkill: (path: string) => Promise<IPCResponse<void>>;
   openFolder: (path: string) => Promise<IPCResponse<void>>;
+
+  // Dialog Operations
+  selectDirectory: () => Promise<{ canceled: boolean; filePaths: string[] } | null>;
 
   // Configuration Operations
   loadConfig: () => Promise<IPCResponse<Configuration>>;
@@ -41,6 +47,77 @@ export interface ElectronAPI {
   cancelAI: (requestId: string) => Promise<IPCResponse<void>>;
   onAIChunk: (callback: (event: any, chunk: any) => void) => void;
   removeAIChunkListener: () => void;
+  getAIConfiguration: () => Promise<IPCResponse<AIConfiguration>>;
+  saveAIConfiguration: (config: AIConfiguration) => Promise<IPCResponse<void>>;
+  testAIConnection: () => Promise<IPCResponse<{ success: boolean; latency?: number }>>;
+
+  // Private Repository Operations
+  addPrivateRepo: (params: {
+    url: string;
+    pat: string;
+    displayName?: string;
+  }) => Promise<IPCResponse<PrivateRepo>>;
+  listPrivateRepos: () => Promise<IPCResponse<PrivateRepo[]>>;
+  getPrivateRepo: (repoId: string) => Promise<IPCResponse<PrivateRepo | null>>;
+  updatePrivateRepo: (repoId: string, updates: Partial<PrivateRepo>) => Promise<IPCResponse<PrivateRepo>>;
+  removePrivateRepo: (repoId: string) => Promise<IPCResponse<void>>;
+  testPrivateRepoConnection: (repoId: string) => Promise<
+    IPCResponse<{
+      valid: boolean;
+      repository?: {
+        name: string;
+        description: string;
+        defaultBranch: string;
+      };
+      error?: string;
+    }>
+  >;
+  getPrivateRepoSkills: (repoId: string) => Promise<IPCResponse<PrivateSkill[]>>;
+  searchPrivateRepoSkills: (params: {
+    repoId: string;
+    query: string;
+  }) => Promise<IPCResponse<PrivateSkill[]>>;
+  installPrivateRepoSkill: (params: {
+    repoId: string;
+    skillPath: string;
+    targetDirectory: 'project' | 'global';
+    conflictResolution?: 'overwrite' | 'rename' | 'skip';
+  }) => Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>>;
+  checkPrivateSkillUpdates: () => Promise<IPCResponse<Map<string, { hasUpdate: boolean }>>>;
+  updatePrivateSkill: (params: {
+    skillPath: string;
+    createBackup?: boolean;
+  }) => Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>>;
+
+  // GitHub Operations (Feature 004 - Public Skill Discovery)
+  searchGitHub: (
+    query: string,
+    page?: number
+  ) => Promise<IPCResponse<{
+    results: SearchResult[];
+    totalCount: number;
+    incomplete: boolean;
+    rateLimit: RateLimitInfo;
+  }>>;
+  previewGitHubSkill: (downloadUrl: string) => Promise<IPCResponse<{ content: string }>>;
+  installGitHubSkill: (params: {
+    repositoryName: string;
+    skillFilePath: string;
+    downloadUrl: string;
+    targetDirectory: 'project' | 'global';
+    conflictResolution?: 'overwrite' | 'rename' | 'skip';
+  }) => Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>>;
+  getCuratedSources: () => Promise<IPCResponse<{ sources: CuratedSource[] }>>;
+  getSkillsFromSource: (params: {
+    repositoryUrl: string;
+    page?: number;
+  }) => Promise<IPCResponse<{ results: SearchResult[]; totalCount: number; hasMore: boolean }>>;
+  cancelGitHubInstall: (params: {
+    skillName: string;
+    repositoryFullName: string;
+  }) => Promise<IPCResponse<{ cancelled: boolean; cleanedUp: boolean }>>;
+  onGitHubInstallProgress: (callback: (event: any, progress: InstallProgress) => void) => void;
+  removeGitHubInstallProgressListener: () => void;
 }
 
 declare global {
