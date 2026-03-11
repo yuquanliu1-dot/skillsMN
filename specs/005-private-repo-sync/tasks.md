@@ -210,12 +210,12 @@ This feature extends an existing Electron application:
 ### Frontend Implementation for User Story 5
 
 - [X] T086 [P] [US5] Extend preload.ts with update and remove channels in src/main/preload.ts
-- [ ] T087 [US5] Update repository selector dropdown for multiple repos in src/renderer/components/PrivateRepoList.tsx
-- [ ] T088 [US5] Implement repo switching logic (load skills for selected repo) in src/renderer/components/PrivateRepoList.tsx
+- [X] T087 [US5] Update repository selector dropdown for multiple repos in src/renderer/components/PrivateRepoList.tsx
+- [X] T088 [US5] Implement repo switching logic (load skills for selected repo) in src/renderer/components/PrivateRepoList.tsx
 - [X] T089 [US5] Add "Edit Repository" option in Settings in src/renderer/components/Settings.tsx
 - [X] T090 [US5] Add "Remove Repository" option with confirmation in src/renderer/components/Settings.tsx
-- [ ] T091 [US5] Display PAT expiration error with link to Settings in src/renderer/components/PrivateRepoList.tsx
-- [ ] T092 [US5] Preserve locally installed skills when repository removed in src/renderer/components/SkillList.tsx
+- [X] T091 [US5] Display PAT expiration error with link to Settings in src/renderer/components/PrivateRepoList.tsx
+- [X] T092 [US5] Preserve locally installed skills when repository removed in src/renderer/components/Settings.tsx
 
 **Checkpoint**: Multi-repo support complete - users can manage multiple team skill repositories
 

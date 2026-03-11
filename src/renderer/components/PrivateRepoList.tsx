@@ -12,6 +12,24 @@ interface PrivateRepoListProps {
   onInstallSkill?: (skill: PrivateSkill, repo: PrivateRepo) => void;
 }
 
+/**
+ * Check if an error message indicates an authentication failure
+ */
+function isAuthenticationError(message: string): boolean {
+  const authErrorPatterns = [
+    'authentication failed',
+    '401',
+    'unauthorized',
+    'invalid pat',
+    'invalid token',
+    'token expired',
+    'bad credentials',
+    'access token',
+  ];
+  const lowerMessage = message.toLowerCase();
+  return authErrorPatterns.some(pattern => lowerMessage.includes(pattern));
+}
+
 export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps): JSX.Element {
   const [repositories, setRepositories] = useState<PrivateRepo[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
@@ -21,6 +39,7 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthError, setIsAuthError] = useState(false);
 
   /**
    * Load repositories on mount
@@ -66,16 +85,32 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
   const loadSkills = async (repoId: string, forceRefresh: boolean = false) => {
     setIsLoadingSkills(true);
     setError(null);
+    setIsAuthError(false);
     try {
       const response = await window.electronAPI.getPrivateRepoSkills(repoId);
       if (response.success && response.data) {
         setSkills(response.data);
       } else {
-        setError(response.error?.message || 'Failed to load skills');
+        // Check for authentication errors
+        const errorMsg = response.error?.message || 'Failed to load skills';
+        const errorCode = response.error?.code;
+
+        if (errorCode === 'AUTH_FAILED' || isAuthenticationError(errorMsg)) {
+          setIsAuthError(true);
+          setError('Authentication failed. Your PAT may have expired or been revoked.');
+        } else {
+          setError(errorMsg);
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load skills';
-      setError(message);
+      // Check for authentication-related errors
+      if (isAuthenticationError(message)) {
+        setIsAuthError(true);
+        setError('Authentication failed. Your PAT may have expired or been revoked.');
+      } else {
+        setError(message);
+      }
       console.error('Load skills error:', err);
     } finally {
       setIsLoadingSkills(false);
@@ -254,9 +289,9 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
           aria-live="polite"
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2 flex-1">
               <svg
-                className="w-5 h-5 text-red-400 dark:text-red-400 flex-shrink-0"
+                className="w-5 h-5 text-red-400 dark:text-red-400 flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -269,15 +304,36 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
                   d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <p className="text-sm text-red-400 dark:text-red-400">{error}</p>
+              <div className="flex-1">
+                <p className="text-sm text-red-400 dark:text-red-400">{error}</p>
+                {isAuthError && (
+                  <p className="text-xs text-red-300 dark:text-red-300 mt-1">
+                    Go to{' '}
+                    <button
+                      onClick={() => {
+                        // Navigate to Settings - this assumes there's a way to switch views
+                        // In a real app, you'd use React Router or context
+                        window.dispatchEvent(new CustomEvent('navigate-to-settings'));
+                      }}
+                      className="underline hover:text-red-200 dark:hover:text-red-200 focus:outline-none focus:ring-2 focus:ring-red-400 rounded"
+                      aria-label="Navigate to Settings to update PAT"
+                    >
+                      Settings
+                    </button>
+                    {' '}to update your PAT.
+                  </p>
+                )}
+              </div>
             </div>
-            <button
-              onClick={() => selectedRepoId && loadSkills(selectedRepoId)}
-              className="btn btn-secondary text-xs"
-              aria-label="Retry loading skills"
-            >
-              Retry
-            </button>
+            {!isAuthError && (
+              <button
+                onClick={() => selectedRepoId && loadSkills(selectedRepoId)}
+                className="btn btn-secondary text-xs ml-2"
+                aria-label="Retry loading skills"
+              >
+                Retry
+              </button>
+            )}
           </div>
         </div>
       )}

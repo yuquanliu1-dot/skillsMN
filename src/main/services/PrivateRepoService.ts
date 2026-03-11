@@ -255,6 +255,12 @@ export class PrivateRepoService {
 
   /**
    * Remove a repository configuration
+   *
+   * Removes only the repository configuration from the app settings.
+   * Locally installed skills from this repository are NOT deleted and remain fully functional.
+   * Users can continue to use installed skills even after removing the repository.
+   * The repository can be re-added later if needed to check for updates or install new skills.
+   *
    * @param repoId - Repository ID to remove
    * @throws Error if repository not found or save fails
    * @example
