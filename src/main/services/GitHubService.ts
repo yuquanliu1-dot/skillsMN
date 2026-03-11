@@ -794,6 +794,9 @@ export class GitHubService {
       const tree = await GitHubService.getRepoTree(owner, repo, pat, actualBranch);
       const skillDirs = GitHubService.findSkillDirectories(tree);
 
+      // PERFORMANCE: Fetch commit history for all skill directories in parallel
+      // This reduces total fetch time from O(n * latency) to O(max_latency)
+      // Each directory gets its commit metadata concurrently
       const skillsWithMetadata = await Promise.all(
         skillDirs.map(async (dir: any) => {
           const commits = await GitHubService.getDirectoryCommits(owner, repo, pat, dir.path, actualBranch);

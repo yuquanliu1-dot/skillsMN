@@ -167,22 +167,30 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-slate-100 mb-2">Private Repositories</h2>
-        <p className="text-sm text-slate-400">
+        <h2 className="text-xl font-semibold text-slate-100 dark:text-slate-100 mb-2">
+          Private Repositories
+        </h2>
+        <p className="text-sm text-slate-400 dark:text-slate-400">
           Browse and install skills from your team's private repositories
         </p>
       </div>
 
       {/* Repository Selector */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label
+          htmlFor="repo-select"
+          className="block text-sm font-medium text-slate-300 dark:text-slate-300 mb-2"
+        >
           Select Repository
         </label>
         <select
+          id="repo-select"
           value={selectedRepoId || ''}
           onChange={(e) => setSelectedRepoId(e.target.value)}
-          className="select w-full"
+          className="select w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600"
           disabled={isLoadingSkills}
+          aria-label="Select a private repository"
+          aria-busy={isLoadingSkills}
         >
           {repositories.map((repo) => (
             <option key={repo.id} value={repo.id}>
@@ -194,22 +202,24 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
 
       {/* Search and Refresh Controls */}
       {selectedRepoId && (
-        <div className="mb-4 flex gap-3">
+        <div className="mb-4 flex gap-3" role="search" aria-label="Search skills">
           <div className="flex-1">
             <input
-              type="text"
+              type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Search skills..."
-              className="input w-full"
+              className="input w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600"
               disabled={isLoadingSkills}
+              aria-label="Search skills in repository"
             />
           </div>
           <button
             onClick={handleSearch}
             disabled={isLoadingSkills || !searchQuery.trim()}
             className="btn btn-secondary"
+            aria-label="Search skills"
           >
             Search
           </button>
@@ -218,6 +228,7 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
             disabled={isLoadingSkills || isRefreshing}
             className="btn btn-secondary"
             title="Refresh skills list"
+            aria-label="Refresh skills list from repository"
           >
             {isRefreshing ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-300"></div>
@@ -237,14 +248,19 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
 
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md">
+        <div
+          className="mb-4 p-3 bg-red-500/10 dark:bg-red-500/10 border border-red-500/30 dark:border-red-500/30 rounded-md"
+          role="alert"
+          aria-live="polite"
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <svg
-                className="w-5 h-5 text-red-400 flex-shrink-0"
+                className="w-5 h-5 text-red-400 dark:text-red-400 flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -253,11 +269,12 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
                   d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-sm text-red-400 dark:text-red-400">{error}</p>
             </div>
             <button
               onClick={() => selectedRepoId && loadSkills(selectedRepoId)}
               className="btn btn-secondary text-xs"
+              aria-label="Retry loading skills"
             >
               Retry
             </button>
@@ -267,16 +284,23 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
 
       {/* Skills List */}
       {isLoadingSkills ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+        <div
+          className="flex items-center justify-center py-12"
+          role="status"
+          aria-live="polite"
+          aria-label="Loading skills"
+        >
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 dark:border-blue-400"></div>
+          <span className="sr-only">Loading skills...</span>
         </div>
       ) : skills.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-12" role="status">
           <svg
-            className="mx-auto h-12 w-12 text-slate-500"
+            className="mx-auto h-12 w-12 text-slate-500 dark:text-slate-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -285,24 +309,31 @@ export default function PrivateRepoList({ onInstallSkill }: PrivateRepoListProps
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-slate-300">No skills found</h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <h3 className="mt-2 text-sm font-medium text-slate-300 dark:text-slate-300">
+            No skills found
+          </h3>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">
             {searchQuery
               ? 'Try a different search term'
               : 'This repository does not contain any skill directories'}
           </p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto space-y-3">
+        <ul
+          className="flex-1 overflow-y-auto space-y-3"
+          role="list"
+          aria-label="Available skills from repository"
+        >
           {skills.map((skill) => (
-            <PrivateSkillCard
-              key={skill.path}
-              skill={skill}
-              repo={selectedRepo!}
-              onInstallComplete={() => loadSkills(selectedRepo!.id)}
-            />
+            <li key={skill.path}>
+              <PrivateSkillCard
+                skill={skill}
+                repo={selectedRepo!}
+                onInstallComplete={() => loadSkills(selectedRepo!.id)}
+              />
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

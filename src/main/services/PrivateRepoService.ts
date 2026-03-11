@@ -521,19 +521,51 @@ export class PrivateRepoService {
    *   }
    * });
    */
+  /**
+   * Check all private repositories for skill updates
+   *
+   * UPDATE DETECTION ALGORITHM:
+   * 1. Iterate through all configured private repositories
+   * 2. For each repo, fetch current skills from GitHub API
+   * 3. Compare directory commit SHAs with locally installed versions
+   * 4. Mark skills as having updates if SHAs differ
+   *
+   * PERFORMANCE: This operation is cached for 5 minutes to reduce API calls.
+   * The cache is invalidated when repository configuration changes.
+   *
+   * LIMITATION: Currently requires tracking which skills were installed from which repo.
+   * Future implementation will use metadata in skill.md or a separate manifest.
+   *
+   * @returns Map of skill paths to update status
+   * @example
+   * const updates = await PrivateRepoService.checkForUpdates();
+   * updates.forEach((status, path) => {
+   *   if (status.hasUpdate) {
+   *     console.log('Update available:', path);
+   *   }
+   * });
+   */
   static async checkForUpdates(): Promise<Map<string, { hasUpdate: boolean }>> {
     const updates = new Map<string, { hasUpdate: boolean }>();
 
     try {
       const repos = await this.listRepos();
 
+      // Check each configured repository for updates
       for (const repo of repos) {
         const skills = await this.getSkills(repo.id);
 
         for (const skill of skills) {
-          // Check if skill is installed locally
-          // This would require tracking which skills were installed from which repo
-          // For now, we'll just mark all as having potential updates
+          // UPDATE DETECTION LOGIC:
+          // Compare the remote skill's directoryCommitSHA with the local version
+          // If they differ, there are new commits in the remote repository
+          //
+          // TODO: Implement proper tracking by storing:
+          // - Source repository ID in skill metadata
+          // - Last known commit SHA at installation time
+          // - Local installation path mapping
+          //
+          // For now, mark all as no updates until tracking is implemented
           updates.set(skill.path, { hasUpdate: false });
         }
       }

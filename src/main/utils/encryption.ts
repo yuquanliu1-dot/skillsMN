@@ -10,11 +10,22 @@ import { logger } from './Logger';
 
 /**
  * Encrypt a Personal Access Token using Electron safeStorage
+ *
+ * Platform-specific implementation:
+ * - Windows: Uses DPAPI (Data Protection API) with user credentials
+ * - macOS: Uses Keychain Access for secure storage
+ * - Linux: Uses libsecret (requires GNOME Keyring or KDE Wallet)
+ *
+ * The encrypted data is tied to the user account and cannot be decrypted
+ * on a different machine or by a different user.
+ *
  * @param pat - Plain text PAT to encrypt
- * @returns Base64-encoded encrypted PAT
- * @throws Error if encryption is not available
+ * @returns Base64-encoded encrypted PAT (safe for JSON storage)
+ * @throws Error if encryption is not available or fails
  */
 export function encryptPAT(pat: string): string {
+  // Check platform support before attempting encryption
+  // This prevents runtime errors on Linux systems without libsecret
   if (!safeStorage.isEncryptionAvailable()) {
     const error = new Error('Credential encryption not available on this platform');
     logger.error('Encryption not available', 'EncryptionUtil', {
@@ -40,11 +51,21 @@ export function encryptPAT(pat: string): string {
 
 /**
  * Decrypt an encrypted Personal Access Token
- * @param encryptedPAT - Base64-encoded encrypted PAT
- * @returns Decrypted plain text PAT
- * @throws Error if decryption fails
+ *
+ * Reverse operation of encryptPAT():
+ * 1. Converts Base64 string back to Buffer
+ * 2. Passes to safeStorage.decryptString()
+ * 3. Returns plain text PAT for API authentication
+ *
+ * SECURITY: The decrypted PAT should never be exposed to the renderer process.
+ * It should only be used in the main process for GitHub API calls.
+ *
+ * @param encryptedPAT - Base64-encoded encrypted PAT (from config file)
+ * @returns Decrypted plain text PAT (for API use only)
+ * @throws Error if decryption fails (corrupted data or wrong platform)
  */
 export function decryptPAT(encryptedPAT: string): string {
+  // Verify encryption support before attempting decryption
   if (!safeStorage.isEncryptionAvailable()) {
     const error = new Error('Credential encryption not available on this platform');
     logger.error('Decryption not available', 'EncryptionUtil', {
