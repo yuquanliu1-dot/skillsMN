@@ -74,7 +74,8 @@ export class AIService {
    */
   static async initialize(config: AIConfiguration): Promise<void> {
     try {
-      const apiKey = AIService.decryptAPIKey(config.apiKey);
+      // API key should already be decrypted (from AIConfigService.loadConfig or frontend input)
+      const apiKey = config.apiKey;
       currentConfig = config; // Store config for custom endpoint handling
 
       // Build client options
@@ -254,7 +255,8 @@ export class AIService {
         return;
       }
 
-      const apiKey = AIService.decryptAPIKey(currentConfig.apiKey);
+      // API key is already decrypted in currentConfig
+      const apiKey = currentConfig.apiKey;
       const url = new URL(currentConfig.baseUrl!);
       const path = `${url.pathname}${endpoint}`;
 

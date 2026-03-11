@@ -16,13 +16,16 @@ let pathValidator: PathValidator | null = null;
 /**
  * Register private repository IPC handlers
  */
-export function registerPrivateRepoHandlers(validator: PathValidator): void {
+export async function registerPrivateRepoHandlers(validator: PathValidator): Promise<void> {
   pathValidator = validator;
 
-  // Initialize service
-  PrivateRepoService.initialize().catch((error) => {
+  // Initialize service and wait for completion
+  try {
+    await PrivateRepoService.initialize();
+    logger.info('PrivateRepoService initialized successfully', 'PrivateRepoHandlers');
+  } catch (error) {
     logger.error('Failed to initialize PrivateRepoService', 'PrivateRepoHandlers', error);
-  });
+  }
 
   // Handler for private-repo:add
   ipcMain.handle(

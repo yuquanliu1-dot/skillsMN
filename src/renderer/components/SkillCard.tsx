@@ -103,7 +103,7 @@ export default function SkillCard({
       {/* Fixed height card: 96px total, 88px content + 8px bottom margin */}
       <div
         className={`
-          relative h-[88px] bg-white border border-gray-200 rounded-lg pt-3 pb-4 px-4 cursor-pointer
+          relative h-[88px] bg-white border border-gray-200 rounded-lg py-2.5 px-4 cursor-pointer
           transition-all duration-200 hover:shadow-md hover:border-blue-300
           ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
         `}
@@ -115,7 +115,7 @@ export default function SkillCard({
         aria-selected={isSelected}
       >
         {/* Top row: Name + Badges + Actions */}
-        <div className="flex items-center justify-between h-6 mb-2">
+        <div className="flex items-center justify-between h-5 mb-1.5">
           {/* Left: Name + Badges */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <h3 className="font-medium text-sm text-gray-900 truncate">
@@ -124,7 +124,7 @@ export default function SkillCard({
 
             {/* Source Badge */}
             <span className={`
-              inline-flex items-center px-2 py-0.5 rounded text-xs font-medium flex-shrink-0
+              inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0
               ${skill.source === 'project'
                 ? 'bg-blue-100 text-blue-700'
                 : 'bg-gray-100 text-gray-700'}
@@ -134,21 +134,21 @@ export default function SkillCard({
 
             {/* Private Badge */}
             {skill.sourceRepoId && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 flex-shrink-0">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 flex-shrink-0">
                 Private
               </span>
             )}
 
             {/* Update Badge */}
             {hasUpdate && updateProgress !== 'success' && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 flex-shrink-0 animate-pulse">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 flex-shrink-0 animate-pulse">
                 Update
               </span>
             )}
 
             {/* Success Badge */}
             {updateProgress === 'success' && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
                 ✓
               </span>
             )}
@@ -202,7 +202,7 @@ export default function SkillCard({
 
         {/* Middle row: Description */}
         {skill.description && (
-          <div className="h-5 mb-2">
+          <div className="h-4 mb-1.5">
             <p
               ref={descriptionRef}
               className="text-xs text-gray-600 line-clamp-1"

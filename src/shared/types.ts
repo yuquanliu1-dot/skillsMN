@@ -71,6 +71,8 @@ export interface Configuration {
   editorDefaultMode: EditorMode;
   /** Auto-refresh skill list on file changes */
   autoRefresh: boolean;
+  /** GitHub Personal Access Token for public skill discovery (optional, for higher rate limits) */
+  githubToken?: string;
 }
 
 // ============================================================================

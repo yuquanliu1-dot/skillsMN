@@ -9,12 +9,13 @@ import * as path from 'path';
 import { logger } from './utils/Logger';
 import { registerConfigHandlers, getConfigService } from './ipc/configHandlers';
 import { registerSkillHandlers } from './ipc/skillHandlers';
-import { registerAIHandlers, registerAITestHandler } from './ipc/aiHandlers';
+import { registerAIHandlers, registerAITestHandler, registerAIConfigHandlers } from './ipc/aiHandlers';
 import { registerGitHubHandlers } from './ipc/gitHubHandlers';
 import { registerPrivateRepoHandlers } from './ipc/privateRepoHandlers';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
 import { SkillDirectoryModel } from './models/SkillDirectory';
+import { AIConfigService } from './services/AIConfigService';
 
 // Global references to prevent garbage collection
 let mainWindow: BrowserWindow | null = null;
@@ -141,9 +142,8 @@ async function initialize(): Promise<void> {
     // Register AI handlers
     registerAIHandlers();
     registerAITestHandler();
-    logger.info('AI handlers registered', 'Main');
-    const { registerAIConfigHandlers } = require('./ipc/aiHandlers');
     registerAIConfigHandlers();
+    AIConfigService.initialize();
     logger.info('AI handlers registered', 'Main');
 
     // Register GitHub handlers
@@ -151,7 +151,7 @@ async function initialize(): Promise<void> {
     logger.info('GitHub handlers registered', 'Main');
 
     // Register Private Repository handlers
-    registerPrivateRepoHandlers(pathValidator);
+    await registerPrivateRepoHandlers(pathValidator);
     logger.info('Private repository handlers registered', 'Main');
 
     // Create main window
