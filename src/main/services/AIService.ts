@@ -73,8 +73,19 @@ export class AIService {
   static async initialize(config: AIConfiguration): Promise<void> {
     try {
       const apiKey = AIService.decryptAPIKey(config.apiKey);
-      anthropic = new Anthropic({ apiKey });
-      logger.info('AI service initialized successfully', 'AIService');
+
+      // Build client options
+      const options: any = { apiKey };
+
+      // Add custom base URL if provided
+      if (config.baseUrl) {
+        options.baseURL = config.baseUrl;
+      }
+
+      anthropic = new Anthropic(options);
+      logger.info('AI service initialized successfully', 'AIService', {
+        hasCustomBaseUrl: !!config.baseUrl
+      });
     } catch (error) {
       logger.error('Failed to initialize AI service', 'AIService', error);
       throw new Error('Failed to initialize AI service. Please check your API key.');
