@@ -162,6 +162,8 @@ export class AIConfigService {
 
     // Validate model
     const validModels: AIModel[] = [
+      'glm-5',
+      'glm-4',
       'claude-3-sonnet-20240229',
       'claude-3-opus-20240229',
       'claude-3-haiku-20240307',
