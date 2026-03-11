@@ -168,6 +168,8 @@ export interface UIState {
 export type AIGenerationMode = 'new' | 'modify' | 'insert' | 'replace';
 
 export interface AIGenerationRequest {
+  /** Unique request identifier for tracking */
+  id?: string;
   /** The prompt describing what to generate */
   prompt: string;
   /** Generation mode */
@@ -186,6 +188,8 @@ export interface AIGenerationRequest {
     cursorPosition?: number;
     selectedText?: string;
   };
+  /** Request timestamp */
+  timestamp?: Date;
 }
 
 export interface AIStreamChunk {

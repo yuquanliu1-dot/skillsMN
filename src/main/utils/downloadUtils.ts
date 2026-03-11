@@ -160,7 +160,7 @@ export async function downloadFile(options: DownloadOptions): Promise<DownloadRe
 
         response.body?.pipe(fileStream);
         response.body?.on('error', (err) => reject(err));
-        fileStream.on('finish', () => resolve());
+        fileStream.on('finish', () => resolve(undefined));
         fileStream.on('error', (err) => reject(err));
       });
 

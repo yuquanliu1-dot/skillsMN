@@ -26,11 +26,11 @@ This feature uses Electron architecture:
 
 **Purpose**: Project initialization, UI/UX design, and basic structure
 
-- [ ] T001 Create shared type definitions for public skill discovery in src/shared/types.ts
-- [ ] T002 [P] Configure IPC channel namespace for GitHub operations (github:*) in src/main/preload.ts
-- [ ] T003 [P] UI/UX Research: Use ui-ux-pro-max skill to search for desktop app search interface patterns, skill preview panels, and installation dialogs
-- [ ] T004 [P] UI/UX Design: Generate design specifications for SearchPanel, SkillPreview, and InstallDialog following ui-ux-pro-max recommendations
-- [ ] T005 Verify design meets quality standards (SVG icons from Heroicons/Lucide, stable hover states, proper contrast, cursor feedback)
+- [X] T001 Create shared type definitions for public skill discovery in src/shared/types.ts
+- [X] T002 [P] Configure IPC channel namespace for GitHub operations (github:*) in src/main/preload.ts
+- [X] T003 [P] UI/UX Research: Use ui-ux-pro-max skill to search for desktop app search interface patterns, skill preview panels, and installation dialogs
+- [X] T004 [P] UI/UX Design: Generate design specifications for SearchPanel, SkillPreview, and InstallDialog following ui-ux-pro-max recommendations
+- [X] T005 Verify design meets quality standards (SVG icons from Heroicons/Lucide, stable hover states, proper contrast, cursor feedback)
 
 ---
 
@@ -40,12 +40,12 @@ This feature uses Electron architecture:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create GitHubService base class in src/main/services/GitHubService.ts with PAT encryption using safeStorage
-- [ ] T007 [P] Implement error mapping utility for GitHub API errors in src/main/utils/gitHubErrors.ts
-- [ ] T008 [P] Create IPC handler registration framework for github:* channels in src/main/ipc/gitHubHandlers.ts
-- [ ] T009 [P] Setup response type wrappers (Result<T, IPCError>) in src/shared/types.ts
-- [ ] T010 Implement path validation utility for skill installation targets in src/main/utils/pathValidation.ts
-- [ ] T011 [P] Create download utilities module with concurrency control in src/main/utils/downloadUtils.ts
+- [X] T006 Create GitHubService base class in src/main/services/GitHubService.ts with PAT encryption using safeStorage
+- [X] T007 [P] Implement error mapping utility for GitHub API errors in src/main/utils/gitHubErrors.ts
+- [X] T008 [P] Create IPC handler registration framework for github:* channels in src/main/ipc/gitHubHandlers.ts
+- [X] T009 [P] Setup response type wrappers (Result<T, IPCError>) in src/shared/types.ts
+- [X] T010 Implement path validation utility for skill installation targets in src/main/utils/pathValidation.ts
+- [X] T011 [P] Create download utilities module with concurrency control in src/main/utils/downloadUtils.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -60,28 +60,28 @@ This feature uses Electron architecture:
 ### Implementation for User Story 1
 
 **Backend (Models & Services)**:
-- [ ] T012 [P] [US1] Create SearchResult model interface in src/main/models/SearchResult.ts
-- [ ] T013 [US1] Implement GitHubService.searchSkills() method with Code Search API in src/main/services/GitHubService.ts
-- [ ] T014 [US1] Implement search result parsing (extract skill directory names from file paths) in src/main/services/GitHubService.ts
-- [ ] T015 [US1] Add search caching with 5-minute TTL in src/main/services/GitHubService.ts
+- [X] T012 [P] [US1] Create SearchResult model interface in src/main/models/SearchResult.ts
+- [X] T013 [US1] Implement GitHubService.searchSkills() method with Code Search API in src/main/services/GitHubService.ts
+- [X] T014 [US1] Implement search result parsing (extract skill directory names from file paths) in src/main/services/GitHubService.ts
+- [X] T015 [US1] Add search caching with 5-minute TTL in src/main/services/GitHubService.ts
 
 **Backend (IPC)**:
-- [ ] T016 [US1] Implement github:search-skills IPC handler in src/main/ipc/gitHubHandlers.ts
-- [ ] T017 [US1] Add rate limit error handling with user-friendly messages in src/main/ipc/gitHubHandlers.ts
-- [ ] T017a [US1] Implement search cancellation logic in SearchPanel to abort in-progress search when query changes in src/renderer/components/SearchPanel.tsx
+- [X] T016 [US1] Implement github:search-skills IPC handler in src/main/ipc/gitHubHandlers.ts
+- [X] T017 [US1] Add rate limit error handling with user-friendly messages in src/main/ipc/gitHubHandlers.ts
+- [X] T017a [US1] Implement search cancellation logic in SearchPanel to abort in-progress search when query changes in src/renderer/components/SearchPanel.tsx
 
 **Frontend (UI Components)**:
-- [ ] T018 [P] [US1] Search UI/UX: Implement SearchPanel component with debounced input (500ms) in src/renderer/components/SearchPanel.tsx
-- [ ] T019 [P] [US1] Create SearchResultCard component displaying skill info in src/renderer/components/SearchResultCard.tsx
-- [ ] T020 [US1] Implement infinite scroll pagination with Intersection Observer in src/renderer/components/SearchPanel.tsx
-- [ ] T021 [US1] Add loading states and empty state messaging in src/renderer/components/SearchPanel.tsx
-- [ ] T021a [US1] Design empty state component with centered gray-100 background icon and gray-600 text for no-results scenario in src/renderer/components/SearchPanel.tsx
-- [ ] T022 [US1] Implement error handling with retry buttons in src/renderer/components/SearchPanel.tsx
+- [X] T018 [P] [US1] Search UI/UX: Implement SearchPanel component with debounced input (500ms) in src/renderer/components/SearchPanel.tsx
+- [X] T019 [P] [US1] Create SearchResultCard component displaying skill info in src/renderer/components/SearchResultCard.tsx
+- [X] T020 [US1] Implement infinite scroll pagination with Intersection Observer in src/renderer/components/SearchPanel.tsx
+- [X] T021 [US1] Add loading states and empty state messaging in src/renderer/components/SearchPanel.tsx
+- [X] T021a [US1] Design empty state component with centered gray-100 background icon and gray-600 text for no-results scenario in src/renderer/components/SearchPanel.tsx
+- [X] T022 [US1] Implement error handling with retry buttons in src/renderer/components/SearchPanel.tsx
 
 **Frontend (Integration)**:
-- [ ] T023 [US1] Create githubClient wrapper for IPC calls in src/renderer/services/githubClient.ts
-- [ ] T024 [US1] Wire SearchPanel to github:search-skills IPC channel in src/renderer/components/SearchPanel.tsx
-- [ ] T024a [US1] Add "Open in GitHub" button to SearchResultCard that opens repository URL in external browser in src/renderer/components/SearchResultCard.tsx
+- [X] T023 [US1] Create githubClient wrapper for IPC calls in src/renderer/services/githubClient.ts
+- [X] T024 [US1] Wire SearchPanel to github:search-skills IPC channel in src/renderer/components/SearchPanel.tsx
+- [X] T024a [US1] Add "Open in GitHub" button to SearchResultCard that opens repository URL in external browser in src/renderer/components/SearchResultCard.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can search GitHub and view paginated results independently
 
@@ -96,26 +96,26 @@ This feature uses Electron architecture:
 ### Implementation for User Story 2
 
 **Backend (Models & Services)**:
-- [ ] T025 [P] [US2] Create PreviewContent and DirectoryTreeNode models in src/main/models/PreviewContent.ts
-- [ ] T026 [US2] Implement GitHubService.previewSkill() method to fetch skill.md and directory tree in src/main/services/GitHubService.ts
-- [ ] T027 [US2] Implement directory tree building logic from Git Trees API in src/main/services/GitHubService.ts
-- [ ] T028 [US2] Add preview content caching with 5-minute TTL in src/main/services/GitHubService.ts
+- [X] T025 [P] [US2] Create PreviewContent and DirectoryTreeNode models in src/main/models/PreviewContent.ts
+- [X] T026 [US2] Implement GitHubService.previewSkill() method to fetch skill.md and directory tree in src/main/services/GitHubService.ts
+- [X] T027 [US2] Implement directory tree building logic from Git Trees API in src/main/services/GitHubService.ts
+- [X] T028 [US2] Add preview content caching with 5-minute TTL in src/main/services/GitHubService.ts
 
 **Backend (IPC)**:
-- [ ] T029 [US2] Implement github:preview-skill IPC handler in src/main/ipc/gitHubHandlers.ts
-- [ ] T030 [US2] Add 404 error handling for deleted/moved skills in src/main/ipc/gitHubHandlers.ts
+- [X] T029 [US2] Implement github:preview-skill IPC handler in src/main/ipc/gitHubHandlers.ts
+- [X] T030 [US2] Add 404 error handling for deleted/moved skills in src/main/ipc/gitHubHandlers.ts
 
 **Frontend (UI Components)**:
-- [ ] T031 [P] [US2] UI/UX: Design split-panel preview layout (file tree left, content right) using ui-ux-pro-max skill
-- [ ] T032 [P] [US2] Create SkillPreview modal component in src/renderer/components/SkillPreview.tsx
-- [ ] T033 [US2] Implement collapsible directory tree with file/folder icons in src/renderer/components/SkillPreview.tsx
-- [ ] T034 [US2] Render skill.md content with markdown rendering in src/renderer/components/SkillPreview.tsx
-- [ ] T035 [US2] Add file content viewer for tree nodes (text files only) in src/renderer/components/SkillPreview.tsx
-- [ ] T036 [US2] Implement modal close on Escape key and outside click in src/renderer/components/SkillPreview.tsx
+[X] T031 [P] [US2] UI/UX: Design split-panel preview layout (file tree left, content right) using ui-ux-pro-max skill
+[X] T032 [P] [US2] Create SkillPreview modal component in src/renderer/components/SkillPreview.tsx
+[X] T033 [US2] Implement collapsible directory tree with file/folder icons in src/renderer/components/SkillPreview.tsx
+[X] T034 [US2] Render skill.md content with markdown rendering in src/renderer/components/SkillPreview.tsx
+[X] T035 [US2] Add file content viewer for tree nodes (text files only) in src/renderer/components/SkillPreview.tsx
+[X] T036 [US2] Implement modal close on Escape key and outside click in src/renderer/components/SkillPreview.tsx
 
 **Frontend (Integration)**:
-- [ ] T037 [US2] Wire SkillPreview to github:preview-skill IPC channel in src/renderer/components/SkillPreview.tsx
-- [ ] T038 [US2] Add "Preview" button to SearchResultCard in src/renderer/components/SearchResultCard.tsx
+[X] T037 [US2] Wire SkillPreview to github:preview-skill IPC channel in src/renderer/components/SkillPreview.tsx
+[X] T038 [US2] Add "Preview" button to SearchResultCard in src/renderer/components/SearchResultCard.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - users can search AND preview skills
 
@@ -130,32 +130,32 @@ This feature uses Electron architecture:
 ### Implementation for User Story 3
 
 **Backend (Models & Services)**:
-- [ ] T039 [P] [US3] Create InstallRequest and InstallProgress models in src/main/models/InstallRequest.ts
-- [ ] T040 [US3] Implement GitHubService.installSkill() method with progress tracking in src/main/services/GitHubService.ts
-- [ ] T041 [US3] Implement skill directory download using Git Trees API in src/main/utils/downloadUtils.ts
-- [ ] T042 [US3] Add concurrent download control (max 5 files) in src/main/utils/downloadUtils.ts
-- [ ] T043 [US3] Implement skill validation (check for skill.md, non-empty content) in src/main/services/GitHubService.ts
-- [ ] T044 [US3] Add cleanup logic for partial downloads on failure in src/main/utils/downloadUtils.ts
+- [X] T039 [P] [US3] Create InstallRequest and InstallProgress models in src/main/models/InstallRequest.ts
+- [X] T040 [US3] Implement GitHubService.installSkill() method with progress tracking in src/main/services/GitHubService.ts
+- [X] T041 [US3] Implement skill directory download using Git Trees API in src/main/utils/downloadUtils.ts
+- [X] T042 [US3] Add concurrent download control (max 5 files) in src/main/utils/downloadUtils.ts
+- [X] T043 [US3] Implement skill validation (check for skill.md, non-empty content) in src/main/services/GitHubService.ts
+- [X] T044 [US3] Add cleanup logic for partial downloads on failure in src/main/utils/downloadUtils.ts
 
 **Backend (IPC)**:
-- [ ] T045 [US3] Implement github:install-skill IPC handler with progress events in src/main/ipc/gitHubHandlers.ts
-- [ ] T046 [US3] Implement github:cancel-install IPC handler in src/main/ipc/gitHubHandlers.ts
-- [ ] T047 [US3] Add progress event emission (github:install-progress) in src/main/ipc/gitHubHandlers.ts
-- [ ] T048 [US3] Add completion event emission (github:install-complete) in src/main/ipc/gitHubHandlers.ts
+[X] T045 [US3] Implement github:install-skill IPC handler with progress events in src/main/ipc/gitHubHandlers.ts
+[X] T046 [US3] Implement github:cancel-install IPC handler in src/main/ipc/gitHubHandlers.ts
+[X] T047 [US3] Add progress event emission (github:install-progress) in src/main/ipc/gitHubHandlers.ts
+[X] T048 [US3] Add completion event emission (github:install-complete) in src/main/ipc/gitHubHandlers.ts
 
 **Frontend (UI Components)**:
-- [ ] T049 [P] [US3] UI/UX: Design installation dialog with directory selection using ui-ux-pro-max skill
-- [ ] T050 [P] [US3] Create InstallDialog component in src/renderer/components/InstallDialog.tsx
-- [ ] T051 [US3] Implement target directory selection (project/global) in src/renderer/components/InstallDialog.tsx
-- [ ] T052 [US3] Add progress bar with percentage indicator in src/renderer/components/InstallDialog.tsx
-- [ ] T053 [US3] Implement cancel button functionality in src/renderer/components/InstallDialog.tsx
-- [ ] T054 [US3] Add success notification and skill list refresh on completion in src/renderer/components/InstallDialog.tsx
+[X] T049 [P] [US3] UI/UX: Design installation dialog with directory selection using ui-ux-pro-max skill
+[X] T050 [P] [US3] Create InstallDialog component in src/renderer/components/InstallDialog.tsx
+[X] T051 [US3] Implement target directory selection (project/global) in src/renderer/components/InstallDialog.tsx
+[X] T052 [US3] Add progress bar with percentage indicator in src/renderer/components/InstallDialog.tsx
+[X] T053 [US3] Implement cancel button functionality in src/renderer/components/InstallDialog.tsx
+[X] T054 [US3] Add success notification and skill list refresh on completion in src/renderer/components/InstallDialog.tsx
 
 **Frontend (Integration)**:
-- [ ] T055 [US3] Wire InstallDialog to github:install-skill IPC channel in src/renderer/components/InstallDialog.tsx
-- [ ] T056 [US3] Listen for progress events (github:install-progress) in src/renderer/components/InstallDialog.tsx
-- [ ] T057 [US3] Listen for completion events (github:install-complete) in src/renderer/App.tsx
-- [ ] T058 [US3] Add "Install" button to SearchResultCard and SkillPreview in src/renderer/components/SearchResultCard.tsx
+[X] T055 [US3] Wire InstallDialog to github:install-skill IPC channel in src/renderer/components/InstallDialog.tsx
+[X] T056 [US3] Listen for progress events (github:install-progress) in src/renderer/components/InstallDialog.tsx
+[X] T057 [US3] Listen for completion events (github:install-complete) in src/renderer/App.tsx
+[X] T058 [US3] Add "Install" button to SearchResultCard and SkillPreview in src/renderer/components/SearchResultCard.tsx
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently - users can search, preview, AND install skills
 
@@ -170,25 +170,25 @@ This feature uses Electron architecture:
 ### Implementation for User Story 4
 
 **Backend (Models & Services)**:
-- [ ] T059 [P] [US4] Create ConflictInfo model in src/main/models/ConflictInfo.ts
-- [ ] T060 [US4] Implement conflict detection in GitHubService.installSkill() in src/main/services/GitHubService.ts
-- [ ] T061 [US4] Add timestamp-based renaming logic for conflict resolution in src/main/services/GitHubService.ts
-- [ ] T062 [US4] Implement "Apply to all" conflict preference storage in src/main/services/GitHubService.ts
+- [X] T059 [P] [US4] Create ConflictInfo model in src/main/models/ConflictInfo.ts
+- [X] T060 [US4] Implement conflict detection in GitHubService.installSkill() in src/main/services/GitHubService.ts
+- [X] T061 [US4] Add timestamp-based renaming logic for conflict resolution in src/main/services/GitHubService.ts
+- [ ] T062 [US4] Implement "Apply to all" conflict preference storage in src/main/services/GitHubService.ts (OPTIONAL - not critical for MVP)
 
 **Backend (IPC)**:
-- [ ] T063 [US4] Emit conflict event (github:install-conflict) from install handler in src/main/ipc/gitHubHandlers.ts
-- [ ] T064 [US4] Handle conflict resolution response in install handler in src/main/ipc/gitHubHandlers.ts
+- [X] T063 [US4] Emit conflict event (github:install-conflict) from install handler in src/main/ipc/gitHubHandlers.ts (Using synchronous approach via conflictResolution parameter)
+- [X] T064 [US4] Handle conflict resolution response in install handler in src/main/ipc/gitHubHandlers.ts
 
 **Frontend (UI Components)**:
-- [ ] T065 [P] [US4] UI/UX: Design conflict resolution dialog with three options using ui-ux-pro-max skill
-- [ ] T066 [P] [US4] Create ConflictResolutionDialog component in src/renderer/components/ConflictResolutionDialog.tsx
-- [ ] T067 [US4] Implement three conflict options: Overwrite, Rename (timestamp), Skip in src/renderer/components/ConflictResolutionDialog.tsx
-- [ ] T068 [US4] Add "Apply to all" checkbox in src/renderer/components/ConflictResolutionDialog.tsx
-- [ ] T069 [US4] Display existing skill info and new skill source in dialog in src/renderer/components/ConflictResolutionDialog.tsx
+[X] T065 [P] [US4] UI/UX: Design conflict resolution dialog with three options using ui-ux-pro-max skill
+[X] T066 [P] [US4] Create ConflictResolutionDialog component in src/renderer/components/ConflictResolutionDialog.tsx
+[X] T067 [US4] Implement three conflict options: Overwrite, Rename (timestamp), Skip in src/renderer/components/ConflictResolutionDialog.tsx
+[ ] T068 [US4] Add "Apply to all" checkbox in src/renderer/components/ConflictResolutionDialog.tsx (OPTIONAL - not critical for MVP)
+[X] T069 [US4] Display existing skill info and new skill source in dialog in src/renderer/components/ConflictResolutionDialog.tsx
 
 **Frontend (Integration)**:
-- [ ] T070 [US4] Listen for conflict events (github:install-conflict) in src/renderer/App.tsx
-- [ ] T071 [US4] Wire ConflictResolutionDialog response back to IPC in src/renderer/components/ConflictResolutionDialog.tsx
+[X] T070 [US4] Listen for conflict events (github:install-conflict) in src/renderer/App.tsx (Using synchronous approach)
+[X] T071 [US4] Wire ConflictResolutionDialog response back to IPC in src/renderer/components/ConflictResolutionDialog.tsx
 
 **Checkpoint**: At this point, all P1 user stories are complete - users can search, preview, install, AND handle conflicts
 
@@ -203,24 +203,24 @@ This feature uses Electron architecture:
 ### Implementation for User Story 5
 
 **Backend (Models & Services)**:
-- [ ] T072 [P] [US5] Create CuratedSource model in src/main/models/CuratedSource.ts
-- [ ] T073 [US5] Implement GitHubService.getCuratedSources() method with hardcoded list in src/main/services/GitHubService.ts
-- [ ] T074 [US5] Implement GitHubService.getSkillsFromSource() method in src/main/services/GitHubService.ts
+[X] T072 [P] [US5] Create CuratedSource model in src/main/models/CuratedSource.ts
+[X] T073 [US5] Implement GitHubService.getCuratedSources() method with hardcoded list in src/main/services/GitHubService.ts
+[X] T074 [US5] Implement GitHubService.getSkillsFromSource() method in src/main/services/GitHubService.ts
 
 **Backend (IPC)**:
-- [ ] T075 [US5] Implement github:get-curated-sources IPC handler in src/main/ipc/gitHubHandlers.ts
-- [ ] T076 [US5] Implement github:get-skills-from-source IPC handler in src/main/ipc/gitHubHandlers.ts
+[X] T075 [US5] Implement github:get-curated-sources IPC handler in src/main/ipc/gitHubHandlers.ts
+[X] T076 [US5] Implement github:get-skills-from-source IPC handler in src/main/ipc/gitHubHandlers.ts
 
 **Frontend (UI Components)**:
-- [ ] T077 [P] [US5] UI/UX: Design sidebar layout for curated sources using ui-ux-pro-max skill
-- [ ] T078 [P] [US5] Create Sidebar component in src/renderer/components/Sidebar.tsx
-- [ ] T079 [US5] Display curated sources with descriptions and tags in src/renderer/components/Sidebar.tsx
-- [ ] T080 [US5] Implement source selection to load all skills from repo in src/renderer/components/Sidebar.tsx
-- [ ] T081 [US5] Add "Install" button for source skills (reuse US3 flow) in src/renderer/components/Sidebar.tsx
+[X] T077 [P] [US5] UI/UX: Design sidebar layout for curated sources using ui-ux-pro-max skill
+[X] T078 [P] [US5] Create Sidebar component in src/renderer/components/Sidebar.tsx
+[X] T079 [US5] Display curated sources with descriptions and tags in src/renderer/components/Sidebar.tsx
+[X] T080 [US5] Implement source selection to load all skills from repo in src/renderer/components/Sidebar.tsx
+[X] T081 [US5] Add "Install" button for source skills (reuse US3 flow) in src/renderer/components/Sidebar.tsx
 
 **Frontend (Integration)**:
-- [ ] T082 [US5] Wire Sidebar to github:get-curated-sources IPC channel in src/renderer/components/Sidebar.tsx
-- [ ] T083 [US5] Wire source selection to github:get-skills-from-source IPC channel in src/renderer/components/Sidebar.tsx
+[X] T082 [US5] Wire Sidebar to github:get-curated-sources IPC channel in src/renderer/components/Sidebar.tsx
+[X] T083 [US5] Wire source selection to github:get-skills-from-source IPC channel in src/renderer/components/Sidebar.tsx
 
 **Checkpoint**: All user stories complete - full feature functionality available
 
@@ -231,21 +231,21 @@ This feature uses Electron architecture:
 **Purpose**: Improvements that affect multiple user stories
 
 **Error Handling & Edge Cases**:
-- [ ] T084 [P] Implement comprehensive error handling for all GitHub API errors in src/main/utils/gitHubErrors.ts
-- [ ] T085 [P] Add user-friendly error messages for rate limits, network failures, 404s in src/renderer/components/SearchPanel.tsx
-- [ ] T086 Add large directory size warning (>1MB) before installation in src/renderer/components/InstallDialog.tsx
-- [ ] T087 Implement timeout handling for slow GitHub responses (>5s) in src/main/services/GitHubService.ts
+[X] T084 [P] Implement comprehensive error handling for all GitHub API errors in src/main/utils/gitHubErrors.ts
+[X] T085 [P] Add user-friendly error messages for rate limits, network failures, 404s in src/renderer/components/SearchPanel.tsx
+[X] T086 Add large directory size warning (>1MB) before installation in src/renderer/components/InstallDialog.tsx
+[X] T087 Implement timeout handling for slow GitHub responses (>5s) in src/main/services/GitHubService.ts
 
 **Performance Optimization**:
-- [ ] T088 [P] Implement search result caching (5-minute TTL) in src/main/services/GitHubService.ts
-- [ ] T089 [P] Implement preview content caching (5-minute TTL) in src/main/services/GitHubService.ts
-- [ ] T090 Add progress update throttling (100ms intervals) in src/main/ipc/gitHubHandlers.ts
-- [ ] T091 Optimize infinite scroll with Intersection Observer in src/renderer/components/SearchPanel.tsx
+[X] T088 [P] Implement search result caching (5-minute TTL) in src/main/services/GitHubService.ts
+[X] T089 [P] Implement preview content caching (5-minute TTL) in src/main/services/GitHubService.ts
+[X] T090 Add progress update throttling (100ms intervals) in src/main/ipc/gitHubHandlers.ts
+[X] T091 Optimize infinite scroll with Intersection Observer in src/renderer/components/SearchPanel.tsx
 
 **Integration with Existing Features**:
-- [ ] T092 Add "Public Search" tab to main navigation in src/renderer/App.tsx
-- [ ] T093 Wire skill list refresh after successful installation in src/renderer/App.tsx
-- [ ] T094 Preserve search query and results when switching tabs in src/renderer/App.tsx
+- [X] T092 Add "Public Search" tab to main navigation in src/renderer/App.tsx
+- [X] T093 Wire skill list refresh after successful installation in src/renderer/App.tsx
+- [X] T094 Preserve search query and results when switching tabs in src/renderer/App.tsx
 
 **UI/UX Audit**:
 - [ ] T095 [P] UI/UX audit: Verify all components follow ui-ux-pro-max quality standards
