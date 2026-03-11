@@ -1001,7 +1001,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   <input
                     type="text"
                     value={aiConfig.model}
-                    onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value as any })}
+                    onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
                     className="input w-full"
                     disabled={isSavingAI}
                     placeholder="e.g., claude-3-sonnet-20240229, glm-5, glm-4"

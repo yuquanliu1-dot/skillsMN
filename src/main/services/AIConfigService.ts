@@ -9,7 +9,7 @@ import * as fs from 'fs-extra';
 import { app } from 'electron';
 import { logger } from '../utils/Logger';
 import { encryptAPIKey, decryptAPIKey } from '../utils/encryptionUtil';
-import type { AIConfiguration, AIProvider, AIModel } from '../../shared/types';
+import type { AIConfiguration, AIProvider } from '../../shared/types';
 
 const AI_CONFIG_FILE = 'ai-config.json';
 
@@ -160,16 +160,9 @@ export class AIConfigService {
       throw new Error('API key must be a string');
     }
 
-    // Validate model
-    const validModels: AIModel[] = [
-      'glm-5',
-      'glm-4',
-      'claude-3-sonnet-20240229',
-      'claude-3-opus-20240229',
-      'claude-3-haiku-20240307',
-    ];
-    if (!validModels.includes(config.model)) {
-      throw new Error(`Invalid AI model: ${config.model}`);
+    // Validate model (just check it's not empty)
+    if (!config.model || typeof config.model !== 'string') {
+      throw new Error('Model must be a non-empty string');
     }
 
     // Validate timeout (5s - 60s)
