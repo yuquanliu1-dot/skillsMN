@@ -1,8 +1,7 @@
 /**
  * SkillList Component
  *
- * Displays list of skills with filtering, sorting, search, and virtualization
- * Uses react-window for performance with large skill lists (500+ skills)
+ * Virtualized list with fixed-height items (80px each)
  */
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
@@ -21,16 +20,22 @@ interface SkillListProps {
   selectedSkillPath?: string | null;
 }
 
-export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreateSkill, onDeleteSkill, onOpenFolder, selectedSkillPath }: SkillListProps): JSX.Element {
+export default function SkillList({
+  skills,
+  onSkillClick,
+  onSkillSelect,
+  onCreateSkill,
+  onDeleteSkill,
+  onOpenFolder,
+  selectedSkillPath,
+}: SkillListProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
   const listRef = useRef<HTMLDivElement>(null);
-  const [listHeight, setListHeight] = useState(600); // Default height
+  const [listHeight, setListHeight] = useState(600);
 
-  /**
-   * Filter and sort skills based on current state
-   */
+  // Filter and sort skills
   const filteredAndSortedSkills = useMemo(() => {
     let result = [...skills];
 
@@ -64,9 +69,6 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
     return result;
   }, [skills, filterSource, searchQuery, sortBy]);
 
-  /**
-   * Reset scroll when filters change
-   */
   const handleFilterChange = useCallback((newFilter: FilterSource) => {
     setFilterSource(newFilter);
   }, []);
@@ -79,14 +81,12 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
     setSearchQuery(query);
   }, []);
 
-  /**
-   * Row renderer for virtualized list
-   */
+  // Row renderer for virtualized list
   const Row = useCallback(
     ({ index, style }: { index: number; style: React.CSSProperties }) => {
       const skill = filteredAndSortedSkills[index];
       return (
-        <div style={style} className="px-4 py-2">
+        <div style={style} className={`px-4 pb-3 ${index === 0 ? 'pt-1' : ''}`}>
           <SkillCard
             skill={skill}
             onClick={onSkillClick}
@@ -101,9 +101,7 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
     [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath]
   );
 
-  /**
-   * Update list height on container resize
-   */
+  // Update list height on container resize
   useEffect(() => {
     const updateHeight = () => {
       if (listRef.current) {
@@ -114,7 +112,6 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
 
     updateHeight();
 
-    // Use ResizeObserver for accurate height updates
     const resizeObserver = new ResizeObserver(updateHeight);
     if (listRef.current) {
       resizeObserver.observe(listRef.current);
@@ -126,7 +123,7 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
   return (
     <div className="flex flex-col h-full">
       {/* Header with filters and search */}
-      <div className="border-b border-border p-4 space-y-3 flex-shrink-0">
+      <div className="border-b border-gray-200 p-4 space-y-3 flex-shrink-0 bg-white">
         {/* Top row: Search + New Skill button */}
         <div className="flex items-center gap-3">
           {/* Search */}
@@ -136,11 +133,11 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
               placeholder="Search skills..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="input w-full pl-10"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               aria-label="Search skills"
             />
             <svg
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-muted"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -159,7 +156,7 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
           {onCreateSkill && (
             <button
               onClick={onCreateSkill}
-              className="btn btn-primary flex items-center gap-2"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               aria-label="Create new skill"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,18 +172,18 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
           )}
         </div>
 
-        {/* Filters and Sort */}
+        {/* Bottom row: Filters + Sort + Count */}
         <div className="flex items-center gap-4 flex-wrap">
           {/* Filter by source */}
           <div className="flex items-center gap-2">
-            <label htmlFor="filter-source" className="text-sm text-text-secondary">
+            <label htmlFor="filter-source" className="text-sm text-gray-700">
               Filter:
             </label>
             <select
               id="filter-source"
               value={filterSource}
               onChange={(e) => handleFilterChange(e.target.value as FilterSource)}
-              className="select"
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
               aria-label="Filter by source"
             >
               <option value="all">All</option>
@@ -197,14 +194,14 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
 
           {/* Sort by */}
           <div className="flex items-center gap-2">
-            <label htmlFor="sort-by" className="text-sm text-text-secondary">
+            <label htmlFor="sort-by" className="text-sm text-gray-700">
               Sort by:
             </label>
             <select
               id="sort-by"
               value={sortBy}
               onChange={(e) => handleSortChange(e.target.value as SortBy)}
-              className="select"
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
               aria-label="Sort by"
             >
               <option value="name">Name</option>
@@ -213,17 +210,17 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
           </div>
 
           {/* Skill count */}
-          <div className="ml-auto text-sm text-text-muted">
+          <div className="ml-auto text-sm text-gray-500">
             {filteredAndSortedSkills.length} of {skills.length} skills
           </div>
         </div>
       </div>
 
       {/* Skill list with virtualization */}
-      <div ref={listRef} className="flex-1 overflow-hidden">
+      <div ref={listRef} className="flex-1 overflow-hidden bg-gray-50 pt-3">
         {filteredAndSortedSkills.length > 0 ? (
           <List
-            height={listHeight}
+            height={listHeight - 12}
             itemCount={filteredAndSortedSkills.length}
             itemSize={SKILL_LIST_ITEM_HEIGHT}
             width="100%"
@@ -233,7 +230,7 @@ export default function SkillList({ skills, onSkillClick, onSkillSelect, onCreat
           </List>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center text-text-muted">
+            <div className="text-center text-gray-500">
               {skills.length === 0
                 ? 'No skills found. Create your first skill to get started.'
                 : 'No skills match your search criteria.'}

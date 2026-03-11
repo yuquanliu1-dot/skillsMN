@@ -127,8 +127,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.AI_CONFIG_SAVE, { config });
   },
 
-  testAIConnection: (): Promise<IPCResponse<{ success: boolean; latency?: number }>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.CONFIG_TEST_AI);
+  testAIConnection: (config?: AIConfiguration): Promise<IPCResponse<{ success: boolean; latency?: number }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.CONFIG_TEST_AI, { config });
   },
 
   // ============================================================================

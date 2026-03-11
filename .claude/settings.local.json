@@ -6,7 +6,21 @@
       "Bash(specs/002-local-skill-management/plan.md:*)",
       "Bash(python:*)",
       "Bash(git:*)",
-      "Bash(pwsh -NoProfile -ExecutionPolicy Bypass -File \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -RequireTasks -IncludeTasks -FeatureDir \"specs/005-private-repo-sync\")"
+      "Bash(pwsh -NoProfile -ExecutionPolicy Bypass -File \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -RequireTasks -IncludeTasks -FeatureDir \"specs/005-private-repo-sync\")",
+      "Bash(npm run:*)",
+      "Bash(npm start:*)",
+      "Bash(timeout 3 tail -n 20 \"C:\\\\Users\\\\lyq\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--skillsMN\\\\logs\\\\main.log\" | grep -i \"error\\\\|warn\" --ignore-case)",
+      "Bash(grep -i \"AI|config|test| $TEMP/claude\")",
+      "Bash(npx tsc:*)",
+      "Bash(tasklist | findstr /i \"electron skillsmn\")",
+      "Bash(node test-ai-config.js)",
+      "Bash(node debug-api.js)",
+      "Bash(node test-sdk.js)",
+      "Bash(node intercept-sdk.js)",
+      "Bash(node test-auth-methods.js)",
+      "Bash(node test-sdk-fetch.js)",
+      "Bash(node test-sdk-custom-headers.js)",
+      "Bash(node test-fix.js)"
     ]
   }
 }

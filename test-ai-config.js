@@ -7,18 +7,18 @@ const Anthropic = require('@anthropic-ai/sdk').default;
 // Test configuration
 const testConfig = {
   apiKey: 'f8b3db6f0e6c8ed9c7890fe4d3c43be6.6tNmJ4ncX8h3JKdw',
-  baseURL: 'https://open.bigmodel.cn/api/anthropic'
+  baseURL: 'https://open.bigmodel.cn/api/anthropic'  // Include the full path prefix
 };
 
 // List of models to test
 const modelsToTest = [
-  'claude-sonnet-4-6-20250514',
-  'claude-3-5-sonnet-20241022',
+  'glm-5',
+  'glm-4',
   'claude-3-5-sonnet',
+  'claude-3-5-sonnet-20241022',
+  'claude-sonnet-4-6-20250514',
   'claude-3-sonnet',
-  'claude-3-sonnet-20240229',
-  'claude-3-haiku-20240307',
-  'claude-3-opus-20240229'
+  'claude-3-haiku-20240307'
 ];
 
 async function testAIConnection() {

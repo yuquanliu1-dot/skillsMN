@@ -49,7 +49,7 @@ export interface ElectronAPI {
   removeAIChunkListener: () => void;
   getAIConfiguration: () => Promise<IPCResponse<AIConfiguration>>;
   saveAIConfiguration: (config: AIConfiguration) => Promise<IPCResponse<void>>;
-  testAIConnection: () => Promise<IPCResponse<{ success: boolean; latency?: number }>>;
+  testAIConnection: (config?: AIConfiguration) => Promise<IPCResponse<{ success: boolean; latency?: number }>>;
 
   // Private Repository Operations
   addPrivateRepo: (params: {

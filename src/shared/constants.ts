@@ -72,7 +72,7 @@ export const FS_POLL_INTERVAL_MS = 100;
 // ============================================================================
 
 /** Skill list item height in pixels */
-export const SKILL_LIST_ITEM_HEIGHT = 80;
+export const SKILL_LIST_ITEM_HEIGHT = 96;
 
 /** Minimum window width in pixels */
 export const MIN_WINDOW_WIDTH = 1024;

@@ -141,6 +141,7 @@ async function initialize(): Promise<void> {
     // Register AI handlers
     registerAIHandlers();
     registerAITestHandler();
+    logger.info('AI handlers registered', 'Main');
     const { registerAIConfigHandlers } = require('./ipc/aiHandlers');
     registerAIConfigHandlers();
     logger.info('AI handlers registered', 'Main');
