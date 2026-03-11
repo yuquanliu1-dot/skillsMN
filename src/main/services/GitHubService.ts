@@ -215,8 +215,15 @@ export class GitHubService {
       GitHubService.updateRateLimitFromHeaders(response.headers);
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(
+            'GitHub API authentication failed. Please configure a GitHub Personal Access Token in Settings → General for higher rate limits (5,000 requests/hour vs 60/hour). Get your free token from: https://github.com/settings/tokens'
+          );
+        }
         if (response.status === 403) {
-          throw new Error('GitHub API rate limit exceeded. Please try again later.');
+          throw new Error(
+            'GitHub API rate limit exceeded. Please configure a GitHub Personal Access Token in Settings → General for higher limits, or wait 1 hour for the limit to reset.'
+          );
         }
         throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
       }
