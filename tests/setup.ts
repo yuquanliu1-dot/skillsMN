@@ -25,6 +25,11 @@ jest.mock('electron', () => ({
   },
 }));
 
+// Mock fetch globally for Node.js environment
+if (typeof global !== 'undefined') {
+  global.fetch = jest.fn();
+}
+
 // Mock Electron APIs for testing
 global.window.electronAPI = {
   // Skill Operations

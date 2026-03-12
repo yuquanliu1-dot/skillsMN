@@ -8,7 +8,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SearchResult, RateLimitInfo } from '../../shared/types';
 import SearchResultCard from './SearchResultCard';
 import SkillPreview from './SkillPreview';
-import InstallDialog from './InstallDialog';
 import ConflictResolutionDialog from './ConflictResolutionDialog';
 
 interface SearchPanelProps {
@@ -425,23 +424,34 @@ export default function SearchPanel({ isOpen, onClose, onInstallComplete, isInli
 
       {/* Install Dialog - render in third column when inline */}
       {!isInline && installingSkill && (
-        <InstallDialog
-          repositoryName={installingSkill.repositoryName}
-          skillFilePath={installingSkill.skillFilePath}
-          downloadUrl={installingSkill.downloadUrl}
-          onClose={() => setInstallingSkill(null)}
-          onInstall={() => {
-            setInstallingSkill(null);
-            onInstallComplete();
-          }}
-          onConflict={() =>
-            handleConflict(
-              installingSkill.repositoryName,
-              installingSkill.skillFilePath,
-              installingSkill.downloadUrl
-            )
-          }
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold mb-4">Install Skill</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Install {installingSkill.skillFilePath} from {installingSkill.repositoryName}?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setInstallingSkill(null)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleInstallFromDialog('project')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Install to Project
+              </button>
+              <button
+                onClick={() => handleInstallFromDialog('global')}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Install to Global
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Conflict Resolution Dialog - render in third column when inline */}
