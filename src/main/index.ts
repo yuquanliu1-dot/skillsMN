@@ -9,12 +9,13 @@ import * as path from 'path';
 import { logger } from './utils/Logger';
 import { registerConfigHandlers, getConfigService } from './ipc/configHandlers';
 import { registerSkillHandlers } from './ipc/skillHandlers';
-import { registerAIHandlers, registerAITestHandler } from './ipc/aiHandlers';
+import { registerAIHandlers, registerAITestHandler, registerAIConfigHandlers } from './ipc/aiHandlers';
 import { registerGitHubHandlers } from './ipc/gitHubHandlers';
 import { registerPrivateRepoHandlers } from './ipc/privateRepoHandlers';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
 import { SkillDirectoryModel } from './models/SkillDirectory';
+import { AIConfigService } from './services/AIConfigService';
 
 // Global references to prevent garbage collection
 let mainWindow: BrowserWindow | null = null;
@@ -48,21 +49,28 @@ async function createWindow(): Promise<void> {
 
   // Load the app
   if (isDev) {
-    // In development, load from Vite dev server or dist
-    const rendererPath = path.join(__dirname, '../renderer/index.html');
-    await mainWindow.loadFile(rendererPath);
-    logger.info('Loaded renderer in development mode', 'Main');
+    // In development, load from Vite dev server
+    const viteDevServerUrl = 'http://localhost:5173';
+    try {
+      await mainWindow.loadURL(viteDevServerUrl);
+      logger.info('Loaded renderer from Vite dev server', 'Main');
 
-    // Open DevTools after window is shown (don't steal focus)
-    mainWindow.webContents.once('did-finish-load', () => {
-      setTimeout(() => {
-        mainWindow?.webContents?.openDevTools({ mode: 'detach' });
-        logger.info('DevTools opened', 'Main');
-      }, 1000);
-    });
+      // Open DevTools after window is shown (don't steal focus)
+      mainWindow.webContents.once('did-finish-load', () => {
+        setTimeout(() => {
+          mainWindow?.webContents?.openDevTools({ mode: 'detach' });
+          logger.info('DevTools opened', 'Main');
+        }, 1000);
+      });
+    } catch (error) {
+      logger.error('Failed to load from Vite dev server, falling back to built files', 'Main', error);
+      const rendererPath = path.join(__dirname, '../../renderer/index.html');
+      await mainWindow.loadFile(rendererPath);
+      logger.info('Loaded renderer from built files (fallback)', 'Main');
+    }
   } else {
     // In production, load from built files
-    const rendererPath = path.join(__dirname, '../renderer/index.html');
+    const rendererPath = path.join(__dirname, '../../renderer/index.html');
     await mainWindow.loadFile(rendererPath);
     logger.info('Loaded renderer in production mode', 'Main');
   }
@@ -141,8 +149,8 @@ async function initialize(): Promise<void> {
     // Register AI handlers
     registerAIHandlers();
     registerAITestHandler();
-    const { registerAIConfigHandlers } = require('./ipc/aiHandlers');
     registerAIConfigHandlers();
+    AIConfigService.initialize();
     logger.info('AI handlers registered', 'Main');
 
     // Register GitHub handlers
@@ -150,7 +158,7 @@ async function initialize(): Promise<void> {
     logger.info('GitHub handlers registered', 'Main');
 
     // Register Private Repository handlers
-    registerPrivateRepoHandlers(pathValidator);
+    await registerPrivateRepoHandlers(pathValidator);
     logger.info('Private repository handlers registered', 'Main');
 
     // Create main window

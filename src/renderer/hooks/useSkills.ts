@@ -5,9 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { ipcRenderer } from 'electron';
-import type { Skill, IPCResponse } from '../../shared/types';
-import { IPC_CHANNELS } from '../../shared/constants';
+import type { Skill } from '../../shared/types';
 
 /**
  * Hook for loading and managing the skill list
@@ -27,13 +25,12 @@ export function useSkills(projectDirectory: string | null) {
     setError(null);
 
     try {
-      const response: IPCResponse<{ skills: Skill[] }> = await ipcRenderer.invoke(
-        IPC_CHANNELS.SKILL_LIST,
-        { projectDirectory }
+      const response = await window.electronAPI.listSkills(
+        { projectDirectory } as any
       );
 
       if (response.success && response.data) {
-        setSkills(response.data.skills);
+        setSkills(response.data);
       } else {
         setError(response.error?.message || 'Failed to load skills');
       }
@@ -54,10 +51,10 @@ export function useSkills(projectDirectory: string | null) {
       loadSkills();
     };
 
-    ipcRenderer.on(IPC_CHANNELS.FS_CHANGE, handleFSChange);
+    window.electronAPI.onFSChange(handleFSChange);
 
     return () => {
-      ipcRenderer.removeAllListeners(IPC_CHANNELS.FS_CHANGE);
+      window.electronAPI.removeFSChangeListener();
     };
   }, [loadSkills]);
 
@@ -85,10 +82,7 @@ export function useSkill(skillPath: string | null) {
       setError(null);
 
       try {
-        const response: IPCResponse<{ metadata: Skill; content: string }> = await ipcRenderer.invoke(
-          IPC_CHANNELS.SKILL_GET,
-          { path: skillPath }
-        );
+        const response = await window.electronAPI.getSkill(skillPath);
 
         if (response.success && response.data) {
           setSkill(response.data.metadata);
@@ -121,9 +115,9 @@ export function useCreateSkill() {
     setError(null);
 
     try {
-      const response: IPCResponse<Skill> = await ipcRenderer.invoke(
-        IPC_CHANNELS.SKILL_CREATE,
-        { name, directory }
+      const response = await window.electronAPI.createSkill(
+        name,
+        directory
       );
 
       if (response.success && response.data) {
@@ -159,9 +153,10 @@ export function useSaveSkill() {
     setError(null);
 
     try {
-      const response: IPCResponse<Skill> = await ipcRenderer.invoke(
-        IPC_CHANNELS.SKILL_UPDATE,
-        { path: skillPath, content, expectedLastModified }
+      const response = await window.electronAPI.updateSkill(
+        skillPath,
+        content,
+        expectedLastModified
       );
 
       if (response.success && response.data) {
@@ -193,10 +188,7 @@ export function useDeleteSkill() {
     setError(null);
 
     try {
-      const response: IPCResponse<void> = await ipcRenderer.invoke(
-        IPC_CHANNELS.SKILL_DELETE,
-        { path: skillPath }
-      );
+      const response = await window.electronAPI.deleteSkill(skillPath);
 
       if (response.success) {
         return true;

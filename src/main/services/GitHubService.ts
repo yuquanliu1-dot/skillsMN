@@ -79,9 +79,22 @@ interface RateLimitState {
 }
 
 /**
+ * Conflict resolution preference (for "Apply to all" feature)
+ */
+interface ConflictPreference {
+  resolution: 'overwrite' | 'rename' | 'skip';
+  timestamp: number;
+}
+
+/**
  * Active requests for cancellation
  */
 const activeRequests = new Map<string, AbortController>();
+
+/**
+ * Conflict resolution preference storage (session-scoped)
+ */
+let conflictPreference: ConflictPreference | null = null;
 
 /**
  * GitHub Service for public skill discovery
@@ -93,6 +106,34 @@ export class GitHubService {
     resetTime: 0,
     lastUpdated: 0,
   };
+
+  /**
+   * Set conflict resolution preference for "Apply to all" feature
+   * This preference is session-scoped and cleared after installation completes
+   */
+  static setConflictPreference(resolution: 'overwrite' | 'rename' | 'skip'): void {
+    conflictPreference = {
+      resolution,
+      timestamp: Date.now(),
+    };
+    logger.info('Conflict preference set', 'GitHubService', { resolution });
+  }
+
+  /**
+   * Get current conflict resolution preference
+   */
+  static getConflictPreference(): 'overwrite' | 'rename' | 'skip' | null {
+    return conflictPreference?.resolution || null;
+  }
+
+  /**
+   * Clear conflict resolution preference
+   * Called after installation session completes
+   */
+  static clearConflictPreference(): void {
+    conflictPreference = null;
+    logger.debug('Conflict preference cleared', 'GitHubService');
+  }
 
   /**
    * Search for public repositories containing Claude Code skills
@@ -130,14 +171,27 @@ export class GitHubService {
       const searchQuery = `${query} "skill.md" in:path`;
       const url = `${GITHUB_API_BASE}/search/code?q=${encodeURIComponent(searchQuery)}&page=${page}&per_page=30`;
 
+      // Get GitHub token from config (if available)
+      const { ConfigService } = await import('./ConfigService');
+      const configService = new ConfigService();
+      const config = await configService.load();
+      const githubToken = config.githubToken;
+
       // Use retry logic for network resilience
       const response = await retryWithBackoff(
         async () => {
+          const headers: Record<string, string> = {
+            Accept: 'application/vnd.github.v3+json',
+            'User-Agent': 'skillsMN-App',
+          };
+
+          // Add authorization if token is available
+          if (githubToken) {
+            headers['Authorization'] = `token ${githubToken}`;
+          }
+
           const res = await fetch(url, {
-            headers: {
-              Accept: 'application/vnd.github.v3+json',
-              'User-Agent': 'skillsMN-App',
-            },
+            headers,
             signal: controller.signal,
           });
 
@@ -161,8 +215,15 @@ export class GitHubService {
       GitHubService.updateRateLimitFromHeaders(response.headers);
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(
+            'GitHub API authentication failed. Please configure a GitHub Personal Access Token in Settings → General for higher rate limits (5,000 requests/hour vs 60/hour). Get your free token from: https://github.com/settings/tokens'
+          );
+        }
         if (response.status === 403) {
-          throw new Error('GitHub API rate limit exceeded. Please try again later.');
+          throw new Error(
+            'GitHub API rate limit exceeded. Please configure a GitHub Personal Access Token in Settings → General for higher limits, or wait 1 hour for the limit to reset.'
+          );
         }
         throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
       }
@@ -315,6 +376,9 @@ export class GitHubService {
     });
 
     try {
+      // Use stored preference if no explicit resolution provided
+      const resolution = conflictResolution || GitHubService.getConflictPreference();
+
       // Determine target directory path
       const baseDir =
         targetDirectory === 'project'
@@ -332,9 +396,9 @@ export class GitHubService {
 
       // Check for conflicts
       if (await fs.pathExists(targetPath)) {
-        if (conflictResolution === 'skip') {
+        if (resolution === 'skip') {
           return { success: false, error: 'Skill already exists and conflict resolution is skip' };
-        } else if (conflictResolution === 'rename') {
+        } else if (resolution === 'rename') {
           // Generate unique name
           let counter = 1;
           let newPath = `${targetPath}-${counter}`;
@@ -348,7 +412,7 @@ export class GitHubService {
             repositoryName,
             skillFilePath
           );
-        } else if (conflictResolution === 'overwrite') {
+        } else if (resolution === 'overwrite') {
           // Remove existing directory
           await fs.remove(targetPath);
         } else {
@@ -829,5 +893,35 @@ export class GitHubService {
       logger.error('Failed to get private repo skills', 'GitHubService', error);
       throw error;
     }
+  }
+
+  /**
+   * Get private repository skill file content
+   */
+  static async getPrivateRepoSkillContent(
+    owner: string,
+    repo: string,
+    skillPath: string,
+    pat?: string,
+    branch?: string
+  ): Promise<string> {
+    const octokit = await this.getAuthenticatedOctokit();
+
+    const actualBranch = branch || 'main';
+    const fullPath = skillPath.startsWith('/') ? skillPath : `${pat}/${skillPath}`;
+
+    const response = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path: fullPath,
+      ref: actualBranch,
+    });
+
+    if (response.status === 200) {
+      const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
+      return content;
+    }
+
+    throw new Error(`Failed to fetch skill content: ${response.status}`);
   }
 }

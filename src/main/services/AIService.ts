@@ -6,12 +6,14 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { safeStorage } from 'electron';
+import * as https from 'https';
 import { logger } from '../utils/Logger';
 import type { AIGenerationRequest, AIStreamChunk } from '../models/AIGenerationRequest';
 import { validateAIGenerationRequest } from '../models/AIGenerationRequest';
 import type { AIConfiguration } from '../../shared/types';
 
 let anthropic: Anthropic | null = null;
+let currentConfig: AIConfiguration | null = null;
 
 /**
  * Active generation streams (for cancellation)
@@ -72,9 +74,23 @@ export class AIService {
    */
   static async initialize(config: AIConfiguration): Promise<void> {
     try {
-      const apiKey = AIService.decryptAPIKey(config.apiKey);
-      anthropic = new Anthropic({ apiKey });
-      logger.info('AI service initialized successfully', 'AIService');
+      // API key should already be decrypted (from AIConfigService.loadConfig or frontend input)
+      const apiKey = config.apiKey;
+      currentConfig = config; // Store config for custom endpoint handling
+
+      // Build client options
+      const options: any = { apiKey };
+
+      // Add custom base URL if provided
+      if (config.baseUrl) {
+        options.baseURL = config.baseUrl;
+        logger.info('Using custom base URL, will use direct HTTP requests for compatibility', 'AIService');
+      }
+
+      anthropic = new Anthropic(options);
+      logger.info('AI service initialized successfully', 'AIService', {
+        hasCustomBaseUrl: !!config.baseUrl
+      });
     } catch (error) {
       logger.error('Failed to initialize AI service', 'AIService', error);
       throw new Error('Failed to initialize AI service. Please check your API key.');
@@ -225,6 +241,64 @@ export class AIService {
   }
 
   /**
+   * Make a direct HTTP request to a custom endpoint
+   * Used for third-party Anthropic-compatible APIs that need special handling
+   * @private
+   */
+  private static async makeDirectRequest(
+    endpoint: string,
+    requestBody: any
+  ): Promise<any> {
+    return new Promise((resolve, reject) => {
+      if (!currentConfig) {
+        reject(new Error('AI service not initialized'));
+        return;
+      }
+
+      // API key is already decrypted in currentConfig
+      const apiKey = currentConfig.apiKey;
+      const url = new URL(currentConfig.baseUrl!);
+      const path = `${url.pathname}${endpoint}`;
+
+      const requestData = JSON.stringify(requestBody);
+
+      const options = {
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: path,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(requestData),
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+              resolve(JSON.parse(data));
+            } else {
+              const error = JSON.parse(data);
+              reject(new Error(`${res.statusCode} ${JSON.stringify(error)}`));
+            }
+          } catch (e) {
+            reject(new Error(`Failed to parse response: ${data}`));
+          }
+        });
+      });
+
+      req.on('error', reject);
+      req.write(requestData);
+      req.end();
+    });
+  }
+
+  /**
    * Test AI connection by making a simple API request
    * Verifies that the API key is valid and the service is accessible
    * @returns Object with success status, optional error message, and latency in milliseconds
@@ -242,17 +316,31 @@ export class AIService {
 
       const startTime = Date.now();
 
-      // Simple test request
-      await anthropic.messages.create({
-        model: 'claude-sonnet-4-6-20250514',
-        max_tokens: 10,
-        messages: [
-          {
-            role: 'user',
-            content: 'Say "OK" if you can read this.',
-          },
-        ],
-      });
+      // Use direct HTTP request for custom endpoints
+      if (currentConfig?.baseUrl) {
+        await AIService.makeDirectRequest('/v1/messages', {
+          model: currentConfig.model || 'glm-5',
+          max_tokens: 10,
+          messages: [
+            {
+              role: 'user',
+              content: 'Say "OK" if you can read this.',
+            },
+          ],
+        });
+      } else {
+        // Use SDK for standard Anthropic API
+        await anthropic!.messages.create({
+          model: 'claude-sonnet-4-6-20250514',
+          max_tokens: 10,
+          messages: [
+            {
+              role: 'user',
+              content: 'Say "OK" if you can read this.',
+            },
+          ],
+        });
+      }
 
       const latency = Date.now() - startTime;
 

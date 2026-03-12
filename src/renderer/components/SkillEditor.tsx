@@ -9,6 +9,7 @@ import Editor, { OnMount, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor';
 import type { Skill } from '../../shared/types';
+import { AIAssistPanel } from './AIAssistPanel';
 
 // Configure Monaco to use local installation instead of CDN
 loader.config({ monaco });
@@ -18,9 +19,18 @@ interface SkillEditorProps {
   onClose: () => void;
   onSave: (content: string, loadedLastModified: number) => Promise<void>;
   isInline?: boolean;
+  content?: string;
+  readOnly?: boolean;
 }
 
-export default function SkillEditor({ skill, onClose, onSave, isInline = false }: SkillEditorProps): JSX.Element {
+export default function SkillEditor({
+  skill,
+  onClose,
+  onSave,
+  isInline = false,
+  content: externalContent,
+  readOnly = false
+}: SkillEditorProps): JSX.Element {
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -29,6 +39,7 @@ export default function SkillEditor({ skill, onClose, onSave, isInline = false }
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saving'>('idle');
   const [loadedLastModified, setLoadedLastModified] = useState<number | null>(null);
   const [externalChangeDetected, setExternalChangeDetected] = useState(false);
+  const [isAIAssistPanelOpen, setIsAIAssistPanelOpen] = useState<boolean>(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -43,6 +54,16 @@ export default function SkillEditor({ skill, onClose, onSave, isInline = false }
         setIsLoading(true);
         setError(null);
 
+        // If external content is provided, use it directly
+        if (externalContent !== undefined) {
+          if (isMounted) {
+            setContent(externalContent);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        // Otherwise, load from API
         console.log('[SkillEditor] Starting to load skill:', skill.path);
         console.log('[SkillEditor] Skill object:', skill);
 
@@ -214,6 +235,64 @@ export default function SkillEditor({ skill, onClose, onSave, isInline = false }
   }, [content, hasUnsavedChanges, isSaving, loadedLastModified, onSave]);
 
   /**
+   * Get cursor position from Monaco Editor
+   */
+  const getCursorPosition = useCallback((): number => {
+    if (!editorRef.current) return 0;
+    const position = editorRef.current.getPosition();
+    if (!position) return 0;
+    const model = editorRef.current.getModel();
+    if (!model) return 0;
+    return model.getOffsetAt(position);
+  }, []);
+
+  /**
+   * Get selected text from Monaco Editor
+   */
+  const getSelectedText = useCallback((): string | undefined => {
+    if (!editorRef.current) return undefined;
+    const selection = editorRef.current.getSelection();
+    if (!selection) return undefined;
+    const model = editorRef.current.getModel();
+    if (!model) return undefined;
+    return model.getValueInRange(selection);
+  }, []);
+
+  /**
+   * Handle applying AI-generated content to editor
+   */
+  const handleApplyAIContent = useCallback((generatedContent: string) => {
+    if (!editorRef.current) return;
+
+    const selection = editorRef.current.getSelection();
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    // If there's a selection, replace it (replace mode)
+    if (selection && !selection.isEmpty()) {
+      editorRef.current.executeEdits('ai-assist', [
+        {
+          range: selection,
+          text: generatedContent,
+        },
+      ]);
+    } else {
+      // Otherwise, insert at cursor position (insert/new mode)
+      const position = editorRef.current.getPosition();
+      if (position) {
+        editorRef.current.executeEdits('ai-assist', [
+          {
+            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+            text: generatedContent,
+          },
+        ]);
+      }
+    }
+
+    setHasUnsavedChanges(true);
+  }, []);
+
+  /**
    * Keyboard shortcuts
    */
   useEffect(() => {
@@ -359,6 +438,23 @@ export default function SkillEditor({ skill, onClose, onSave, isInline = false }
         </div>
 
         <div className="flex items-center gap-2">
+          {/* AI Assist Button */}
+          <button
+            onClick={() => setIsAIAssistPanelOpen(true)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              isAIAssistPanelOpen
+                ? 'bg-purple-600 text-white shadow-lg ring-2 ring-purple-300'
+                : 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-md'
+            }`}
+            aria-label="Open AI Assist"
+            title="AI Assist"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            </svg>
+            AI Assist
+          </button>
+
           {/* Save button */}
           <button
             onClick={handleSave}
@@ -565,6 +661,17 @@ export default function SkillEditor({ skill, onClose, onSave, isInline = false }
           Modified: {new Date(skill.lastModified).toLocaleString()}
         </div>
       </div>
+
+      {/* AI Assist Panel */}
+      {isAIAssistPanelOpen && (
+        <AIAssistPanel
+          onApply={handleApplyAIContent}
+          onClose={() => setIsAIAssistPanelOpen(false)}
+          editorContent={content}
+          cursorPosition={getCursorPosition()}
+          selectedText={getSelectedText()}
+        />
+      )}
     </div>
   );
 }

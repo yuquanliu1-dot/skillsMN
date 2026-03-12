@@ -49,7 +49,7 @@ export interface ElectronAPI {
   removeAIChunkListener: () => void;
   getAIConfiguration: () => Promise<IPCResponse<AIConfiguration>>;
   saveAIConfiguration: (config: AIConfiguration) => Promise<IPCResponse<void>>;
-  testAIConnection: () => Promise<IPCResponse<{ success: boolean; latency?: number }>>;
+  testAIConnection: (config?: AIConfiguration) => Promise<IPCResponse<{ success: boolean; latency?: number }>>;
 
   // Private Repository Operations
   addPrivateRepo: (params: {
@@ -77,6 +77,7 @@ export interface ElectronAPI {
     repoId: string;
     query: string;
   }) => Promise<IPCResponse<PrivateSkill[]>>;
+  getPrivateRepoSkillContent: (repoId: string, skillPath: string) => Promise<IPCResponse<string>>;
   installPrivateRepoSkill: (params: {
     repoId: string;
     skillPath: string;
@@ -106,7 +107,10 @@ export interface ElectronAPI {
     downloadUrl: string;
     targetDirectory: 'project' | 'global';
     conflictResolution?: 'overwrite' | 'rename' | 'skip';
+    applyToAll?: boolean;
   }) => Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>>;
+  setGitHubConflictPreference: (resolution: 'overwrite' | 'rename' | 'skip') => Promise<void>;
+  clearGitHubConflictPreference: () => Promise<void>;
   getCuratedSources: () => Promise<IPCResponse<{ sources: CuratedSource[] }>>;
   getSkillsFromSource: (params: {
     repositoryUrl: string;

@@ -20,6 +20,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
   const [defaultInstallDirectory, setDefaultInstallDirectory] = useState<InstallDirectory>('project');
   const [editorDefaultMode, setEditorDefaultMode] = useState<EditorMode>('edit');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [githubToken, setGithubToken] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -56,6 +57,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
       setDefaultInstallDirectory(config.defaultInstallDirectory);
       setEditorDefaultMode(config.editorDefaultMode);
       setAutoRefresh(config.autoRefresh);
+      setGithubToken(config.githubToken || '');
       setError(null);
       setSuccess(null);
       setActiveTab('general');
@@ -113,6 +115,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
         defaultInstallDirectory,
         editorDefaultMode,
         autoRefresh,
+        githubToken: githubToken.trim() || undefined,
       });
       setSuccess('Settings saved successfully');
       setTimeout(() => {
@@ -171,7 +174,8 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
 
     try {
       const startTime = Date.now();
-      const response = await window.electronAPI.testAIConnection();
+      // Pass current config to test (allows testing before saving)
+      const response = await window.electronAPI.testAIConnection(aiConfig);
       const latency = Date.now() - startTime;
 
       if (response.success) {
@@ -565,6 +569,31 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 </p>
               </div>
             </label>
+          </div>
+
+          {/* GitHub Token (Optional) */}
+          <div className="mb-6">
+            <label
+              htmlFor="github-token"
+              className="block text-sm font-medium text-slate-700 mb-2"
+            >
+              GitHub Personal Access Token (Optional)
+            </label>
+            <input
+              id="github-token"
+              type="password"
+              value={githubToken}
+              onChange={(e) => setGithubToken(e.target.value)}
+              className="input w-full"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              disabled={isSaving}
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Optional: Provides higher GitHub API rate limits for public skill discovery (5,000 requests/hour vs 60/hour)
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              Get your token from GitHub Settings → Developer settings → Personal access tokens
+            </p>
           </div>
 
           {/* Keyboard Shortcuts */}
@@ -997,16 +1026,17 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Model
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={aiConfig.model}
-                    onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value as any })}
-                    className="select w-full"
+                    onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
+                    className="input w-full"
                     disabled={isSavingAI}
-                  >
-                    <option value="claude-3-opus-20240229">Claude 3 Opus (Most capable)</option>
-                    <option value="claude-3-sonnet-20240229">Claude 3 Sonnet (Balanced)</option>
-                    <option value="claude-3-haiku-20240307">Claude 3 Haiku (Fastest)</option>
-                  </select>
+                    placeholder="e.g., claude-3-sonnet-20240229, glm-5, glm-4"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Supported models: claude-3-opus, claude-3-sonnet, claude-3-haiku, glm-5, glm-4
+                  </p>
                 </div>
 
                 {/* Streaming Toggle */}

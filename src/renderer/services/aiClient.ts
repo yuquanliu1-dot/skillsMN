@@ -4,7 +4,6 @@
  * Frontend service for AI operations with streaming support
  */
 
-import { ipcRenderer } from 'electron';
 import { IPC_CHANNELS } from '../../shared/constants';
 import type { AIConfiguration, AIGenerationRequest } from '../../shared/types';
 
@@ -26,7 +25,7 @@ export class AIClientService {
 
   private constructor() {
     // Register streaming event listener
-    ipcRenderer.on(IPC_CHANNELS.AI_CHUNK, (_event, data) => {
+    window.electronAPI.onAIChunk((_event, data) => {
       const { requestId, chunk, isComplete, error } = data;
       const callbacks = this.activeCallbacks.get(requestId);
 
@@ -70,7 +69,7 @@ export class AIClientService {
 
     try {
       // Start generation
-      const response = await ipcRenderer.invoke(IPC_CHANNELS.AI_GENERATE, {
+      const response = await window.electronAPI.generateAI({
         requestId,
         request,
       });
@@ -91,7 +90,7 @@ export class AIClientService {
    */
   async cancelGeneration(requestId: string): Promise<boolean> {
     try {
-      const response = await ipcRenderer.invoke(IPC_CHANNELS.AI_CANCEL, { requestId });
+      const response = await window.electronAPI.cancelAI(requestId);
       return response.success;
     } catch (error) {
       console.error('Failed to cancel generation:', error);
@@ -104,7 +103,7 @@ export class AIClientService {
    */
   async getConfig(): Promise<AIConfiguration> {
     try {
-      const response = await ipcRenderer.invoke(IPC_CHANNELS.AI_CONFIG_GET);
+      const response = await window.electronAPI.getAIConfiguration();
       if (!response.success) {
         throw new Error(response.error?.message || 'Failed to load config');
       }
@@ -120,7 +119,7 @@ export class AIClientService {
    */
   async saveConfig(config: AIConfiguration): Promise<void> {
     try {
-      const response = await ipcRenderer.invoke(IPC_CHANNELS.AI_CONFIG_SAVE, { config });
+      const response = await window.electronAPI.saveAIConfiguration(config);
       if (!response.success) {
         throw new Error(response.error?.message || 'Failed to save config');
       }
@@ -135,7 +134,7 @@ export class AIClientService {
    */
   async testConfig(): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await ipcRenderer.invoke(IPC_CHANNELS.AI_CONFIG_TEST);
+      const response = await window.electronAPI.testAIConnection();
       return {
         success: response.success,
         error: response.error?.message,

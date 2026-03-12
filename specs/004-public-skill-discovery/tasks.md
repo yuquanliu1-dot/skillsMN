@@ -173,7 +173,7 @@ This feature uses Electron architecture:
 - [X] T059 [P] [US4] Create ConflictInfo model in src/main/models/ConflictInfo.ts
 - [X] T060 [US4] Implement conflict detection in GitHubService.installSkill() in src/main/services/GitHubService.ts
 - [X] T061 [US4] Add timestamp-based renaming logic for conflict resolution in src/main/services/GitHubService.ts
-- [ ] T062 [US4] Implement "Apply to all" conflict preference storage in src/main/services/GitHubService.ts (OPTIONAL - not critical for MVP)
+- [X] T062 [US4] Implement "Apply to all" conflict preference storage in src/main/services/GitHubService.ts
 
 **Backend (IPC)**:
 - [X] T063 [US4] Emit conflict event (github:install-conflict) from install handler in src/main/ipc/gitHubHandlers.ts (Using synchronous approach via conflictResolution parameter)
@@ -183,7 +183,7 @@ This feature uses Electron architecture:
 [X] T065 [P] [US4] UI/UX: Design conflict resolution dialog with three options using ui-ux-pro-max skill
 [X] T066 [P] [US4] Create ConflictResolutionDialog component in src/renderer/components/ConflictResolutionDialog.tsx
 [X] T067 [US4] Implement three conflict options: Overwrite, Rename (timestamp), Skip in src/renderer/components/ConflictResolutionDialog.tsx
-[ ] T068 [US4] Add "Apply to all" checkbox in src/renderer/components/ConflictResolutionDialog.tsx (OPTIONAL - not critical for MVP)
+[X] T068 [US4] Add "Apply to all" checkbox in src/renderer/components/ConflictResolutionDialog.tsx (OPTIONAL - not critical for MVP)
 [X] T069 [US4] Display existing skill info and new skill source in dialog in src/renderer/components/ConflictResolutionDialog.tsx
 
 **Frontend (Integration)**:
@@ -261,9 +261,9 @@ This feature uses Electron architecture:
 - [ ] T103 [P] Test on Linux (Ubuntu 20.04+) - verify path handling and file operations
 
 **Documentation**:
-- [ ] T104 [P] Update user documentation with public search features in docs/user-guide.md
-- [ ] T105 [P] Document IPC contracts in docs/api/ipc-contracts.md
-- [ ] T106 Run quickstart.md validation - verify all implementation steps work
+- [X] T104 [P] Update user documentation with public search features in docs/user-guide.md
+- [X] T105 [P] Document IPC contracts in docs/api/ipc-contracts.md
+- [X] T106 Run quickstart.md validation - verify all implementation steps work
 
 ---
 

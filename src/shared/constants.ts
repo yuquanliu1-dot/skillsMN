@@ -72,7 +72,7 @@ export const FS_POLL_INTERVAL_MS = 100;
 // ============================================================================
 
 /** Skill list item height in pixels */
-export const SKILL_LIST_ITEM_HEIGHT = 80;
+export const SKILL_LIST_ITEM_HEIGHT = 96;
 
 /** Minimum window width in pixels */
 export const MIN_WINDOW_WIDTH = 1024;
@@ -150,6 +150,8 @@ export const IPC_CHANNELS = {
   GITHUB_INSTALL_COMPLETE: 'github:install-complete',
   GITHUB_INSTALL_CONFLICT: 'github:install-conflict',
   GITHUB_INSTALL_ERROR: 'github:install-error',
+  GITHUB_SET_CONFLICT_PREFERENCE: 'github:set-conflict-preference',
+  GITHUB_CLEAR_CONFLICT_PREFERENCE: 'github:clear-conflict-preference',
 
   // Private Repository operations (Feature 005)
   PRIVATE_REPO_ADD: 'private-repo:add',
@@ -164,7 +166,48 @@ export const IPC_CHANNELS = {
   PRIVATE_REPO_CHECK_UPDATES: 'private-repo:check-updates',
   PRIVATE_REPO_UPDATE_SKILL: 'private-repo:update-skill',
   PRIVATE_REPO_GET_SKILL_METADATA: 'private-repo:get-skill-metadata',
+  PRIVATE_REPO_GET_SKILL_CONTENT: 'private-repo:get-skill-content',
+
+  // Skills Registry operations (Feature 006)
+  REGISTRY_SEARCH: 'registry:search',
+  REGISTRY_INSTALL: 'registry:install',
+  REGISTRY_CHECK_INSTALLED: 'registry:check-installed',
+  REGISTRY_INSTALL_PROGRESS: 'registry:install:progress',
 } as const;
+
+// ============================================================================
+// Skills Registry Constants (Feature 006)
+// ============================================================================
+
+/** Skills.sh Registry API base URL */
+export const REGISTRY_API_BASE_URL = 'https://skills.sh';
+
+/** Skills.sh Registry API search endpoint */
+export const REGISTRY_SEARCH_ENDPOINT = '/api/search';
+
+/** Default search result limit */
+export const REGISTRY_SEARCH_LIMIT = 20;
+
+/** Search debounce delay in milliseconds */
+export const SEARCH_DEBOUNCE_MS = 400;
+
+/** Registry API timeout in milliseconds */
+export const REGISTRY_API_TIMEOUT_MS = 10000;
+
+/** Installation progress stages */
+export const INSTALL_STAGES = {
+  CLONING: 'cloning',
+  DISCOVERING: 'discovering',
+  COPYING: 'copying',
+  WRITING_METADATA: 'writing_metadata',
+  CLEANING_UP: 'cleaning_up',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+} as const;
+
+/** Source metadata file name */
+export const SOURCE_METADATA_FILE = '.source.json';
+
 
 // ============================================================================
 // Keyboard Shortcuts
@@ -177,3 +220,32 @@ export const SHORTCUTS = {
   CLOSE_EDITOR: 'Ctrl+W',
   DELETE: 'Delete',
 } as const;
+
+// ============================================================================
+// Skills Registry Constants (Feature 006)
+// ============================================================================
+
+/** Skills.sh registry API base URL */
+export const REGISTRY_API_BASE_URL = 'https://skills.sh';
+
+/** Skills.sh API search endpoint */
+export const REGISTRY_SEARCH_ENDPOINT = '/api/search';
+
+/** Default search limit */
+export const REGISTRY_DEFAULT_LIMIT = 20;
+
+/** Search debounce delay in milliseconds */
+export const REGISTRY_SEARCH_DEBOUNCE_MS = 400;
+
+/** API request timeout in milliseconds */
+export const REGISTRY_API_TIMEOUT_MS = 10000;
+
+/** Search results target time in milliseconds */
+export const REGISTRY_SEARCH_TARGET_MS = 3000;
+
+/** Installation target time in seconds (excluding network) */
+export const REGISTRY_INSTALL_TARGET_S = 30;
+
+/** Installation progress update interval in milliseconds */
+export const REGISTRY_INSTALL_PROGRESS_INTERVAL_MS = 2000;
+

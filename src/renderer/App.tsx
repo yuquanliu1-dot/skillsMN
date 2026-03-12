@@ -5,7 +5,7 @@
  */
 
 import React, { createContext, useReducer, useEffect, useState } from 'react';
-import type { Configuration, Skill, UIState, FilterSource, SortBy, AIGenerationMode } from '../shared/types';
+import type { Configuration, Skill, UIState, FilterSource, SortBy, PrivateSkill, PrivateRepo } from '../shared/types';
 import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
@@ -14,7 +14,6 @@ import { lazy, Suspense } from 'react';
 const SkillEditor = lazy(() => import('./components/SkillEditor'));
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import Settings from './components/Settings';
-import AIPanel from './components/AIPanel';
 import ToastContainer, { ToastMessage } from './components/ToastContainer';
 import PrivateRepoList from './components/PrivateRepoList';
 import Sidebar, { ViewType } from './components/Sidebar';
@@ -107,15 +106,14 @@ export default function App(): JSX.Element {
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showAIPanel, setShowAIPanel] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | null>(null);
-  const [editorContent, _setEditorContent] = useState<string>('');
-  const [editorSelection, _setEditorSelection] = useState<{ start: number; end: number }>({
-    start: 0,
-    end: 0,
-  });
+  const [viewingPrivateSkill, setViewingPrivateSkill] = useState<{
+    skill: PrivateSkill;
+    repo: PrivateRepo;
+    content: string;
+  } | null>(null);
 
   /**
    * Load configuration on mount
@@ -212,14 +210,6 @@ export default function App(): JSX.Element {
         if (!showSetup && state.config?.projectDirectory) {
           loadSkills();
           showToast('Skills refreshed', 'success');
-        }
-      }
-
-      // Ctrl+Shift+N: Open AI assistant panel
-      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'N') {
-        event.preventDefault();
-        if (!showSetup && state.config?.projectDirectory && editingSkill) {
-          setShowAIPanel(true);
         }
       }
 
@@ -412,34 +402,29 @@ export default function App(): JSX.Element {
   };
 
   /**
-   * Handle AI content application
+   * Handle viewing private skill content
    */
-  const handleApplyAIContent = async (content: string, mode: AIGenerationMode): Promise<void> => {
-    if (!editingSkill) return;
-
+  const handleViewPrivateSkill = async (skill: PrivateSkill) => {
     try {
-      let newContent = content;
-
-      if (mode === 'insert') {
-        // Insert at cursor position
-        const before = editorContent.substring(0, editorSelection.start);
-        const after = editorContent.substring(editorSelection.start);
-        newContent = before + content + after;
-      } else if (mode === 'replace') {
-        // Replace selected text
-        const before = editorContent.substring(0, editorSelection.start);
-        const after = editorContent.substring(editorSelection.end);
-        newContent = before + content + after;
+      const repo = state.config?.privateRepos?.find(r => r.id === skill.repoId);
+      if (!repo) {
+        showToast('Repository not found', 'error');
+        return;
       }
-      // For 'new' and 'modify' modes, use content as-is
 
-      // Save the updated content
-      await handleSaveSkill(newContent);
-
-      showToast('AI content applied successfully', 'success');
+      const response = await window.electronAPI.getPrivateRepoSkillContent(repo.id, skill.path);
+      if (response.success && response.data) {
+        setViewingPrivateSkill({
+          skill,
+          repo,
+          content: response.data,
+        });
+      } else {
+        throw new Error(response.error?.message || 'Failed to load skill content');
+      }
     } catch (error) {
-      console.error('Failed to apply AI content:', error);
-      showToast('Failed to apply AI content', 'error');
+      console.error('Failed to view private skill:', error);
+      showToast(`Failed to load skill: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
 
@@ -523,7 +508,9 @@ export default function App(): JSX.Element {
             </div>
 
             <div style={{ display: currentView === 'private-repos' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
-              <PrivateRepoList />
+              <PrivateRepoList
+                onSkillClick={handleViewPrivateSkill}
+              />
             </div>
 
             <div style={{ display: currentView === 'settings' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
@@ -553,6 +540,56 @@ export default function App(): JSX.Element {
                   isInline={true}
                 />
               </Suspense>
+            ) : viewingPrivateSkill ? (
+              <div className="h-full flex flex-col">
+                <div className="p-4 border-b border-gray-200 bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        {viewingPrivateSkill.skill.name}
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {viewingPrivateSkill.repo.displayName || `${viewingPrivateSkill.repo.owner}/${viewingPrivateSkill.repo.repo}`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setViewingPrivateSkill(null)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      aria-label="Close preview"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-text-muted">Loading editor...</div>
+                      </div>
+                    }
+                  >
+                    <SkillEditor
+                      skill={{
+                        path: viewingPrivateSkill.skill.path,
+                        name: viewingPrivateSkill.skill.name,
+                        source: 'project',
+                        lastModified: new Date(),
+                        resourceCount: 0,
+                      }}
+                      content={viewingPrivateSkill.content}
+                      onClose={() => setViewingPrivateSkill(null)}
+                      onSave={async () => {
+                        showToast('Private repository skills are read-only', 'info');
+                      }}
+                      isInline={true}
+                      readOnly={true}
+                    />
+                  </Suspense>
+                </div>
+              </div>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-400">
                 <div className="text-center">
@@ -582,16 +619,6 @@ export default function App(): JSX.Element {
         skill={deletingSkill}
         onClose={() => setDeletingSkill(null)}
         onConfirm={handleDeleteSkill}
-      />
-
-      {/* AI Assistant Panel */}
-      <AIPanel
-        isOpen={showAIPanel}
-        onClose={() => setShowAIPanel(false)}
-        onApply={handleApplyAIContent}
-        currentContent={editorContent}
-        selectionStart={editorSelection.start}
-        selectionEnd={editorSelection.end}
       />
 
       {/* Toast Notifications */}

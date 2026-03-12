@@ -127,8 +127,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.AI_CONFIG_SAVE, { config });
   },
 
-  testAIConnection: (): Promise<IPCResponse<{ success: boolean; latency?: number }>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.CONFIG_TEST_AI);
+  testAIConnection: (config?: AIConfiguration): Promise<IPCResponse<{ success: boolean; latency?: number }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.AI_CONFIG_TEST, { config });
   },
 
   // ============================================================================
@@ -202,6 +202,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_UPDATE_SKILL, params);
   },
 
+  getPrivateRepoSkillContent: (repoId: string, skillPath: string): Promise<IPCResponse<string>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_GET_SKILL_CONTENT, { repoId, skillPath });
+  },
+
   // ============================================================================
   // GitHub Operations (Feature 004 - Public Skill Discovery)
   // ============================================================================
@@ -228,8 +232,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     downloadUrl: string;
     targetDirectory: 'project' | 'global';
     conflictResolution?: 'overwrite' | 'rename' | 'skip';
+    applyToAll?: boolean;
   }): Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.GITHUB_INSTALL_SKILL, params);
+  },
+
+  setGitHubConflictPreference: (resolution: 'overwrite' | 'rename' | 'skip'): Promise<void> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.GITHUB_SET_CONFLICT_PREFERENCE, { resolution });
+  },
+
+  clearGitHubConflictPreference: (): Promise<void> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.GITHUB_CLEAR_CONFLICT_PREFERENCE);
   },
 
   getCuratedSources: (): Promise<IPCResponse<{ sources: CuratedSource[] }>> => {

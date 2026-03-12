@@ -102,11 +102,10 @@ export default function Sidebar({
       {/* Logo */}
       <div className="p-4 border-b border-gray-100 flex justify-center">
         <div
-          className="w-10 h-10 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform"
-          style={{ backgroundColor: '#DE2910' }}
+          className="w-12 h-12 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
           title="skillsMN"
         >
-          <span className="text-white font-bold text-lg">S</span>
+          <span className="font-bold text-xl tracking-tight" style={{ color: '#DE2910' }}>SKM</span>
         </div>
       </div>
 

@@ -16,13 +16,16 @@ let pathValidator: PathValidator | null = null;
 /**
  * Register private repository IPC handlers
  */
-export function registerPrivateRepoHandlers(validator: PathValidator): void {
+export async function registerPrivateRepoHandlers(validator: PathValidator): Promise<void> {
   pathValidator = validator;
 
-  // Initialize service
-  PrivateRepoService.initialize().catch((error) => {
+  // Initialize service and wait for completion
+  try {
+    await PrivateRepoService.initialize();
+    logger.info('PrivateRepoService initialized successfully', 'PrivateRepoHandlers');
+  } catch (error) {
     logger.error('Failed to initialize PrivateRepoService', 'PrivateRepoHandlers', error);
-  });
+  }
 
   // Handler for private-repo:add
   ipcMain.handle(
@@ -440,6 +443,54 @@ export function registerPrivateRepoHandlers(validator: PathValidator): void {
           error: {
             code: 'UPDATE_SKILL_FAILED',
             message: error instanceof Error ? error.message : 'Unknown error',
+          },
+        };
+      }
+    }
+  );
+
+  // Handler for private-repo:get-skill-content
+  ipcMain.handle(
+    'private-repo:get-skill-content',
+    async (
+      _event,
+      { repoId, skillPath }: { repoId: string; skillPath: string }
+    ): Promise<IPCResponse<string>> => {
+      try {
+        logger.debug('Getting skill content from private repository', 'PrivateRepoHandlers', {
+          repoId,
+          skillPath,
+        });
+
+        const content = await PrivateRepoService.getSkillContent(repoId, skillPath);
+
+        logger.info('Retrieved skill content from private repo', 'PrivateRepoHandlers', {
+          repoId,
+          skillPath,
+          contentLength: content.length,
+        });
+
+        return { success: true, data: content };
+      } catch (error) {
+        logger.error('Failed to get skill content from private repo', 'PrivateRepoHandlers', error);
+
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        let errorCode = 'GET_CONTENT_FAILED';
+        let actionableMessage = errorMessage;
+
+        if (errorMessage.includes('Repository not found')) {
+          errorCode = 'REPO_NOT_FOUND';
+          actionableMessage = 'Repository not found. It may have been removed. Please refresh and try again.';
+        } else if (errorMessage.includes('authentication failed') || errorMessage.includes('401')) {
+          errorCode = 'AUTH_FAILED';
+          actionableMessage = 'PAT has expired. Please update your PAT in Settings → Repositories.';
+        }
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: actionableMessage,
           },
         };
       }

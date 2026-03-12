@@ -79,4 +79,6 @@ global.window.electronAPI = {
   cancelGitHubInstall: jest.fn(),
   onGitHubInstallProgress: jest.fn(),
   removeGitHubInstallProgressListener: jest.fn(),
+  setGitHubConflictPreference: jest.fn(),
+  clearGitHubConflictPreference: jest.fn(),
 };

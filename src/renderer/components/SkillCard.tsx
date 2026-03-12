@@ -1,7 +1,8 @@
 /**
  * SkillCard Component
  *
- * Displays individual skill metadata in a card format with update support
+ * Fixed-height card for virtualized skill list
+ * Height: 80px (fixed)
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -35,7 +36,6 @@ export default function SkillCard({
   const [isTruncated, setIsTruncated] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
 
-  // Check if description is truncated
   useEffect(() => {
     if (descriptionRef.current && skill.description) {
       const element = descriptionRef.current;
@@ -89,7 +89,6 @@ export default function SkillCard({
       setUpdateProgress('success');
       setShowUpdateDialog(false);
 
-      // Auto-dismiss success message after 2 seconds
       setTimeout(() => {
         setUpdateProgress('idle');
       }, 2000);
@@ -101,171 +100,150 @@ export default function SkillCard({
 
   return (
     <>
+      {/* Fixed height card: 96px total, 88px content + 8px bottom margin */}
       <div
-        className={`card card-interactive group ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
+        className={`
+          relative h-[88px] bg-white border border-gray-200 rounded-lg py-2.5 px-4 cursor-pointer
+          transition-all duration-200 hover:shadow-md hover:border-blue-300
+          ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+        `}
         onClick={handleClick}
         onKeyPress={handleKeyPress}
         tabIndex={0}
         role="button"
-        aria-label={`Skill: ${skill.name}. ${isSelected ? 'Selected. ' : ''}${hasUpdate ? 'Update available. ' : ''}Click to edit.`}
+        aria-label={`Skill: ${skill.name}`}
         aria-selected={isSelected}
       >
-        {/* Header Row: Title + Badges + Actions */}
-        <div className="flex items-start justify-between gap-4 mb-2">
-          {/* Left: Title + Badges */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h3 className="font-semibold text-lg text-text-primary truncate">
-                {skill.name}
-              </h3>
+        {/* Top row: Name + Badges + Actions */}
+        <div className="flex items-center justify-between h-5 mb-1.5">
+          {/* Left: Name + Badges */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <h3 className="font-medium text-sm text-gray-900 truncate">
+              {skill.name}
+            </h3>
 
-              {/* Source Badge */}
-              <span
-                className={`badge ${
-                  skill.source === 'project' ? 'badge-project' : 'badge-global'
-                } flex-shrink-0`}
-              >
-                {skill.source === 'project' ? 'Project' : 'Global'}
+            {/* Source Badge */}
+            <span className={`
+              inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0
+              ${skill.source === 'project'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-700'}
+            `}>
+              {skill.source === 'project' ? 'P' : 'G'}
+            </span>
+
+            {/* Private Badge */}
+            {skill.sourceRepoId && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 flex-shrink-0">
+                Private
               </span>
+            )}
 
-              {/* Private Repo Badge */}
-              {skill.sourceRepoId && (
-                <span className="badge bg-purple-100 text-purple-700 border-purple-200 flex-shrink-0">
-                  Private
-                </span>
-              )}
+            {/* Update Badge */}
+            {hasUpdate && updateProgress !== 'success' && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 flex-shrink-0 animate-pulse">
+                Update
+              </span>
+            )}
 
-              {/* Update Available Badge */}
-              {hasUpdate && updateProgress !== 'success' && (
-                <span className="badge bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0 animate-pulse">
-                  Update Available
-                </span>
-              )}
-
-              {/* Update Success Badge */}
-              {updateProgress === 'success' && (
-                <span className="badge bg-green-50 text-green-700 border-green-200 flex-shrink-0">
-                  ✓ Updated
-                </span>
-              )}
-            </div>
+            {/* Success Badge */}
+            {updateProgress === 'success' && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
+                ✓
+              </span>
+            )}
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0 opacity-0 hover:opacity-100 transition-opacity">
             {/* Update Button */}
             {hasUpdate && onUpdate && updateProgress !== 'success' && (
               <button
                 onClick={handleUpdateClick}
                 disabled={updateProgress === 'updating'}
-                className={`opacity-0 group-hover:opacity-100 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-fast ${
-                  updateProgress === 'error'
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                className="px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {updateProgress === 'idle' && 'Update'}
-                {updateProgress === 'updating' && (
-                  <span className="flex items-center gap-1">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                    Updating...
-                  </span>
-                )}
-                {updateProgress === 'error' && 'Retry'}
+                {updateProgress === 'updating' ? '...' : 'Update'}
               </button>
             )}
 
-            {/* Open Folder button */}
+            {/* Open Folder Button */}
             {onOpenFolder && (
               <button
                 onClick={handleOpenFolder}
-                className="opacity-0 group-hover:opacity-100 p-2 hover:bg-primary/20 rounded-lg cursor-pointer transition-all duration-fast"
-                aria-label={`Open folder for ${skill.name}`}
+                className="p-1 hover:bg-gray-100 rounded"
+                aria-label="Open folder"
               >
-                <svg className="w-5 h-5 text-text-muted hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                 </svg>
               </button>
             )}
 
-            {/* Delete button */}
+            {/* Delete Button */}
             {onDelete && (
               <button
                 onClick={handleDelete}
-                className="opacity-0 group-hover:opacity-100 p-2 hover:bg-error/20 rounded-lg cursor-pointer transition-all duration-fast"
-                aria-label={`Delete ${skill.name}`}
+                className="p-1 hover:bg-red-50 rounded"
+                aria-label="Delete"
               >
-                <svg className="w-5 h-5 text-error hover:text-error-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
             )}
 
-            {/* Arrow icon */}
-            <svg className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors duration-fast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            {/* Arrow */}
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>
         </div>
 
-        {/* Description - Full Width, max 2 lines with tooltip */}
+        {/* Middle row: Description */}
         {skill.description && (
-          <p
-            ref={descriptionRef}
-            className="text-sm text-text-secondary w-full mb-2 truncate-2"
-            title={isTruncated ? skill.description : undefined}
-          >
-            {skill.description}
-          </p>
-        )}
-
-        {/* Update Error Message */}
-        {updateProgress === 'error' && errorMessage && (
-          <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
-            <div className="flex items-start gap-2">
-              <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="flex-1">
-                <p className="font-medium">Update Failed</p>
-                <p className="mt-1">{errorMessage}</p>
-              </div>
-            </div>
+          <div className="h-4 mb-1.5">
+            <p
+              ref={descriptionRef}
+              className="text-xs text-gray-600 line-clamp-1"
+              title={isTruncated ? skill.description : undefined}
+            >
+              {skill.description}
+            </p>
           </div>
         )}
 
-        {/* Metadata */}
-        <div className="flex items-center gap-4 text-xs text-text-muted">
-          <span className="flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Bottom row: Metadata */}
+        <div className="flex items-center gap-4 h-4 text-xs text-gray-500">
+          <span className="flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             {new Date(skill.lastModified).toLocaleDateString()}
           </span>
           {skill.resourceCount > 0 && (
-            <span className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span className="flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              {skill.resourceCount} {skill.resourceCount === 1 ? 'file' : 'files'}
+              {skill.resourceCount}
             </span>
           )}
           {skill.sourceRepoId && skill.installedAt && (
-            <span className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span className="flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              Installed {new Date(skill.installedAt).toLocaleDateString()}
+              {new Date(skill.installedAt).toLocaleDateString()}
             </span>
           )}
         </div>
       </div>
 
-      {/* Update Confirmation Dialog */}
+      {/* Update Dialog */}
       {showUpdateDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg w-full max-w-md border border-gray-200 shadow-xl">
-            {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Update Skill</h3>
               <button
@@ -279,9 +257,7 @@ export default function SkillCard({
               </button>
             </div>
 
-            {/* Content */}
             <div className="p-4 space-y-4">
-              {/* Warning */}
               <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded text-sm">
                 <div className="flex items-start gap-2">
                   <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -289,12 +265,11 @@ export default function SkillCard({
                   </svg>
                   <div className="flex-1">
                     <p className="font-medium">This will replace the current skill</p>
-                    <p className="text-xs mt-1">Any local modifications will be overwritten with the latest version from the repository.</p>
+                    <p className="text-xs mt-1">Any local modifications will be overwritten.</p>
                   </div>
                 </div>
               </div>
 
-              {/* Skill Info */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Skill Name</label>
                 <div className="text-gray-900">{skill.name}</div>
@@ -305,7 +280,6 @@ export default function SkillCard({
                 <div className="text-gray-900 text-sm font-mono">{skill.path}</div>
               </div>
 
-              {/* Backup Option */}
               <label className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded cursor-pointer hover:bg-gray-100 transition-colors">
                 <input
                   type="checkbox"
@@ -316,13 +290,12 @@ export default function SkillCard({
                 <div className="flex-1">
                   <div className="text-gray-900 font-medium">Create backup before update</div>
                   <div className="text-xs text-gray-600 mt-1">
-                    Saves a copy of the current skill with a timestamp suffix (e.g., skill-backup-2024-01-15)
+                    Saves a copy with a timestamp suffix
                   </div>
                 </div>
               </label>
             </div>
 
-            {/* Footer */}
             <div className="border-t border-gray-200 p-4 flex gap-2 justify-end">
               <button
                 onClick={() => setShowUpdateDialog(false)}
@@ -332,7 +305,7 @@ export default function SkillCard({
               </button>
               <button
                 onClick={handleConfirmUpdate}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
               >
                 Update Skill
               </button>

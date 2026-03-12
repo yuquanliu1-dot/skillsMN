@@ -172,57 +172,242 @@ If AI generation is taking too long or producing unwanted content:
 
 ## Discovering Public Skills
 
-### Searching GitHub
+The Discover feature allows you to search, preview, and install skills from public GitHub repositories. Find community-created skills and add them to your project with just a few clicks.
 
-1. Click the **"Discover"** tab in the sidebar
-2. Enter your search query in the search box
-   - Example: "React hooks", "Python testing", "API design"
-3. Wait 500ms for debounced search (reduces API calls)
-4. Results display repositories containing `skill.md` files
+### Accessing the Discover Tab
+
+1. Click the **Discover** (compass) icon in the left sidebar
+2. The search interface will appear in the main panel
+
+### Searching for Skills
+
+1. **Enter a search query** in the search box
+   - Try keywords like: "react", "typescript", "testing", "api"
+   - The search finds repositories containing `skill.md` files
+2. **Wait for results** (search is debounced by 500ms)
+   - Search triggers automatically after you stop typing
+   - A loading spinner appears while searching GitHub
+3. **Browse results** using infinite scroll
+   - Results load automatically as you scroll down
+   - No need to click "Load More" - just keep scrolling!
+
+**Search Tips**:
+- **Be specific**: "react hooks typescript" finds better results than just "react"
+- **Check descriptions**: Read repository descriptions before installing
+- **Preview first**: Always preview a skill to see what you're getting
+- **Check stars**: Higher star counts usually indicate better quality
 
 ### Understanding Search Results
 
-Each result shows:
-- **Repository name** and URL (click to visit on GitHub)
-- **Description** of the repository
-- **Star count** (popularity indicator)
-- **Language** badge (primary programming language)
-- **Skill files** found in the repository
+Each result card displays:
+- **Repository name**: Click to visit on GitHub
+- **Description**: What the repository is about
+- **Star count**: Popularity indicator (⭐)
+- **Fork count**: Community engagement
+- **Language badge**: Primary programming language
+- **Skill count**: Number of skills found in the repository
+- **Action buttons**:
+  - **Preview**: View skill content before installing
+  - **Install**: Add the skill to your local directory
+  - **Open in GitHub** (↗): Open repository in your browser
 
 ### Previewing a Skill
 
-1. Click the **Preview** button on any skill file
-2. A modal displays the full skill.md content
-3. Review the skill's structure, frontmatter, and content
-4. No files are downloaded during preview (uses GitHub raw URLs)
+Before installing, preview the skill to see exactly what you're getting:
+
+1. Click the **Preview** button on any search result
+2. A modal displays:
+   - **File tree** (left panel): Browse the skill's directory structure
+   - **Content viewer** (right panel): View skill.md content rendered as markdown
+3. Browse files by clicking on them in the tree
+4. Check for:
+   - ✅ Clear documentation with usage instructions
+   - ✅ Examples and templates
+   - ✅ Recent updates (check modification dates)
+   - ❌ Empty or incomplete skill.md files
+5. Click **Install** from the preview modal if you like what you see
 
 ### Installing a Skill
 
-1. Click the **Install** button on a skill file
-2. Select the **target directory** (Project or Global)
+1. Click the **Install** button on a search result or from the preview modal
+2. Select **installation location**:
+   - **Project directory**: `.claude/skills/` (project-specific, shared via Git)
+   - **Global directory**: `~/.claude/skills/` (available in all projects)
 3. Click **Install**
-4. The entire skill directory (including all files) is downloaded
-5. The skill appears in your local skill list
+4. Watch the progress bar as files are downloaded
+5. Once complete, the skill appears in your **Local Skills** list
 
-### Handling Conflicts
+**Installation Progress**:
+- **Progress bar**: Shows percentage complete
+- **File count**: "5 of 10 files downloaded"
+- **Stage indicator**: Downloading → Validating → Saving
+- **Cancel button**: Abort installation if needed
 
-If a skill with the same name already exists:
+### Handling Installation Conflicts
 
-1. **Rename** (Recommended): Keep existing and install with a new name
-2. **Overwrite**: Replace existing skill (existing content is lost)
-3. **Skip**: Keep existing and don't install
+If a skill with the same name already exists in your target directory:
 
-### Rate Limits
+A conflict resolution dialog will appear with three options:
 
-- **Unauthenticated**: 60 requests/hour
-- **With GitHub PAT**: 5,000 requests/hour
+#### Option 1: Overwrite ⚠️
+- **What happens**: Replaces the existing skill completely
+- **Warning**: All changes to the existing skill will be **lost**
+- **When to use**: You want to update to a newer version
 
-To increase your rate limit:
-1. Open Settings
+#### Option 2: Rename (Recommended) ✅
+- **What happens**: Installs with a timestamp suffix
+  - Example: `react-hooks` → `react-hooks-20260311-143022`
+- **Benefit**: Keeps both versions
+- **When to use**: You want to try the new version while keeping the old one
+
+#### Option 3: Skip ❌
+- **What happens**: Cancels the installation
+- **When to use**: You don't want to install this skill after all
+
+### Error Handling
+
+#### Search Errors
+
+If search fails, you'll see an error message with a **Retry** button:
+- **Network error**: Check your internet connection, then retry
+- **Rate limit exceeded**: Add a GitHub PAT (see below)
+- **No results**: Try different keywords
+
+#### Installation Errors
+
+If installation fails:
+1. Check the error message for details
+2. Verify your internet connection
+3. Try again with the **Retry** button
+4. Check if the skill directory was partially created (delete if needed)
+
+### Managing Search State
+
+**Tab switching preserves your search**:
+- Search query is preserved when switching tabs
+- Results remain loaded
+- Scroll position is maintained
+- No need to re-search when coming back
+
+### GitHub Rate Limits
+
+**Unauthenticated access** (default):
+- **Limit**: 60 requests/hour
+- **Cost**: Free, no setup required
+
+**With GitHub PAT** (recommended):
+- **Limit**: 5,000 requests/hour
+- **Setup**: Add any GitHub PAT in Settings → Private Repositories
+- **Benefit**: 83x more requests per hour!
+
+**To add a PAT**:
+1. Go to Settings (⚙️)
 2. Navigate to Private Repositories tab
 3. Add any GitHub PAT (even for public repos)
+4. Your rate limit increases immediately
+
+### Browsing Curated Sources
+
+Discover high-quality, vetted skill repositories:
+
+1. Scroll down in the **Discover** tab
+2. Find the **Curated Sources** section
+3. Click on any source to browse all its skills
+4. All skills from that repository are displayed
+
+**Benefits of curated sources**:
+- ✅ Quality assured by the community
+- ✅ Easy discovery without searching
+- ✅ Trusted, maintained repositories
+- ✅ Regularly updated with new skills
+
+### Best Practices
+
+**Before Installing**:
+- ✅ Preview the skill first
+- ✅ Read the documentation
+- ✅ Check the file structure
+- ✅ Verify repository stars and last update
+
+**During Installation**:
+- ✅ Choose the right directory (project vs global)
+- ✅ Use "Rename" for conflicts (safest option)
+- ✅ Let installation complete fully (don't cancel midway)
+
+**After Installation**:
+- ✅ Test the skill
+- ✅ Review the documentation in the editor
+- ✅ Check for dependencies or setup requirements
+- ✅ Report issues to the repository maintainer
+
+### Troubleshooting Public Discovery
+
+#### Search Returns No Results
+
+**Possible causes**:
+- No skills match your query
+- GitHub API rate limit exceeded
+- Network connection issues
+
+**Solutions**:
+- Try different keywords
+- Add a GitHub PAT for higher rate limits
+- Check internet connection
+- Use the **Retry** button
+
+#### Installation Fails
+
+**Possible causes**:
+- Network connection lost
+- Skill directory too large (>10MB)
+- Invalid skill structure (missing skill.md)
+- Permission denied
+
+**Solutions**:
+- Check internet connection
+- Try installing a smaller skill
+- Report invalid skills to maintainers
+- Check file permissions in target directory
+
+#### Preview Shows Error
+
+**Possible causes**:
+- Repository deleted or made private
+- Network timeout
+- Skill file removed
+
+**Solutions**:
+- Search again to find updated results
+- Check if repository still exists on GitHub
+- Try a different skill
+
+#### Infinite Scroll Not Loading More
+
+**Possible causes**:
+- Reached end of results
+- Network timeout
+- Rate limit exceeded
+
+**Solutions**:
+- Check if "Loading more..." indicator appears
+- Wait a few seconds and try scrolling again
+- Add a GitHub PAT if rate limited
 
 ---
+
+### Keyboard Shortcuts for Discovery
+
+| Shortcut | Action |
+|----------|--------|
+| Click compass icon | Open Discover tab |
+| Type in search box | Search automatically (debounced) |
+| Scroll down | Load more results automatically |
+| `Escape` | Close preview modal |
+| `Tab` | Navigate between results |
+
+---
+
+**Pro tip**: Install a variety of skills to build your personal toolkit. Start with foundational skills (testing, linting, documentation) and add specialized skills as needed!
 
 ## Private Repository Management
 

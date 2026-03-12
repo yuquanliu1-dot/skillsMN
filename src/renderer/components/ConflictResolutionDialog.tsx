@@ -11,7 +11,8 @@ interface ConflictResolutionDialogProps {
   skillFilePath: string;
   downloadUrl: string;
   onClose: () => void;
-  onResolve: (resolution: 'overwrite' | 'rename' | 'skip') => void;
+  onResolve: (resolution: 'overwrite' | 'rename' | 'skip', applyToAll?: boolean) => void;
+  remainingConflicts?: number;
 }
 
 export default function ConflictResolutionDialog({
@@ -20,8 +21,10 @@ export default function ConflictResolutionDialog({
   downloadUrl,
   onClose,
   onResolve,
+  remainingConflicts = 0,
 }: ConflictResolutionDialogProps): JSX.Element {
   const [resolution, setResolution] = useState<'overwrite' | 'rename' | 'skip'>('rename');
+  const [applyToAll, setApplyToAll] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,19 +33,7 @@ export default function ConflictResolutionDialog({
     setError(null);
 
     try {
-      const response = await window.electronAPI.installGitHubSkill({
-        repositoryName,
-        skillFilePath,
-        downloadUrl,
-        targetDirectory: 'project', // Default to project directory for conflict resolution
-        conflictResolution: resolution,
-      });
-
-      if (response.success) {
-        onResolve(resolution);
-      } else {
-        setError(response.error?.message || 'Failed to resolve conflict');
-      }
+      await onResolve(resolution, applyToAll);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resolve conflict');
     } finally {
@@ -140,6 +131,28 @@ export default function ConflictResolutionDialog({
               </label>
             </div>
           </div>
+
+          {/* Apply to All Checkbox */}
+          {remainingConflicts > 0 && (
+            <div className="bg-slate-900 border border-slate-700 rounded p-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={applyToAll}
+                  onChange={(e) => setApplyToAll(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 mt-0.5 rounded"
+                />
+                <div className="flex-1">
+                  <div className="text-slate-100 font-medium text-sm">
+                    Apply to all remaining conflicts
+                  </div>
+                  <div className="text-xs text-slate-400 mt-1">
+                    Use this resolution for all {remainingConflicts} remaining conflict{remainingConflicts !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              </label>
+            </div>
+          )}
 
           {/* Error Display */}
           {error && (

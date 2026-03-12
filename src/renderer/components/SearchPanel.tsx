@@ -187,11 +187,62 @@ export default function SearchPanel({ isOpen, onClose, onInstallComplete, isInli
     setConflictSkill({ repositoryName, skillFilePath, downloadUrl });
   };
 
-  // Install complete
-  const handleInstallComplete = () => {
-    setInstallingSkill(null);
-    setConflictSkill(null);
-    onInstallComplete();
+  // Install from InstallDialog
+  const handleInstallFromDialog = async (targetDirectory: 'project' | 'global', conflictResolution?: 'overwrite' | 'rename' | 'skip') => {
+    if (!installingSkill) return;
+
+    try {
+      const response = await window.electronAPI.installGitHubSkill({
+        repositoryName: installingSkill.repositoryName,
+        skillFilePath: installingSkill.skillFilePath,
+        downloadUrl: installingSkill.downloadUrl,
+        targetDirectory,
+        conflictResolution,
+      });
+
+      if (response.success) {
+        setInstallingSkill(null);
+        onInstallComplete();
+      } else if (response.error?.code === 'CONFLICT') {
+        handleConflict(
+          installingSkill.repositoryName,
+          installingSkill.skillFilePath,
+          installingSkill.downloadUrl
+        );
+      }
+    } catch (error) {
+      console.error('Install failed:', error);
+    }
+  };
+
+  // Conflict resolution handler (for ConflictResolutionDialog component)
+  const handleConflictResolve = async (resolution: 'overwrite' | 'rename' | 'skip', applyToAll?: boolean) => {
+    if (!conflictSkill) return;
+
+    try {
+      // If applyToAll is checked, set the preference in the backend
+      if (applyToAll) {
+        await window.electronAPI.setGitHubConflictPreference(resolution);
+      }
+
+      // Perform the installation with the chosen resolution
+      const response = await window.electronAPI.installGitHubSkill({
+        repositoryName: conflictSkill.repositoryName,
+        skillFilePath: conflictSkill.skillFilePath,
+        downloadUrl: conflictSkill.downloadUrl,
+        targetDirectory: 'project', // Default to project directory
+        conflictResolution: resolution,
+      });
+
+      if (response.success) {
+        setConflictSkill(null);
+        onInstallComplete();
+      } else {
+        console.error('Conflict resolution failed:', response.error);
+      }
+    } catch (error) {
+      console.error('Failed to resolve conflict:', error);
+    }
   };
 
   if (!isOpen && !isInline) return null;
@@ -379,7 +430,10 @@ export default function SearchPanel({ isOpen, onClose, onInstallComplete, isInli
           skillFilePath={installingSkill.skillFilePath}
           downloadUrl={installingSkill.downloadUrl}
           onClose={() => setInstallingSkill(null)}
-          onInstall={handleInstallComplete}
+          onInstall={() => {
+            setInstallingSkill(null);
+            onInstallComplete();
+          }}
           onConflict={() =>
             handleConflict(
               installingSkill.repositoryName,
@@ -397,7 +451,7 @@ export default function SearchPanel({ isOpen, onClose, onInstallComplete, isInli
           skillFilePath={conflictSkill.skillFilePath}
           downloadUrl={conflictSkill.downloadUrl}
           onClose={() => setConflictSkill(null)}
-          onResolve={handleInstallComplete}
+          onResolve={handleConflictResolve}
         />
       )}
     </div>

@@ -144,21 +144,36 @@ export function registerAIConfigHandlers(): void {
   // Handler for ai:config:test
   ipcMain.handle(
     IPC_CHANNELS.AI_CONFIG_TEST,
-    async (_event, { config }: { config: AIConfiguration }) => {
+    async (_event, { config }: { config?: AIConfiguration } = {}) => {
       try {
         logger.debug('Testing AI configuration', 'AIHandlers');
 
-        // Temporarily initialize with test config
+        // Use provided config or load from storage
+        const testConfig = config || await AIConfigService.loadConfig();
+
+        // Validate that we have a config with an API key
+        if (!testConfig || !testConfig.apiKey) {
+          return {
+            success: false,
+            error: { code: 'CONFIG_MISSING', message: 'No API key configured. Please save your API key first.' }
+          };
+        }
+
+        // Store original config for restoration
         const originalConfig = await AIConfigService.loadConfig().catch(() => null);
 
         try {
-          await AIService.initialize(config);
+          await AIService.initialize(testConfig);
           const result = await AIService.testConnection();
 
-          return { success: result.success, error: result.error ? { code: 'CONNECTION_ERROR', message: result.error } : undefined, latency: result.latency };
+          return {
+            success: result.success,
+            error: result.error ? { code: 'CONNECTION_ERROR', message: result.error } : undefined,
+            latency: result.latency
+          };
         } finally {
-          // Restore original config if it existed
-          if (originalConfig) {
+          // Restore original config if it existed and had an API key
+          if (originalConfig && originalConfig.apiKey) {
             await AIService.initialize(originalConfig).catch(err => {
               logger.error('Failed to restore original config', 'AIHandlers', err);
             });

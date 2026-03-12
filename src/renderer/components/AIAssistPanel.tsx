@@ -135,14 +135,21 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
   return (
     <div className="ai-assist-panel">
       <div className="panel-header">
-        <h2>AI Skill Assistant</h2>
+        <div className="header-title">
+          <div className="icon-wrapper">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            </svg>
+          </div>
+          <h2>AI Skill Assistant</h2>
+        </div>
         <button
           className="close-button"
           onClick={onClose}
           aria-label="Close AI panel"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-            <path d="M15 5L5 15M5 5l10 10" strokeWidth="2" strokeLinecap="round" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M6 18L18 6M6 6l12 12" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
       </div>
@@ -206,10 +213,10 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
           right: 0;
           top: 0;
           height: 100vh;
-          width: 400px;
-          background: var(--background-primary);
-          border-left: 1px solid var(--border-color);
-          box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+          width: 420px;
+          background: #ffffff;
+          border-left: 1px solid #e5e7eb;
+          box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
           display: flex;
           flex-direction: column;
           animation: slideIn 300ms ease-out;
@@ -231,45 +238,71 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 1.5rem;
-          border-bottom: 1px solid var(--border-color);
+          padding: 1.25rem 1.5rem;
+          border-bottom: 1px solid #e5e7eb;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .header-title {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .icon-wrapper {
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 0.625rem;
+          background: rgba(255, 255, 255, 0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          backdrop-filter: blur(10px);
+        }
+
+        .icon-wrapper svg {
+          color: #ffffff;
         }
 
         .panel-header h2 {
           margin: 0;
-          font-size: 1.25rem;
-          color: var(--text-primary);
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: #ffffff;
         }
 
         .close-button {
-          background: none;
+          background: rgba(255, 255, 255, 0.2);
           border: none;
           cursor: pointer;
           padding: 0.5rem;
-          border-radius: 4px;
-          color: var(--text-secondary);
-          transition: background-color 150ms;
+          border-radius: 0.5rem;
+          color: #ffffff;
+          transition: all 150ms;
+          backdrop-filter: blur(10px);
         }
 
         .close-button:hover {
-          background-color: var(--background-hover);
+          background: rgba(255, 255, 255, 0.3);
         }
 
         .panel-content {
           flex: 1;
           display: flex;
           flex-direction: column;
-          gap: 1rem;
+          gap: 1.25rem;
           padding: 1.5rem;
           overflow-y: auto;
+          background: #fafafa;
         }
 
         .timeout-warning {
-          background: rgba(245, 158, 11, 0.1);
+          background: #fffbeb;
           border: 1px solid #f59e0b;
-          border-radius: 8px;
+          border-radius: 0.5rem;
           padding: 1rem;
           margin: 0.5rem 0;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .warning-content {
@@ -299,8 +332,9 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
         .btn-cancel {
           padding: 0.5rem 1rem;
           border: none;
-          border-radius: 4px;
+          border-radius: 0.375rem;
           font-size: 0.875rem;
+          font-weight: 500;
           cursor: pointer;
           transition: all 150ms;
         }
@@ -312,6 +346,7 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
 
         .btn-continue:hover {
           background: #059669;
+          transform: translateY(-1px);
         }
 
         .btn-cancel {
@@ -321,6 +356,7 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
 
         .btn-cancel:hover {
           background: #dc2626;
+          transform: translateY(-1px);
         }
       `}</style>
     </div>
