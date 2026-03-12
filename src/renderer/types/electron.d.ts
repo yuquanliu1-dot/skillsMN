@@ -11,6 +11,9 @@ import type {
   PrivateRepo,
   PrivateSkill,
   AIConfiguration,
+  SearchSkillResult,
+  InstallFromRegistryRequest,
+  InstallProgressEvent,
 } from '../../shared/types';
 
 export interface ElectronAPI {
@@ -122,6 +125,19 @@ export interface ElectronAPI {
   }) => Promise<IPCResponse<{ cancelled: boolean; cleanedUp: boolean }>>;
   onGitHubInstallProgress: (callback: (event: any, progress: InstallProgress) => void) => void;
   removeGitHubInstallProgressListener: () => void;
+
+  // Registry Operations (Feature 006 - Skills Registry Search)
+  searchRegistry: (query: string, limit?: number) => Promise<IPCResponse<SearchSkillResult[]>>;
+  installFromRegistry: (
+    request: InstallFromRegistryRequest,
+    targetDirectory: string
+  ) => Promise<IPCResponse<{ success: boolean; skillPath?: string; error?: string; errorCode?: string }>>;
+  checkSkillInstalled: (
+    skillId: string,
+    targetDirectory: string
+  ) => Promise<IPCResponse<{ installed: boolean }>>;
+  onInstallProgress: (callback: (event: any, progress: InstallProgressEvent) => void) => void;
+  removeInstallProgressListener: () => void;
 }
 
 declare global {

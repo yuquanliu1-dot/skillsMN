@@ -65,10 +65,18 @@ global.window.electronAPI = {
   removePrivateRepo: jest.fn(),
   testPrivateRepoConnection: jest.fn(),
   getPrivateRepoSkills: jest.fn(),
+  getPrivateRepoSkillContent: jest.fn(),
   searchPrivateRepoSkills: jest.fn(),
   installPrivateRepoSkill: jest.fn(),
   checkPrivateSkillUpdates: jest.fn(),
   updatePrivateSkill: jest.fn(),
+
+  // Registry Operations (Feature 006)
+  searchRegistry: jest.fn(),
+  installFromRegistry: jest.fn(),
+  checkSkillInstalled: jest.fn(),
+  onInstallProgress: jest.fn(),
+  removeInstallProgressListener: jest.fn(),
 
   // GitHub Operations (Feature 004)
   searchGitHub: jest.fn(),

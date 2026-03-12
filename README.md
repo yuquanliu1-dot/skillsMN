@@ -11,7 +11,9 @@ skillsMN is an Electron-based desktop application that provides a unified interf
 - 📁 **Local Skill Management**: Create, edit, delete, and organize skills from project and global directories
 - 🤖 **AI-Assisted Generation**: Generate or modify skills using natural language prompts with real-time streaming
 - 🔍 **Public Skill Discovery**: Search GitHub for public skills, preview content, and install with one click
+- 🌐 **Skills Registry Search**: Search the skills.sh registry for curated, community-vetted skills with instant results and easy installation
 - 🔒 **Private Repository Sync**: Connect to private GitHub repositories for team skill sharing with update detection
+- 🌐 **Skills Registry Search**: Search the skills.sh registry for public skills with one-click installation
 - ⚙️ **Comprehensive Settings**: Configure default behaviors, manage credentials, and customize AI settings
 
 ### ✨ Key Capabilities
@@ -23,6 +25,69 @@ skillsMN is an Electron-based desktop application that provides a unified interf
 - 🔐 **Secure Storage**: API keys and PATs encrypted using Electron safeStorage
 - 🌐 **GitHub Integration**: Search public skills, browse private repos, handle conflicts intelligently
 - 🎨 **AI Streaming**: Watch AI generate content in real-time with 200ms chunk delivery
+- 🔍 **Registry Search**: Search thousands of public skills with instant, debounced results
+
+## Skills Registry Search (New in v1.1)
+
+### Overview
+
+The Skills Registry Search feature allows you to discover and install skills from the [skills.sh](https://skills.sh) registry - a curated collection of public skills shared by the Claude community.
+
+### Searching for Skills
+
+1. **Open Registry Search**: Click the **"Registry"** tab in the navigation sidebar
+2. **Enter Search Query**: Type keywords in the search box (e.g., "data analysis", "code review")
+3. **View Results**: Browse through matching skills with:
+   - Skill name and description
+   - Installation count
+   - Source repository
+   - Already installed indicator
+4. **View Details**: Click on the skill name to view full details on skills.sh (opens in new tab)
+
+### Installing from Registry
+
+1. **Click Install**: Click the **"Install"** button on any skill card
+2. **Select Target Tool**: Choose where to install:
+   - **Claude Code**: For the Claude Code CLI
+   - **Claude Desktop**: For the Claude Desktop application
+3. **Monitor Progress**: Watch the installation progress:
+   - Cloning repository (10%)
+   - Finding skill directory (40%)
+   - Copying files (60%)
+   - Writing metadata (80%)
+   - Cleanup (90%)
+   - Complete (100%)
+4. **Start Using**: The skill is now available in your selected tool
+
+### Installation Tracking
+
+Skills installed from the registry include a `.source.json` file with:
+- Source repository URL
+- Skill ID
+- Installation timestamp
+- Git commit hash (for version tracking)
+
+### Error Handling
+
+The registry search provides clear error messages for common scenarios:
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| **Git Not Installed** | Git is not available in PATH | Install Git from https://git-scm.com |
+| **Repository Not Found** | Skill repository deleted or moved | Search for an alternative skill |
+| **Private Repository** | Repository requires authentication | Contact author or find public alternative |
+| **Network Error** | Cannot connect to GitHub | Check internet connection |
+| **Disk Space Error** | Insufficient disk space | Free up disk space |
+| **Invalid Skill Structure** | Missing SKILL.md file | Contact skill author |
+
+For transient errors (network, timeout), a **"Try Again"** button appears for easy retry.
+
+### Performance Features
+
+- **Debounced Search**: 400ms delay prevents excessive API calls
+- **Fast Results**: Search completes in <3 seconds
+- **Efficient Installation**: Shallow clone (depth=1) minimizes download time
+- **Automatic Cleanup**: Temporary files always cleaned up (success or failure)
 
 ## Screenshots
 

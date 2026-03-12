@@ -12,6 +12,7 @@ import { registerSkillHandlers } from './ipc/skillHandlers';
 import { registerAIHandlers, registerAITestHandler, registerAIConfigHandlers } from './ipc/aiHandlers';
 import { registerGitHubHandlers } from './ipc/gitHubHandlers';
 import { registerPrivateRepoHandlers } from './ipc/privateRepoHandlers';
+import { registerRegistryHandlers } from './ipc/registryHandlers';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
 import { SkillDirectoryModel } from './models/SkillDirectory';
@@ -156,6 +157,10 @@ async function initialize(): Promise<void> {
     // Register GitHub handlers
     registerGitHubHandlers(pathValidator);
     logger.info('GitHub handlers registered', 'Main');
+
+    // Register registry handlers
+    registerRegistryHandlers();
+    logger.info('Registry handlers registered', 'Main');
 
     // Register Private Repository handlers
     await registerPrivateRepoHandlers(pathValidator);

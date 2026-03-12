@@ -24,11 +24,13 @@ describe('AI Assistant Integration Tests', () => {
   beforeAll(() => {
     // Setup mock configuration
     mockConfig = {
+      provider: 'anthropic',
       apiKey: Buffer.from('test-api-key').toString('base64'),
       model: 'claude-sonnet-4.6',
-      maxTokens: 4096,
-      temperature: 0.7,
-      customEndpoint: undefined,
+      streamingEnabled: true,
+      timeout: 30000,
+      maxRetries: 3,
+      baseUrl: undefined,
     };
   });
 
@@ -289,10 +291,12 @@ This is a test skill.`,
 
     test('should handle invalid API key gracefully', async () => {
       const invalidConfig: AIConfiguration = {
+        provider: 'anthropic',
         apiKey: Buffer.from('invalid-key').toString('base64'),
         model: 'claude-sonnet-4.6',
-        maxTokens: 4096,
-        temperature: 0.7,
+        streamingEnabled: true,
+        timeout: 30000,
+        maxRetries: 3
       };
 
       await AIService.initialize(invalidConfig);

@@ -651,7 +651,7 @@ export class PrivateRepoService {
         repo.repo,
         skillPath,
         pat,
-        repo.branch
+        repo.defaultBranch
       );
 
       return content;

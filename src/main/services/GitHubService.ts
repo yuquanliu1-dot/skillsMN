@@ -905,23 +905,29 @@ export class GitHubService {
     pat?: string,
     branch?: string
   ): Promise<string> {
-    const octokit = await this.getAuthenticatedOctokit();
-
     const actualBranch = branch || 'main';
-    const fullPath = skillPath.startsWith('/') ? skillPath : `${pat}/${skillPath}`;
+    const fullPath = skillPath.startsWith('/') ? skillPath : `${skillPath}`;
 
-    const response = await octokit.rest.repos.getContent({
-      owner,
-      repo,
-      path: fullPath,
-      ref: actualBranch,
-    });
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'skillsMN-App',
+    };
 
-    if (response.status === 200) {
-      const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
-      return content;
+    if (pat) {
+      headers['Authorization'] = `token ${pat}`;
     }
 
-    throw new Error(`Failed to fetch skill content: ${response.status}`);
+    const response = await fetch(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}?ref=${actualBranch}`,
+      { headers }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch skill content: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const content = Buffer.from(data.content, 'base64').toString('utf-8');
+    return content;
   }
 }
