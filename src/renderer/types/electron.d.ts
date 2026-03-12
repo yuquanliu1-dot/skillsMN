@@ -77,6 +77,7 @@ export interface ElectronAPI {
     repoId: string;
     query: string;
   }) => Promise<IPCResponse<PrivateSkill[]>>;
+  getPrivateRepoSkillContent: (repoId: string, skillPath: string) => Promise<IPCResponse<string>>;
   installPrivateRepoSkill: (params: {
     repoId: string;
     skillPath: string;

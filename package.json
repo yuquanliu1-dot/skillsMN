@@ -8,7 +8,9 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "dev": "concurrently \"npm run build:watch\" \"electron .\"",
+    "dev": "concurrently -k \"cross-env BROWSER=none npm run dev:renderer\" \"npm run dev:main\" \"cross-env NODE_ENV=development electron .\"",
+    "dev:main": "tsc --watch",
+    "dev:renderer": "vite",
     "build": "tsc && npm run build:renderer",
     "build:watch": "tsc --watch",
     "build:renderer": "vite build",
@@ -58,6 +60,7 @@
     "@vitejs/plugin-react": "^5.1.4",
     "autoprefixer": "^10.4.16",
     "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",

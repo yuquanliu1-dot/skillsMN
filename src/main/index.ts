@@ -49,18 +49,25 @@ async function createWindow(): Promise<void> {
 
   // Load the app
   if (isDev) {
-    // In development, load from Vite dev server or dist
-    const rendererPath = path.join(__dirname, '../../renderer/index.html');
-    await mainWindow.loadFile(rendererPath);
-    logger.info('Loaded renderer in development mode', 'Main');
+    // In development, load from Vite dev server
+    const viteDevServerUrl = 'http://localhost:5173';
+    try {
+      await mainWindow.loadURL(viteDevServerUrl);
+      logger.info('Loaded renderer from Vite dev server', 'Main');
 
-    // Open DevTools after window is shown (don't steal focus)
-    mainWindow.webContents.once('did-finish-load', () => {
-      setTimeout(() => {
-        mainWindow?.webContents?.openDevTools({ mode: 'detach' });
-        logger.info('DevTools opened', 'Main');
-      }, 1000);
-    });
+      // Open DevTools after window is shown (don't steal focus)
+      mainWindow.webContents.once('did-finish-load', () => {
+        setTimeout(() => {
+          mainWindow?.webContents?.openDevTools({ mode: 'detach' });
+          logger.info('DevTools opened', 'Main');
+        }, 1000);
+      });
+    } catch (error) {
+      logger.error('Failed to load from Vite dev server, falling back to built files', 'Main', error);
+      const rendererPath = path.join(__dirname, '../../renderer/index.html');
+      await mainWindow.loadFile(rendererPath);
+      logger.info('Loaded renderer from built files (fallback)', 'Main');
+    }
   } else {
     // In production, load from built files
     const rendererPath = path.join(__dirname, '../../renderer/index.html');

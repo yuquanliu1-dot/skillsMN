@@ -9,6 +9,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-10
 - GitHub REST API v3 (004-public-skill-discovery)
 - Jest + Spectron/Playwright (003-ai-skill-generation)
 - GitHub REST API v3 (004-public-skill-discovery)
+- TypeScript 5.x (strict mode) + Electron, React 18.2+, Node.js 20 LTS, node-fetch for HTTP requests, Tailwind CSS for UI styling (006-skills-registry-search)
+- Local file system (skills directories), temporary directories for git clones (006-skills-registry-search)
 
 ## Project Structure
 
@@ -42,9 +44,9 @@ npm run lint     # ESLint code checking
 TypeScript 5.x (strict mode): Use strict type checking, avoid `any`, prefer interfaces over types for object shapes. Follow ESLint recommended rules.
 
 ## Recent Changes
+- 006-skills-registry-search: Added TypeScript 5.x (strict mode) + Electron, React 18.2+, Node.js 20 LTS, node-fetch for HTTP requests, Tailwind CSS for UI styling
 - master: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
 - 004-public-skill-discovery: Added GitHub REST API v3 integration for public skill discovery
-- master: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
 
 
 <!-- MANUAL ADDITIONS START -->

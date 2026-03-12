@@ -395,4 +395,100 @@ export interface ContentValidationResult {
   frontmatter?: SkillFrontmatter;
 }
 
+// ============================================================================
+// Skills Registry Types (Feature 006)
+// ============================================================================
+
+/**
+ * Result from skills.sh registry search
+ */
+export interface SearchSkillResult {
+  /** Unique identifier from registry */
+  id: string;
+  /** Skill identifier (may differ from id) */
+  skillId: string;
+  /** Display name of the skill */
+  name: string;
+  /** Number of installations */
+  installs: number;
+  /** GitHub repository path (format: "org/repo") */
+  source: string;
+}
+
+/**
+ * Request to install a skill from the registry
+ */
+export interface InstallFromRegistryRequest {
+  /** GitHub repository path (format: "org/repo") */
+  source: string;
+  /** Skill identifier to install */
+  skillId: string;
+  /** Target tool identifier */
+  targetToolId: string;
+}
+
+/**
+ * Source metadata for tracking installed skills
+ */
+export interface SkillSourceMetadata {
+  /** Source type identifier */
+  type: 'registry';
+  /** Base URL of the registry */
+  registryUrl: string;
+  /** GitHub repository path */
+  source: string;
+  /** Skill identifier */
+  skillId: string;
+  /** Installation timestamp (ISO 8601) */
+  installedAt: string;
+  /** Git commit hash (optional) */
+  commitHash?: string;
+}
+
+/**
+ * Response from skills.sh registry search API
+ */
+export interface SearchSkillsResponse {
+  /** Array of search results */
+  skills: SearchSkillResult[];
+}
+
+/**
+ * Installation status check result
+ */
+export interface SkillInstallationStatus {
+  /** Whether the skill is installed */
+  installed: boolean;
+  /** Path to installed skill (if installed) */
+  skillPath?: string;
+  /** Installation timestamp (if installed) */
+  installedAt?: string;
+}
+
+/**
+ * Installation progress event
+ */
+export interface InstallProgressEvent {
+  /** Current installation stage */
+  stage: 'cloning' | 'discovering' | 'copying' | 'writing_metadata' | 'cleaning_up' | 'completed' | 'failed';
+  /** Progress message */
+  message: string;
+  /** Progress percentage (0-100) */
+  progress?: number;
+}
+
+/**
+ * Registry-specific error codes
+ */
+export type RegistryErrorCode =
+  | 'REGISTRY_NETWORK_ERROR'
+  | 'REGISTRY_TIMEOUT'
+  | 'REGISTRY_INVALID_RESPONSE'
+  | 'GIT_NOT_FOUND'
+  | 'REPO_NOT_FOUND'
+  | 'REPO_PRIVATE'
+  | 'REPO_NETWORK_ERROR'
+  | 'DISK_SPACE_ERROR'
+  | 'INVALID_SKILL'
+  | 'INSTALLATION_FAILED';
 

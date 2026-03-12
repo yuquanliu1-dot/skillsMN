@@ -13,15 +13,23 @@ interface PrivateSkillCardProps {
   skill: PrivateSkill;
   repo: PrivateRepo;
   onInstallComplete?: () => void;
+  onSkillClick?: (skill: PrivateSkill) => void;
 }
 
-export default function PrivateSkillCard({ skill, repo, onInstallComplete }: PrivateSkillCardProps): JSX.Element {
+export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSkillClick }: PrivateSkillCardProps): JSX.Element {
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [installProgress, setInstallProgress] = useState<'idle' | 'installing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleInstallClick = () => {
+  const handleCardClick = () => {
+    if (onSkillClick) {
+      onSkillClick(skill);
+    }
+  };
+
+  const handleInstallClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
     setShowInstallDialog(true);
     setInstallProgress('idle');
     setErrorMessage(null);

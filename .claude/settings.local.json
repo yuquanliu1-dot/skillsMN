@@ -21,7 +21,20 @@
       "Bash(node test-sdk-fetch.js)",
       "Bash(node test-sdk-custom-headers.js)",
       "Bash(node test-fix.js)",
-      "Bash(node test-github-search.js)"
+      "Bash(node test-github-search.js)",
+      "Bash(npm install:*)",
+      "Bash(netstat -ano | findstr :5173)",
+      "Bash(taskkill /F /PID 9144)",
+      "Bash(cp -r \"C:\\\\Users\\\\lyq\\\\.claude\\\\skills\\\\ui-ux-pro-max\" /tmp/devops-skills/)",
+      "Bash(npm list:*)",
+      "Bash(node scripts/test-ai-assistant.js)",
+      "Bash(node scripts/test-ai-functional.js)",
+      "Bash(node scripts/test-ai-complete.js)",
+      "Bash(node scripts/check-ai-config.js)",
+      "Bash(git ls-remote:*)",
+      "Bash(git branch:*)",
+      "Bash(ls -d specs/[0-9]*-skills-registry-search 2>/dev/null || echo \"No specs directories found\")",
+      "Bash(ls -d specs/[0-9]*-* 2>/dev/null | sed 's/specs\\\\///' | sed 's/-.*$//' | sort -n | tail -1 || echo \"0\")"
     ]
   }
 }

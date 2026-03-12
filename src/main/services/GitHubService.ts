@@ -894,4 +894,34 @@ export class GitHubService {
       throw error;
     }
   }
+
+  /**
+   * Get private repository skill file content
+   */
+  static async getPrivateRepoSkillContent(
+    owner: string,
+    repo: string,
+    skillPath: string,
+    pat?: string,
+    branch?: string
+  ): Promise<string> {
+    const octokit = await this.getAuthenticatedOctokit();
+
+    const actualBranch = branch || 'main';
+    const fullPath = skillPath.startsWith('/') ? skillPath : `${pat}/${skillPath}`;
+
+    const response = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path: fullPath,
+      ref: actualBranch,
+    });
+
+    if (response.status === 200) {
+      const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
+      return content;
+    }
+
+    throw new Error(`Failed to fetch skill content: ${response.status}`);
+  }
 }

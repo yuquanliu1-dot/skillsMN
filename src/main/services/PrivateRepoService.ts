@@ -632,4 +632,32 @@ export class PrivateRepoService {
       };
     }
   }
+
+  /**
+   * Get skill content from a private repository
+   */
+  static async getSkillContent(repoId: string, skillPath: string): Promise<string> {
+    try {
+      const repo = await this.getRepo(repoId);
+      if (!repo) {
+        throw new Error('Repository not found');
+      }
+
+      // Decrypt PAT
+      const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
+
+      const content = await GitHubService.getPrivateRepoSkillContent(
+        repo.owner,
+        repo.repo,
+        skillPath,
+        pat,
+        repo.branch
+      );
+
+      return content;
+    } catch (error) {
+      logger.error('Failed to get skill content', 'PrivateRepoService', error);
+      throw error;
+    }
+  }
 }

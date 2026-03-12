@@ -19,9 +19,18 @@ interface SkillEditorProps {
   onClose: () => void;
   onSave: (content: string, loadedLastModified: number) => Promise<void>;
   isInline?: boolean;
+  content?: string;
+  readOnly?: boolean;
 }
 
-export default function SkillEditor({ skill, onClose, onSave, isInline = false }: SkillEditorProps): JSX.Element {
+export default function SkillEditor({
+  skill,
+  onClose,
+  onSave,
+  isInline = false,
+  content: externalContent,
+  readOnly = false
+}: SkillEditorProps): JSX.Element {
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -45,6 +54,16 @@ export default function SkillEditor({ skill, onClose, onSave, isInline = false }
         setIsLoading(true);
         setError(null);
 
+        // If external content is provided, use it directly
+        if (externalContent !== undefined) {
+          if (isMounted) {
+            setContent(externalContent);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        // Otherwise, load from API
         console.log('[SkillEditor] Starting to load skill:', skill.path);
         console.log('[SkillEditor] Skill object:', skill);
 

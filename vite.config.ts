@@ -8,6 +8,11 @@ export default defineConfig({
   base: './',
   root: 'src/renderer',
   publicDir: path.resolve(__dirname, 'src/renderer/public'),
+  server: {
+    port: 5173,
+    strictPort: true,
+    host: true
+  },
   build: {
     outDir: path.resolve(__dirname, 'dist/renderer'),
     emptyOutDir: false,

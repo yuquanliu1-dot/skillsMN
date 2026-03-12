@@ -1,0 +1,190 @@
+{
+  "timestamp": "2026-03-12T04:36:40.943Z",
+  "total": 7,
+  "passed": 7,
+  "failed": 0,
+  "percentage": 100,
+  "results": [
+    {
+      "name": "Generation modes",
+      "passed": true,
+      "details": [
+        {
+          "mode": "new",
+          "success": true,
+          "contentLength": 363,
+          "hasFrontmatter": true
+        },
+        {
+          "mode": "modify",
+          "success": true,
+          "contentLength": 484,
+          "hasFrontmatter": true
+        },
+        {
+          "mode": "insert",
+          "success": true,
+          "contentLength": 341,
+          "hasFrontmatter": true
+        },
+        {
+          "mode": "replace",
+          "success": true,
+          "contentLength": 49,
+          "hasFrontmatter": true
+        }
+      ]
+    },
+    {
+      "name": "Mode validation",
+      "passed": true,
+      "details": [
+        {
+          "mode": "new",
+          "isValid": true,
+          "expected": "valid",
+          "correct": true
+        },
+        {
+          "mode": "modify",
+          "isValid": true,
+          "expected": "valid",
+          "correct": true
+        },
+        {
+          "mode": "insert",
+          "isValid": true,
+          "expected": "valid",
+          "correct": true
+        },
+        {
+          "mode": "replace",
+          "isValid": true,
+          "expected": "valid",
+          "correct": true
+        },
+        {
+          "mode": "invalid",
+          "isValid": false,
+          "expected": "invalid",
+          "correct": true
+        },
+        {
+          "mode": "create",
+          "isValid": false,
+          "expected": "invalid",
+          "correct": true
+        },
+        {
+          "mode": "delete",
+          "isValid": false,
+          "expected": "invalid",
+          "correct": true
+        },
+        {
+          "mode": "null/undefined",
+          "isValid": false,
+          "expected": "invalid",
+          "correct": true
+        },
+        {
+          "mode": "null/undefined",
+          "isValid": false,
+          "expected": "invalid",
+          "correct": true
+        },
+        {
+          "mode": "null/undefined",
+          "isValid": false,
+          "expected": "invalid",
+          "correct": true
+        }
+      ]
+    },
+    {
+      "name": "Streaming simulation",
+      "passed": true,
+      "details": {
+        "totalChunks": 18,
+        "finalLength": 364,
+        "expectedLength": 364,
+        "isComplete": true
+      }
+    },
+    {
+      "name": "Cancellation scenario",
+      "passed": true,
+      "details": {
+        "totalChunks": 18,
+        "receivedChunks": 10,
+        "cancelledAt": 9,
+        "wasCancelled": true,
+        "cancelledCorrectly": true
+      }
+    },
+    {
+      "name": "Context handling",
+      "passed": true,
+      "details": [
+        {
+          "mode": "modify",
+          "hasContext": true,
+          "contextRequired": true,
+          "valid": true
+        },
+        {
+          "mode": "insert",
+          "hasContext": true,
+          "contextRequired": true,
+          "valid": true
+        },
+        {
+          "mode": "replace",
+          "hasContext": true,
+          "contextRequired": true,
+          "valid": true
+        },
+        {
+          "mode": "new",
+          "hasContext": false,
+          "contextRequired": false,
+          "valid": true
+        }
+      ]
+    },
+    {
+      "name": "Error handling",
+      "passed": true,
+      "details": [
+        {
+          "scenario": "Invalid API key",
+          "handled": true,
+          "isExpected": true,
+          "errorMessage": "Invalid API key"
+        },
+        {
+          "scenario": "Network error",
+          "handled": true,
+          "isExpected": true,
+          "errorMessage": "Network request failed"
+        },
+        {
+          "scenario": "Rate limit",
+          "handled": true,
+          "isExpected": true,
+          "errorMessage": "Rate limit exceeded"
+        }
+      ]
+    },
+    {
+      "name": "Timeout scenario",
+      "passed": true,
+      "details": {
+        "timeoutMs": 1000,
+        "elapsedMs": 1015,
+        "timedOut": true,
+        "result": "timeout"
+      }
+    }
+  ]
+}
