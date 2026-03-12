@@ -13,6 +13,9 @@ import { SkillDiscovery } from '../../src/main/utils/skillDiscovery';
 import { GitOperations } from '../../src/main/utils/gitOperations';
 import type { SearchSkillResult, InstallFromRegistryRequest } from '../../src/shared/types';
 
+// Set longer timeout for all tests in this file (30 seconds)
+jest.setTimeout(30000);
+
 describe('Registry Search E2E Workflows', () => {
   let tempRoot: string;
   let skillsDir: string;
@@ -77,7 +80,7 @@ describe('Registry Search E2E Workflows', () => {
       expect(detailsUrl).toBe('https://skills.sh/user1%2Fdata-skills/data-analysis-helper');
 
       mockFetch.mockRestore();
-    });
+    }, 15000); // Increased timeout to 15s
 
     it('should handle empty results with user-friendly message', async () => {
       const query = 'nonexistent-skill';

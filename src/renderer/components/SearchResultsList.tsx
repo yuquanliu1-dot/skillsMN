@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { SearchSkillResult } from '../../../shared/types';
+import SearchResultCard from './SkillResultCard';
 import { SkillResultCard } from './SkillResultCard';
 
 interface SearchResultsListProps {

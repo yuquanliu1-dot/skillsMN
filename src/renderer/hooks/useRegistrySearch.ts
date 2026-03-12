@@ -12,6 +12,7 @@ export interface UseRegistrySearchResult {
   results: SearchSkillResult[];
   isLoading: boolean;
   error: string | null;
+  setQuery: (query: string) => void;
 }
 
 export function useRegistrySearch(debounceMs: number = 400): UseRegistrySearchResult {
