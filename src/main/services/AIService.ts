@@ -11,7 +11,6 @@ import { logger } from '../utils/Logger';
 import type { AIGenerationRequest, AIStreamChunk } from '../models/AIGenerationRequest';
 import { validateAIGenerationRequest } from '../models/AIGenerationRequest';
 import type { AIConfiguration } from '../../shared/types';
-import { z } from 'zod';
 
 // Dynamic imports for Claude Agent SDK (ES Module)
 type ClaudeAgentSDK = {
@@ -128,50 +127,33 @@ export class AIService {
   }
 
   /**
-   * Create the skill-creator tool using MCP
+   * Load skill-creator skill content to include in system prompt
    * @private
    */
-  private static async createSkillCreatorTool() {
-    const { tool } = await loadSDK();
-
-    return tool(
-      'create_skill',
-      'Create a new Claude Code skill file with proper format and content. Use this tool to generate skill files based on user requirements.',
-      {
-        name: z.string().describe('The name of the skill (will be used as filename)'),
-        description: z.string().describe('Brief description of what the skill does'),
-        content: z.string().describe('The full Markdown content of the skill (including frontmatter)'),
-        mode: z.enum(['new', 'modify', 'insert', 'replace']).describe('Generation mode'),
-        context: z.string().optional().describe('Existing skill content (for modify/insert/replace modes)')
-      },
-      async (args: any) => {
-        // This tool doesn't actually create files - it just validates and returns the content
-        // The actual file creation will be handled by the caller
-        return {
-          content: [
-            {
-              type: 'text',
-              text: args.content,
-            },
-          ],
-        };
+  private static async loadSkillCreatorContent(): Promise<string> {
+    try {
+      // Try to load from project skills first
+      const projectSkillPath = path.join(process.cwd(), '.claude', 'skills', 'skill-creator', 'skill.md');
+      if (fs.existsSync(projectSkillPath)) {
+        const content = fs.readFileSync(projectSkillPath, 'utf-8');
+        logger.debug('Loaded skill-creator from project directory', 'AIService');
+        return content;
       }
-    );
-  }
 
-  /**
-   * Create MCP server with skill-creator tool
-   * @private
-   */
-  private static async createMCPServer() {
-    const { createSdkMcpServer } = await loadSDK();
-    const skillCreatorTool = await AIService.createSkillCreatorTool();
+      // Try global skills directory
+      const globalSkillPath = path.join(require('os').homedir(), '.claude', 'skills', 'skill-creator', 'skill.md');
+      if (fs.existsSync(globalSkillPath)) {
+        const content = fs.readFileSync(globalSkillPath, 'utf-8');
+        logger.debug('Loaded skill-creator from global directory', 'AIService');
+        return content;
+      }
 
-    return createSdkMcpServer({
-      name: 'skill-tools',
-      version: '1.0.0',
-      tools: [skillCreatorTool],
-    });
+      logger.warn('skill-creator skill not found, using default guidelines', 'AIService');
+      return '';
+    } catch (error) {
+      logger.error('Failed to load skill-creator skill', 'AIService', error);
+      return '';
+    }
   }
 
   /**
@@ -202,24 +184,20 @@ export class AIService {
       // Build the user prompt
       const userPrompt = AIService.buildUserPrompt(request);
 
-      // Build system prompt
-      const systemPrompt = AIService.buildSystemPrompt(request.mode);
+      // Load skill-creator skill content
+      const skillCreatorContent = await AIService.loadSkillCreatorContent();
 
-      // Create MCP server with tools
-      const mcpServer = await AIService.createMCPServer();
+      // Build system prompt with skill-creator knowledge
+      const systemPrompt = AIService.buildSystemPrompt(request.mode, skillCreatorContent);
 
       // Load SDK and use query
       const { query } = await loadSDK();
 
-      // Use Claude Agent SDK query
+      // Use Claude Agent SDK query (no tools needed - skill-creator is knowledge, not a tool)
       const stream = query({
         prompt: userPrompt,
         options: {
           systemPrompt,
-          mcpServers: {
-            'skill-tools': mcpServer,
-          },
-          allowedTools: ['mcp__skill-tools__create_skill'],
           // Use configured model
           model: currentConfig?.model || 'claude-sonnet-4-6-20250514',
         },
@@ -363,7 +341,7 @@ export class AIService {
    * Build system prompt based on generation mode
    * @private
    */
-  private static buildSystemPrompt(mode: AIGenerationRequest['mode']): string {
+  private static buildSystemPrompt(mode: AIGenerationRequest['mode'], skillCreatorContent: string = ''): string {
     const basePrompt = `You are an expert skill creator for Claude Code, a desktop application that helps developers manage Claude Code skills. A skill is a YAML + Markdown file that extends Claude's capabilities with specialized knowledge.
 
 Skills follow this format:
@@ -376,8 +354,6 @@ description: Brief description of the skill
 
 Markdown content here with instructions, examples, and guidance.
 
-You have access to the skill-creator skill which provides comprehensive guidelines for creating effective skills. Use it to ensure you follow best practices.
-
 Guidelines for skill generation:
 - Use clear, concise language
 - Include practical examples
@@ -386,30 +362,22 @@ Guidelines for skill generation:
 - Follow Markdown best practices
 - Make content actionable and specific`;
 
-    switch (mode) {
-      case 'new':
-        return `${basePrompt}
+    // Include skill-creator skill content if available
+    const skillCreatorSection = skillCreatorContent
+      ? `\n\n## Skill Creation Guidelines\n\nRefer to the following comprehensive skill creation guide:\n\n${skillCreatorContent}`
+      : '';
 
-You are generating a NEW skill from scratch based on the user's prompt. Create complete, production-ready skill content with proper frontmatter and comprehensive markdown content.`;
+    const modeInstructions = {
+      new: '\n\nYou are generating a NEW skill from scratch based on the user\'s prompt. Create complete, production-ready skill content with proper frontmatter and comprehensive markdown content.',
 
-      case 'modify':
-        return `${basePrompt}
+      modify: '\n\nYou are MODIFYING existing skill content based on the user\'s instructions. Improve, expand, or refine the existing content while preserving its core purpose.',
 
-You are MODIFYING existing skill content based on the user's instructions. Improve, expand, or refine the existing content while preserving its core purpose.`;
+      insert: '\n\nYou are INSERTING new content into existing skill content at a specified position. Generate content that fits naturally into the existing skill.',
 
-      case 'insert':
-        return `${basePrompt}
+      replace: '\n\nYou are REPLACING a selected portion of existing skill content with new content. Generate replacement content that maintains context and flow.'
+    };
 
-You are INSERTING new content into existing skill content at a specified position. Generate content that fits naturally into the existing skill.`;
-
-      case 'replace':
-        return `${basePrompt}
-
-You are REPLACING a selected portion of existing skill content with new content. Generate replacement content that maintains context and flow.`;
-
-      default:
-        return basePrompt;
-    }
+    return basePrompt + skillCreatorSection + (modeInstructions[mode] || '');
   }
 
   /**
