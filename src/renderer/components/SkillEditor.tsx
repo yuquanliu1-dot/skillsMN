@@ -8,8 +8,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Editor, { OnMount, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor';
-import type { Skill } from '../../shared/types';
+import type { Skill, AIGenerationMode } from '../../shared/types';
 import { AIAssistPanel } from './AIAssistPanel';
+import { AIAssistantPopover } from './AIAssistantPopover';
+import { ipcClient } from '../services/ipcClient';
+import { useAIGeneration } from '../hooks/useAIGeneration';
 
 // Configure Monaco to use local installation instead of CDN
 loader.config({ monaco });
@@ -40,8 +43,17 @@ export default function SkillEditor({
   const [loadedLastModified, setLoadedLastModified] = useState<number | null>(null);
   const [externalChangeDetected, setExternalChangeDetected] = useState(false);
   const [isAIAssistPanelOpen, setIsAIAssistPanelOpen] = useState<boolean>(false);
+  const [isAIRewritePopoverOpen, setIsAIRewritePopoverOpen] = useState<boolean>(false);
+  const [rewriteSelection, setRewriteSelection] = useState<{ text: string; range: monaco.Range } | null>(null);
+  const [rewritePopoverPosition, setRewritePopoverPosition] = useState<{ x: number; y: number } | undefined>();
+  const [isAIInsertPopoverOpen, setIsAIInsertPopoverOpen] = useState<boolean>(false);
+  const [insertPosition, setInsertPosition] = useState<{ line: number; column: number } | null>(null);
+  const [insertPopoverPosition, setInsertPopoverPosition] = useState<{ x: number; y: number } | undefined>();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // AI generation hook for rewrite
+  const { status: aiStatus, content: aiContent, generate, reset: resetAI } = useAIGeneration();
 
   /**
    * Load skill content on mount
@@ -127,6 +139,84 @@ export default function SkillEditor({
    */
   const handleEditorDidMount: OnMount = (editor) => {
     editorRef.current = editor;
+
+    // Add custom context menu action for AI Rewrite
+    editor.addAction({
+      id: 'ai-rewrite',
+      label: 'AI Rewrite',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyR],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.5,
+      run: (ed) => {
+        const selection = ed.getSelection();
+        if (!selection || selection.isEmpty()) {
+          return;
+        }
+
+        const model = ed.getModel();
+        if (!model) return;
+
+        const selectedText = model.getValueInRange(selection);
+
+        // Get cursor position for popover placement
+        const position = ed.getPosition();
+        if (!position) return;
+
+        // Convert editor position to screen coordinates
+        const editorCoords = ed.getScrolledVisiblePosition(position);
+        const editorDomNode = ed.getDomNode();
+        if (!editorCoords || !editorDomNode) return;
+
+        const rect = editorDomNode.getBoundingClientRect();
+        const screenX = rect.left + editorCoords.left;
+        const screenY = rect.top + editorCoords.top;
+
+        // Store selection and position, then open popover
+        setRewriteSelection({
+          text: selectedText,
+          range: selection,
+        });
+        setRewritePopoverPosition({ x: screenX, y: screenY });
+        setIsAIRewritePopoverOpen(true);
+      },
+    });
+
+    // Add custom context menu action for AI Insert
+    editor.addAction({
+      id: 'ai-insert',
+      label: 'AI Insert',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyI],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.6,
+      run: (ed) => {
+        const selection = ed.getSelection();
+        // Only show if there's NO selection (empty selection means cursor is just positioned)
+        if (!selection || !selection.isEmpty()) {
+          return;
+        }
+
+        // Get cursor position for popover placement
+        const position = ed.getPosition();
+        if (!position) return;
+
+        // Convert editor position to screen coordinates
+        const editorCoords = ed.getScrolledVisiblePosition(position);
+        const editorDomNode = ed.getDomNode();
+        if (!editorCoords || !editorDomNode) return;
+
+        const rect = editorDomNode.getBoundingClientRect();
+        const screenX = rect.left + editorCoords.left;
+        const screenY = rect.top + editorCoords.top;
+
+        // Store cursor position and open popover
+        setInsertPosition({
+          line: position.lineNumber,
+          column: position.column,
+        });
+        setInsertPopoverPosition({ x: screenX, y: screenY });
+        setIsAIInsertPopoverOpen(true);
+      },
+    });
 
     // Focus editor
     editor.focus();
@@ -261,7 +351,81 @@ export default function SkillEditor({
   /**
    * Handle applying AI-generated content to editor
    */
-  const handleApplyAIContent = useCallback((generatedContent: string) => {
+  /**
+   * Parse skill name from YAML frontmatter
+   */
+  const parseSkillNameFromFrontmatter = useCallback((content: string): string | null => {
+    // Match YAML frontmatter between --- markers
+    const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
+    if (!frontmatterMatch) {
+      console.error('No YAML frontmatter found in content');
+      console.log('Content preview:', content.substring(0, 200));
+      return null;
+    }
+
+    const frontmatter = frontmatterMatch[1];
+    console.log('Found frontmatter:', frontmatter);
+
+    // Try to match name field with various formats
+    // Handles: name: Value, name: "Value", name: 'Value'
+    const nameMatch = frontmatter.match(/^name:\s*["']?(.+?)["']?\s*$/m);
+    if (!nameMatch) {
+      console.error('No name field found in frontmatter');
+      return null;
+    }
+
+    const skillName = nameMatch[1].trim();
+    console.log('Parsed skill name:', skillName);
+    return skillName;
+  }, []);
+
+  /**
+   * Handle AI-generated content application
+   */
+  const handleApplyAIContent = useCallback(async (generatedContent: string, mode: AIGenerationMode) => {
+    console.log('handleApplyAIContent called with mode:', mode);
+    console.log('Generated content length:', generatedContent.length);
+    console.log('Content preview:', generatedContent.substring(0, 300));
+
+    // If creating a new skill, save it to the project directory
+    if (mode === 'new') {
+      try {
+        const skillName = parseSkillNameFromFrontmatter(generatedContent);
+        if (!skillName) {
+          const errorMsg = 'Failed to parse skill name from generated content. Please ensure the content includes YAML frontmatter with a "name" field.';
+          console.error(errorMsg);
+          setError(errorMsg);
+          alert(errorMsg + '\n\nGenerated content:\n' + generatedContent.substring(0, 500));
+          return;
+        }
+
+        console.log('Creating skill with name:', skillName);
+
+        // Create the skill in the project directory
+        const newSkill = await ipcClient.createSkill(skillName, 'project');
+        console.log('Skill created:', newSkill);
+
+        // Update the skill with the generated content
+        await ipcClient.updateSkill(newSkill.path, generatedContent);
+        console.log('Skill content updated');
+
+        // Close the AI panel
+        setIsAIAssistPanelOpen(false);
+
+        // Notify parent to refresh and open the new skill
+        setError(null);
+        alert(`✅ Skill "${skillName}" created successfully!\n\nLocation: .claude/skills/${skillName}/skill.md`);
+        onClose();
+      } catch (error) {
+        console.error('Failed to create skill:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Failed to create skill';
+        setError(errorMsg);
+        alert('Failed to create skill: ' + errorMsg);
+      }
+      return;
+    }
+
+    // For other modes, insert/replace content in the editor
     if (!editorRef.current) return;
 
     const selection = editorRef.current.getSelection();
@@ -277,7 +441,7 @@ export default function SkillEditor({
         },
       ]);
     } else {
-      // Otherwise, insert at cursor position (insert/new mode)
+      // Otherwise, insert at cursor position (insert/modify mode)
       const position = editorRef.current.getPosition();
       if (position) {
         editorRef.current.executeEdits('ai-assist', [
@@ -290,7 +454,88 @@ export default function SkillEditor({
     }
 
     setHasUnsavedChanges(true);
-  }, []);
+  }, [parseSkillNameFromFrontmatter, onClose]);
+
+  /**
+   * Handle AI Rewrite confirmation
+   */
+  const handleAIRewriteConfirm = useCallback((prompt: string) => {
+    if (!rewriteSelection) return;
+
+    generate(prompt, 'replace', {
+      content,
+      selectedText: rewriteSelection.text,
+      cursorPosition: undefined,
+    });
+  }, [rewriteSelection, content, generate]);
+
+  /**
+   * Handle AI Insert confirmation
+   */
+  const handleAIInsertConfirm = useCallback((prompt: string) => {
+    if (!insertPosition) return;
+
+    generate(prompt, 'insert', {
+      content,
+      selectedText: undefined,
+      cursorPosition: undefined,
+    });
+  }, [insertPosition, content, generate]);
+
+  /**
+   * Watch for AI rewrite completion
+   */
+  useEffect(() => {
+    if (aiStatus === 'COMPLETE' && aiContent && rewriteSelection && editorRef.current) {
+      // Replace the selected text with AI-generated content
+      editorRef.current.executeEdits('ai-rewrite', [
+        {
+          range: rewriteSelection.range,
+          text: aiContent,
+        },
+      ]);
+
+      setHasUnsavedChanges(true);
+      setIsAIRewritePopoverOpen(false);
+      setRewriteSelection(null);
+      resetAI();
+    } else if (aiStatus === 'ERROR') {
+      // Close popover on error
+      setIsAIRewritePopoverOpen(false);
+      setRewriteSelection(null);
+      resetAI();
+    }
+  }, [aiStatus, aiContent, rewriteSelection, resetAI]);
+
+  /**
+   * Watch for AI insert completion
+   */
+  useEffect(() => {
+    if (aiStatus === 'COMPLETE' && aiContent && insertPosition && editorRef.current) {
+      // Insert the AI-generated content at cursor position
+      editorRef.current.executeEdits('ai-insert', [
+        {
+          range: new monaco.Range(
+            insertPosition.line,
+            insertPosition.column,
+            insertPosition.line,
+            insertPosition.column
+          ),
+          text: aiContent,
+        },
+      ]);
+
+      setHasUnsavedChanges(true);
+      setIsAIInsertPopoverOpen(false);
+      setInsertPosition(null);
+      resetAI();
+    } else if (aiStatus === 'ERROR') {
+      // Close popover on error
+      setIsAIInsertPopoverOpen(false);
+      setInsertPosition(null);
+      resetAI();
+    }
+  }, [aiStatus, aiContent, insertPosition, resetAI]);
 
   /**
    * Keyboard shortcuts
@@ -670,6 +915,39 @@ export default function SkillEditor({
           editorContent={content}
           cursorPosition={getCursorPosition()}
           selectedText={getSelectedText()}
+        />
+      )}
+
+      {/* AI Rewrite Popover */}
+      {isAIRewritePopoverOpen && rewriteSelection && (
+        <AIAssistantPopover
+          isOpen={isAIRewritePopoverOpen}
+          mode="rewrite"
+          selectedText={rewriteSelection.text}
+          onClose={() => {
+            setIsAIRewritePopoverOpen(false);
+            setRewriteSelection(null);
+            resetAI();
+          }}
+          onConfirm={handleAIRewriteConfirm}
+          isProcessing={aiStatus === 'STREAMING'}
+          position={rewritePopoverPosition}
+        />
+      )}
+
+      {/* AI Insert Popover */}
+      {isAIInsertPopoverOpen && insertPosition && (
+        <AIAssistantPopover
+          isOpen={isAIInsertPopoverOpen}
+          mode="insert"
+          onClose={() => {
+            setIsAIInsertPopoverOpen(false);
+            setInsertPosition(null);
+            resetAI();
+          }}
+          onConfirm={handleAIInsertConfirm}
+          isProcessing={aiStatus === 'STREAMING'}
+          position={insertPopoverPosition}
         />
       )}
     </div>
