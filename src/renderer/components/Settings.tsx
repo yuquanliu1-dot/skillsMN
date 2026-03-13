@@ -504,10 +504,10 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: activeTab === 'general' ? 'block' : 'none' }}>
           {/* Default Install Directory */}
-          <div className="mb-4">
+          <div className="mb-3">
             <label
               htmlFor="default-install-directory"
-              className="block text-sm font-medium text-slate-700 mb-2"
+              className="block text-sm font-medium text-slate-700 mb-1.5"
             >
               Default Install Directory
             </label>
@@ -521,16 +521,13 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
               <option value="project">Project Directory</option>
               <option value="global">Global Directory</option>
             </select>
-            <p className="text-xs text-slate-500 mt-1">
-              Where new skills are created by default
-            </p>
           </div>
 
           {/* Editor Default Mode */}
-          <div className="mb-4">
+          <div className="mb-3">
             <label
               htmlFor="editor-default-mode"
-              className="block text-sm font-medium text-slate-700 mb-2"
+              className="block text-sm font-medium text-slate-700 mb-1.5"
             >
               Editor Default Mode
             </label>
@@ -544,14 +541,11 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
               <option value="edit">Edit Mode</option>
               <option value="preview">Preview Mode</option>
             </select>
-            <p className="text-xs text-slate-500 mt-1">
-              Default mode when opening skill editor
-            </p>
           </div>
 
           {/* Auto Refresh */}
-          <div className="mb-6">
-            <label className="flex items-center gap-3 cursor-pointer">
+          <div className="mb-4">
+            <label className="flex items-center gap-2.5 cursor-pointer">
               <input
                 type="checkbox"
                 checked={autoRefresh}
@@ -559,38 +553,33 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
                 disabled={isSaving}
               />
-              <div>
-                <span className="text-sm font-medium text-slate-700">Auto Refresh</span>
-                <p className="text-xs text-slate-500">
-                  Automatically refresh skill list when files change
-                </p>
-              </div>
+              <span className="text-sm text-slate-700">Auto-refresh skill list on file changes</span>
             </label>
           </div>
 
           {/* Keyboard Shortcuts */}
-          <div className="mb-6 pt-6 border-t border-slate-200">
-            <h3 className="text-sm font-medium text-slate-700 mb-3">Keyboard Shortcuts</h3>
-            <div className="space-y-2">
+          <div className="pt-4 border-t border-slate-200">
+            <h3 className="text-sm font-medium text-slate-700 mb-2.5">Keyboard Shortcuts</h3>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">Create new skill</span>
-                <kbd className="px-2 py-1 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+N</kbd>
+                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+N</kbd>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">Save skill</span>
-                <kbd className="px-2 py-1 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+S</kbd>
+                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+S</kbd>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">Close editor</span>
-                <kbd className="px-2 py-1 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+W</kbd>
+                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+W</kbd>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">Delete selected skill</span>
-                <kbd className="px-2 py-1 bg-slate-100 rounded text-xs text-slate-700 font-mono">Delete</kbd>
+                <span className="text-slate-600">Delete skill</span>
+                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Delete</kbd>
               </div>
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-sm col-span-2">
                 <span className="text-slate-600">Close dialog</span>
-                <kbd className="px-2 py-1 bg-slate-100 rounded text-xs text-slate-700 font-mono">Escape</kbd>
+                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Escape</kbd>
               </div>
             </div>
           </div>
@@ -663,13 +652,13 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
         {activeTab === 'repositories' && (
           <div>
             {/* Add Repository Button */}
-            <div className="mb-4">
+            <div className="mb-3">
               <button
                 onClick={() => setShowAddRepoForm(!showAddRepoForm)}
-                className="btn btn-primary"
+                className="btn btn-primary btn-sm"
                 disabled={isAddingRepo}
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Add Repository
@@ -678,12 +667,12 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
 
             {/* Add Repository Form */}
             {showAddRepoForm && (
-              <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                <h3 className="text-sm font-medium text-slate-700 mb-4">Add Private Repository</h3>
+              <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <h3 className="text-sm font-medium text-slate-700 mb-3">Add Private Repository</h3>
                 <form onSubmit={handleAddRepo}>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
                         Repository URL
                       </label>
                       <input
@@ -695,59 +684,55 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                         disabled={isAddingRepo}
                         required
                       />
-                      <p className="text-xs text-slate-500 mt-1">
-                        Full GitHub repository URL
-                      </p>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Personal Access Token (PAT)
-                      </label>
-                      <input
-                        type="password"
-                        value={newRepoPAT}
-                        onChange={(e) => setNewRepoPAT(e.target.value)}
-                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                        className="input w-full"
-                        disabled={isAddingRepo}
-                        required
-                      />
-                      <p className="text-xs text-slate-500 mt-1">
-                        Requires 'repo' scope for private repositories
-                      </p>
-                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          Personal Access Token
+                        </label>
+                        <input
+                          type="password"
+                          value={newRepoPAT}
+                          onChange={(e) => setNewRepoPAT(e.target.value)}
+                          placeholder="ghp_xxxx..."
+                          className="input w-full text-sm"
+                          disabled={isAddingRepo}
+                          required
+                        />
+                      </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Display Name (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={newRepoDisplayName}
-                        onChange={(e) => setNewRepoDisplayName(e.target.value)}
-                        placeholder="My Team Skills"
-                        className="input w-full"
-                        disabled={isAddingRepo}
-                      />
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          Display Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newRepoDisplayName}
+                          onChange={(e) => setNewRepoDisplayName(e.target.value)}
+                          placeholder="My Team Skills"
+                          className="input w-full text-sm"
+                          disabled={isAddingRepo}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 mt-4">
+                  <div className="flex justify-end gap-2 mt-3">
                     <button
                       type="button"
                       onClick={() => setShowAddRepoForm(false)}
-                      className="btn btn-secondary"
+                      className="btn btn-secondary btn-sm"
                       disabled={isAddingRepo}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="btn btn-primary"
+                      className="btn btn-primary btn-sm"
                       disabled={isAddingRepo || !newRepoUrl || !newRepoPAT}
                     >
-                      {isAddingRepo ? 'Adding...' : 'Add Repository'}
+                      {isAddingRepo ? 'Adding...' : 'Add'}
                     </button>
                   </div>
                 </form>
@@ -800,13 +785,13 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
 
             {/* Repository List */}
             {isLoadingRepos ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="flex items-center justify-center py-6">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
               </div>
             ) : privateRepos.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="text-center py-6">
                 <svg
-                  className="mx-auto h-12 w-12 text-slate-400"
+                  className="mx-auto h-10 w-10 text-slate-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -818,60 +803,59 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
                   />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-slate-700">No repositories</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Get started by adding a private repository.
-                </p>
+                <p className="mt-2 text-sm text-slate-600">No repositories configured</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {privateRepos.map((repo) => (
                   <div
                     key={repo.id}
-                    className="p-4 bg-slate-50 border border-slate-200 rounded-lg"
+                    className="p-3 bg-slate-50 border border-slate-200 rounded-lg"
                   >
                     {editingRepoId === repo.id ? (
                       // Edit Form
-                      <div className="space-y-3">
+                      <div className="space-y-2.5">
                         <h4 className="text-sm font-medium text-slate-900">Edit Repository</h4>
-                        <div>
-                          <label className="block text-xs font-medium text-slate-700 mb-1">
-                            Display Name
-                          </label>
-                          <input
-                            type="text"
-                            value={editDisplayName}
-                            onChange={(e) => setEditDisplayName(e.target.value)}
-                            placeholder={`${repo.owner}/${repo.repo}`}
-                            className="input w-full text-sm"
-                            disabled={isUpdatingRepo}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-slate-700 mb-1">
-                            New PAT (leave empty to keep current)
-                          </label>
-                          <input
-                            type="password"
-                            value={editPAT}
-                            onChange={(e) => setEditPAT(e.target.value)}
-                            placeholder="Enter new PAT to update"
-                            className="input w-full text-sm"
-                            disabled={isUpdatingRepo}
-                          />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Display Name
+                            </label>
+                            <input
+                              type="text"
+                              value={editDisplayName}
+                              onChange={(e) => setEditDisplayName(e.target.value)}
+                              placeholder={`${repo.owner}/${repo.repo}`}
+                              className="input w-full text-sm"
+                              disabled={isUpdatingRepo}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              New PAT
+                            </label>
+                            <input
+                              type="password"
+                              value={editPAT}
+                              onChange={(e) => setEditPAT(e.target.value)}
+                              placeholder="Leave empty to keep"
+                              className="input w-full text-sm"
+                              disabled={isUpdatingRepo}
+                            />
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleSaveEditRepo(repo.id)}
                             disabled={isUpdatingRepo}
-                            className="btn btn-primary text-xs px-3 py-1"
+                            className="btn btn-primary btn-sm"
                           >
                             {isUpdatingRepo ? 'Saving...' : 'Save'}
                           </button>
                           <button
                             onClick={handleCancelEdit}
                             disabled={isUpdatingRepo}
-                            className="btn btn-secondary text-xs px-3 py-1"
+                            className="btn btn-secondary btn-sm"
                           >
                             Cancel
                           </button>
@@ -879,59 +863,57 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       </div>
                     ) : (
                       // Normal Display
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
                             <svg
-                              className="w-5 h-5 text-slate-600"
+                              className="w-4 h-4 text-slate-600 flex-shrink-0"
                               fill="currentColor"
                               viewBox="0 0 24 24"
                             >
                               <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
                             </svg>
-                            <h4 className="text-sm font-medium text-slate-900">
+                            <h4 className="text-sm font-medium text-slate-900 truncate">
                               {repo.displayName || `${repo.owner}/${repo.repo}`}
                             </h4>
                           </div>
-                          <p className="text-xs text-slate-600 mb-2">{repo.url}</p>
+                          <p className="text-xs text-slate-600 truncate mb-1">{repo.url}</p>
                           {repo.description && (
-                            <p className="text-xs text-slate-500 mb-2">{repo.description}</p>
+                            <p className="text-xs text-slate-500 truncate mb-1">{repo.description}</p>
                           )}
-                          <div className="flex items-center gap-4 text-xs text-slate-500">
-                            <span>Branch: {repo.defaultBranch || 'main'}</span>
+                          <div className="flex items-center gap-3 text-xs text-slate-500">
+                            <span>{repo.defaultBranch || 'main'}</span>
                             {repo.skillCount !== undefined && (
                               <span>{repo.skillCount} skills</span>
                             )}
                             {repo.lastSyncTime && (
-                              <span>
-                                Last sync: {new Date(repo.lastSyncTime).toLocaleDateString()}
-                              </span>
+                              <span>{new Date(repo.lastSyncTime).toLocaleDateString()}</span>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
                           <button
                             onClick={() => handleTestRepo(repo.id)}
                             disabled={testingRepoId === repo.id}
-                            className="btn btn-secondary text-xs px-3 py-1"
+                            className="btn btn-secondary btn-sm"
                             title="Test connection"
                           >
                             {testingRepoId === repo.id ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600"></div>
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-slate-600"></div>
                             ) : (
                               'Test'
                             )}
                           </button>
                           <button
                             onClick={() => handleStartEditRepo(repo)}
-                            className="btn btn-secondary text-xs px-3 py-1"
+                            className="btn btn-secondary btn-sm"
                             title="Edit repository"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleRemoveRepo(repo.id)}
-                            className="btn btn-secondary text-xs px-3 py-1 text-red-600 hover:text-red-700"
+                            className="btn btn-secondary btn-sm text-red-600 hover:text-red-700"
                             title="Remove repository"
                           >
                             Remove
@@ -956,117 +938,109 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : aiConfig ? (
-              <div className="space-y-6">
-                {/* API Base URL */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    API Base URL (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={aiConfig.baseUrl || ''}
-                    onChange={(e) => setAiConfig({ ...aiConfig, baseUrl: e.target.value || undefined })}
-                    placeholder="https://api.anthropic.com"
-                    className="input w-full"
-                    disabled={isSavingAI}
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Custom API endpoint (leave empty for default)
-                  </p>
-                </div>
+              <div className="space-y-4">
+                {/* API Configuration Group */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">API Configuration</h3>
 
-                {/* API Key */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    API Key
-                  </label>
-                  <input
-                    type="password"
-                    value={aiConfig.apiKey}
-                    onChange={(e) => setAiConfig({ ...aiConfig, apiKey: e.target.value })}
-                    placeholder="sk-ant-..."
-                    className="input w-full"
-                    disabled={isSavingAI}
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Your Anthropic API key (stored encrypted)
-                  </p>
-                </div>
-
-                {/* Model Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Model
-                  </label>
-                  <input
-                    type="text"
-                    value={aiConfig.model}
-                    onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
-                    className="input w-full"
-                    disabled={isSavingAI}
-                    placeholder="e.g., claude-3-sonnet-20240229, glm-5, glm-4"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Supported models: claude-3-opus, claude-3-sonnet, claude-3-haiku, glm-5, glm-4
-                  </p>
-                </div>
-
-                {/* Streaming Toggle */}
-                <div>
-                  <label className="flex items-center gap-3 cursor-pointer">
+                  {/* API Key - Full width */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      API Key
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={aiConfig.streamingEnabled}
-                      onChange={(e) => setAiConfig({ ...aiConfig, streamingEnabled: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
+                      type="password"
+                      value={aiConfig.apiKey}
+                      onChange={(e) => setAiConfig({ ...aiConfig, apiKey: e.target.value })}
+                      placeholder="sk-ant-..."
+                      className="input w-full"
                       disabled={isSavingAI}
                     />
+                  </div>
+
+                  {/* Base URL and Model - Side by side */}
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <span className="text-sm font-medium text-slate-700">Enable Streaming</span>
-                      <p className="text-xs text-slate-500">
-                        Stream AI responses in real-time
-                      </p>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Base URL
+                      </label>
+                      <input
+                        type="text"
+                        value={aiConfig.baseUrl || ''}
+                        onChange={(e) => setAiConfig({ ...aiConfig, baseUrl: e.target.value || undefined })}
+                        placeholder="https://api.anthropic.com"
+                        className="input w-full text-sm"
+                        disabled={isSavingAI}
+                      />
                     </div>
-                  </label>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Model
+                      </label>
+                      <input
+                        type="text"
+                        value={aiConfig.model}
+                        onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
+                        className="input w-full text-sm"
+                        disabled={isSavingAI}
+                        placeholder="claude-3-sonnet-20240229"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Timeout */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Timeout (ms)
-                  </label>
-                  <input
-                    type="number"
-                    value={aiConfig.timeout}
-                    onChange={(e) => setAiConfig({ ...aiConfig, timeout: parseInt(e.target.value) })}
-                    min={5000}
-                    max={60000}
-                    step={1000}
-                    className="input w-full"
-                    disabled={isSavingAI}
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Maximum time to wait for AI response (5000-60000ms)
-                  </p>
-                </div>
+                {/* Request Settings Group */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">Request Settings</h3>
 
-                {/* Max Retries */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Max Retries
-                  </label>
-                  <input
-                    type="number"
-                    value={aiConfig.maxRetries}
-                    onChange={(e) => setAiConfig({ ...aiConfig, maxRetries: parseInt(e.target.value) })}
-                    min={0}
-                    max={5}
-                    className="input w-full"
-                    disabled={isSavingAI}
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Number of retry attempts on failure (0-5)
-                  </p>
+                  {/* Timeout and Retries - Side by side */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Timeout (ms)
+                      </label>
+                      <input
+                        type="number"
+                        value={aiConfig.timeout}
+                        onChange={(e) => setAiConfig({ ...aiConfig, timeout: parseInt(e.target.value) })}
+                        min={5000}
+                        max={60000}
+                        step={1000}
+                        className="input w-full"
+                        disabled={isSavingAI}
+                      />
+                      <p className="text-xs text-slate-500 mt-1">5,000 - 60,000</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Max Retries
+                      </label>
+                      <input
+                        type="number"
+                        value={aiConfig.maxRetries}
+                        onChange={(e) => setAiConfig({ ...aiConfig, maxRetries: parseInt(e.target.value) })}
+                        min={0}
+                        max={5}
+                        className="input w-full"
+                        disabled={isSavingAI}
+                      />
+                      <p className="text-xs text-slate-500 mt-1">0 - 5 attempts</p>
+                    </div>
+                  </div>
+
+                  {/* Streaming Toggle */}
+                  <div>
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={aiConfig.streamingEnabled}
+                        onChange={(e) => setAiConfig({ ...aiConfig, streamingEnabled: e.target.checked })}
+                        className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
+                        disabled={isSavingAI}
+                      />
+                      <span className="text-sm text-slate-700">Enable streaming responses</span>
+                    </label>
+                  </div>
                 </div>
 
                 {/* Test Result */}
