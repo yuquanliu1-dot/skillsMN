@@ -406,7 +406,13 @@ export default function App(): JSX.Element {
    */
   const handleViewPrivateSkill = async (skill: PrivateSkill) => {
     try {
-      const repo = state.config?.privateRepos?.find(r => r.id === skill.repoId);
+      // Get repository from PrivateRepoService
+      const reposResponse = await window.electronAPI.listPrivateRepos();
+      if (!reposResponse.success || !reposResponse.data) {
+        throw new Error('Failed to load repositories');
+      }
+
+      const repo = reposResponse.data.find(r => r.id === skill.repoId);
       if (!repo) {
         showToast('Repository not found', 'error');
         return;

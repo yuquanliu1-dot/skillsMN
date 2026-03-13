@@ -16,7 +16,7 @@
     "build:renderer": "vite build",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "jest --coverage --coverageReporters=text --coverageReporters=lcov --coverageReporters=html",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
@@ -31,6 +31,7 @@
     "package:linux": "electron-builder --linux"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.74",
     "@anthropic-ai/sdk": "^0.78.0",
     "@monaco-editor/react": "^4.6.0",
     "chokidar": "^3.6.0",

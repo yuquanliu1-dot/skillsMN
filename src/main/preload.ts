@@ -20,6 +20,10 @@ import type {
   CuratedSource,
   InstallProgress,
   AIConfiguration,
+  SearchSkillResult,
+  InstallFromRegistryRequest,
+  SkillInstallationStatus,
+  InstallProgressEvent,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
@@ -269,6 +273,39 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   removeGitHubInstallProgressListener: (): void => {
     ipcRenderer.removeAllListeners(IPC_CHANNELS.GITHUB_INSTALL_PROGRESS);
+  },
+
+  // ============================================================================
+  // Registry Operations (Feature 006 - Skills Registry Search)
+  // ============================================================================
+
+  searchRegistry: (
+    query: string,
+    limit?: number
+  ): Promise<IPCResponse<SearchSkillResult[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.REGISTRY_SEARCH, { query, limit });
+  },
+
+  installFromRegistry: (
+    request: InstallFromRegistryRequest,
+    targetDirectory: string
+  ): Promise<IPCResponse<{ success: boolean; skillPath?: string; error?: string }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.REGISTRY_INSTALL, { request, targetDirectory });
+  },
+
+  checkSkillInstalled: (
+    skillId: string,
+    targetDirectory: string
+  ): Promise<IPCResponse<SkillInstallationStatus>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.REGISTRY_CHECK_INSTALLED, { skillId, targetDirectory });
+  },
+
+  onInstallProgress: (callback: (event: any, progress: InstallProgressEvent) => void): void => {
+    ipcRenderer.on(IPC_CHANNELS.REGISTRY_INSTALL_PROGRESS, callback);
+  },
+
+  removeInstallProgressListener: (): void => {
+    ipcRenderer.removeAllListeners(IPC_CHANNELS.REGISTRY_INSTALL_PROGRESS);
   },
 });
 

@@ -28,6 +28,19 @@ export function registerAIHandlers(): void {
           throw new Error('Window not found');
         }
 
+        // Ensure AI service is initialized
+        if (!AIService.isInitialized()) {
+          logger.info('AI service not initialized, loading config...', 'AIHandlers');
+          const config = await AIConfigService.loadConfig();
+
+          if (!config.apiKey) {
+            throw new Error('API key not configured. Please configure your API key in Settings.');
+          }
+
+          await AIService.initialize(config);
+          logger.info('AI service initialized successfully', 'AIHandlers');
+        }
+
         // Start streaming generation
         const stream = AIService.generateStream(requestId, request);
 

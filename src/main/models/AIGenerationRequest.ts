@@ -4,19 +4,30 @@
  * Represents a request to generate or modify skill content using AI
  */
 
-export type AIGenerationMode = 'new' | 'modify' | 'insert' | 'replace';
+import type { AIGenerationMode } from '../../shared/types';
 
 export interface AIGenerationRequest {
+  /** Unique request identifier for tracking */
+  id?: string;
   /** The prompt describing what to generate */
   prompt: string;
   /** Generation mode */
   mode: AIGenerationMode;
-  /** Current skill content (for modify/insert/replace modes) */
-  currentContent?: string;
-  /** Selection start position (for insert/replace modes) */
-  selectionStart?: number;
-  /** Selection end position (for insert/replace modes) */
-  selectionEnd?: number;
+  /** Timestamp of the request */
+  timestamp?: Date;
+  /** Skill context for AI generation */
+  skillContext?: {
+    /** Current skill content (for modify/insert/replace modes) */
+    content?: string;
+    /** Cursor position (for insert mode) */
+    cursorPosition?: number;
+    /** Selected text (for replace mode) */
+    selectedText?: string;
+    /** Skill name */
+    name?: string;
+    /** Skill metadata */
+    metadata?: Record<string, any>;
+  };
 }
 
 export interface AIStreamChunk {
@@ -40,21 +51,26 @@ export function validateAIGenerationRequest(request: AIGenerationRequest): strin
     return 'Prompt must be less than 10,000 characters';
   }
 
-  if (!['new', 'modify', 'insert', 'replace'].includes(request.mode)) {
+  const validModes: AIGenerationMode[] = ['new', 'modify', 'insert', 'replace'];
+  if (!validModes.includes(request.mode)) {
     return 'Invalid generation mode';
   }
 
-  if (request.mode !== 'new' && !request.currentContent) {
-    return 'Current content is required for modify/insert/replace modes';
+  // For modify/insert/replace modes, check if context is provided
+  if (request.mode !== 'new') {
+    if (!request.skillContext?.content) {
+      return 'Skill content is required for modify/insert/replace modes';
+    }
   }
 
-  if (request.mode === 'insert' || request.mode === 'replace') {
-    if (request.selectionStart === undefined || request.selectionEnd === undefined) {
-      return 'Selection positions are required for insert/replace modes';
-    }
-    if (request.selectionStart < 0 || request.selectionEnd < request.selectionStart) {
-      return 'Invalid selection positions';
-    }
+  // For insert mode, cursor position should be provided
+  if (request.mode === 'insert' && request.skillContext?.cursorPosition === undefined) {
+    return 'Cursor position is required for insert mode';
+  }
+
+  // For replace mode, selected text should be provided
+  if (request.mode === 'replace' && !request.skillContext?.selectedText) {
+    return 'Selected text is required for replace mode';
   }
 
   return null;

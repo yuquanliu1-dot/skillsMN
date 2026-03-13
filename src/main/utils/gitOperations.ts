@@ -40,7 +40,7 @@ export type GitErrorCode =
 /**
  * User-friendly error messages with actionable guidance
  */
-const ERROR_MESSAGES: Record<GitErrorCode, { user: string; action: string }> = {
+export const ERROR_MESSAGES: Record<GitErrorCode, { user: string; action: string }> = {
   GIT_NOT_FOUND: {
     user: 'Git is required but not installed. Please install Git and restart the application.',
     action: 'Install Git from https://git-scm.com'

@@ -220,32 +220,3 @@ export const SHORTCUTS = {
   CLOSE_EDITOR: 'Ctrl+W',
   DELETE: 'Delete',
 } as const;
-
-// ============================================================================
-// Skills Registry Constants (Feature 006)
-// ============================================================================
-
-/** Skills.sh registry API base URL */
-export const REGISTRY_API_BASE_URL = 'https://skills.sh';
-
-/** Skills.sh API search endpoint */
-export const REGISTRY_SEARCH_ENDPOINT = '/api/search';
-
-/** Default search limit */
-export const REGISTRY_DEFAULT_LIMIT = 20;
-
-/** Search debounce delay in milliseconds */
-export const REGISTRY_SEARCH_DEBOUNCE_MS = 400;
-
-/** API request timeout in milliseconds */
-export const REGISTRY_API_TIMEOUT_MS = 10000;
-
-/** Search results target time in milliseconds */
-export const REGISTRY_SEARCH_TARGET_MS = 3000;
-
-/** Installation target time in seconds (excluding network) */
-export const REGISTRY_INSTALL_TARGET_S = 30;
-
-/** Installation progress update interval in milliseconds */
-export const REGISTRY_INSTALL_PROGRESS_INTERVAL_MS = 2000;
-
