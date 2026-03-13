@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { SearchSkillResult } from '../../../shared/types';
+import { SearchSkillResult } from '../../shared/types';
 import { checkSkillInstalled, installFromRegistry, onInstallProgress } from '../services/registryClient';
 import { InstallDialog } from './InstallDialog';
 import { ExternalLinkIcon } from './icons/ExternalLinkIcon';
