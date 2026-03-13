@@ -12,6 +12,7 @@ import type { AIConfiguration, AIGenerationRequest } from '../../shared/types';
  */
 export interface AIStreamCallbacks {
   onChunk: (chunk: string) => void;
+  onToolUse?: (tool: { name: string; input?: any }) => void;
   onComplete: () => void;
   onError: (error: string) => void;
 }
@@ -26,7 +27,7 @@ export class AIClientService {
   private constructor() {
     // Register streaming event listener
     window.electronAPI.onAIChunk((_event, data) => {
-      const { requestId, chunk, isComplete, error } = data;
+      const { requestId, type, text, tool, isComplete, error } = data;
       const callbacks = this.activeCallbacks.get(requestId);
 
       if (!callbacks) {
@@ -40,8 +41,10 @@ export class AIClientService {
       } else if (isComplete) {
         callbacks.onComplete();
         this.activeCallbacks.delete(requestId);
-      } else {
-        callbacks.onChunk(chunk);
+      } else if (type === 'tool_use' && tool && callbacks.onToolUse) {
+        callbacks.onToolUse(tool);
+      } else if (type === 'text' && text) {
+        callbacks.onChunk(text);
       }
     });
   }

@@ -152,6 +152,16 @@ export class SkillDiscovery {
   }
 
   /**
+   * Validate skill directory (public method for checking if SKILL.md exists)
+   *
+   * @param skillDir - Path to skill directory
+   * @returns True if directory contains SKILL.md
+   */
+  async validateSkillDirectory(skillDir: string): Promise<boolean> {
+    return this.validateSkillStructure(skillDir);
+  }
+
+  /**
    * Check if a skill is already installed
    *
    * @param skillDir - Path to skill directory

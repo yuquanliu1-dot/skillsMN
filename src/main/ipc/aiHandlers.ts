@@ -48,8 +48,10 @@ export function registerAIHandlers(): void {
         for await (const chunk of stream) {
           // Send chunk to renderer
           win.webContents.send(IPC_CHANNELS.AI_CHUNK, {
-            type: 'ai:chunk',
-            chunk: chunk.text,
+            requestId,
+            type: chunk.type,  // 'text' or 'tool_use'
+            text: chunk.text,
+            tool: chunk.tool,
             isComplete: chunk.isComplete,
             error: chunk.error,
           });

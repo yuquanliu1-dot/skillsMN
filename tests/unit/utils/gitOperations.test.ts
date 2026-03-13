@@ -54,19 +54,19 @@ describe('GitOperations', () => {
       const targetDir = '/tmp/test-repo';
 
       // Mock git available check
-      (execAsync as jest.Mock).mockResolvedValueOnce({
+      mockExecAsync.mockResolvedValueOnce({
         stdout: 'git version 2.34.1',
         stderr: ''
       });
 
       // Mock clone
-      (execAsync as jest.Mock).mockResolvedValueOnce({
+      mockExecAsync.mockResolvedValueOnce({
         stdout: 'Cloning into /tmp/test-repo...',
         stderr: ''
       });
 
       // Mock getCommitHash
-      (execAsync as jest.Mock).mockResolvedValueOnce({
+      mockExecAsync.mockResolvedValueOnce({
         stdout: 'abc123d',
         stderr: ''
       });
@@ -76,7 +76,7 @@ describe('GitOperations', () => {
       expect(result.success).toBe(true);
       expect(result.directory).toBe(targetDir);
       expect(result.commitHash).toBe('abc123d');
-      expect(execAsync).toHaveBeenCalledWith(
+      expect(mockExecAsync).toHaveBeenCalledWith(
         expect.stringContaining('git clone --depth 1 --single-branch'),
         expect.any(Object)
       );
@@ -87,7 +87,7 @@ describe('GitOperations', () => {
       const targetDir = '/tmp/test-repo';
 
       // Mock git not available
-      (execAsync as jest.Mock).mockRejectedValueOnce(new Error('git: command not found'));
+      mockExecAsync.mockRejectedValueOnce(new Error('git: command not found'));
 
       const result = await gitOperations.shallowClone(source, targetDir);
 
@@ -101,13 +101,13 @@ describe('GitOperations', () => {
       const targetDir = '/tmp/test-repo';
 
       // Mock git available
-      (execAsync as jest.Mock).mockResolvedValueOnce({
+      mockExecAsync.mockResolvedValueOnce({
         stdout: 'git version 2.34.1',
         stderr: ''
       });
 
       // Mock clone failure
-      (execAsync as jest.Mock).mockRejectedValueOnce(
+      mockExecAsync.mockRejectedValueOnce(
         new Error('fatal: repository \'https://github.com/owner/nonexistent-repo.git\' not found')
       );
 
@@ -123,13 +123,13 @@ describe('GitOperations', () => {
       const targetDir = '/tmp/test-repo';
 
       // Mock git available
-      (execAsync as jest.Mock).mockResolvedValueOnce({
+      mockExecAsync.mockResolvedValueOnce({
         stdout: 'git version 2.34.1',
         stderr: ''
       });
 
       // Mock clone failure with 403
-      (execAsync as jest.Mock).mockRejectedValueOnce(
+      mockExecAsync.mockRejectedValueOnce(
         new Error('fatal: Authentication failed for \'https://github.com/owner/private-repo.git/\'')
       );
 
@@ -145,13 +145,13 @@ describe('GitOperations', () => {
       const targetDir = '/tmp/test-repo';
 
       // Mock git available
-      (execAsync as jest.Mock).mockResolvedValueOnce({
+      mockExecAsync.mockResolvedValueOnce({
         stdout: 'git version 2.34.1',
         stderr: ''
       });
 
       // Mock network failure
-      (execAsync as jest.Mock).mockRejectedValueOnce(
+      mockExecAsync.mockRejectedValueOnce(
         new Error('fatal: unable to access \'https://github.com/owner/repo.git/\': Failed to connect to github.com')
       );
 
@@ -167,19 +167,19 @@ describe('GitOperations', () => {
       const progressCallback = jest.fn();
 
       // Mock git available
-      (execAsync as jest.Mock).mockResolvedValueOnce({
+      mockExecAsync.mockResolvedValueOnce({
         stdout: 'git version 2.34.1',
         stderr: ''
       });
 
       // Mock clone
-      (execAsync as jest.Mock).mockResolvedValueOnce({
+      mockExecAsync.mockResolvedValueOnce({
         stdout: 'Cloning into /tmp/test-repo...',
         stderr: ''
       });
 
       // Mock getCommitHash
-      (execAsync as jest.Mock).mockResolvedValueOnce({
+      mockExecAsync.mockResolvedValueOnce({
         stdout: 'abc123d',
         stderr: ''
       });

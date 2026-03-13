@@ -17,7 +17,10 @@ import Settings from './components/Settings';
 import ToastContainer, { ToastMessage } from './components/ToastContainer';
 import PrivateRepoList from './components/PrivateRepoList';
 import Sidebar, { ViewType } from './components/Sidebar';
-import SearchPanel from './components/SearchPanel';
+import { RegistrySearchPanel } from './components/RegistrySearchPanel';
+import { AIAssistPanel } from './components/AIAssistPanel';
+import { AISkillCreationDialog } from './components/AISkillCreationDialog';
+import DirectoryChangeDialog from './components/DirectoryChangeDialog';
 
 type MainTab = 'local' | 'private-repos';
 
@@ -109,6 +112,10 @@ export default function App(): JSX.Element {
   const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | null>(null);
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showAICreationDialog, setShowAICreationDialog] = useState(false);
+  const [aiCreationDirectory, setAICreationDirectory] = useState<'project' | 'global'>('project');
+  const [showDirectoryChangeDialog, setShowDirectoryChangeDialog] = useState(false);
   const [viewingPrivateSkill, setViewingPrivateSkill] = useState<{
     skill: PrivateSkill;
     repo: PrivateRepo;
@@ -402,6 +409,26 @@ export default function App(): JSX.Element {
   };
 
   /**
+   * Handle change project directory
+   */
+  const handleChangeProjectDirectory = async (newDirectory: string): Promise<void> => {
+    try {
+      const config = await ipcClient.saveConfig({ projectDirectory: newDirectory });
+      dispatch({ type: 'SET_CONFIG', payload: config });
+      setShowDirectoryChangeDialog(false);
+
+      // Reload skills for the new directory
+      await loadSkills();
+
+      showToast('Project directory changed successfully', 'success');
+    } catch (error) {
+      console.error('Failed to change project directory:', error);
+      showToast(`Failed to change directory: ${(error as Error).message}`, 'error');
+      throw error;
+    }
+  };
+
+  /**
    * Handle viewing private skill content
    */
   const handleViewPrivateSkill = async (skill: PrivateSkill) => {
@@ -418,7 +445,7 @@ export default function App(): JSX.Element {
         return;
       }
 
-      const response = await window.electronAPI.getPrivateRepoSkillContent(repo.id, skill.path);
+      const response = await window.electronAPI.getPrivateRepoSkillContent(repo.id, skill.skillFilePath || skill.path);
       if (response.success && response.data) {
         setViewingPrivateSkill({
           skill,
@@ -431,6 +458,25 @@ export default function App(): JSX.Element {
     } catch (error) {
       console.error('Failed to view private skill:', error);
       showToast(`Failed to load skill: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
+  };
+
+  /**
+   * Handle applying AI-generated content
+   */
+  const handleApplyAIContent = async (content: string) => {
+    try {
+      // If editing a skill, apply the content to it
+      if (editingSkill) {
+        await handleSaveSkill(content);
+        showToast('AI content applied successfully', 'success');
+      } else {
+        // If not editing, create a new skill with the AI content
+        showToast('Please select or create a skill first to apply AI content', 'info');
+      }
+    } catch (error) {
+      console.error('Failed to apply AI content:', error);
+      showToast(`Failed to apply AI content: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
 
@@ -485,6 +531,7 @@ export default function App(): JSX.Element {
           currentView={currentView}
           onViewChange={setCurrentView}
           config={state.config}
+          onChangeProjectDirectory={() => setShowDirectoryChangeDialog(true)}
         />
 
         {/* Main Content Area */}
@@ -505,11 +552,9 @@ export default function App(): JSX.Element {
             </div>
 
             <div style={{ display: currentView === 'discover' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
-              <SearchPanel
-                isOpen={true}
-                onClose={() => setCurrentView('skills')}
+              <RegistrySearchPanel
+                config={state.config}
                 onInstallComplete={loadSkills}
-                isInline={true}
               />
             </div>
 
@@ -611,12 +656,37 @@ export default function App(): JSX.Element {
         </div>
       </div>
 
+      {/* AI Assist Panel */}
+      {showAIPanel && (
+        <AIAssistPanel
+          onApply={handleApplyAIContent}
+          onClose={() => setShowAIPanel(false)}
+          editorContent={editingSkill ? undefined : undefined}
+        />
+      )}
+
       {/* Create Skill Dialog */}
       <CreateSkillDialog
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onCreateSkill={handleCreateSkill}
+        onOpenAICreation={(directory) => {
+          setAICreationDirectory(directory);
+          setShowCreateDialog(false);
+          setShowAICreationDialog(true);
+        }}
         defaultDirectory={state.config?.defaultInstallDirectory || 'project'}
+      />
+
+      {/* AI Skill Creation Dialog */}
+      <AISkillCreationDialog
+        isOpen={showAICreationDialog}
+        onClose={() => setShowAICreationDialog(false)}
+        directory={aiCreationDirectory}
+        onSkillCreated={() => {
+          loadSkills();
+          showToast('Skill created successfully with AI!', 'success');
+        }}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -626,6 +696,16 @@ export default function App(): JSX.Element {
         onClose={() => setDeletingSkill(null)}
         onConfirm={handleDeleteSkill}
       />
+
+      {/* Directory Change Dialog */}
+      {state.config?.projectDirectory && (
+        <DirectoryChangeDialog
+          isOpen={showDirectoryChangeDialog}
+          currentDirectory={state.config.projectDirectory}
+          onClose={() => setShowDirectoryChangeDialog(false)}
+          onChangeDirectory={handleChangeProjectDirectory}
+        />
+      )}
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />

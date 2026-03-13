@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { searchRegistry } from '../services/registryClient';
+import { SearchSkillResult } from '../../shared/types';
 
 export interface UseRegistrySearchResult {
   query: string;
@@ -64,8 +65,5 @@ export function useRegistrySearch(debounceMs: number = 400): UseRegistrySearchRe
     isLoading,
     error,
     setQuery,
-    setResults,
-    setError,
-    setIsLoading,
   };
 }

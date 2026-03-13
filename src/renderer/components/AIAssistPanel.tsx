@@ -13,7 +13,7 @@ import { ModeSelector } from './ModeSelector';
 import type { AIGenerationRequest, AIGenerationMode } from '../../shared/types';
 
 interface AIAssistPanelProps {
-  onApply: (content: string) => void;
+  onApply: (content: string, mode: AIGenerationMode) => void;
   onClose: () => void;
   editorContent?: string;
   cursorPosition?: number;
@@ -29,7 +29,6 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
 }) => {
   const [mode, setMode] = useState<AIGenerationMode>('new');
   const [prompt, setPrompt] = useState('');
-  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   const generationStartTime = useRef<number | null>(null);
 
   const {
@@ -46,18 +45,16 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
   } = useAIGeneration({
     onComplete: (generatedContent) => {
       console.log('AI generation complete:', generatedContent.length);
-      setShowTimeoutWarning(false);
       generationStartTime.current = null;
     },
     onError: (errorMessage) => {
       console.error('AI generation error:', errorMessage);
-      setShowTimeoutWarning(false);
       generationStartTime.current = null;
     },
   });
 
   /**
-   * Timeout detection - warn if generation takes longer than 30s
+   * Track generation start time for UI feedback
    */
   useEffect(() => {
     if (isStreaming && !generationStartTime.current) {
@@ -66,27 +63,14 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
 
     if (!isStreaming && generationStartTime.current) {
       generationStartTime.current = null;
-      setShowTimeoutWarning(false);
     }
-
-    const timeoutCheck = setInterval(() => {
-      if (isStreaming && generationStartTime.current) {
-        const elapsed = Date.now() - generationStartTime.current;
-        if (elapsed > 30000 && !showTimeoutWarning) {
-          setShowTimeoutWarning(true);
-        }
-      }
-    }, 1000);
-
-    return () => clearInterval(timeoutCheck);
-  }, [isStreaming, showTimeoutWarning]);
+  }, [isStreaming]);
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       return;
     }
 
-    setShowTimeoutWarning(false);
     generationStartTime.current = Date.now();
 
     // Build skill context based on mode
@@ -109,28 +93,17 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
 
   const handleApply = useCallback(() => {
     if (content) {
-      onApply(content)
+      onApply(content, mode)
       onClose()
     }
-  }, [content, onApply, onClose])
+  }, [content, mode, onApply, onClose])
 
   const handleModeChange = useCallback((newMode: AIGenerationMode) => {
     setMode(newMode)
     reset()
     setPrompt('')
-    setShowTimeoutWarning(false)
     generationStartTime.current = null
   }, [reset])
-
-  const handleContinueAnyway = useCallback(() => {
-    setShowTimeoutWarning(false)
-  }, [])
-
-  const handleCancelGeneration = useCallback(async () => {
-    await stop()
-    setShowTimeoutWarning(false)
-    generationStartTime.current = null
-  }, [stop])
 
   return (
     <div className="ai-assist-panel">
@@ -175,30 +148,12 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
           error={error}
         />
 
-        {showTimeoutWarning && (
-          <div className="timeout-warning">
-            <div className="warning-content">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <p>Generation is taking longer than expected</p>
-              <div className="warning-actions">
-                <button className="btn-continue" onClick={handleContinueAnyway}>
-                  Continue
-                </button>
-                <button className="btn-cancel" onClick={handleCancelGeneration}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         <AIControls
           status={status}
           isStreaming={isStreaming}
           isComplete={isComplete}
           isIdle={isIdle}
+          canGenerate={prompt.trim().length > 0}
           canApply={isComplete && content.length > 0}
           onGenerate={handleGenerate}
           onStop={stop}
@@ -294,69 +249,6 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
           padding: 1.5rem;
           overflow-y: auto;
           background: #fafafa;
-        }
-
-        .timeout-warning {
-          background: #fffbeb;
-          border: 1px solid #f59e0b;
-          border-radius: 0.5rem;
-          padding: 1rem;
-          margin: 0.5rem 0;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .warning-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.75rem;
-        }
-
-        .warning-content svg {
-          color: #f59e0b;
-        }
-
-        .warning-content p {
-          margin: 0;
-          font-size: 0.875rem;
-          color: #92400e;
-          font-weight: 500;
-        }
-
-        .warning-actions {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .btn-continue,
-        .btn-cancel {
-          padding: 0.5rem 1rem;
-          border: none;
-          border-radius: 0.375rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 150ms;
-        }
-
-        .btn-continue {
-          background: #10b981;
-          color: white;
-        }
-
-        .btn-continue:hover {
-          background: #059669;
-          transform: translateY(-1px);
-        }
-
-        .btn-cancel {
-          background: #ef4444;
-          color: white;
-        }
-
-        .btn-cancel:hover {
-          background: #dc2626;
-          transform: translateY(-1px);
         }
       `}</style>
     </div>

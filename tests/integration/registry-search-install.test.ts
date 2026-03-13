@@ -51,7 +51,7 @@ describe('Registry Search Integration Tests', () => {
       const query = 'code review';
 
       // Get the mocked fetch
-      const fetch = require('node-fetch') as jest.Mocked<typeof import('node-fetch')>;
+      const fetch = require('node-fetch') as jest.Mock;
 
       // Mock successful response
       fetch.mockResolvedValueOnce({
@@ -74,14 +74,14 @@ describe('Registry Search Integration Tests', () => {
       const results = await registryService.searchSkills(query);
 
       expect(results).toBeDefined();
-      expect(results).toHaveLength().toBeGreaterThan(0);
+      expect(results.length).toBeGreaterThan(0);
       expect(results[0].skillId).toBe('code-review-helper');
     }, 10000);
 
     it('should handle empty search results', async () => {
       const query = 'nonexistent-skill-xyz';
 
-      const fetch = require('node-fetch') as jest.Mocked<typeof import('node-fetch')>;
+      const fetch = require('node-fetch') as jest.Mock;
       fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -370,7 +370,9 @@ This is a test skill.
 
   describe('IPC Integration', () => {
     it('should handle registry:search IPC call', async () => {
-      const mockFetch = jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+      const fetch = require('node-fetch') as jest.Mock;
+
+      fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           skills: [
@@ -385,7 +387,7 @@ This is a test skill.
           total: 1,
           query: 'test'
         })
-      } as any);
+      } as Response);
 
       // Simulate IPC call
       const event = {} as any;
@@ -397,8 +399,6 @@ This is a test skill.
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
       expect(result.data.length).toBe(1);
-
-      mockFetch.mockRestore();
     });
 
     it('should handle registry:install IPC call with progress events', async () => {
@@ -502,23 +502,18 @@ This is a test skill.
 
   describe('Performance', () => {
     it('should complete search in under 3 seconds', async () => {
-      const mockFetch = jest.fn().mockResolvedValue({
+      const fetch = require('node-fetch') as jest.Mock;
+
+      fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ skills: [], total: 0, query: 'test' })
-      });
-
-      // Mock the global fetch if it exists
-      if (typeof global !== 'undefined' && global.fetch) {
-        jest.spyOn(global, 'fetch').mockReturnValue(mockFetch);
-      }
+      } as Response);
 
       const start = Date.now();
       await registryService.searchSkills('test');
       const duration = Date.now() - start;
 
       expect(duration).toBeLessThan(3000);
-
-      mockFetch.mockRestore();
     });
 
     it('should complete installation in under 30 seconds (excluding network)', async () => {

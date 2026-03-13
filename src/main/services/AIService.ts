@@ -142,7 +142,7 @@ export class AIService {
     // Validate request
     const validationError = validateAIGenerationRequest(request);
     if (validationError) {
-      yield { text: '', isComplete: false, error: validationError };
+      yield { type: 'error', text: '', isComplete: false, error: validationError };
       return;
     }
 
@@ -157,18 +157,29 @@ export class AIService {
       const userPrompt = AIService.buildUserPrompt(request);
 
       // Build system prompt (Agent SDK will automatically load skills)
-      const systemPrompt = AIService.buildSystemPrompt(request.mode);
+      const systemPrompt = AIService.buildSystemPrompt(request.mode, request);
 
       // Load SDK and use query
       const { query } = await loadSDK();
 
-      // Use Claude Agent SDK query (Agent SDK will access skill-creator automatically)
+      // Determine working directory (project root)
+      const workingDirectory = request?.skillContext?.targetPath
+        ? require('path').dirname(request.skillContext.targetPath)
+        : process.cwd();
+
+      // Use Claude Agent SDK query with permission to execute tools
       const stream = query({
         prompt: userPrompt,
         options: {
           systemPrompt,
           // Use configured model
           model: currentConfig?.model || 'claude-sonnet-4-6-20250514',
+          // Set working directory
+          cwd: workingDirectory,
+          // Allow file operations without prompting
+          permissionMode: 'acceptEdits',
+          // Auto-allow Write and Bash tools
+          allowedTools: ['Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill'],
         },
       });
 
@@ -179,7 +190,7 @@ export class AIService {
         // Check if cancelled
         if (abortController.signal.aborted) {
           logger.info('AI generation cancelled', 'AIService', { requestId });
-          yield { text: fullText, isComplete: false, error: 'Generation cancelled' };
+          yield { type: 'error', text: fullText, isComplete: false, error: 'Generation cancelled' };
           return;
         }
 
@@ -191,13 +202,22 @@ export class AIService {
               if (piece.type === 'text') {
                 const chunk = piece.text;
                 fullText += chunk;
-                yield { text: chunk, isComplete: false };
+                yield { type: 'text', text: chunk, isComplete: false };
               } else if (piece.type === 'tool_use') {
-                // Log tool usage
+                // Send tool usage to frontend
                 logger.debug('Agent using tool', 'AIService', {
                   tool: piece.name,
                   input: piece.input
                 });
+
+                yield {
+                  type: 'tool_use',
+                  tool: {
+                    name: piece.name,
+                    input: piece.input
+                  },
+                  isComplete: false
+                };
               }
             }
             break;
@@ -214,7 +234,7 @@ export class AIService {
                     // Tool results are included in the response
                     const textContent = inner as { type: 'text'; text: string };
                     fullText += textContent.text;
-                    yield { text: textContent.text, isComplete: false };
+                    yield { type: 'text', text: textContent.text, isComplete: false };
                   }
                 }
               }
@@ -238,11 +258,11 @@ export class AIService {
         length: fullText.length,
       });
 
-      yield { text: '', isComplete: true };
+      yield { type: 'complete', text: '', isComplete: true };
     } catch (error) {
       logger.error('AI generation failed', 'AIService', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      yield { text: '', isComplete: false, error: errorMessage };
+      yield { type: 'error', text: '', isComplete: false, error: errorMessage };
     } finally {
       activeStreams.delete(requestId);
     }
@@ -311,7 +331,7 @@ export class AIService {
    * Note: Claude Agent SDK will automatically load and access skills from .claude/skills/
    * @private
    */
-  private static buildSystemPrompt(mode: AIGenerationRequest['mode']): string {
+  private static buildSystemPrompt(mode: AIGenerationRequest['mode'], request?: AIGenerationRequest): string {
     const basePrompt = `You are an expert skill creator for Claude Code. You have access to the skill-creator skill which provides comprehensive guidelines for creating effective skills.
 
 When generating skill content:
@@ -320,6 +340,9 @@ When generating skill content:
 - Write comprehensive Markdown content with clear structure
 - Include practical examples and step-by-step instructions
 - Use proper formatting (headings, lists, code blocks)
+- You CAN use the Write tool to directly create skill files
+- You CAN use Bash and other tools as needed
+- Use the Skill tool to access skill-creator guidance
 
 Skills follow this format:
 ---
@@ -334,14 +357,29 @@ tags: [tag1, tag2, tag3]
 
 Markdown content with instructions, examples, and guidance.`;
 
+    const targetPath = request?.skillContext?.targetPath;
     const modeInstructions = {
-      new: '\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user\'s requirements. Use the skill-creator skill for guidance.',
+      new: targetPath
+        ? `\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user's requirements. Use the skill-creator skill for guidance.
 
-      modify: '\n\nYou are MODIFYING an existing skill. Improve, expand, or refine the content while preserving its core purpose. Refer to skill-creator for best practices.',
+IMPORTANT: A skill is a DIRECTORY containing a skill.md file. Follow these steps:
+1. Use the Bash tool to create a directory at: ${targetPath}
+   The directory name should be based on the skill name (use kebab-case, e.g., "my-skill-name")
+2. Use the Write tool to create the skill.md file inside that directory: ${targetPath}/skill.md
+3. The skill.md file must contain YAML frontmatter and Markdown content
 
-      insert: '\n\nYou are INSERTING new content into an existing skill at a specified position. Generate content that fits naturally. Follow skill-creator guidelines.',
+Example structure:
+   ${targetPath}/
+   └── skill.md (contains YAML frontmatter + Markdown content)
 
-      replace: '\n\nYou are REPLACING a selected portion of an existing skill. Generate replacement content that maintains context and flow. Use skill-creator as reference.'
+You must create BOTH the directory AND the skill.md file.`
+        : '\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user\'s requirements. Use the skill-creator skill for guidance.',
+
+      modify: '\n\nYou are MODIFYING an existing skill. Improve, expand, or refine the content while preserving its core purpose. Use the Write tool to save changes to the skill.md file. Refer to skill-creator for best practices.',
+
+      insert: '\n\nYou are INSERTING new content into an existing skill at a specified position. Generate content that fits naturally. Use the Write tool to save changes to the skill.md file. Follow skill-creator guidelines.',
+
+      replace: '\n\nYou are REPLACING a selected portion of an existing skill. Generate replacement content that maintains context and flow. Use the Write tool to save changes to the skill.md file. Use skill-creator as reference.'
     };
 
     return basePrompt + (modeInstructions[mode] || '');

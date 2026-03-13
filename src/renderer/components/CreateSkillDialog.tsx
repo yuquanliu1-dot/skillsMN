@@ -10,6 +10,7 @@ interface CreateSkillDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateSkill: (name: string, directory: 'project' | 'global') => Promise<void>;
+  onOpenAICreation: (directory: 'project' | 'global') => void;
   defaultDirectory: 'project' | 'global';
 }
 
@@ -17,6 +18,7 @@ export default function CreateSkillDialog({
   isOpen,
   onClose,
   onCreateSkill,
+  onOpenAICreation,
   defaultDirectory,
 }: CreateSkillDialogProps): JSX.Element | null {
   const [name, setName] = useState('');
@@ -251,6 +253,27 @@ export default function CreateSkillDialog({
               className="btn btn-secondary"
             >
               Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAICreation(directory)}
+              disabled={isCreating}
+              className="btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white flex items-center gap-2"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z"
+                />
+              </svg>
+              AI Create
             </button>
             <button
               type="submit"

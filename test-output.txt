@@ -1,0 +1,704 @@
+
+> skillsmn@0.1.0 test
+> jest tests/integration --passWithNoTests
+
+PASS tests/integration/replaceSelectedText.test.ts (42.64 s)
+PASS tests/integration/controlAIGeneration.test.ts (43.212 s)
+FAIL tests/integration/ai-assistant.test.ts (43.959 s)
+  ● Console
+
+    console.error
+      [2026-03-12T15:56:52.594Z] [ERROR] [AIService] Failed to initialize AI service | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.initialize (src/main/services/AIService.ts:95:14)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:52:30)
+
+    console.error
+      [2026-03-12T15:56:53.075Z] [ERROR] [AIService] Failed to initialize AI service | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.initialize (src/main/services/AIService.ts:95:14)
+      at AIService.updateConfiguration (src/main/services/AIService.ts:109:21)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:62:30)
+
+    console.log
+      [2026-03-12T15:56:53.089Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "test-new-001"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.092Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:79:26)
+
+    console.log
+      Test expected to fail without API key: Cannot read properties of null (reading 'messages')
+
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:98:17)
+
+    console.log
+      Modify mode test: expect(received).toBeGreaterThan(expected)
+      
+      Expected: > 0
+      Received:   0
+
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:131:17)
+
+    console.log
+      Insert mode test: expect(received).toBeGreaterThan(expected)
+      
+      Expected: > 0
+      Received:   0
+
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:159:17)
+
+    console.log
+      Replace mode test: expect(received).toBeGreaterThan(expected)
+      
+      Expected: > 0
+      Received:   0
+
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:187:17)
+
+    console.log
+      [2026-03-12T15:56:53.137Z] [INFO] [AIService] Testing AI connection
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+
+    console.error
+      [2026-03-12T15:56:53.140Z] [ERROR] [AIService] AI connection test failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.testConnection (src/main/services/AIService.ts:351:14)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:201:40)
+
+    console.log
+      [2026-03-12T15:56:53.149Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "concurrent-1"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.152Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:232:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:225:33)
+
+    console.log
+      [2026-03-12T15:56:53.155Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "concurrent-2"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.159Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:232:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:225:33)
+
+    console.log
+      [2026-03-12T15:56:53.162Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "concurrent-3"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.164Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:232:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:225:33)
+
+    console.log
+      [2026-03-12T15:56:53.184Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "latency-test"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.186Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:261:26)
+
+    console.log
+      First chunk latency: -1773331013183ms
+
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:270:17)
+
+    console.log
+      Total chunks received: 0
+
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:271:17)
+
+    console.error
+      [2026-03-12T15:56:53.202Z] [ERROR] [AIService] Failed to initialize AI service | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.initialize (src/main/services/AIService.ts:95:14)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:302:23)
+
+    console.log
+      [2026-03-12T15:56:53.322Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "network-test"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.328Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:320:26)
+
+    console.log
+      [2026-03-12T15:56:53.385Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "rate-limit-0"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.388Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:343:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:339:18)
+
+    console.log
+      [2026-03-12T15:56:53.391Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "rate-limit-1"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.395Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:343:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:339:18)
+
+    console.log
+      [2026-03-12T15:56:53.399Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "rate-limit-2"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.402Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:343:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:339:18)
+
+    console.log
+      [2026-03-12T15:56:53.405Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "rate-limit-3"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.408Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:343:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:339:18)
+
+    console.log
+      [2026-03-12T15:56:53.412Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "rate-limit-4"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.416Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:343:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:339:18)
+
+    console.log
+      [2026-03-12T15:56:53.449Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "rate-limit-5"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.456Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:343:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:339:18)
+
+    console.log
+      [2026-03-12T15:56:53.459Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "rate-limit-6"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.463Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:343:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:339:18)
+
+    console.log
+      [2026-03-12T15:56:53.465Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "rate-limit-7"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.470Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:343:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:339:18)
+
+    console.log
+      [2026-03-12T15:56:53.505Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "rate-limit-8"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.508Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:343:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:339:18)
+
+    console.log
+      [2026-03-12T15:56:53.510Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "rate-limit-9"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+          at Array.map (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.514Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at tests/integration/ai-assistant.test.ts:343:28
+          at Array.map (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:339:18)
+
+    console.log
+      [2026-03-12T15:56:53.522Z] [INFO] [AIService] Starting AI generation | {
+        "mode": "new",
+        "requestId": "timeout-test"
+      }
+
+      at Logger.log (src/main/utils/Logger.ts:66:17)
+          at generateStream.next (<anonymous>)
+
+    console.error
+      [2026-03-12T15:56:53.545Z] [ERROR] [AIService] AI generation failed | {}
+
+    [0m [90m 55 |[39m     [36mswitch[39m (level) {
+     [90m 56 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mERROR[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 57 |[39m         console[33m.[39merror(formatted)[33m;[39m
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 58 |[39m         [36mbreak[39m[33m;[39m
+     [90m 59 |[39m       [36mcase[39m [33mLogLevel[39m[33m.[39m[33mWARN[39m[33m:[39m
+     [90m 60 |[39m         console[33m.[39mwarn(formatted)[33m;[39m[0m
+
+      at Logger.log (src/main/utils/Logger.ts:57:17)
+      at Logger.error (src/main/utils/Logger.ts:83:10)
+      at AIService.generateStream (src/main/services/AIService.ts:212:14)
+          at generateStream.next (<anonymous>)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:368:26)
+
+  ● AI Assistant Integration Tests › 🔧 Configuration Tests › should initialize AI service with config
+
+    expect(received).resolves.not.toThrow()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [Error: Failed to initialize AI service. Please check your API key.]
+
+    [0m [90m 50 |[39m
+     [90m 51 |[39m     test([32m'should initialize AI service with config'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 52 |[39m       [36mawait[39m expect([33mAIService[39m[33m.[39minitialize(mockConfig))[33m.[39mresolves[33m.[39mnot[33m.[39mtoThrow()[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 53 |[39m     })[33m;[39m
+     [90m 54 |[39m
+     [90m 55 |[39m     test([32m'should check if service is initialized'[39m[33m,[39m () [33m=>[39m {[0m
+
+      at expect (node_modules/expect/build/index.js:113:15)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:52:13)
+
+  ● AI Assistant Integration Tests › 🔧 Configuration Tests › should update configuration
+
+    expect(received).resolves.not.toThrow()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [Error: Failed to initialize AI service. Please check your API key.]
+
+    [0m [90m 60 |[39m     test([32m'should update configuration'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m 61 |[39m       [36mconst[39m newConfig [33m=[39m { [33m...[39mmockConfig[33m,[39m temperature[33m:[39m [35m0.5[39m }[33m;[39m
+    [31m[1m>[22m[39m[90m 62 |[39m       [36mawait[39m expect([33mAIService[39m[33m.[39mupdateConfiguration(newConfig))[33m.[39mresolves[33m.[39mnot[33m.[39mtoThrow()[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 63 |[39m     })[33m;[39m
+     [90m 64 |[39m   })[33m;[39m
+     [90m 65 |[39m[0m
+
+      at expect (node_modules/expect/build/index.js:113:15)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:62:13)
+
+  ● AI Assistant Integration Tests › 🔒 Security Tests › should handle invalid API key gracefully
+
+    Failed to initialize AI service. Please check your API key.
+
+    [0m [90m 94 |[39m     } [36mcatch[39m (error) {
+     [90m 95 |[39m       logger[33m.[39merror([32m'Failed to initialize AI service'[39m[33m,[39m [32m'AIService'[39m[33m,[39m error)[33m;[39m
+    [31m[1m>[22m[39m[90m 96 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m'Failed to initialize AI service. Please check your API key.'[39m)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 97 |[39m     }
+     [90m 98 |[39m   }
+     [90m 99 |[39m[0m
+
+      at AIService.initialize (src/main/services/AIService.ts:96:13)
+      at Object.<anonymous> (tests/integration/ai-assistant.test.ts:302:23)
+
+PASS tests/integration/aiConfiguration.test.ts (43.148 s)
+PASS tests/integration/insertAtCursor.test.ts (45.723 s)
+PASS tests/integration/newSkillGeneration.test.ts (48.302 s)
+PASS tests/integration/modifySkillGeneration.test.ts (6.287 s)
+FAIL tests/integration/registry-e2e-workflows.test.ts
+  ● Test suite failed to run
+
+    [96mtests/integration/registry-e2e-workflows.test.ts[0m:[93m48[0m:[93m13[0m - [91merror[0m[90m TS2339: [0mProperty 'mockResolvedValueOnce' does not exist on type 'Mocked<typeof fetch>'.
+
+    [7m48[0m       fetch.mockResolvedValueOnce({
+    [7m  [0m [91m            ~~~~~~~~~~~~~~~~~~~~~[0m
+    [96mtests/integration/registry-e2e-workflows.test.ts[0m:[93m89[0m:[93m13[0m - [91merror[0m[90m TS2339: [0mProperty 'mockResolvedValueOnce' does not exist on type 'Mocked<typeof fetch>'.
+
+    [7m89[0m       fetch.mockResolvedValueOnce({
+    [7m  [0m [91m            ~~~~~~~~~~~~~~~~~~~~~[0m
+    [96mtests/integration/registry-e2e-workflows.test.ts[0m:[93m429[0m:[93m13[0m - [91merror[0m[90m TS2339: [0mProperty 'mockResolvedValueOnce' does not exist on type 'Mocked<typeof fetch>'.
+
+    [7m429[0m       fetch.mockResolvedValueOnce({
+    [7m   [0m [91m            ~~~~~~~~~~~~~~~~~~~~~[0m
+    [96mtests/integration/registry-e2e-workflows.test.ts[0m:[93m462[0m:[93m13[0m - [91merror[0m[90m TS2339: [0mProperty 'mockResolvedValueOnce' does not exist on type 'Mocked<typeof fetch>'.
+
+    [7m462[0m       fetch.mockResolvedValueOnce({
+    [7m   [0m [91m            ~~~~~~~~~~~~~~~~~~~~~[0m
+    [96mtests/integration/registry-e2e-workflows.test.ts[0m:[93m533[0m:[93m13[0m - [91merror[0m[90m TS2339: [0mProperty 'mockResolvedValueOnce' does not exist on type 'Mocked<typeof fetch>'.
+
+    [7m533[0m       fetch.mockResolvedValueOnce({
+    [7m   [0m [91m            ~~~~~~~~~~~~~~~~~~~~~[0m
+
+FAIL tests/integration/registry-search-install.test.ts
+  ● Test suite failed to run
+
+    [96mtests/integration/registry-search-install.test.ts[0m:[93m57[0m:[93m13[0m - [91merror[0m[90m TS2339: [0mProperty 'mockResolvedValueOnce' does not exist on type 'Mocked<typeof fetch>'.
+
+    [7m57[0m       fetch.mockResolvedValueOnce({
+    [7m  [0m [91m            ~~~~~~~~~~~~~~~~~~~~~[0m
+    [96mtests/integration/registry-search-install.test.ts[0m:[93m85[0m:[93m13[0m - [91merror[0m[90m TS2339: [0mProperty 'mockResolvedValueOnce' does not exist on type 'Mocked<typeof fetch>'.
+
+    [7m85[0m       fetch.mockResolvedValueOnce({
+    [7m  [0m [91m            ~~~~~~~~~~~~~~~~~~~~~[0m
+    [96mtests/integration/registry-search-install.test.ts[0m:[93m375[0m:[93m13[0m - [91merror[0m[90m TS2339: [0mProperty 'mockResolvedValueOnce' does not exist on type 'Mocked<typeof fetch>'.
+
+    [7m375[0m       fetch.mockResolvedValueOnce({
+    [7m   [0m [91m            ~~~~~~~~~~~~~~~~~~~~~[0m
+    [96mtests/integration/registry-search-install.test.ts[0m:[93m507[0m:[93m13[0m - [91merror[0m[90m TS2339: [0mProperty 'mockResolvedValueOnce' does not exist on type 'Mocked<typeof fetch>'.
+
+    [7m507[0m       fetch.mockResolvedValueOnce({
+    [7m   [0m [91m            ~~~~~~~~~~~~~~~~~~~~~[0m
+
+A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
+Test Suites: 3 failed, 6 passed, 9 total
+Tests:       3 failed, 42 passed, 45 total
+Snapshots:   0 total
+Time:        81.555 s, estimated 281 s
+Ran all test suites matching /tests\\integration/i.

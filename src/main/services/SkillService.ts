@@ -684,16 +684,10 @@ installedAt: ${new Date().toISOString()}
   }
 
   /**
-   * Get configuration (temporary - should use ConfigService)
+   * Get configuration from ConfigService
    */
   private async getConfig(): Promise<Configuration> {
-    // This should be injected or retrieved from ConfigService
-    // For now, return a minimal config
-    return {
-      projectDirectory: null,
-      defaultInstallDirectory: 'project',
-      editorDefaultMode: 'edit',
-      autoRefresh: true,
-    };
+    const configService = await this.getConfigService();
+    return await configService.load();
   }
 }

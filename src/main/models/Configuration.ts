@@ -26,7 +26,6 @@ export class ConfigurationModel {
       defaultInstallDirectory: DEFAULT_INSTALL_DIRECTORY,
       editorDefaultMode: DEFAULT_EDITOR_MODE,
       autoRefresh: DEFAULT_AUTO_REFRESH,
-      githubToken: undefined,
     };
   }
 
@@ -70,18 +69,12 @@ export class ConfigurationModel {
       throw new Error('Auto-refresh must be a boolean');
     }
 
-    // Validate githubToken (optional)
-    if (config.githubToken !== undefined && config.githubToken !== null && typeof config.githubToken !== 'string') {
-      throw new Error('GitHub token must be a string or undefined');
-    }
-
     // Return validated config with defaults
     return {
       projectDirectory: config.projectDirectory ?? null,
       defaultInstallDirectory: config.defaultInstallDirectory ?? DEFAULT_INSTALL_DIRECTORY,
       editorDefaultMode: config.editorDefaultMode ?? DEFAULT_EDITOR_MODE,
       autoRefresh: config.autoRefresh ?? DEFAULT_AUTO_REFRESH,
-      githubToken: config.githubToken,
     };
   }
 
@@ -98,7 +91,6 @@ export class ConfigurationModel {
         updates.defaultInstallDirectory ?? existing.defaultInstallDirectory,
       editorDefaultMode: updates.editorDefaultMode ?? existing.editorDefaultMode,
       autoRefresh: updates.autoRefresh ?? existing.autoRefresh,
-      githubToken: updates.githubToken !== undefined ? updates.githubToken : existing.githubToken,
     };
   }
 

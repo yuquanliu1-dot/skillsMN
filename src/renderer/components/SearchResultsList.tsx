@@ -5,16 +5,16 @@
  */
 
 import React from 'react';
-import { SearchSkillResult } from '../../../shared/types';
-import SearchResultCard from './SkillResultCard';
+import { SearchSkillResult } from '../../shared/types';
 import { SkillResultCard } from './SkillResultCard';
 
 interface SearchResultsListProps {
   results: SearchSkillResult[];
-  onInstall?: (skill: SearchSkillResult) => void;
+  targetDirectory: string;
+  onInstallComplete?: (skill: SearchSkillResult) => void;
 }
 
-export const SearchResultsList: React.FC<SearchResultsListProps> = ({ results, onInstall }) => {
+export const SearchResultsList: React.FC<SearchResultsListProps> = ({ results, targetDirectory, onInstallComplete }) => {
   if (results.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -29,7 +29,8 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = ({ results, o
         <SkillResultCard
           key={skill.id}
           skill={skill}
-          onInstall={onInstall}
+          targetDirectory={targetDirectory}
+          onInstallComplete={onInstallComplete}
         />
       ))}
     </div>

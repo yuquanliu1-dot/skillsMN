@@ -4,7 +4,7 @@
  * SVG search icon from Heroicons
  */
 
-export const SearchIcon: React.FC<{ className?: string }> = () => {
+export const SearchIcon: React.FC<{ className?: string }> = ({ className }) => {
   return (
     <svg
       className={className || "w-5 h-5"}

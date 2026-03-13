@@ -13,6 +13,9 @@ import { SkillDiscovery } from '../../src/main/utils/skillDiscovery';
 import { GitOperations } from '../../src/main/utils/gitOperations';
 import type { SearchSkillResult, InstallFromRegistryRequest } from '../../src/shared/types';
 
+// Mock node-fetch at module level
+jest.mock('node-fetch');
+
 // Set longer timeout for all tests in this file (30 seconds)
 jest.setTimeout(30000);
 
@@ -43,7 +46,9 @@ describe('Registry Search E2E Workflows', () => {
       const query = 'data analysis';
 
       // Step 2: Search skills.sh
-      const mockFetch = jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+      const fetch = require('node-fetch');
+
+      (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           skills: [
@@ -65,7 +70,7 @@ describe('Registry Search E2E Workflows', () => {
           total: 2,
           query
         })
-      } as any);
+      } as Response);
 
       const results = await registryService.searchSkills(query);
 
@@ -78,33 +83,31 @@ describe('Registry Search E2E Workflows', () => {
       const detailsUrl = `https://skills.sh/${encodeURIComponent(skill.source)}/${encodeURIComponent(skill.skillId)}`;
 
       expect(detailsUrl).toBe('https://skills.sh/user1%2Fdata-skills/data-analysis-helper');
-
-      mockFetch.mockRestore();
     }, 15000); // Increased timeout to 15s
 
     it('should handle empty results with user-friendly message', async () => {
       const query = 'nonexistent-skill';
 
-      const mockFetch = jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+      const fetch = require('node-fetch');
+
+      (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           skills: [],
           total: 0,
           query
         })
-      } as any);
+      } as Response);
 
       const results = await registryService.searchSkills(query);
 
       expect(results.length).toBe(0);
       // UI should show "No results found" message
-
-      mockFetch.mockRestore();
     });
 
     it('should debounce rapid search queries', async () => {
       const queries = ['test1', 'test2', 'test3'];
-      const mockFetch = jest.spyOn(global, 'fetch');
+      const fetch = require('node-fetch') as jest.Mock;
 
       // Simulate rapid typing (only last query should execute)
       for (const query of queries) {
@@ -115,9 +118,7 @@ describe('Registry Search E2E Workflows', () => {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Should only call API once (last query)
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-
-      mockFetch.mockRestore();
+      expect(fetch).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -426,14 +427,15 @@ Use this skill for testing
         source: `user${i}/repo${i}`
       }));
 
-      const mockFetch = jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+      const fetch = require('node-fetch');
+      (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           skills: mockSkills,
           total: 25,
           query: 'test'
         })
-      } as any);
+      } as Response);
 
       const start = Date.now();
       const results = await registryService.searchSkills('test');
@@ -441,8 +443,6 @@ Use this skill for testing
 
       expect(results.length).toBe(25);
       expect(duration).toBeLessThan(1000); // Should handle in under 1 second
-
-      mockFetch.mockRestore();
     });
 
     it('should validate all search results', async () => {
@@ -460,22 +460,21 @@ Use this skill for testing
         { id: 'invalid-3', skillId: 'test', name: 'Negative Installs', installs: -1, source: 'user/repo' }
       ];
 
-      const mockFetch = jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+      const fetch = require('node-fetch');
+      (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           skills: [validSkill, ...invalidSkills],
           total: 4,
           query: 'test'
         })
-      } as any);
+      } as Response);
 
       const results = await registryService.searchSkills('test');
 
       // Only valid skill should pass validation
       expect(results.length).toBe(1);
       expect(results[0].skillId).toBe('valid-skill');
-
-      mockFetch.mockRestore();
     });
   });
 
@@ -531,19 +530,19 @@ Use this skill for testing
     });
 
     it('should use HTTPS for all external communication', async () => {
-      const mockFetch = jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+      const fetch = require('node-fetch');
+
+      (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ skills: [], total: 0, query: 'test' })
-      } as any);
+      } as Response);
 
       await registryService.searchSkills('test');
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(fetch).toHaveBeenCalledWith(
         expect.stringMatching(/^https:/),
         expect.any(Object)
       );
-
-      mockFetch.mockRestore();
     });
   });
 });

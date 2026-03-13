@@ -20,7 +20,6 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
   const [defaultInstallDirectory, setDefaultInstallDirectory] = useState<InstallDirectory>('project');
   const [editorDefaultMode, setEditorDefaultMode] = useState<EditorMode>('edit');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [githubToken, setGithubToken] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -57,7 +56,6 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
       setDefaultInstallDirectory(config.defaultInstallDirectory);
       setEditorDefaultMode(config.editorDefaultMode);
       setAutoRefresh(config.autoRefresh);
-      setGithubToken(config.githubToken || '');
       setError(null);
       setSuccess(null);
       setActiveTab('general');
@@ -115,7 +113,6 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
         defaultInstallDirectory,
         editorDefaultMode,
         autoRefresh,
-        githubToken: githubToken.trim() || undefined,
       });
       setSuccess('Settings saved successfully');
       setTimeout(() => {
@@ -569,31 +566,6 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 </p>
               </div>
             </label>
-          </div>
-
-          {/* GitHub Token (Optional) */}
-          <div className="mb-6">
-            <label
-              htmlFor="github-token"
-              className="block text-sm font-medium text-slate-700 mb-2"
-            >
-              GitHub Personal Access Token (Optional)
-            </label>
-            <input
-              id="github-token"
-              type="password"
-              value={githubToken}
-              onChange={(e) => setGithubToken(e.target.value)}
-              className="input w-full"
-              placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              disabled={isSaving}
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Optional: Provides higher GitHub API rate limits for public skill discovery (5,000 requests/hour vs 60/hour)
-            </p>
-            <p className="text-xs text-blue-600 mt-1">
-              Get your token from GitHub Settings → Developer settings → Personal access tokens
-            </p>
           </div>
 
           {/* Keyboard Shortcuts */}

@@ -15,6 +15,10 @@ export interface AIGenerationRequest {
   mode: AIGenerationMode;
   /** Timestamp of the request */
   timestamp?: Date;
+  /** Target directory for the skill (project or global) */
+  targetDirectory?: 'project' | 'global';
+  /** Target path where the skill will be saved */
+  targetPath?: string;
   /** Skill context for AI generation */
   skillContext?: {
     /** Current skill content (for modify/insert/replace modes) */
@@ -27,12 +31,23 @@ export interface AIGenerationRequest {
     name?: string;
     /** Skill metadata */
     metadata?: Record<string, any>;
+    /** Target directory for new skills */
+    targetDirectory?: 'project' | 'global';
+    /** Target path where the skill will be saved */
+    targetPath?: string;
   };
 }
 
 export interface AIStreamChunk {
-  /** Chunk of generated text */
-  text: string;
+  /** Type of chunk */
+  type: 'text' | 'tool_use' | 'complete' | 'error';
+  /** Chunk of generated text (for type: 'text') */
+  text?: string;
+  /** Tool information (for type: 'tool_use') */
+  tool?: {
+    name: string;
+    input?: any;
+  };
   /** Whether this is the final chunk */
   isComplete: boolean;
   /** Error message if generation failed */

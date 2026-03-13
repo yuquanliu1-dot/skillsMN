@@ -5,7 +5,7 @@
  */
 
 import { RegistryService } from '../../../src/main/services/RegistryService';
-import { REGISTRY_API_BASE_URL, REGISTRY_SEARCH_ENDPOINT, REGISTRY_SEARCH_LIMIT } from '../../../shared/constants';
+import { REGISTRY_API_BASE_URL, REGISTRY_SEARCH_ENDPOINT, REGISTRY_SEARCH_LIMIT } from '../../../src/shared/constants';
 
 // Mock fetch
 global.fetch = jest.fn();

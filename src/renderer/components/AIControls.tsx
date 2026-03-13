@@ -12,6 +12,7 @@ interface AIControlsProps {
   isStreaming: boolean;
   isComplete: boolean;
   isIdle: boolean;
+  canGenerate: boolean;
   canApply: boolean;
   onGenerate: () => void;
   onStop: () => void;
@@ -24,6 +25,7 @@ export const AIControls: React.FC<AIControlsProps> = ({
   isStreaming,
   isComplete,
   isIdle,
+  canGenerate,
   canApply,
   onGenerate,
   onStop,
@@ -37,10 +39,26 @@ export const AIControls: React.FC<AIControlsProps> = ({
           <button
             className="generate-button"
             onClick={onGenerate}
-            disabled={!canApply}
+            disabled={!canGenerate}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              background: canGenerate ? 'linear-gradient(135deg, #8B5CF6, #6366F1)' : '#D1D5DB',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: canGenerate ? 'pointer' : 'not-allowed',
+              transition: 'all 150ms ease',
+            }}
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-              <path d="M10 2l4-4 2 4 4-4-4-2 4-4 4 4 4v4-4 4 4 2 4-4 4 4 2 4-4 4 4 4 4 4 4 4 4 4-4 4 0 6 6l8 6L10 6 10 6z" strokeWidth="2" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             <span>Generate</span>
           </button>
@@ -50,10 +68,25 @@ export const AIControls: React.FC<AIControlsProps> = ({
           <button
             className="stop-button"
             onClick={onStop}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              background: '#EF4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+            }}
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-              <rect x="6" y="6" width="8" height="8" rx="2" ry="2" strokeWidth="2" />
-              <path d="M6 14l8 8 6 6l8 8-6-8" strokeWidth="2" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="6" y="6" width="12" height="12" rx="2" strokeWidth="2" />
             </svg>
             <span>Stop</span>
           </button>
@@ -65,9 +98,25 @@ export const AIControls: React.FC<AIControlsProps> = ({
           className="retry-button"
           onClick={onRetry}
           disabled={isIdle}
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            padding: '0.75rem 1.5rem',
+            background: isIdle ? '#D1D5DB' : '#F59E0B',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            cursor: isIdle ? 'not-allowed' : 'pointer',
+            transition: 'all 150ms ease',
+          }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
-            <path d="M1.5 2.5L8.5 8.5l2.5-2.5M5.5l2.5-2.5L2.5z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
           <span>Retry</span>
         </button>
@@ -76,9 +125,25 @@ export const AIControls: React.FC<AIControlsProps> = ({
           <button
             className="apply-button"
             onClick={onApply}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              background: '#10B981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+            }}
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-              <path d="M16 4l-5 7-7 7-4-3-4-3v4-3z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
             <span>Apply</span>
           </button>
@@ -129,55 +194,57 @@ const controlsStyles = `
   }
 
   .generate-button {
-    background: var(--color-primary);
+    background: linear-gradient(135deg, #8B5CF6, #6366F1);
     color: white;
     flex: 1;
     justify-content: center;
   }
 
-  .generate-button:hover:notdisabled {
-    background: var(--color-primary-dark);
+  .generate-button:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  .generate-button:active:notdisabled {
+  .generate-button:active:not(:disabled) {
     transform: translateY(0);
   }
 
   .stop-button {
-    background: var(--color-error);
+    background: #EF4444;
     color: white;
   }
 
-  .stop-button:hover:notdisabled {
-    background: var(--color-error-dark);
+  .stop-button:hover:not(:disabled) {
+    background: #DC2626;
   }
 
   .retry-button {
-    background: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
+    background: #F59E0B;
+    color: white;
+    border: none;
   }
 
-  .retry-button:hover:notdisabled {
-    background: var(--background-hover);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+  .retry-button:hover:not(:disabled) {
+    background: #D97706;
+  }
+
+  .retry-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .apply-button {
-    background: var(--color-success);
+    background: #10B981;
     color: white;
   }
 
-  .apply-button:hover:notdisabled {
-    background: var(--color-success-dark);
+  .apply-button:hover:not(:disabled) {
+    background: #059669;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  .apply-button:active:notdisabled {
+  .apply-button:active:not(:disabled) {
     transform: translateY(0);
   }
 

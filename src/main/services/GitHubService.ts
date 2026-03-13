@@ -171,12 +171,6 @@ export class GitHubService {
       const searchQuery = `${query} "skill.md" in:path`;
       const url = `${GITHUB_API_BASE}/search/code?q=${encodeURIComponent(searchQuery)}&page=${page}&per_page=30`;
 
-      // Get GitHub token from config (if available)
-      const { ConfigService } = await import('./ConfigService');
-      const configService = new ConfigService();
-      const config = await configService.load();
-      const githubToken = config.githubToken;
-
       // Use retry logic for network resilience
       const response = await retryWithBackoff(
         async () => {
@@ -184,11 +178,6 @@ export class GitHubService {
             Accept: 'application/vnd.github.v3+json',
             'User-Agent': 'skillsMN-App',
           };
-
-          // Add authorization if token is available
-          if (githubToken) {
-            headers['Authorization'] = `token ${githubToken}`;
-          }
 
           const res = await fetch(url, {
             headers,

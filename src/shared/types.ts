@@ -71,8 +71,6 @@ export interface Configuration {
   editorDefaultMode: EditorMode;
   /** Auto-refresh skill list on file changes */
   autoRefresh: boolean;
-  /** GitHub Personal Access Token for public skill discovery (optional, for higher rate limits) */
-  githubToken?: string;
 }
 
 // ============================================================================
@@ -189,14 +187,25 @@ export interface AIGenerationRequest {
     content?: string;
     cursorPosition?: number;
     selectedText?: string;
+    /** Target directory for new skills */
+    targetDirectory?: 'project' | 'global';
+    /** Target path where the skill will be saved */
+    targetPath?: string;
   };
   /** Request timestamp */
   timestamp?: Date;
 }
 
 export interface AIStreamChunk {
-  /** Chunk of generated text */
-  text: string;
+  /** Type of chunk */
+  type: 'text' | 'tool_use' | 'complete' | 'error';
+  /** Chunk of generated text (for type: 'text') */
+  text?: string;
+  /** Tool information (for type: 'tool_use') */
+  tool?: {
+    name: string;
+    input?: any;
+  };
   /** Whether this is the final chunk */
   isComplete: boolean;
   /** Error message if generation failed */
@@ -385,6 +394,7 @@ export interface PrivateSkill {
   lastCommitDate?: Date;
   fileCount?: number;
   directoryCommitSHA?: string;
+  skillFilePath?: string; // Path to SKILL.md file
 }
 
 export interface ContentValidationResult {

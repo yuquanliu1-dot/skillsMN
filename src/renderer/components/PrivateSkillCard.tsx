@@ -81,7 +81,20 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
 
   return (
     <>
-      <article className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
+      <article
+        onClick={handleCardClick}
+        className={`p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors ${
+          onSkillClick ? 'cursor-pointer' : ''
+        }`}
+        role={onSkillClick ? 'button' : undefined}
+        tabIndex={onSkillClick ? 0 : undefined}
+        onKeyPress={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            handleCardClick();
+          }
+        }}
+        aria-label={onSkillClick ? `View ${skill.name} details` : undefined}
+      >
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
             <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">

@@ -392,6 +392,7 @@ export class PrivateRepoService {
         lastCommitDate: skill.lastCommitDate,
         fileCount: 1,
         directoryCommitSHA: skill.directoryCommitSHA,
+        skillFilePath: skill.skillFilePath,
       }));
 
       // Update last sync time
