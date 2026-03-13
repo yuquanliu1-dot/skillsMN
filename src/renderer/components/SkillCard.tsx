@@ -155,7 +155,7 @@ export default function SkillCard({
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-1 flex-shrink-0 opacity-0 hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {/* Update Button */}
             {hasUpdate && onUpdate && updateProgress !== 'success' && (
               <button
