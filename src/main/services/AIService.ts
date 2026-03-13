@@ -1,12 +1,10 @@
 /**
  * AI Service (Using Claude Agent SDK)
  *
- * Handles AI-powered skill generation using Claude Agent SDK with skill-creator tool
+ * Handles AI-powered skill generation using Claude Agent SDK
  */
 
 import { safeStorage } from 'electron';
-import * as fs from 'fs';
-import * as path from 'path';
 import { logger } from '../utils/Logger';
 import type { AIGenerationRequest, AIStreamChunk } from '../models/AIGenerationRequest';
 import { validateAIGenerationRequest } from '../models/AIGenerationRequest';
@@ -127,36 +125,6 @@ export class AIService {
   }
 
   /**
-   * Load skill-creator skill content to include in system prompt
-   * @private
-   */
-  private static async loadSkillCreatorContent(): Promise<string> {
-    try {
-      // Try to load from project skills first
-      const projectSkillPath = path.join(process.cwd(), '.claude', 'skills', 'skill-creator', 'skill.md');
-      if (fs.existsSync(projectSkillPath)) {
-        const content = fs.readFileSync(projectSkillPath, 'utf-8');
-        logger.debug('Loaded skill-creator from project directory', 'AIService');
-        return content;
-      }
-
-      // Try global skills directory
-      const globalSkillPath = path.join(require('os').homedir(), '.claude', 'skills', 'skill-creator', 'skill.md');
-      if (fs.existsSync(globalSkillPath)) {
-        const content = fs.readFileSync(globalSkillPath, 'utf-8');
-        logger.debug('Loaded skill-creator from global directory', 'AIService');
-        return content;
-      }
-
-      logger.warn('skill-creator skill not found, using default guidelines', 'AIService');
-      return '';
-    } catch (error) {
-      logger.error('Failed to load skill-creator skill', 'AIService', error);
-      return '';
-    }
-  }
-
-  /**
    * Generate skill content with streaming support using Claude Agent SDK
    * Creates an async generator that yields chunks of generated text
    * @param requestId - Unique identifier for this generation request (used for cancellation)
@@ -184,16 +152,13 @@ export class AIService {
       // Build the user prompt
       const userPrompt = AIService.buildUserPrompt(request);
 
-      // Load skill-creator skill content
-      const skillCreatorContent = await AIService.loadSkillCreatorContent();
-
-      // Build system prompt with skill-creator knowledge
-      const systemPrompt = AIService.buildSystemPrompt(request.mode, skillCreatorContent);
+      // Build system prompt (Agent SDK will automatically load skills)
+      const systemPrompt = AIService.buildSystemPrompt(request.mode);
 
       // Load SDK and use query
       const { query } = await loadSDK();
 
-      // Use Claude Agent SDK query (no tools needed - skill-creator is knowledge, not a tool)
+      // Use Claude Agent SDK query (Agent SDK will access skill-creator automatically)
       const stream = query({
         prompt: userPrompt,
         options: {
@@ -339,45 +304,43 @@ export class AIService {
 
   /**
    * Build system prompt based on generation mode
+   * Note: Claude Agent SDK will automatically load and access skills from .claude/skills/
    * @private
    */
-  private static buildSystemPrompt(mode: AIGenerationRequest['mode'], skillCreatorContent: string = ''): string {
-    const basePrompt = `You are an expert skill creator for Claude Code, a desktop application that helps developers manage Claude Code skills. A skill is a YAML + Markdown file that extends Claude's capabilities with specialized knowledge.
+  private static buildSystemPrompt(mode: AIGenerationRequest['mode']): string {
+    const basePrompt = `You are an expert skill creator for Claude Code. You have access to the skill-creator skill which provides comprehensive guidelines for creating effective skills.
+
+When generating skill content:
+- Use the skill-creator skill as your guide for best practices
+- Follow proper YAML frontmatter format (name, description, version, author, tags)
+- Write comprehensive Markdown content with clear structure
+- Include practical examples and step-by-step instructions
+- Use proper formatting (headings, lists, code blocks)
 
 Skills follow this format:
 ---
 name: Skill Name
-description: Brief description of the skill
+description: Brief description
+version: 1.0.0
+author: Author Name
+tags: [tag1, tag2, tag3]
 ---
 
 # Skill Content
 
-Markdown content here with instructions, examples, and guidance.
-
-Guidelines for skill generation:
-- Use clear, concise language
-- Include practical examples
-- Provide step-by-step instructions when appropriate
-- Use proper YAML syntax in frontmatter
-- Follow Markdown best practices
-- Make content actionable and specific`;
-
-    // Include skill-creator skill content if available
-    const skillCreatorSection = skillCreatorContent
-      ? `\n\n## Skill Creation Guidelines\n\nRefer to the following comprehensive skill creation guide:\n\n${skillCreatorContent}`
-      : '';
+Markdown content with instructions, examples, and guidance.`;
 
     const modeInstructions = {
-      new: '\n\nYou are generating a NEW skill from scratch based on the user\'s prompt. Create complete, production-ready skill content with proper frontmatter and comprehensive markdown content.',
+      new: '\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user\'s requirements. Use the skill-creator skill for guidance.',
 
-      modify: '\n\nYou are MODIFYING existing skill content based on the user\'s instructions. Improve, expand, or refine the existing content while preserving its core purpose.',
+      modify: '\n\nYou are MODIFYING an existing skill. Improve, expand, or refine the content while preserving its core purpose. Refer to skill-creator for best practices.',
 
-      insert: '\n\nYou are INSERTING new content into existing skill content at a specified position. Generate content that fits naturally into the existing skill.',
+      insert: '\n\nYou are INSERTING new content into an existing skill at a specified position. Generate content that fits naturally. Follow skill-creator guidelines.',
 
-      replace: '\n\nYou are REPLACING a selected portion of existing skill content with new content. Generate replacement content that maintains context and flow.'
+      replace: '\n\nYou are REPLACING a selected portion of an existing skill. Generate replacement content that maintains context and flow. Use skill-creator as reference.'
     };
 
-    return basePrompt + skillCreatorSection + (modeInstructions[mode] || '');
+    return basePrompt + (modeInstructions[mode] || '');
   }
 
   /**
