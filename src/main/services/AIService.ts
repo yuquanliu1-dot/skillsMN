@@ -28,11 +28,15 @@ const activeStreams = new Map<string, AbortController>();
 
 /**
  * Load Claude Agent SDK module dynamically
+ * Uses Function constructor to prevent TypeScript from transpiling import() to require()
  */
 async function loadSDK(): Promise<ClaudeAgentSDK> {
   if (!sdkModule) {
-    // Dynamic import for ES Module
-    const module = await import('@anthropic-ai/claude-agent-sdk');
+    // Use Function constructor to prevent TypeScript from transpiling to require()
+    // This is necessary because @anthropic-ai/claude-agent-sdk is an ES Module
+    const dynamicImport = new Function('modulePath', 'return import(modulePath)');
+    const module = await dynamicImport('@anthropic-ai/claude-agent-sdk');
+
     sdkModule = {
       query: module.query,
       createSdkMcpServer: module.createSdkMcpServer,
