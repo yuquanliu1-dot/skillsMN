@@ -174,6 +174,7 @@ export const IPC_CHANNELS = {
   REGISTRY_INSTALL: 'registry:install',
   REGISTRY_CHECK_INSTALLED: 'registry:check-installed',
   REGISTRY_INSTALL_PROGRESS: 'registry:install:progress',
+  REGISTRY_GET_CONTENT: 'registry:get-content',
 } as const;
 
 // ============================================================================

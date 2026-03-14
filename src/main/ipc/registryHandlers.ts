@@ -210,5 +210,46 @@ export function registerRegistryHandlers(): void {
     }
   );
 
+  /**
+   * Handler for registry:get-content
+   * Fetches skill content from the registry for preview
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.REGISTRY_GET_CONTENT,
+    async (_event, { source, skillId }: {
+      source: string;
+      skillId: string;
+    }) => {
+      try {
+        logger.debug('Fetching skill content from registry', 'RegistryHandlers', {
+          source,
+          skillId
+        });
+
+        const content = await registryService.getSkillContent(source, skillId);
+
+        logger.info('Skill content fetched successfully', 'RegistryHandlers', {
+          source,
+          skillId,
+          contentLength: content.length
+        });
+
+        return {
+          success: true,
+          data: content
+        };
+      } catch (error) {
+        logger.error('Failed to fetch skill content', 'RegistryHandlers', error);
+        return {
+          success: false,
+          error: {
+            code: 'REGISTRY_CONTENT_ERROR',
+            message: error instanceof Error ? error.message : 'Failed to fetch skill content'
+          }
+        };
+      }
+    }
+  );
+
   logger.info('Registry IPC handlers registered', 'RegistryHandlers');
 }

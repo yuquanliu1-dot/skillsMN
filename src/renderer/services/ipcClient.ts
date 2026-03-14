@@ -131,14 +131,18 @@ export const ipcClient = {
   // ============================================================================
 
   async startWatching(): Promise<void> {
+    console.log('[IPC Client] startWatching() called');
     if (!isElectron()) {
       console.warn('[IPC Client] Cannot start watching in browser mode');
       return;
     }
+    console.log('[IPC Client] Calling window.electronAPI.startWatching()...');
     const response = await window.electronAPI.startWatching();
+    console.log('[IPC Client] startWatching() response:', response);
     if (!response.success) {
       throw new Error(response.error?.message || 'Unknown error');
     }
+    console.log('[IPC Client] startWatching() completed successfully');
   },
 
   async stopWatching(): Promise<void> {
@@ -153,12 +157,19 @@ export const ipcClient = {
   },
 
   onFSChange(callback: (event: FSEvent) => void): void {
+    console.log('[IPC Client] onFSChange called');
     if (!isElectron()) {
       console.warn('[IPC Client] Cannot register FS listener in browser mode');
       return;
     }
     if (window.electronAPI?.onFSChange) {
-      window.electronAPI.onFSChange(callback);
+      console.log('[IPC Client] Registering FS change listener');
+      window.electronAPI.onFSChange((event) => {
+        console.log('[IPC Client] FS change event received:', event);
+        callback(event);
+      });
+    } else {
+      console.error('[IPC Client] electronAPI.onFSChange not available');
     }
   },
 

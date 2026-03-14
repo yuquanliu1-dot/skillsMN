@@ -7,11 +7,12 @@
 import { useState } from 'react';
 import type { Configuration } from '../../shared/types';
 
-export type ViewType = 'skills' | 'discover' | 'private-repos' | 'settings';
+export type ViewType = 'skills' | 'discover' | 'private-repos';
 
 interface SidebarProps {
   currentView: ViewType;
   onViewChange: (view: ViewType) => void;
+  onSettingsClick: () => void;
   config: Configuration | null;
   onChangeProjectDirectory?: () => void;
 }
@@ -19,6 +20,7 @@ interface SidebarProps {
 export default function Sidebar({
   currentView,
   onViewChange,
+  onSettingsClick,
   config,
   onChangeProjectDirectory,
 }: SidebarProps): JSX.Element {
@@ -73,28 +75,6 @@ export default function Sidebar({
       description: 'Manage private repositories',
       disabled: !config?.projectDirectory,
     },
-    {
-      id: 'settings' as const,
-      label: 'Settings',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-      ),
-      description: 'Configure settings',
-      disabled: false,
-    },
   ];
 
   return (
@@ -143,6 +123,36 @@ export default function Sidebar({
 
       {/* Footer Section */}
       <div className="p-2 border-t border-gray-100 space-y-1">
+        {/* Settings Button */}
+        <button
+          onClick={onSettingsClick}
+          onMouseEnter={() => setShowTooltip('settings')}
+          onMouseLeave={() => setShowTooltip(null)}
+          className="w-full aspect-square rounded-xl flex items-center justify-center transition-all duration-200 relative text-gray-500 hover:text-blue-600 hover:bg-gray-50"
+          title="Settings"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+          {/* Tooltip */}
+          {showTooltip === 'settings' && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded whitespace-nowrap z-50 shadow-lg animate-fade-in">
+              Settings
+            </div>
+          )}
+        </button>
+
         {/* Project Directory Switch Button */}
         {onChangeProjectDirectory && (
           <button

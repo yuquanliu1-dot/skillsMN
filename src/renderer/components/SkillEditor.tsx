@@ -70,6 +70,7 @@ export default function SkillEditor({
         if (externalContent !== undefined) {
           if (isMounted) {
             setContent(externalContent);
+            setLoadedLastModified(Date.now());
             setIsLoading(false);
           }
           return;

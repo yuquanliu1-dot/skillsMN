@@ -2,17 +2,18 @@
  * File Watcher Service
  *
  * Monitors skill directories for changes and emits events to renderer
+ * Uses @parcel/watcher for reliable file watching on Windows
  */
 
 import { BrowserWindow } from 'electron';
-import chokidar, { FSWatcher } from 'chokidar';
+import * as parcelWatcher from '@parcel/watcher';
 import { logger } from '../utils/Logger';
 import { PathValidator } from './PathValidator';
 import { IPC_CHANNELS } from '../../shared/constants';
 import type { FSEvent } from '../../shared/types';
 
 export class FileWatcher {
-  private watcher: FSWatcher | null = null;
+  private subscriptions: parcelWatcher.AsyncSubscription[] = [];
   private mainWindow: BrowserWindow | null = null;
   private pathValidator: PathValidator;
   private watchedPaths: Set<string> = new Set();
@@ -32,7 +33,7 @@ export class FileWatcher {
    */
   setMainWindow(window: BrowserWindow): void {
     this.mainWindow = window;
-    logger.debug('Main window reference set for file watcher', 'FileWatcher');
+    logger.info('Main window reference set for file watcher', 'FileWatcher');
   }
 
   /**
@@ -44,10 +45,15 @@ export class FileWatcher {
    * @example
    * fileWatcher.start('/path/to/project/skills', '/home/user/.claude/skills');
    */
-  start(projectDir: string | null, globalDir: string): void {
-    if (this.watcher) {
-      logger.warn('File watcher already running, stopping previous instance', 'FileWatcher');
-      this.stop();
+  async start(projectDir: string | null, globalDir: string): Promise<void> {
+    logger.info('Starting file watcher', 'FileWatcher', {
+      projectDir,
+      globalDir,
+    });
+
+    if (this.subscriptions.length > 0) {
+      logger.warn('File watcher already running, stopping previous instances', 'FileWatcher');
+      await this.stop();
     }
 
     const watchPaths: string[] = [];
@@ -55,41 +61,49 @@ export class FileWatcher {
     // Add global directory
     const validatedGlobal = this.pathValidator.validate(globalDir);
     watchPaths.push(validatedGlobal);
+    logger.debug('Added global path to watch list', 'FileWatcher', { path: validatedGlobal });
 
     // Add project directory if configured
     if (projectDir) {
       const validatedProject = this.pathValidator.validate(projectDir);
       watchPaths.push(validatedProject);
+      logger.debug('Added project path to watch list', 'FileWatcher', { path: validatedProject });
     }
 
-    logger.info('Starting file watcher', 'FileWatcher', {
-      paths: watchPaths,
-    });
+    logger.info('Starting to watch directories', 'FileWatcher', { watchPaths });
 
-    // Create watcher with chokidar
-    this.watcher = chokidar.watch(watchPaths, {
-      ignored: /(^|[\/\\])\../, // Ignore dotfiles
-      persistent: true,
-      ignoreInitial: true, // Don't emit events for existing files
-      awaitWriteFinish: {
-        stabilityThreshold: 100,
-        pollInterval: 50,
-      },
-      depth: 2, // Watch skill directories and their contents
-    });
+    // Subscribe to each directory
+    for (const watchPath of watchPaths) {
+      try {
+        const subscription = await parcelWatcher.subscribe(
+          watchPath,
+          (err, events) => {
+            if (err) {
+              this.handleError(err);
+              return;
+            }
 
-    // Event handlers
-    this.watcher
-      .on('add', (path) => this.handleChange('add', path))
-      .on('change', (path) => this.handleChange('change', path))
-      .on('unlink', (path) => this.handleChange('unlink', path))
-      .on('addDir', (path) => this.handleChange('addDir', path))
-      .on('unlinkDir', (path) => this.handleChange('unlinkDir', path))
-      .on('error', (error) => this.handleError(error));
+            // Process each event
+            events.forEach(event => {
+              this.handleChange(event.type, event.path);
+            });
+          },
+          {
+            ignore: ['**/node_modules/**', '**/.git/**', '**/.*'], // Ignore dotfiles and common directories
+          }
+        );
+
+        this.subscriptions.push(subscription);
+        logger.debug('Successfully subscribed to directory', 'FileWatcher', { path: watchPath });
+      } catch (error) {
+        logger.error(`Failed to subscribe to directory: ${watchPath}`, 'FileWatcher', error);
+      }
+    }
 
     this.watchedPaths = new Set(watchPaths);
     logger.info('File watcher started successfully', 'FileWatcher', {
       watchedPaths: Array.from(this.watchedPaths),
+      subscriptionCount: this.subscriptions.length,
     });
   }
 
@@ -100,13 +114,21 @@ export class FileWatcher {
    * @example
    * fileWatcher.stop();
    */
-  stop(): void {
-    if (this.watcher) {
-      this.watcher.close();
-      this.watcher = null;
-      this.watchedPaths.clear();
-      logger.info('File watcher stopped', 'FileWatcher');
+  async stop(): Promise<void> {
+    logger.debug('Stopping file watcher', 'FileWatcher');
+
+    // Unsubscribe from all watchers
+    for (const subscription of this.subscriptions) {
+      try {
+        await subscription.unsubscribe();
+      } catch (error) {
+        logger.error('Error unsubscribing from watcher', 'FileWatcher', error);
+      }
     }
+
+    this.subscriptions = [];
+    this.watchedPaths.clear();
+    logger.info('File watcher stopped', 'FileWatcher');
 
     // Clear any pending debounce timers
     this.debounceTimers.forEach((timer) => clearTimeout(timer));
@@ -115,10 +137,25 @@ export class FileWatcher {
 
   /**
    * Handle file system changes with debouncing
+   * Maps parcel/watcher event types to our FSEvent types
    */
-  private handleChange(eventType: string, path: string): void {
+  private handleChange(eventType: 'create' | 'update' | 'delete', path: string): void {
+    logger.debug('File system event received', 'FileWatcher', {
+      eventType,
+      path,
+    });
+
+    // Map parcel/watcher event types to our FSEvent types
+    const eventTypeMap: Record<'create' | 'update' | 'delete', FSEvent['type']> = {
+      create: 'add',
+      update: 'change',
+      delete: 'unlink',
+    };
+
+    const mappedEventType = eventTypeMap[eventType];
+
     // Debounce rapid changes
-    const key = `${eventType}:${path}`;
+    const key = `${mappedEventType}:${path}`;
 
     // Clear existing timer if any
     const existingTimer = this.debounceTimers.get(key);
@@ -128,7 +165,11 @@ export class FileWatcher {
 
     // Set new timer
     const timer = setTimeout(() => {
-      this.emitEvent(eventType, path);
+      logger.info('Emitting debounced file system event', 'FileWatcher', {
+        eventType: mappedEventType,
+        path,
+      });
+      this.emitEvent(mappedEventType, path);
       this.debounceTimers.delete(key);
     }, this.DEBOUNCE_MS);
 
@@ -138,7 +179,7 @@ export class FileWatcher {
   /**
    * Emit event to renderer process
    */
-  private emitEvent(eventType: string, path: string): void {
+  private emitEvent(eventType: FSEvent['type'], path: string): void {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) {
       logger.warn('Cannot emit event: main window not available', 'FileWatcher');
       return;
@@ -148,16 +189,19 @@ export class FileWatcher {
     const directory = this.pathValidator.getSkillSource(path);
 
     const event: FSEvent = {
-      type: eventType as FSEvent['type'],
+      type: eventType,
       path,
       directory,
     };
 
-    logger.debug('Emitting file system event', 'FileWatcher', {
+    logger.info('Emitting FS_CHANGE event to renderer', 'FileWatcher', {
       event,
+      channel: IPC_CHANNELS.FS_CHANGE,
     });
 
     this.mainWindow.webContents.send(IPC_CHANNELS.FS_CHANGE, event);
+
+    logger.debug('FS_CHANGE event sent successfully', 'FileWatcher');
   }
 
   /**
@@ -165,8 +209,6 @@ export class FileWatcher {
    */
   private handleError(error: Error): void {
     logger.error('File watcher error', 'FileWatcher', error);
-    // Note: We don't emit error events to renderer as FSEvent doesn't support error type
-    // The watcher will continue running despite errors
   }
 
   /**
@@ -178,7 +220,7 @@ export class FileWatcher {
    * }
    */
   isRunning(): boolean {
-    return this.watcher !== null;
+    return this.subscriptions.length > 0;
   }
 
   /**

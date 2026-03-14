@@ -136,6 +136,10 @@ export interface ElectronAPI {
     skillId: string,
     targetDirectory: string
   ) => Promise<IPCResponse<{ installed: boolean }>>;
+  getRegistrySkillContent: (
+    source: string,
+    skillId: string
+  ) => Promise<IPCResponse<string>>;
   onInstallProgress: (callback: (event: any, progress: InstallProgressEvent) => void) => void;
   removeInstallProgressListener: () => void;
 }

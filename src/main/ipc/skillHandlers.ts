@@ -182,7 +182,8 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
         const projectSkillsDir = config.projectDirectory
           ? SkillDirectoryModel.getProjectDirectory(config.projectDirectory)
           : null;
-        fileWatcher.start(projectSkillsDir, globalDir);
+
+        await fileWatcher.start(projectSkillsDir, globalDir);
 
         logger.info('File system watcher started', 'SkillHandlers');
         return { success: true };
@@ -205,7 +206,7 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
           throw new Error('File watcher not initialized');
         }
 
-        fileWatcher.stop();
+        await fileWatcher.stop();
 
         logger.info('File system watcher stopped', 'SkillHandlers');
         return { success: true };

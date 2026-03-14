@@ -306,6 +306,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.REGISTRY_CHECK_INSTALLED, { skillId, targetDirectory });
   },
 
+  getRegistrySkillContent: (
+    source: string,
+    skillId: string
+  ): Promise<IPCResponse<string>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.REGISTRY_GET_CONTENT, { source, skillId });
+  },
+
   onInstallProgress: (callback: (event: any, progress: InstallProgressEvent) => void): void => {
     ipcRenderer.on(IPC_CHANNELS.REGISTRY_INSTALL_PROGRESS, callback);
   },

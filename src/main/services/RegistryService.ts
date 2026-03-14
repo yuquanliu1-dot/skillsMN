@@ -97,4 +97,89 @@ export class RegistryService {
       throw error;
     }
   }
+
+  /**
+   * Get skill content from registry
+   *
+   * @param source - Skill source (e.g., "anthropics/skills")
+   * @param skillId - Skill identifier
+   * @returns Skill content as string
+   */
+  async getSkillContent(source: string, skillId: string): Promise<string> {
+    // Construct URL to fetch skill content from skills.sh
+    // Format: https://skills.sh/api/skills/{source}/{skillId}/content
+    const url = `${REGISTRY_API_BASE_URL}/api/skills/${encodeURIComponent(source)}/${encodeURIComponent(skillId)}/content`;
+
+    console.log(`[RegistryService] Fetching skill content: ${source}/${skillId}`);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), REGISTRY_API_TIMEOUT_MS);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          'Accept': 'text/markdown',
+          'User-Agent': 'skillsMN-Desktop/1.0'
+        }
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        // Fallback: Try GitHub raw URL
+        const githubUrl = this.buildGitHubRawUrl(source, skillId);
+        if (githubUrl) {
+          console.log(`[RegistryService] Trying GitHub fallback: ${githubUrl}`);
+          const githubResponse = await fetch(githubUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'text/plain',
+              'User-Agent': 'skillsMN-Desktop/1.0'
+            }
+          });
+
+          if (githubResponse.ok) {
+            const content = await githubResponse.text();
+            console.log(`[RegistryService] Skill content fetched from GitHub (${content.length} chars)`);
+            return content;
+          }
+        }
+
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to fetch skill content: ${response.status} - ${errorText}`);
+      }
+
+      const content = await response.text();
+      console.log(`[RegistryService] Skill content fetched (${content.length} chars)`);
+      return content;
+
+    } catch (error: any) {
+      console.error('[RegistryService] Failed to fetch skill content:', error);
+
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timed out after ${REGISTRY_API_TIMEOUT_MS}ms`);
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Build GitHub raw URL for skill content
+   * Attempts to construct a GitHub raw URL from the source
+   */
+  private buildGitHubRawUrl(source: string, skillId: string): string | null {
+    // Source format: "owner/repo" or "owner/repo/subpath"
+    const parts = source.split('/');
+    if (parts.length >= 2) {
+      const owner = parts[0];
+      const repo = parts[1];
+      const subpath = parts.length > 2 ? parts.slice(2).join('/') : '';
+      const skillPath = subpath ? `${subpath}/${skillId}/skill.md` : `${skillId}/skill.md`;
+      return `https://raw.githubusercontent.com/${owner}/${repo}/main/${skillPath}`;
+    }
+    return null;
+  }
 }
