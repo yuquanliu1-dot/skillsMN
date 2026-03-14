@@ -881,6 +881,7 @@ export default function SkillEditor({
               renderWhitespace: 'selection',
               bracketPairColorization: { enabled: true },
               padding: { top: 16 },
+              readOnly: readOnly,
             }}
           />
         </div>

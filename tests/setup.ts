@@ -80,6 +80,7 @@ global.window.electronAPI = {
   searchRegistry: jest.fn(),
   installFromRegistry: jest.fn(),
   checkSkillInstalled: jest.fn(),
+  getRegistrySkillContent: jest.fn(),
   onInstallProgress: jest.fn(),
   removeInstallProgressListener: jest.fn(),
 
