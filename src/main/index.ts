@@ -100,7 +100,7 @@ async function createWindow(): Promise<void> {
     return { action: 'deny' };
   });
 
-  // Remove default Electron menu
+  // Remove application menu
   Menu.setApplicationMenu(null);
 
   // Clean up on close
