@@ -41,19 +41,18 @@ export default function DirectoryChangeDialog({
    */
   const handleBrowse = useCallback(async () => {
     try {
-      // Use Electron's dialog API if available
-      const result = await window.electronAPI.selectDirectory();
-      if (result && !result.canceled && result.filePaths.length > 0) {
-        setDirectory(result.filePaths[0]);
+      // Use Electron's dialog API
+      const response = await window.electronAPI.selectDirectory();
+
+      if (response.success && response.data && !response.data.canceled && response.data.filePaths.length > 0) {
+        setDirectory(response.data.filePaths[0]);
         setError(null);
+      } else if (!response.success) {
+        setError(response.error?.message || 'Failed to open directory selector');
       }
     } catch (err) {
-      // Fallback to prompt if dialog API is not available
-      const result = prompt('Enter Claude project directory path:');
-      if (result) {
-        setDirectory(result);
-        setError(null);
-      }
+      const message = err instanceof Error ? err.message : 'Failed to open directory selector';
+      setError(message);
       console.error('Browse error:', err);
     }
   }, []);

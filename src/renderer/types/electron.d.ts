@@ -30,7 +30,7 @@ export interface ElectronAPI {
   openFolder: (path: string) => Promise<IPCResponse<void>>;
 
   // Dialog Operations
-  selectDirectory: () => Promise<{ canceled: boolean; filePaths: string[] } | null>;
+  selectDirectory: () => Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>>;
 
   // Configuration Operations
   loadConfig: () => Promise<IPCResponse<Configuration>>;

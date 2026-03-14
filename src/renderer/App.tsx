@@ -4,7 +4,7 @@
  * Root component with React Context for state management
  */
 
-import React, { createContext, useReducer, useEffect, useState } from 'react';
+import React, { createContext, useReducer, useEffect, useState, useCallback, useRef } from 'react';
 import type { Configuration, Skill, UIState, FilterSource, SortBy, PrivateSkill, PrivateRepo } from '../shared/types';
 import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
@@ -112,6 +112,9 @@ export default function App(): JSX.Element {
   const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | null>(null);
+
+  // Ref to store latest loadSkills function for file watcher callback
+  const loadSkillsRef = useRef<() => Promise<void>>(async () => {});
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showAICreationDialog, setShowAICreationDialog] = useState(false);
   const [aiCreationDirectory, setAICreationDirectory] = useState<'project' | 'global'>('project');
@@ -158,14 +161,31 @@ export default function App(): JSX.Element {
           // Continue anyway - the directory might become available later
         }
 
-        // Start file watcher
-        await ipcClient.startWatching();
+        // Start file watcher if autoRefresh is enabled
+        console.log('🔍 [App.tsx] Checking autoRefresh setting:', config.autoRefresh);
+        if (config.autoRefresh !== false) {  // Default to true if not set
+          console.log('🚀 [App.tsx] AutoRefresh enabled, starting file watcher...');
+          try {
+            await ipcClient.startWatching();
+            console.log('✅ [App.tsx] startWatching() completed successfully');
+          } catch (error) {
+            console.error('❌ [App.tsx] Failed to start file watcher:', error);
+          }
 
-        // Subscribe to file system changes
-        ipcClient.onFSChange(async (event) => {
-          console.log('File system change detected:', event);
-          await loadSkills();
-        });
+          // Remove any existing listener before adding new one
+          ipcClient.removeFSChangeListener();
+
+          // Subscribe to file system changes
+          ipcClient.onFSChange(async (event) => {
+            console.log('🔔 [App.tsx] File system change detected:', event);
+            console.log('🔔 [App.tsx] Calling loadSkills...');
+            await loadSkillsRef.current();
+            console.log('✅ [App.tsx] loadSkills completed');
+          });
+          console.log('File system watcher started on initialization');
+        } else {
+          console.log('⚠️ [App.tsx] AutoRefresh disabled, skipping file watcher');
+        }
 
         dispatch({ type: 'SET_LOADING', payload: false });
       } catch (error) {
@@ -240,17 +260,25 @@ export default function App(): JSX.Element {
   /**
    * Load skills from file system
    */
-  async function loadSkills(): Promise<void> {
-    if (!state.config) return;
+  const loadSkills = useCallback(async (): Promise<void> => {
+    if (!state.config) {
+      console.log('⚠️ [loadSkills] No config, skipping');
+      return;
+    }
 
     try {
+      console.log('🔄 [loadSkills] Starting to load skills...');
       const skills = await ipcClient.listSkills(state.config);
+      console.log(`✅ [loadSkills] Loaded ${skills.length} skills`);
       dispatch({ type: 'SET_SKILLS', payload: skills });
     } catch (error) {
-      console.error('Failed to load skills:', error);
+      console.error('❌ [loadSkills] Failed to load skills:', error);
       dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
     }
-  }
+  }, [state.config]);
+
+  // Keep ref updated with latest loadSkills function
+  loadSkillsRef.current = loadSkills;
 
   /**
    * Handle setup completion
@@ -261,14 +289,20 @@ export default function App(): JSX.Element {
       dispatch({ type: 'SET_CONFIG', payload: config });
       setShowSetup(false);
 
-      // Start file watcher
-      await ipcClient.startWatching();
+      // Start file watcher if autoRefresh is enabled (default: true)
+      if (config.autoRefresh !== false) {
+        await ipcClient.startWatching();
 
-      // Subscribe to file system changes
-      ipcClient.onFSChange(async (event) => {
-        console.log('File system change detected:', event);
-        await loadSkills();
-      });
+        // Remove any existing listener before adding new one
+        ipcClient.removeFSChangeListener();
+
+        // Subscribe to file system changes
+        ipcClient.onFSChange(async (event) => {
+          console.log('File system change detected:', event);
+          await loadSkillsRef.current();
+        });
+        console.log('File system watcher started after setup');
+      }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
     }
@@ -396,10 +430,36 @@ export default function App(): JSX.Element {
    */
   const handleSaveSettings = async (settings: Partial<Configuration>): Promise<void> => {
     try {
+      const oldConfig = state.config;
       const updatedConfig = await ipcClient.saveConfig(settings);
 
       // Update local state
       dispatch({ type: 'SET_CONFIG', payload: updatedConfig });
+
+      // Handle autoRefresh changes
+      if (oldConfig && 'autoRefresh' in settings) {
+        const wasWatching = oldConfig.autoRefresh !== false;
+        const shouldWatch = updatedConfig.autoRefresh !== false;
+
+        if (!wasWatching && shouldWatch) {
+          // Start watching
+          await ipcClient.startWatching();
+
+          // Remove any existing listener before adding new one
+          ipcClient.removeFSChangeListener();
+
+          ipcClient.onFSChange(async (event) => {
+            console.log('File system change detected:', event);
+            await loadSkillsRef.current();
+          });
+          console.log('File system watcher started');
+        } else if (wasWatching && !shouldWatch) {
+          // Stop watching
+          await ipcClient.stopWatching();
+          ipcClient.removeFSChangeListener();
+          console.log('File system watcher stopped');
+        }
+      }
 
       console.log('Settings saved successfully');
     } catch (error) {
@@ -458,6 +518,23 @@ export default function App(): JSX.Element {
     } catch (error) {
       console.error('Failed to view private skill:', error);
       showToast(`Failed to load skill: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
+  };
+
+  /**
+   * Handle viewing discover skill content
+   * Opens skill details on skills.sh in new tab
+   */
+  const handleViewDiscoverSkill = async (skill: any) => {
+    try {
+      // Open skill details on skills.sh in new tab
+      const encodedSource = encodeURIComponent(skill.source);
+      const encodedSkillId = encodeURIComponent(skill.skillId);
+      const url = `https://skills.sh/${encodedSource}/${encodedSkillId}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Failed to view discover skill:', error);
+      showToast(`Failed to open skill: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
 
@@ -530,6 +607,7 @@ export default function App(): JSX.Element {
         <Sidebar
           currentView={currentView}
           onViewChange={setCurrentView}
+          onSettingsClick={() => setShowSettings(true)}
           config={state.config}
           onChangeProjectDirectory={() => setShowDirectoryChangeDialog(true)}
         />
@@ -555,21 +633,13 @@ export default function App(): JSX.Element {
               <RegistrySearchPanel
                 config={state.config}
                 onInstallComplete={loadSkills}
+                onSkillClick={handleViewDiscoverSkill}
               />
             </div>
 
             <div style={{ display: currentView === 'private-repos' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
               <PrivateRepoList
                 onSkillClick={handleViewPrivateSkill}
-              />
-            </div>
-
-            <div style={{ display: currentView === 'settings' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
-              <Settings
-                isOpen={true}
-                onClose={() => setCurrentView('skills')}
-                config={state.config}
-                onSave={handleSaveSettings}
               />
             </div>
           </div>
@@ -709,6 +779,14 @@ export default function App(): JSX.Element {
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {/* Settings Modal */}
+      <Settings
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        config={state.config}
+        onSave={handleSaveSettings}
+      />
     </AppContext.Provider>
   );
 }

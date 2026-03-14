@@ -12,9 +12,10 @@ interface SearchResultsListProps {
   results: SearchSkillResult[];
   targetDirectory: string;
   onInstallComplete?: (skill: SearchSkillResult) => void;
+  onSkillClick?: (skill: SearchSkillResult) => void;
 }
 
-export const SearchResultsList: React.FC<SearchResultsListProps> = ({ results, targetDirectory, onInstallComplete }) => {
+export const SearchResultsList: React.FC<SearchResultsListProps> = ({ results, targetDirectory, onInstallComplete, onSkillClick }) => {
   if (results.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -31,6 +32,7 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = ({ results, t
           skill={skill}
           targetDirectory={targetDirectory}
           onInstallComplete={onInstallComplete}
+          onSkillClick={onSkillClick}
         />
       ))}
     </div>

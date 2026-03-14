@@ -78,6 +78,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.CONFIG_SAVE, { config });
   },
 
+  selectDirectory: (): Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SELECT_DIRECTORY);
+  },
+
   // ============================================================================
   // File System Watching
   // ============================================================================
@@ -91,7 +95,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   onFSChange: (callback: (event: FSEvent) => void): void => {
+    console.log('[Preload] onFSChange: Registering listener for', IPC_CHANNELS.FS_CHANGE);
     ipcRenderer.on(IPC_CHANNELS.FS_CHANGE, (_event, change) => {
+      console.log('[Preload] Received FS_CHANGE event:', change);
       callback(change as FSEvent);
     });
   },

@@ -174,6 +174,11 @@ export default function SkillList({
 
         {/* Bottom row: Filters + Sort + Count */}
         <div className="flex items-center gap-4 flex-wrap">
+          {/* Skill count */}
+          <div className="text-sm text-gray-500">
+            {filteredAndSortedSkills.length} of {skills.length} skills
+          </div>
+
           {/* Filter by source */}
           <div className="flex items-center gap-2">
             <label htmlFor="filter-source" className="text-sm text-gray-700">
@@ -207,11 +212,6 @@ export default function SkillList({
               <option value="name">Name</option>
               <option value="modified">Modified</option>
             </select>
-          </div>
-
-          {/* Skill count */}
-          <div className="ml-auto text-sm text-gray-500">
-            {filteredAndSortedSkills.length} of {skills.length} skills
           </div>
         </div>
       </div>

@@ -14,12 +14,14 @@ interface SkillResultCardProps {
   skill: SearchSkillResult;
   targetDirectory: string;
   onInstallComplete?: (skill: SearchSkillResult) => void;
+  onSkillClick?: (skill: SearchSkillResult) => void;
 }
 
 export const SkillResultCard: React.FC<SkillResultCardProps> = ({
   skill,
   targetDirectory,
-  onInstallComplete
+  onInstallComplete,
+  onSkillClick
 }) => {
   const [showDialog, setShowDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
@@ -84,11 +86,16 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
   };
 
   const handleSkillNameClick = () => {
-    // Open skill details on skills.sh in new tab
-    const encodedSource = encodeURIComponent(skill.source);
-    const encodedSkillId = encodeURIComponent(skill.skillId);
-    const url = `https://skills.sh/${encodedSource}/${encodedSkillId}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+    if (onSkillClick) {
+      // If onSkillClick callback is provided, use it to show skill in third column
+      onSkillClick(skill);
+    } else {
+      // Fallback: open skill details on skills.sh in new tab
+      const encodedSource = encodeURIComponent(skill.source);
+      const encodedSkillId = encodeURIComponent(skill.skillId);
+      const url = `https://skills.sh/${encodedSource}/${encodedSkillId}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   return (

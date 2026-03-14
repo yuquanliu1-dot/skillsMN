@@ -8,16 +8,18 @@ import React, { useState } from 'react';
 import { useRegistrySearch } from '../hooks/useRegistrySearch';
 import { SearchIcon } from './icons/SearchIcon';
 import { SearchResultsList } from './SearchResultsList';
-import type { Configuration } from '../../shared/types';
+import type { Configuration, SearchSkillResult } from '../../shared/types';
 
 interface RegistrySearchPanelProps {
   config: Configuration | null;
   onInstallComplete?: () => void;
+  onSkillClick?: (skill: SearchSkillResult) => void;
 }
 
 export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
   config,
-  onInstallComplete
+  onInstallComplete,
+  onSkillClick
 }) => {
   const { query, results, isLoading, error, setQuery } = useRegistrySearch();
   const [hasSearched, setHasSearched] = useState(false);
@@ -148,6 +150,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
                 results={results}
                 targetDirectory={targetDirectory}
                 onInstallComplete={onInstallComplete}
+                onSkillClick={onSkillClick}
               />
             </>
           )}

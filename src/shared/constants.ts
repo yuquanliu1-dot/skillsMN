@@ -125,6 +125,7 @@ export const IPC_CHANNELS = {
   CONFIG_LOAD: 'config:load',
   CONFIG_SAVE: 'config:save',
   CONFIG_TEST_AI: 'config:test-ai',
+  DIALOG_SELECT_DIRECTORY: 'dialog:select-directory',
 
   // File system watching
   FS_WATCH_START: 'fs:watch-start',
