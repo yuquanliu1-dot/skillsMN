@@ -8,6 +8,7 @@ import fs from 'fs';
 import fsExtra from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import trash from 'trash';
 import { logger } from '../utils/Logger';
 import { PathValidator } from './PathValidator';
 import { ConfigService } from './ConfigService';
@@ -281,8 +282,7 @@ export class SkillService {
     // Validate path
     const validatedPath = this.pathValidator.validate(skillPath);
 
-    // Move to recycle bin using dynamic import for ES module
-    const { default: trash } = await import('trash');
+    // Move to recycle bin
     await trash(validatedPath);
 
     logger.info(`Skill moved to recycle bin: ${skillPath}`, 'SkillService');
