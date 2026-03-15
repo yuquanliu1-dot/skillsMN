@@ -783,8 +783,8 @@ export class PrivateRepoService {
       const provider = repo.provider || 'github';
       const gitProvider = getGitProvider(provider);
 
-      // Extract skill directory name from path
-      const skillDirName = skillPath.split('/').pop() || skillName;
+      // Extract skill directory name from path (handle both Windows and Unix paths)
+      const skillDirName = path.basename(skillPath);
 
       // Call provider's upload method
       const result = await (gitProvider as any).uploadSkill(
