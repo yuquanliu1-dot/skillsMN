@@ -10,7 +10,7 @@ import * as os from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import { gitOperations, CloneResult } from '../utils/gitOperations';
 import { SkillDiscovery } from '../utils/skillDiscovery';
-import { createSkillSource, SkillSource } from '../models/SkillSource';
+import { createRegistrySource, SkillSource } from '../models/SkillSource';
 import { logger } from '../utils/Logger';
 import type { InstallFromRegistryRequest, InstallProgressEvent, RegistryErrorCode } from '../../shared/types';
 
@@ -159,7 +159,7 @@ export class SkillInstaller {
       });
 
       // Create and write source metadata
-      const sourceMetadata = createSkillSource(
+      const sourceMetadata = createRegistrySource(
         request.source,
         request.skillId,
         cloneResult.commitHash

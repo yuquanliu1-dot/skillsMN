@@ -9,7 +9,8 @@ import path from 'path';
 import matter from 'gray-matter';
 import { logger } from '../utils/Logger';
 import { Skill, SkillFrontmatter, SkillSource } from '../../shared/types';
-import { SKILL_FILE_NAME, MAX_SKILL_NAME_LENGTH, MAX_SKILL_DESCRIPTION_LENGTH } from '../../shared/constants';
+import { SkillSource as SkillSourceType, validateSkillSource } from './SkillSource';
+import { SKILL_FILE_NAME, MAX_SKILL_NAME_LENGTH, MAX_SKILL_DESCRIPTION_LENGTH, SOURCE_METADATA_FILE } from '../../shared/constants';
 
 export class SkillModel {
   /**
@@ -53,6 +54,25 @@ export class SkillModel {
     // Count resources (all files except skill.md)
     const resourceCount = await this.countResources(dirPath);
 
+    // Read source metadata if available
+    let sourceMetadata: SkillSourceType | undefined;
+    const metadataPath = path.join(dirPath, SOURCE_METADATA_FILE);
+    if (fs.existsSync(metadataPath)) {
+      try {
+        const metadataContent = await fs.promises.readFile(metadataPath, 'utf-8');
+        const parsedMetadata = JSON.parse(metadataContent);
+
+        if (validateSkillSource(parsedMetadata)) {
+          sourceMetadata = parsedMetadata;
+          logger.debug('Source metadata loaded', 'SkillModel', { dirPath, type: sourceMetadata.type });
+        } else {
+          logger.warn('Invalid source metadata format', 'SkillModel', { dirPath });
+        }
+      } catch (error) {
+        logger.warn('Failed to read source metadata', 'SkillModel', { dirPath, error });
+      }
+    }
+
     const skill: Skill = {
       path: dirPath,
       name: validatedName,
@@ -60,6 +80,7 @@ export class SkillModel {
       source,
       lastModified: dirStats.mtime,
       resourceCount,
+      sourceMetadata,
     };
 
     logger.debug(`Skill model created: ${validatedName}`, 'SkillModel', { path: dirPath, source });
