@@ -8,8 +8,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Editor, { OnMount, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor';
-import type { Skill, AIGenerationMode } from '../../shared/types';
-import { AIAssistPanel } from './AIAssistPanel';
+import type { Skill, AIGenerationMode, SkillEditorConfig } from '../../shared/types';
 import { AIAssistantPopover } from './AIAssistantPopover';
 import { ipcClient } from '../services/ipcClient';
 import { useAIGeneration } from '../hooks/useAIGeneration';
@@ -24,6 +23,7 @@ interface SkillEditorProps {
   isInline?: boolean;
   content?: string;
   readOnly?: boolean;
+  config?: SkillEditorConfig;
 }
 
 export default function SkillEditor({
@@ -32,7 +32,18 @@ export default function SkillEditor({
   onSave,
   isInline = false,
   content: externalContent,
-  readOnly = false
+  readOnly = false,
+  config = {
+    fontSize: 14,
+    theme: 'light',
+    autoSaveEnabled: true,
+    autoSaveDelay: 2000,
+    showMinimap: false,
+    lineNumbers: 'on',
+    fontFamily: "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+    tabSize: 2,
+    wordWrap: true,
+  },
 }: SkillEditorProps): JSX.Element {
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +53,6 @@ export default function SkillEditor({
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saving'>('idle');
   const [loadedLastModified, setLoadedLastModified] = useState<number | null>(null);
   const [externalChangeDetected, setExternalChangeDetected] = useState(false);
-  const [isAIAssistPanelOpen, setIsAIAssistPanelOpen] = useState<boolean>(false);
   const [isAIRewritePopoverOpen, setIsAIRewritePopoverOpen] = useState<boolean>(false);
   const [rewriteSelection, setRewriteSelection] = useState<{ text: string; range: monaco.Range } | null>(null);
   const [rewritePopoverPosition, setRewritePopoverPosition] = useState<{ x: number; y: number } | undefined>();
@@ -237,12 +247,14 @@ export default function SkillEditor({
         clearTimeout(autoSaveTimerRef.current);
       }
 
-      // Set new auto-save timer (2 seconds debounce)
-      autoSaveTimerRef.current = setTimeout(() => {
-        handleAutoSave(value);
-      }, 2000);
+      // Set new auto-save timer (use configured delay)
+      if (config.autoSaveEnabled) {
+        autoSaveTimerRef.current = setTimeout(() => {
+          handleAutoSave(value);
+        }, config.autoSaveDelay);
+      }
     }
-  }, []);
+  }, [config.autoSaveEnabled, config.autoSaveDelay]);
 
   /**
    * Auto-save handler
@@ -410,9 +422,6 @@ export default function SkillEditor({
         await ipcClient.updateSkill(newSkill.path, generatedContent);
         console.log('Skill content updated');
 
-        // Close the AI panel
-        setIsAIAssistPanelOpen(false);
-
         // Notify parent to refresh and open the new skill
         setError(null);
         alert(`✅ Skill "${skillName}" created successfully!\n\nLocation: .claude/skills/${skillName}/skill.md`);
@@ -556,13 +565,6 @@ export default function SkillEditor({
           onClose();
         }
       }
-
-      // Escape to close
-      if (e.key === 'Escape') {
-        if (!hasUnsavedChanges || confirm('You have unsaved changes. Close anyway?')) {
-          onClose();
-        }
-      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -684,25 +686,6 @@ export default function SkillEditor({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* AI Assist Button - hide when readOnly */}
-          {!readOnly && (
-            <button
-              onClick={() => setIsAIAssistPanelOpen(true)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                isAIAssistPanelOpen
-                  ? 'bg-purple-600 text-white shadow-lg ring-2 ring-purple-300'
-                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-md'
-              }`}
-              aria-label="Open AI Assist"
-              title="AI Assist"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z" />
-              </svg>
-              AI Assist
-            </button>
-          )}
-
           {/* Save button - hide when readOnly */}
           {!readOnly && (
             <button
@@ -867,17 +850,17 @@ export default function SkillEditor({
             value={content}
             onChange={handleContentChange}
             onMount={handleEditorDidMount}
-            theme="light"
+            theme={config.theme}
             options={{
-              fontSize: 14,
-              fontFamily: "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+              fontSize: config.fontSize,
+              fontFamily: config.fontFamily,
               fontLigatures: true,
-              lineNumbers: 'on',
-              minimap: { enabled: false },
-              wordWrap: 'on',
+              lineNumbers: config.lineNumbers,
+              minimap: { enabled: config.showMinimap },
+              wordWrap: config.wordWrap ? 'on' : 'off',
               scrollBeyondLastLine: false,
               automaticLayout: true,
-              tabSize: 2,
+              tabSize: config.tabSize,
               insertSpaces: true,
               renderWhitespace: 'selection',
               bracketPairColorization: { enabled: true },
@@ -900,29 +883,24 @@ export default function SkillEditor({
           <span className="flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
             <span>+</span>
-            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">W</kbd>
-            <span>Close</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Alt</kbd>
+            <span>+</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">R</kbd>
+            <span>AI Rewrite</span>
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Esc</kbd>
-            <span>Close</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
+            <span>+</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Alt</kbd>
+            <span>+</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">I</kbd>
+            <span>AI Insert</span>
           </span>
         </div>
         <div>
           Modified: {new Date(skill.lastModified).toLocaleString()}
         </div>
       </div>
-
-      {/* AI Assist Panel */}
-      {isAIAssistPanelOpen && (
-        <AIAssistPanel
-          onApply={handleApplyAIContent}
-          onClose={() => setIsAIAssistPanelOpen(false)}
-          editorContent={content}
-          cursorPosition={getCursorPosition()}
-          selectedText={getSelectedText()}
-        />
-      )}
 
       {/* AI Rewrite Popover */}
       {isAIRewritePopoverOpen && rewriteSelection && (

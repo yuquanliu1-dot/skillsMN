@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Configuration, InstallDirectory, EditorMode, PrivateRepo, AIConfiguration } from '../../shared/types';
+import type { Configuration, InstallDirectory, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig } from '../../shared/types';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -24,6 +24,19 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Skill Editor Configuration State
+  const [skillEditorConfig, setSkillEditorConfig] = useState<SkillEditorConfig>({
+    fontSize: 14,
+    theme: 'light',
+    autoSaveEnabled: true,
+    autoSaveDelay: 2000,
+    showMinimap: false,
+    lineNumbers: 'on',
+    fontFamily: "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+    tabSize: 2,
+    wordWrap: true,
+  });
+
   // Private Repository State
   const [privateRepos, setPrivateRepos] = useState<PrivateRepo[]>([]);
   const [isLoadingRepos, setIsLoadingRepos] = useState(false);
@@ -37,7 +50,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editPAT, setEditPAT] = useState('');
   const [isUpdatingRepo, setIsUpdatingRepo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'repositories' | 'ai'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'skill-view' | 'repositories' | 'ai'>('general');
 
   console.log('[Settings] Current state', { activeTab, isOpen });
 
@@ -56,6 +69,12 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
       setDefaultInstallDirectory(config.defaultInstallDirectory);
       setEditorDefaultMode(config.editorDefaultMode);
       setAutoRefresh(config.autoRefresh);
+
+      // Load skill editor config with defaults
+      if (config.skillEditor) {
+        setSkillEditorConfig(config.skillEditor);
+      }
+
       setError(null);
       setSuccess(null);
       setActiveTab('general');
@@ -113,6 +132,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
         defaultInstallDirectory,
         editorDefaultMode,
         autoRefresh,
+        skillEditor: skillEditorConfig,
       });
       setSuccess('Settings saved successfully');
       setTimeout(() => {
@@ -474,6 +494,19 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
             </button>
             <button
               onClick={() => {
+                console.log('[Settings] Skill View tab clicked');
+                setActiveTab('skill-view');
+              }}
+              className={`pb-3 px-1 text-sm font-medium transition-colors ${
+                activeTab === 'skill-view'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
+            >
+              Skill View
+            </button>
+            <button
+              onClick={() => {
                 console.log('[Settings] Private Repositories tab clicked');
                 setActiveTab('repositories');
               }}
@@ -647,6 +680,261 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
             </button>
           </div>
         </form>
+
+        {/* Skill View Tab */}
+        {activeTab === 'skill-view' && (
+          <div className="space-y-6">
+            {/* Skill Editor Configuration */}
+            <div>
+              <h3 className="text-sm font-medium text-slate-700 mb-3 border-b border-slate-200 pb-2">
+                Skill Editor
+              </h3>
+              <div className="space-y-3">
+                {/* Font Size and Theme - Side by side */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Font Size
+                    </label>
+                    <select
+                      value={skillEditorConfig.fontSize}
+                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, fontSize: parseInt(e.target.value) })}
+                      className="select w-full"
+                      disabled={isSaving}
+                    >
+                      <option value="10">10px - Very Small</option>
+                      <option value="11">11px - Small</option>
+                      <option value="12">12px - Compact</option>
+                      <option value="13">13px - Medium Small</option>
+                      <option value="14">14px - Default</option>
+                      <option value="15">15px - Medium</option>
+                      <option value="16">16px - Large</option>
+                      <option value="18">18px - Extra Large</option>
+                      <option value="20">20px - Big</option>
+                      <option value="22">22px - Very Big</option>
+                      <option value="24">24px - Huge</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Theme
+                    </label>
+                    <select
+                      value={skillEditorConfig.theme}
+                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, theme: e.target.value as 'light' | 'dark' })}
+                      className="select w-full"
+                      disabled={isSaving}
+                    >
+                      <option value="light">Light</option>
+                      <option value="dark">Dark</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Tab Size and Line Numbers - Side by side */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Tab Size
+                    </label>
+                    <input
+                      type="number"
+                      value={skillEditorConfig.tabSize}
+                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, tabSize: parseInt(e.target.value) })}
+                      min={2}
+                      max={8}
+                      step={2}
+                      className="input w-full"
+                      disabled={isSaving}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">2 - 8</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Line Numbers
+                    </label>
+                    <select
+                      value={skillEditorConfig.lineNumbers}
+                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, lineNumbers: e.target.value as 'on' | 'off' | 'relative' })}
+                      className="select w-full"
+                      disabled={isSaving}
+                    >
+                      <option value="on">On</option>
+                      <option value="off">Off</option>
+                      <option value="relative">Relative</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Font Family */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Font Family
+                  </label>
+                  <select
+                    value={skillEditorConfig.fontFamily}
+                    onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, fontFamily: e.target.value })}
+                    className="select w-full"
+                    disabled={isSaving}
+                  >
+                    <option value="'Fira Code', 'Cascadia Code', 'Consolas', monospace">Fira Code (Recommended)</option>
+                    <option value="'Cascadia Code', 'Consolas', monospace">Cascadia Code</option>
+                    <option value="'JetBrains Mono', 'Consolas', monospace">JetBrains Mono</option>
+                    <option value="'Source Code Pro', 'Consolas', monospace">Source Code Pro</option>
+                    <option value="Consolas, 'Courier New', monospace">Consolas (Windows)</option>
+                    <option value="'Monaco', 'Menlo', monospace">Monaco (macOS)</option>
+                    <option value="'Menlo', 'Monaco', monospace">Menlo (macOS)</option>
+                    <option value="'Courier New', monospace">Courier New (Universal)</option>
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Select a monospace font for code editing
+                  </p>
+                </div>
+
+                {/* Auto-save Options */}
+                <div className="space-y-2.5">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={skillEditorConfig.autoSaveEnabled}
+                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, autoSaveEnabled: e.target.checked })}
+                      className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
+                      disabled={isSaving}
+                    />
+                    <span className="text-sm text-slate-700">Enable auto-save</span>
+                  </label>
+
+                  {skillEditorConfig.autoSaveEnabled && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Auto-save Delay (ms)
+                      </label>
+                      <input
+                        type="number"
+                        value={skillEditorConfig.autoSaveDelay}
+                        onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, autoSaveDelay: parseInt(e.target.value) })}
+                        min={500}
+                        max={10000}
+                        step={500}
+                        className="input w-full"
+                        disabled={isSaving}
+                      />
+                      <p className="text-xs text-slate-500 mt-1">500 - 10,000 (default: 2000)</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Editor Display Options */}
+                <div className="space-y-2.5">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={skillEditorConfig.showMinimap}
+                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, showMinimap: e.target.checked })}
+                      className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
+                      disabled={isSaving}
+                    />
+                    <span className="text-sm text-slate-700">Show minimap</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={skillEditorConfig.wordWrap}
+                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, wordWrap: e.target.checked })}
+                      className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
+                      disabled={isSaving}
+                    />
+                    <span className="text-sm text-slate-700">Enable word wrap</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Success message */}
+            {success && activeTab === 'skill-view' && (
+              <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-md">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-green-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <p className="text-sm text-green-400">{success}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error message */}
+            {error && activeTab === 'skill-view' && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-md">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-red-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSaving}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsSaving(true);
+                  setError(null);
+                  setSuccess(null);
+                  try {
+                    await onSave({
+                      skillEditor: skillEditorConfig,
+                    });
+                    setSuccess('Skill editor settings saved successfully');
+                    setTimeout(() => {
+                      onClose();
+                    }, 1000);
+                  } catch (err) {
+                    const message = err instanceof Error ? err.message : 'Failed to save settings';
+                    setError(message);
+                    console.error('Save skill editor settings error:', err);
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                disabled={isSaving}
+                className="btn btn-primary"
+              >
+                {isSaving ? 'Saving...' : 'Save Settings'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Repositories Tab */}
         {activeTab === 'repositories' && (

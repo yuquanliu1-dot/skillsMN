@@ -132,8 +132,13 @@ export default function SkillCard({
               {skill.source === 'project' ? 'P' : 'G'}
             </span>
 
-            {/* Private Badge */}
-            {skill.sourceRepoId && (
+            {/* Source Type Badge */}
+            {skill.sourceMetadata?.type === 'registry' && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-700 flex-shrink-0">
+                Registry
+              </span>
+            )}
+            {skill.sourceMetadata?.type === 'private-repo' && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 flex-shrink-0">
                 Private
               </span>

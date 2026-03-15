@@ -23,14 +23,16 @@ export interface Skill {
   lastModified: Date;
   /** Count of non-skill.md files in directory */
   resourceCount: number;
-  /** Source repository ID for installed skills */
+  /** Source repository ID for installed skills (deprecated - use sourceMetadata) */
   sourceRepoId?: string;
-  /** Source repository path (owner/repo) */
+  /** Source repository path (owner/repo) (deprecated - use sourceMetadata) */
   sourceRepoPath?: string;
-  /** Installed directory commit SHA */
+  /** Installed directory commit SHA (deprecated - use sourceMetadata) */
   installedDirectoryCommitSHA?: string;
-  /** Installation timestamp */
+  /** Installation timestamp (deprecated - use sourceMetadata) */
   installedAt?: Date;
+  /** Source metadata for tracking skill origin and version */
+  sourceMetadata?: import('../main/models/SkillSource').SkillSource;
 }
 
 export interface SkillDirectory {
@@ -62,6 +64,27 @@ export interface SkillFrontmatter {
 export type InstallDirectory = 'project' | 'global';
 export type EditorMode = 'edit' | 'preview';
 
+export interface SkillEditorConfig {
+  /** Editor font size */
+  fontSize: number;
+  /** Editor theme */
+  theme: 'light' | 'dark';
+  /** Auto-save enabled */
+  autoSaveEnabled: boolean;
+  /** Auto-save delay in milliseconds */
+  autoSaveDelay: number;
+  /** Show minimap */
+  showMinimap: boolean;
+  /** Line numbers display mode */
+  lineNumbers: 'on' | 'off' | 'relative';
+  /** Editor font family */
+  fontFamily: string;
+  /** Tab size */
+  tabSize: number;
+  /** Word wrap enabled */
+  wordWrap: boolean;
+}
+
 export interface Configuration {
   /** Path to Claude project directory (null if not configured) */
   projectDirectory: string | null;
@@ -71,6 +94,8 @@ export interface Configuration {
   editorDefaultMode: EditorMode;
   /** Auto-refresh skill list on file changes */
   autoRefresh: boolean;
+  /** Skill editor configuration */
+  skillEditor?: SkillEditorConfig;
 }
 
 // ============================================================================
@@ -438,9 +463,10 @@ export interface InstallFromRegistryRequest {
 }
 
 /**
- * Source metadata for tracking installed skills
+ * Source metadata for tracking installed skills (alias for unified SkillSource)
+ * @deprecated Use SkillSource types from '../main/models/SkillSource' instead
  */
-export interface SkillSourceMetadata {
+export type SkillSourceMetadata = {
   /** Source type identifier */
   type: 'registry';
   /** Base URL of the registry */
@@ -453,7 +479,7 @@ export interface SkillSourceMetadata {
   installedAt: string;
   /** Git commit hash (optional) */
   commitHash?: string;
-}
+};
 
 /**
  * Response from skills.sh registry search API

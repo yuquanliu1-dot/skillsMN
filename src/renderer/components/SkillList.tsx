@@ -86,7 +86,7 @@ export default function SkillList({
     ({ index, style }: { index: number; style: React.CSSProperties }) => {
       const skill = filteredAndSortedSkills[index];
       return (
-        <div style={style} className={`px-4 pb-3 ${index === 0 ? 'pt-1' : ''}`}>
+        <div style={style} className={`px-4 pb-2 ${index === 0 ? 'pt-2' : ''}`}>
           <SkillCard
             skill={skill}
             onClick={onSkillClick}
@@ -217,10 +217,10 @@ export default function SkillList({
       </div>
 
       {/* Skill list with virtualization */}
-      <div ref={listRef} className="flex-1 overflow-hidden bg-gray-50 pt-3">
+      <div ref={listRef} className="flex-1 overflow-hidden bg-gray-50 pt-1">
         {filteredAndSortedSkills.length > 0 ? (
           <List
-            height={listHeight - 12}
+            height={listHeight - 8}
             itemCount={filteredAndSortedSkills.length}
             itemSize={SKILL_LIST_ITEM_HEIGHT}
             width="100%"

@@ -8,6 +8,7 @@ import {
   Configuration,
   InstallDirectory,
   EditorMode,
+  SkillEditorConfig,
 } from '../../shared/types';
 import {
   DEFAULT_INSTALL_DIRECTORY,
@@ -15,6 +16,21 @@ import {
   DEFAULT_AUTO_REFRESH,
 } from '../../shared/constants';
 import * as path from 'path';
+
+/**
+ * Default skill editor configuration
+ */
+const DEFAULT_SKILL_EDITOR_CONFIG: SkillEditorConfig = {
+  fontSize: 14,
+  theme: 'light',
+  autoSaveEnabled: true,
+  autoSaveDelay: 2000,
+  showMinimap: false,
+  lineNumbers: 'on',
+  fontFamily: "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+  tabSize: 2,
+  wordWrap: true,
+};
 
 export class ConfigurationModel {
   /**
@@ -26,6 +42,7 @@ export class ConfigurationModel {
       defaultInstallDirectory: DEFAULT_INSTALL_DIRECTORY,
       editorDefaultMode: DEFAULT_EDITOR_MODE,
       autoRefresh: DEFAULT_AUTO_REFRESH,
+      skillEditor: DEFAULT_SKILL_EDITOR_CONFIG,
     };
   }
 
@@ -69,12 +86,35 @@ export class ConfigurationModel {
       throw new Error('Auto-refresh must be a boolean');
     }
 
+    // Validate skillEditor config if provided
+    if (config.skillEditor) {
+      config.skillEditor = this.validateSkillEditorConfig(config.skillEditor);
+    }
+
     // Return validated config with defaults
     return {
       projectDirectory: config.projectDirectory ?? null,
       defaultInstallDirectory: config.defaultInstallDirectory ?? DEFAULT_INSTALL_DIRECTORY,
       editorDefaultMode: config.editorDefaultMode ?? DEFAULT_EDITOR_MODE,
       autoRefresh: config.autoRefresh ?? DEFAULT_AUTO_REFRESH,
+      skillEditor: config.skillEditor ?? DEFAULT_SKILL_EDITOR_CONFIG,
+    };
+  }
+
+  /**
+   * Validate skill editor configuration
+   */
+  private static validateSkillEditorConfig(config: Partial<SkillEditorConfig>): SkillEditorConfig {
+    return {
+      fontSize: Math.max(10, Math.min(24, config.fontSize ?? 14)),
+      theme: config.theme ?? 'light',
+      autoSaveEnabled: config.autoSaveEnabled ?? true,
+      autoSaveDelay: Math.max(500, Math.min(10000, config.autoSaveDelay ?? 2000)),
+      showMinimap: config.showMinimap ?? false,
+      lineNumbers: config.lineNumbers ?? 'on',
+      fontFamily: config.fontFamily ?? "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+      tabSize: Math.max(2, Math.min(8, config.tabSize ?? 2)),
+      wordWrap: config.wordWrap ?? true,
     };
   }
 
@@ -91,6 +131,7 @@ export class ConfigurationModel {
         updates.defaultInstallDirectory ?? existing.defaultInstallDirectory,
       editorDefaultMode: updates.editorDefaultMode ?? existing.editorDefaultMode,
       autoRefresh: updates.autoRefresh ?? existing.autoRefresh,
+      skillEditor: updates.skillEditor ?? existing.skillEditor ?? DEFAULT_SKILL_EDITOR_CONFIG,
     };
   }
 

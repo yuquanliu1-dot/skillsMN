@@ -18,7 +18,6 @@ import ToastContainer, { ToastMessage } from './components/ToastContainer';
 import PrivateRepoList from './components/PrivateRepoList';
 import Sidebar, { ViewType } from './components/Sidebar';
 import { RegistrySearchPanel } from './components/RegistrySearchPanel';
-import { AIAssistPanel } from './components/AIAssistPanel';
 import { AISkillCreationDialog } from './components/AISkillCreationDialog';
 import DirectoryChangeDialog from './components/DirectoryChangeDialog';
 
@@ -115,7 +114,6 @@ export default function App(): JSX.Element {
 
   // Ref to store latest loadSkills function for file watcher callback
   const loadSkillsRef = useRef<() => Promise<void>>(async () => {});
-  const [showAIPanel, setShowAIPanel] = useState(false);
   const [showAICreationDialog, setShowAICreationDialog] = useState(false);
   const [aiCreationDirectory, setAICreationDirectory] = useState<'project' | 'global'>('project');
   const [showDirectoryChangeDialog, setShowDirectoryChangeDialog] = useState(false);
@@ -551,25 +549,6 @@ export default function App(): JSX.Element {
   };
 
   /**
-   * Handle applying AI-generated content
-   */
-  const handleApplyAIContent = async (content: string) => {
-    try {
-      // If editing a skill, apply the content to it
-      if (editingSkill) {
-        await handleSaveSkill(content);
-        showToast('AI content applied successfully', 'success');
-      } else {
-        // If not editing, create a new skill with the AI content
-        showToast('Please select or create a skill first to apply AI content', 'info');
-      }
-    } catch (error) {
-      console.error('Failed to apply AI content:', error);
-      showToast(`Failed to apply AI content: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-    }
-  };
-
-  /**
    * Render loading state
    */
   if (state.isLoading) {
@@ -658,7 +637,8 @@ export default function App(): JSX.Element {
 
           {/* Detail Panel - Column 3 (adaptive width) */}
           <div className="flex-1 border-l border-gray-200 bg-white overflow-hidden">
-            {editingSkill ? (
+            {/* Skills View - Show editing skill or empty state */}
+            {currentView === 'skills' && editingSkill ? (
               <Suspense
                 fallback={
                   <div className="flex items-center justify-center h-full">
@@ -671,59 +651,23 @@ export default function App(): JSX.Element {
                   onClose={() => setEditingSkill(null)}
                   onSave={handleSaveSkill}
                   isInline={true}
+                  config={state.config?.skillEditor}
                 />
               </Suspense>
-            ) : viewingPrivateSkill ? (
-              <div className="h-full flex flex-col">
-                <div className="p-4 border-b border-gray-200 bg-gray-50">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900">
-                        {viewingPrivateSkill.skill.name}
-                      </h2>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {viewingPrivateSkill.repo.displayName || `${viewingPrivateSkill.repo.owner}/${viewingPrivateSkill.repo.repo}`}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setViewingPrivateSkill(null)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                      aria-label="Close preview"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <Suspense
-                    fallback={
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-text-muted">Loading editor...</div>
-                      </div>
-                    }
-                  >
-                    <SkillEditor
-                      skill={{
-                        path: viewingPrivateSkill.skill.path,
-                        name: viewingPrivateSkill.skill.name,
-                        source: 'project',
-                        lastModified: new Date(),
-                        resourceCount: 0,
-                      }}
-                      content={viewingPrivateSkill.content}
-                      onClose={() => setViewingPrivateSkill(null)}
-                      onSave={async () => {
-                        showToast('Private repository skills are read-only. Install them to edit.', 'info');
-                      }}
-                      isInline={true}
-                      readOnly={true}
-                    />
-                  </Suspense>
+            ) : currentView === 'skills' && !editingSkill ? (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-lg font-medium">No Skill Selected</p>
+                  <p className="text-sm text-gray-400 mt-2">Select a skill to view details</p>
                 </div>
               </div>
-            ) : viewingDiscoverSkill ? (
+            ) : null}
+
+            {/* Discover View - Show discover skill or empty state */}
+            {currentView === 'discover' && viewingDiscoverSkill ? (
               <div className="h-full flex flex-col">
                 <div className="p-4 border-b border-gray-200 bg-gray-50">
                   <div className="flex items-start justify-between">
@@ -769,33 +713,90 @@ export default function App(): JSX.Element {
                       }}
                       isInline={true}
                       readOnly={true}
+                      config={state.config?.skillEditor}
                     />
                   </Suspense>
                 </div>
               </div>
-            ) : (
+            ) : currentView === 'discover' && !viewingDiscoverSkill ? (
               <div className="h-full flex items-center justify-center text-gray-400">
                 <div className="text-center">
                   <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <p className="text-lg font-medium">No Skill Selected</p>
-                  <p className="text-sm text-gray-400 mt-2">Select a skill to view details</p>
+                  <p className="text-sm text-gray-400 mt-2">Search and select a skill to preview</p>
                 </div>
               </div>
-            )}
+            ) : null}
+
+            {/* Private Repos View - Show private skill or empty state */}
+            {currentView === 'private-repos' && viewingPrivateSkill ? (
+              <div className="h-full flex flex-col">
+                <div className="p-4 border-b border-gray-200 bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        {viewingPrivateSkill.skill.name}
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {viewingPrivateSkill.repo.displayName || `${viewingPrivateSkill.repo.owner}/${viewingPrivateSkill.repo.repo}`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setViewingPrivateSkill(null)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      aria-label="Close preview"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-text-muted">Loading editor...</div>
+                      </div>
+                    }
+                  >
+                    <SkillEditor
+                      skill={{
+                        path: viewingPrivateSkill.skill.path,
+                        name: viewingPrivateSkill.skill.name,
+                        source: 'project',
+                        lastModified: new Date(),
+                        resourceCount: 0,
+                      }}
+                      content={viewingPrivateSkill.content}
+                      onClose={() => setViewingPrivateSkill(null)}
+                      onSave={async () => {
+                        showToast('Private repository skills are read-only. Install them to edit.', 'info');
+                      }}
+                      isInline={true}
+                      readOnly={true}
+                      config={state.config?.skillEditor}
+                    />
+                  </Suspense>
+                </div>
+              </div>
+            ) : currentView === 'private-repos' && !viewingPrivateSkill ? (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-2-4a2 2 0 114 0v1h-4v-1z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                  <p className="text-lg font-medium">No Skill Selected</p>
+                  <p className="text-sm text-gray-400 mt-2">Select a skill from private repos to preview</p>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
-
-      {/* AI Assist Panel */}
-      {showAIPanel && (
-        <AIAssistPanel
-          onApply={handleApplyAIContent}
-          onClose={() => setShowAIPanel(false)}
-          editorContent={editingSkill ? undefined : undefined}
-        />
-      )}
 
       {/* Create Skill Dialog */}
       <CreateSkillDialog

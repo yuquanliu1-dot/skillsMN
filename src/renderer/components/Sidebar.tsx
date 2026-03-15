@@ -32,11 +32,12 @@ export default function Sidebar({
       label: 'Skills',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Yellow folder icon for local skills */}
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
           />
         </svg>
       ),
@@ -48,11 +49,19 @@ export default function Sidebar({
       label: 'Discover',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Blue cloud with search icon for internet/discover skills */}
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 15l3 3m0-3l3 3"
+            opacity={0.6}
           />
         </svg>
       ),
@@ -64,11 +73,18 @@ export default function Sidebar({
       label: 'Private Repos',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Folder with lock icon for private repositories */}
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 15v2m-2-4a2 2 0 114 0v1h-4v-1z"
           />
         </svg>
       ),
@@ -108,7 +124,6 @@ export default function Sidebar({
                   : 'text-gray-500 hover:text-blue-600 hover:bg-gray-50'
               }
             `}
-            title={item.description}
           >
             {item.icon}
             {/* Tooltip */}
@@ -129,7 +144,6 @@ export default function Sidebar({
           onMouseEnter={() => setShowTooltip('settings')}
           onMouseLeave={() => setShowTooltip(null)}
           className="w-full aspect-square rounded-xl flex items-center justify-center transition-all duration-200 relative text-gray-500 hover:text-blue-600 hover:bg-gray-50"
-          title="Settings"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -160,7 +174,6 @@ export default function Sidebar({
             onMouseEnter={() => setShowTooltip('directory')}
             onMouseLeave={() => setShowTooltip(null)}
             className="w-full aspect-square rounded-xl flex items-center justify-center transition-all duration-200 relative text-gray-500 hover:text-blue-600 hover:bg-gray-50"
-            title="Change project directory"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -180,14 +193,12 @@ export default function Sidebar({
         )}
 
         {/* Status Indicator */}
-        <div
-          className="w-full aspect-square rounded-xl flex items-center justify-center"
-          title={config?.projectDirectory ? `Project: ${config.projectDirectory}` : 'Project not configured'}
-        >
+        <div className="w-full aspect-square rounded-xl flex items-center justify-center">
           <div
             className={`w-3 h-3 rounded-full ${
               config?.projectDirectory ? 'bg-emerald-500' : 'bg-gray-300'
             }`}
+            title={config?.projectDirectory ? `Project: ${config.projectDirectory}` : 'Project not configured'}
           />
         </div>
       </div>
