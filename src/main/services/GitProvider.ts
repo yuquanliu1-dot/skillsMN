@@ -113,6 +113,21 @@ export interface GitProvider {
     branch: string,
     instanceUrl?: string
   ): Promise<string>;
+
+  /**
+   * Upload a skill to the repository
+   */
+  uploadSkill(
+    owner: string,
+    repo: string,
+    skillPath: string,
+    skillName: string,
+    content: string,
+    pat: string,
+    branch: string,
+    commitMessage?: string,
+    instanceUrl?: string
+  ): Promise<{ success: boolean; sha?: string; error?: string }>;
 }
 
 /**

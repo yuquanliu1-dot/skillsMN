@@ -77,6 +77,7 @@ global.window.electronAPI = {
   installPrivateRepoSkill: jest.fn(),
   checkPrivateSkillUpdates: jest.fn(),
   updatePrivateSkill: jest.fn(),
+  uploadSkillToPrivateRepo: jest.fn(),
 
   // Registry Operations (Feature 006)
   searchRegistry: jest.fn(),

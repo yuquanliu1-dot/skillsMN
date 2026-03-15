@@ -17,6 +17,7 @@ interface SkillCardProps {
   isSelected?: boolean;
   hasUpdate?: boolean;
   onUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
+  onUpload?: (skill: Skill) => void;
 }
 
 export default function SkillCard({
@@ -28,6 +29,7 @@ export default function SkillCard({
   isSelected,
   hasUpdate = false,
   onUpdate,
+  onUpload,
 }: SkillCardProps): JSX.Element {
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [createBackup, setCreateBackup] = useState(true);
@@ -124,7 +126,7 @@ export default function SkillCard({
 
             {/* Source Badge */}
             <span className={`
-              inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0
+              inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0 border-0
               ${skill.source === 'project'
                 ? 'bg-blue-100 text-blue-700'
                 : 'bg-gray-100 text-gray-700'}
@@ -134,26 +136,26 @@ export default function SkillCard({
 
             {/* Source Type Badge */}
             {skill.sourceMetadata?.type === 'registry' && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-700 flex-shrink-0">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-700 flex-shrink-0 border-0">
                 Registry
               </span>
             )}
             {skill.sourceMetadata?.type === 'private-repo' && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 flex-shrink-0">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 flex-shrink-0 border-0">
                 Private
               </span>
             )}
 
             {/* Update Badge */}
             {hasUpdate && updateProgress !== 'success' && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 flex-shrink-0 animate-pulse">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 flex-shrink-0 border-0 animate-pulse">
                 Update
               </span>
             )}
 
             {/* Success Badge */}
             {updateProgress === 'success' && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 flex-shrink-0 border-0">
                 ✓
               </span>
             )}
@@ -198,10 +200,23 @@ export default function SkillCard({
               </button>
             )}
 
-            {/* Arrow */}
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            {/* Upload Button */}
+            {onUpload && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onUpload(skill);
+                }}
+                className="p-1 hover:bg-purple-50 rounded"
+                aria-label="Upload to private repository"
+                title="Upload to private repository"
+              >
+                <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4 0V4m0 12l4-4m-4 4l-4-4" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 

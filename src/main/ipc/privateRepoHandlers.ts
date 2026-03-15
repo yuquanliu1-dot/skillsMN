@@ -498,5 +498,79 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
     }
   );
 
+  // Handler for private-repo:upload-skill
+  ipcMain.handle(
+    'private-repo:upload-skill',
+    async (
+      _event,
+      {
+        repoId,
+        skillPath,
+        skillContent,
+        skillName,
+        commitMessage,
+      }: {
+        repoId: string;
+        skillPath: string;
+        skillContent: string;
+        skillName: string;
+        commitMessage?: string;
+      }
+    ): Promise<IPCResponse<{ sha: string }>> => {
+      try {
+        logger.debug('Uploading skill to private repository', 'PrivateRepoHandlers', {
+          repoId,
+          skillPath,
+          skillName,
+        });
+
+        const result = await PrivateRepoService.uploadSkillToRepo(
+          repoId,
+          skillPath,
+          skillContent,
+          skillName,
+          commitMessage
+        );
+
+        if (!result.success) {
+          throw new Error(result.error || 'Upload failed');
+        }
+
+        logger.info('Successfully uploaded skill to private repo', 'PrivateRepoHandlers', {
+          repoId,
+          skillPath,
+          sha: result.sha,
+        });
+
+        return { success: true, data: { sha: result.sha || '' } };
+      } catch (error) {
+        logger.error('Failed to upload skill to private repo', 'PrivateRepoHandlers', error);
+
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        let errorCode = 'UPLOAD_FAILED';
+        let actionableMessage = errorMessage;
+
+        if (errorMessage.includes('Repository not found')) {
+          errorCode = 'REPO_NOT_FOUND';
+          actionableMessage = 'Repository not found. It may have been removed. Please refresh and try again.';
+        } else if (errorMessage.includes('authentication failed') || errorMessage.includes('401')) {
+          errorCode = 'AUTH_FAILED';
+          actionableMessage = 'PAT has expired or lacks write permissions. Please update your PAT in Settings → Repositories.';
+        } else if (errorMessage.includes('403')) {
+          errorCode = 'FORBIDDEN';
+          actionableMessage = 'Access forbidden. Please ensure your PAT has write permissions.';
+        }
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: actionableMessage,
+          },
+        };
+      }
+    }
+  );
+
   logger.info('Private repository IPC handlers registered', 'PrivateRepoHandlers');
 }

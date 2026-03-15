@@ -348,4 +348,108 @@ export class GitLabService {
   ): Promise<string> {
     return this.getFileContent(owner, repo, path, pat, branch, instanceUrl);
   }
+
+  /**
+   * Upload a skill to a private GitLab repository
+   * Creates or updates the skill.md file and commits it to the repository
+   *
+   * @param owner - Repository owner (namespace)
+   * @param repo - Repository name
+   * @param skillDirName - Directory name for the skill
+   * @param skillName - Name of the skill (for commit message)
+   * @param content - Skill content (markdown with YAML frontmatter)
+   * @param pat - Personal Access Token with api scope
+   * @param branch - Branch to commit to (default: 'main')
+   * @param commitMessage - Optional custom commit message
+   * @param instanceUrl - GitLab instance URL (default: 'https://gitlab.com')
+   * @returns Object with success status and SHA or error message
+   */
+  static async uploadSkill(
+    owner: string,
+    repo: string,
+    skillDirName: string,
+    skillName: string,
+    content: string,
+    pat: string,
+    branch: string = 'main',
+    commitMessage?: string,
+    instanceUrl?: string
+  ): Promise<{ success: boolean; sha?: string; error?: string }> {
+    try {
+      const baseUrl = instanceUrl || 'https://gitlab.com';
+      const fullPath = skillDirName.startsWith('/') ? `${skillDirName}/skill.md` : `${skillDirName}/skill.md`;
+      const projectId = encodeURIComponent(`${owner}/${repo}`);
+
+      const message = commitMessage || `Update skill: ${skillName}`;
+
+      // GitLab API for creating/updating files
+      const response = await fetch(
+        `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodeURIComponent(fullPath)}`,
+        {
+          method: 'PUT',
+          headers: {
+            'PRIVATE-TOKEN': pat,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            branch,
+            content,
+            commit_message: message,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        // Try creating the file if update fails (file might not exist)
+        if (response.status === 404) {
+          const createResponse = await fetch(
+            `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodeURIComponent(fullPath)}`,
+            {
+              method: 'POST',
+              headers: {
+                'PRIVATE-TOKEN': pat,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                branch,
+                content,
+                commit_message: `Add skill: ${skillName}`,
+              }),
+            }
+          );
+
+          if (!createResponse.ok) {
+            const errorData = await createResponse.json();
+            return {
+              success: false,
+              error: errorData.message || `GitLab API error: ${createResponse.status}`,
+            };
+          }
+
+          const data = await createResponse.json();
+          return {
+            success: true,
+            sha: data.commit_id,
+          };
+        }
+
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.message || `GitLab API error: ${response.status}`,
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        sha: data.commit_id,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to upload skill',
+      };
+    }
+  }
 }

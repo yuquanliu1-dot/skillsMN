@@ -229,6 +229,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_GET_SKILL_CONTENT, { repoId, skillPath });
   },
 
+  uploadSkillToPrivateRepo: (params: {
+    repoId: string;
+    skillPath: string;
+    skillContent: string;
+    skillName: string;
+    commitMessage?: string;
+  }): Promise<IPCResponse<{ sha: string }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_UPLOAD_SKILL, params);
+  },
+
   // ============================================================================
   // GitHub Operations (Feature 004 - Public Skill Discovery)
   // ============================================================================

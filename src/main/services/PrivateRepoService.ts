@@ -753,4 +753,67 @@ export class PrivateRepoService {
       throw error;
     }
   }
+
+  /**
+   * Upload a skill to a private repository
+   * @param repoId - ID of the private repository to upload to
+   * @param skillPath - Local path of the skill to upload
+   * @param skillContent - Content of the skill to upload
+   * @param skillName - Name of the skill for commit message
+   * @param commitMessage - Optional custom commit message
+   * @returns Upload result with success status and optional error
+   */
+  static async uploadSkillToRepo(
+    repoId: string,
+    skillPath: string,
+    skillContent: string,
+    skillName: string,
+    commitMessage?: string
+  ): Promise<{ success: boolean; sha?: string; error?: string }> {
+    try {
+      const repo = await this.getRepo(repoId);
+      if (!repo) {
+        throw new Error('Repository not found');
+      }
+
+      // Decrypt PAT
+      const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
+
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
+      // Extract skill directory name from path
+      const skillDirName = skillPath.split('/').pop() || skillName;
+
+      // Call provider's upload method
+      const result = await (gitProvider as any).uploadSkill(
+        repo.owner,
+        repo.repo,
+        skillDirName,
+        skillName,
+        skillContent,
+        pat,
+        repo.defaultBranch || 'main',
+        commitMessage,
+        repo.instanceUrl
+      );
+
+      if (result.success) {
+        logger.info('Successfully uploaded skill to private repo', 'PrivateRepoService', {
+          repoId,
+          skillPath,
+          sha: result.sha,
+        });
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to upload skill to private repo', 'PrivateRepoService', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }

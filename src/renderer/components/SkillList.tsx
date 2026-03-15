@@ -21,6 +21,7 @@ interface SkillListProps {
   selectedSkillPath?: string | null;
   skillUpdates?: Record<string, { hasUpdate: boolean; remoteSHA?: string }>;
   onSkillUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
+  onSkillUpload?: (skill: Skill) => void;
 }
 
 export default function SkillList({
@@ -33,6 +34,7 @@ export default function SkillList({
   selectedSkillPath,
   skillUpdates = {},
   onSkillUpdate,
+  onSkillUpload,
 }: SkillListProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
@@ -102,7 +104,7 @@ export default function SkillList({
       const updateInfo = skillUpdates[skill.path];
 
       return (
-        <div style={style} className={`px-4 pb-2 ${index === 0 ? 'pt-2' : ''}`}>
+        <div style={style} className="px-4 py-2">
           <SkillCard
             skill={skill}
             onClick={onSkillClick}
@@ -112,11 +114,12 @@ export default function SkillList({
             isSelected={skill.path === selectedSkillPath}
             hasUpdate={updateInfo?.hasUpdate || false}
             onUpdate={handleSkillUpdate}
+            onUpload={onSkillUpload}
           />
         </div>
       );
     },
-    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath, skillUpdates, handleSkillUpdate]
+    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath, skillUpdates, handleSkillUpdate, onSkillUpload]
   );
 
   // Update list height on container resize

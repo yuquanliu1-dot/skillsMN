@@ -919,4 +919,98 @@ export class GitHubService {
     const content = Buffer.from(data.content, 'base64').toString('utf-8');
     return content;
   }
+
+  /**
+   * Upload a skill to a private GitHub repository
+   * Creates or updates the skill.md file and commits it to the repository
+   *
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param skillDirName - Directory name for the skill
+   * @param skillName - Name of the skill (for commit message)
+   * @param content - Skill content (markdown with YAML frontmatter)
+   * @param pat - Personal Access Token with repo scope
+   * @param branch - Branch to commit to (default: 'main')
+   * @param commitMessage - Optional custom commit message
+   * @param instanceUrl - Optional instance URL (for GitHub Enterprise, not used in GitHub.com)
+   * @returns Object with success status and SHA or error message
+   */
+  static async uploadSkill(
+    owner: string,
+    repo: string,
+    skillDirName: string,
+    skillName: string,
+    content: string,
+    pat: string,
+    branch: string = 'main',
+    commitMessage?: string,
+    instanceUrl?: string
+  ): Promise<{ success: boolean; sha?: string; error?: string }> {
+    try {
+      const fullPath = skillDirName.startsWith('/') ? `${skillDirName}/skill.md` : `${skillDirName}/skill.md`;
+
+      // Check if file already exists to get its SHA for update
+      let existingSha: string | undefined;
+      try {
+        const checkResponse = await fetch(
+          `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}?ref=${branch}`,
+          {
+            headers: {
+              'Authorization': `token ${pat}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'User-Agent': 'skillsMN-App',
+            },
+          }
+        );
+
+        if (checkResponse.ok) {
+          const existingFile = await checkResponse.json();
+          existingSha = existingFile.sha;
+        }
+      } catch (error) {
+        // File doesn't exist, which is fine for creating new files
+      }
+
+      // Create or update the file
+      const message = commitMessage || (existingSha ? `Update skill: ${skillName}` : `Add skill: ${skillName}`);
+
+      const response = await fetch(
+        `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `token ${pat}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'skillsMN-App',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message,
+            content: Buffer.from(content).toString('base64'),
+            branch,
+            ...(existingSha && { sha: existingSha }),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.message || `GitHub API error: ${response.status} ${response.statusText}`,
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        sha: data.content.sha,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to upload skill',
+      };
+    }
+  }
 }

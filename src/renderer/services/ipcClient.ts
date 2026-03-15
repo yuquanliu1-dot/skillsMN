@@ -9,6 +9,7 @@ import type {
   Skill,
   FSEvent,
   SkillSource,
+  IPCResponse,
 } from '../../shared/types';
 
 /**
@@ -203,5 +204,28 @@ export const ipcClient = {
     if (window.electronAPI?.removeFSChangeListener) {
       window.electronAPI.removeFSChangeListener();
     }
+  },
+
+  // ============================================================================
+  // Private Repository Operations
+  // ============================================================================
+
+  /**
+   * Upload a skill to a private repository
+   */
+  uploadSkillToPrivateRepo: async (params: {
+    repoId: string;
+    skillPath: string;
+    skillContent: string;
+    skillName: string;
+    commitMessage?: string;
+  }): Promise<IPCResponse<{ sha: string }>> => {
+    if (!isElectron()) {
+      return { success: false, error: { code: 'NOT_ELECTRON', message: 'Not running in Electron' } };
+    }
+    if (!window.electronAPI?.uploadSkillToPrivateRepo) {
+      return { success: false, error: { code: 'API_NOT_AVAILABLE', message: 'Electron API not available' } };
+    }
+    return window.electronAPI.uploadSkillToPrivateRepo(params);
   },
 };

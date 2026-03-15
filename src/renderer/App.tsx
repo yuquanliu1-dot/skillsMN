@@ -13,6 +13,7 @@ import CreateSkillDialog from './components/CreateSkillDialog';
 import { lazy, Suspense } from 'react';
 const SkillEditor = lazy(() => import('./components/SkillEditor'));
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
+import UploadToPrivateRepoDialog from './components/UploadToPrivateRepoDialog';
 import Settings from './components/Settings';
 import ToastContainer, { ToastMessage } from './components/ToastContainer';
 import PrivateRepoList from './components/PrivateRepoList';
@@ -107,6 +108,7 @@ export default function App(): JSX.Element {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
+  const [uploadingSkill, setUploadingSkill] = useState<Skill | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -325,6 +327,13 @@ export default function App(): JSX.Element {
       showToast(`Failed to update skill: ${error.message}`, 'error');
       throw error;
     }
+  };
+
+  /**
+   * Handle upload skill to private repository
+   */
+  const handleUploadSkill = async (skill: Skill): Promise<void> => {
+    setUploadingSkill(skill);
   };
 
   /**
@@ -679,6 +688,7 @@ export default function App(): JSX.Element {
                 selectedSkillPath={selectedSkillPath}
                 skillUpdates={skillUpdates}
                 onSkillUpdate={handleUpdateSkill}
+                onSkillUpload={handleUploadSkill}
               />
             </div>
 
@@ -891,6 +901,19 @@ export default function App(): JSX.Element {
         onClose={() => setDeletingSkill(null)}
         onConfirm={handleDeleteSkill}
       />
+
+      {/* Upload to Private Repository Dialog */}
+      {uploadingSkill && (
+        <UploadToPrivateRepoDialog
+          isOpen={uploadingSkill !== null}
+          skill={uploadingSkill}
+          onClose={() => setUploadingSkill(null)}
+          onSuccess={() => {
+            showToast(`Skill "${uploadingSkill.name}" uploaded successfully!`, 'success');
+            setUploadingSkill(null);
+          }}
+        />
+      )}
 
       {/* Directory Change Dialog */}
       {state.config?.projectDirectory && (
