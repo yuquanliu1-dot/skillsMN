@@ -11,6 +11,8 @@ import { safeStorage } from 'electron';
 import { logger } from '../utils/Logger';
 import { PrivateRepoModel } from '../models/PrivateRepo';
 import { GitHubService } from './GitHubService';
+import { GitLabService } from './GitLabService';
+import { getGitProvider } from './GitProvider';
 import { SkillService } from './SkillService';
 import { PathValidator } from './PathValidator';
 import type { PrivateRepo, PrivateRepoConfig, PrivateSkill } from '../../shared/types';
@@ -105,31 +107,47 @@ export class PrivateRepoService {
   /**
    * Add a private repository configuration
    * Validates URL, tests connection, and encrypts PAT before storing
-   * @param url - GitHub repository URL (https://github.com/owner/repo)
+   * @param url - Repository URL (GitHub or GitLab)
    * @param pat - Personal Access Token with repo access
    * @param displayName - Optional friendly name for the repository
+   * @param provider - Git provider ('github' or 'gitlab')
+   * @param instanceUrl - Optional instance URL for self-hosted GitLab
    * @returns Created PrivateRepo object with encrypted PAT
    * @throws Error if URL is invalid, connection fails, or save fails
    * @example
    * const repo = await PrivateRepoService.addRepo(
    *   'https://github.com/myorg/skills',
    *   'ghp_xxxxxxxxxxxx',
-   *   'My Organization Skills'
+   *   'My Organization Skills',
+   *   'github'
    * );
    * console.log('Added repo:', repo.id);
    */
-  static async addRepo(url: string, pat: string, displayName?: string): Promise<PrivateRepo> {
+  static async addRepo(
+    url: string,
+    pat: string,
+    displayName?: string,
+    provider?: 'github' | 'gitlab',
+    instanceUrl?: string
+  ): Promise<PrivateRepo> {
     try {
       // Parse URL
       const parsed = PrivateRepoModel.parseUrl(url);
       if (!parsed) {
-        throw new Error('Invalid repository URL. Must be https://github.com/owner/repo');
+        throw new Error('Invalid repository URL. Must be a valid GitHub or GitLab repository URL');
       }
 
-      const { owner, repo } = parsed;
+      const { owner, repo, provider: detectedProvider, instanceUrl: detectedInstanceUrl } = parsed;
+
+      // Use provided values or fall back to detected values
+      const finalProvider = provider || detectedProvider;
+      const finalInstanceUrl = instanceUrl || detectedInstanceUrl;
+
+      // Get appropriate provider service
+      const gitProvider = getGitProvider(finalProvider);
 
       // Test connection
-      const connectionTest = await GitHubService.testConnection(owner, repo, pat);
+      const connectionTest = await gitProvider.testConnection(owner, repo, pat, finalInstanceUrl);
       if (!connectionTest.valid) {
         throw new Error(connectionTest.error || 'Failed to connect to repository');
       }
@@ -138,7 +156,14 @@ export class PrivateRepoService {
       const patEncrypted = safeStorage.encryptString(pat).toString('base64');
 
       // Create repository entry
-      const newRepo = PrivateRepoModel.create(owner, repo, patEncrypted, displayName);
+      const newRepo = PrivateRepoModel.create(
+        owner,
+        repo,
+        patEncrypted,
+        displayName,
+        finalProvider,
+        finalInstanceUrl
+      );
       newRepo.defaultBranch = connectionTest.repository?.defaultBranch || 'main';
       newRepo.description = connectionTest.repository?.description;
 
@@ -153,6 +178,7 @@ export class PrivateRepoService {
       logger.info('Added private repository', 'PrivateRepoService', {
         id: newRepo.id,
         url: newRepo.url,
+        provider: finalProvider,
       });
 
       return newRepo;
@@ -329,7 +355,16 @@ export class PrivateRepoService {
       // Decrypt PAT
       const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
 
-      const result = await GitHubService.testConnection(repo.owner, repo.repo, pat);
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
+      const result = await gitProvider.testConnection(
+        repo.owner,
+        repo.repo,
+        pat,
+        repo.instanceUrl
+      );
 
       if (result.valid && result.repository) {
         // Update repository metadata
@@ -371,29 +406,46 @@ export class PrivateRepoService {
       // Decrypt PAT
       const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
 
-      const skills = await GitHubService.getPrivateRepoSkills(
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
+      const skills = await (gitProvider as any).getPrivateRepoSkills?.(
         repo.owner,
         repo.repo,
         pat,
-        repo.defaultBranch
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
+      ) || await (gitProvider as any).getSkills?.(
+        repo.owner,
+        repo.repo,
+        pat,
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
       );
 
       // Convert to PrivateSkill format
-      const privateSkills: PrivateSkill[] = skills.map((skill: any) => ({
-        name: skill.name,
-        path: skill.path,
-        directoryPath: skill.path,
-        downloadUrl: `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repo.defaultBranch}/${skill.skillFilePath}`,
-        lastModified: skill.lastCommitDate || new Date(),
-        repoId: repo.id,
-        repoName: `${repo.owner}/${repo.repo}`,
-        lastCommitMessage: skill.lastCommitMessage,
-        lastCommitAuthor: skill.lastCommitAuthor,
-        lastCommitDate: skill.lastCommitDate,
-        fileCount: 1,
-        directoryCommitSHA: skill.directoryCommitSHA,
-        skillFilePath: skill.skillFilePath,
-      }));
+      const privateSkills: PrivateSkill[] = skills.map((skill: any) => {
+        const baseUrl = provider === 'gitlab' && repo.instanceUrl
+          ? repo.instanceUrl
+          : (provider === 'gitlab' ? 'https://gitlab.com' : 'https://raw.githubusercontent.com');
+
+        return {
+          name: skill.name,
+          path: skill.path,
+          directoryPath: skill.path,
+          downloadUrl: `${baseUrl}/${repo.owner}/${repo.repo}/${repo.defaultBranch}/${skill.skillFilePath}`,
+          lastModified: skill.lastCommitDate || new Date(),
+          repoId: repo.id,
+          repoName: `${repo.owner}/${repo.repo}`,
+          lastCommitMessage: skill.lastCommitMessage,
+          lastCommitAuthor: skill.lastCommitAuthor,
+          lastCommitDate: skill.lastCommitDate,
+          fileCount: 1,
+          directoryCommitSHA: skill.directoryCommitSHA,
+          skillFilePath: skill.skillFilePath,
+        };
+      });
 
       // Update last sync time
       await this.updateRepo(repoId, {});
@@ -401,6 +453,7 @@ export class PrivateRepoService {
       logger.info('Retrieved skills from private repo', 'PrivateRepoService', {
         repoId,
         count: privateSkills.length,
+        provider,
       });
 
       return privateSkills;
@@ -446,13 +499,25 @@ export class PrivateRepoService {
       // Decrypt PAT
       const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
 
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
       // Download skill directory
-      const files = await GitHubService.downloadPrivateDirectory(
+      const files = await (gitProvider as any).downloadPrivateDirectory?.(
         repo.owner,
         repo.repo,
         skillPath,
         pat,
-        repo.defaultBranch
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
+      ) || await (gitProvider as any).downloadDirectory?.(
+        repo.owner,
+        repo.repo,
+        skillPath,
+        pat,
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
       );
 
       if (files.size === 0) {
@@ -507,11 +572,26 @@ export class PrivateRepoService {
         await fs.writeFile(absolutePath, content, 'utf-8');
       }
 
+      // Write source metadata for version tracking
+      const sourceMetadata = {
+        type: 'private-repo' as const,
+        repoId,
+        repoPath: `${repo.owner}/${repo.repo}`,
+        skillPath,
+        installedAt: new Date().toISOString(),
+        provider: repo.provider,
+        instanceUrl: repo.instanceUrl,
+      };
+
+      const metadataPath = path.join(finalPath, '.source.json');
+      await fs.writeJson(metadataPath, sourceMetadata, { spaces: 2 });
+
       logger.info('Installed skill from private repo', 'PrivateRepoService', {
         repoId,
         skillPath,
         targetPath: finalPath,
         fileCount: files.size,
+        provider,
       });
 
       return {
@@ -647,12 +727,24 @@ export class PrivateRepoService {
       // Decrypt PAT
       const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
 
-      const content = await GitHubService.getPrivateRepoSkillContent(
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
+      const content = await (gitProvider as any).getPrivateRepoSkillContent?.(
         repo.owner,
         repo.repo,
         skillPath,
         pat,
-        repo.defaultBranch
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
+      ) || await (gitProvider as any).getSkillContent?.(
+        repo.owner,
+        repo.repo,
+        skillPath,
+        pat,
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
       );
 
       return content;

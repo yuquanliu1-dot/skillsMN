@@ -44,6 +44,8 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
   const [newRepoUrl, setNewRepoUrl] = useState('');
   const [newRepoPAT, setNewRepoPAT] = useState('');
   const [newRepoDisplayName, setNewRepoDisplayName] = useState('');
+  const [newRepoProvider, setNewRepoProvider] = useState<'github' | 'gitlab'>('github');
+  const [newRepoInstanceUrl, setNewRepoInstanceUrl] = useState('');
   const [isAddingRepo, setIsAddingRepo] = useState(false);
   const [testingRepoId, setTestingRepoId] = useState<string | null>(null);
   const [editingRepoId, setEditingRepoId] = useState<string | null>(null);
@@ -256,6 +258,8 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
         url: newRepoUrl,
         pat: newRepoPAT,
         displayName: newRepoDisplayName || undefined,
+        provider: newRepoProvider,
+        instanceUrl: newRepoInstanceUrl || undefined,
       });
 
       if (response.success && response.data) {
@@ -263,6 +267,8 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
         setNewRepoUrl('');
         setNewRepoPAT('');
         setNewRepoDisplayName('');
+        setNewRepoProvider('github');
+        setNewRepoInstanceUrl('');
         setShowAddRepoForm(false);
         await loadPrivateRepos();
       } else {
@@ -959,6 +965,43 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 <h3 className="text-sm font-medium text-slate-700 mb-3">Add Private Repository</h3>
                 <form onSubmit={handleAddRepo}>
                   <div className="space-y-3">
+                    {/* Provider Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Provider
+                      </label>
+                      <select
+                        value={newRepoProvider}
+                        onChange={(e) => setNewRepoProvider(e.target.value as 'github' | 'gitlab')}
+                        className="input w-full"
+                        disabled={isAddingRepo}
+                      >
+                        <option value="github">GitHub</option>
+                        <option value="gitlab">GitLab</option>
+                      </select>
+                    </div>
+
+                    {/* Instance URL (only for GitLab) */}
+                    {newRepoProvider === 'gitlab' && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          GitLab Instance URL (optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={newRepoInstanceUrl}
+                          onChange={(e) => setNewRepoInstanceUrl(e.target.value)}
+                          placeholder="https://gitlab.company.com (leave empty for GitLab.com)"
+                          className="input w-full text-sm"
+                          disabled={isAddingRepo}
+                        />
+                        <p className="text-xs text-slate-500 mt-1">
+                          Leave empty for GitLab.com, or enter your self-hosted GitLab URL
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Repository URL */}
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">
                         Repository URL
@@ -967,14 +1010,26 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                         type="text"
                         value={newRepoUrl}
                         onChange={(e) => setNewRepoUrl(e.target.value)}
-                        placeholder="https://github.com/owner/repo"
+                        placeholder={
+                          newRepoProvider === 'github'
+                            ? 'https://github.com/owner/repo'
+                            : newRepoInstanceUrl
+                            ? `${newRepoInstanceUrl}/owner/repo`
+                            : 'https://gitlab.com/owner/repo'
+                        }
                         className="input w-full"
                         disabled={isAddingRepo}
                         required
                       />
+                      <p className="text-xs text-slate-500 mt-1">
+                        {newRepoProvider === 'github'
+                          ? 'Enter your GitHub repository URL'
+                          : 'Enter your GitLab repository URL'}
+                      </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
+                      {/* Personal Access Token */}
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                           Personal Access Token
@@ -983,13 +1038,19 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                           type="password"
                           value={newRepoPAT}
                           onChange={(e) => setNewRepoPAT(e.target.value)}
-                          placeholder="ghp_xxxx..."
+                          placeholder={newRepoProvider === 'github' ? 'ghp_xxxx...' : 'glpat-xxxx...'}
                           className="input w-full text-sm"
                           disabled={isAddingRepo}
                           required
                         />
+                        <p className="text-xs text-slate-500 mt-1">
+                          {newRepoProvider === 'github'
+                            ? 'GitHub PAT with "repo" scope'
+                            : 'GitLab PAT with "read_api" scope'}
+                        </p>
                       </div>
 
+                      {/* Display Name */}
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
                           Display Name
@@ -1009,7 +1070,11 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   <div className="flex justify-end gap-2 mt-3">
                     <button
                       type="button"
-                      onClick={() => setShowAddRepoForm(false)}
+                      onClick={() => {
+                        setShowAddRepoForm(false);
+                        setNewRepoProvider('github');
+                        setNewRepoInstanceUrl('');
+                      }}
                       className="btn btn-secondary btn-sm"
                       disabled={isAddingRepo}
                     >
@@ -1164,8 +1229,22 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                             <h4 className="text-sm font-medium text-slate-900 truncate">
                               {repo.displayName || `${repo.owner}/${repo.repo}`}
                             </h4>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded ${
+                                (repo.provider || 'github') === 'github'
+                                  ? 'bg-slate-100 text-slate-600'
+                                  : 'bg-orange-100 text-orange-600'
+                              }`}
+                            >
+                              {(repo.provider || 'github') === 'github' ? 'GitHub' : 'GitLab'}
+                            </span>
                           </div>
                           <p className="text-xs text-slate-600 truncate mb-1">{repo.url}</p>
+                          {repo.instanceUrl && (
+                            <p className="text-xs text-slate-500 truncate mb-1">
+                              Instance: {repo.instanceUrl}
+                            </p>
+                          )}
                           {repo.description && (
                             <p className="text-xs text-slate-500 truncate mb-1">{repo.description}</p>
                           )}

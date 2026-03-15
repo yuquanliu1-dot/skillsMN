@@ -15,15 +15,20 @@ export class PrivateRepoModel {
     owner: string,
     repo: string,
     patEncrypted: string,
-    displayName?: string
+    displayName?: string,
+    provider: 'github' | 'gitlab' = 'github',
+    instanceUrl?: string
   ): PrivateRepo {
     const now = new Date();
+    const baseUrl = provider === 'gitlab' && instanceUrl
+      ? instanceUrl
+      : (provider === 'gitlab' ? 'https://gitlab.com' : 'https://github.com');
 
     return {
       id: uuidv4(),
       owner,
       repo,
-      url: `https://github.com/${owner}/${repo}`,
+      url: `${baseUrl}/${owner}/${repo}`,
       displayName: displayName || `${owner}/${repo}`,
       patEncrypted,
       defaultBranch: 'main',
@@ -32,6 +37,8 @@ export class PrivateRepoModel {
       addedAt: now,
       createdAt: now,
       updatedAt: now,
+      provider,
+      instanceUrl,
     };
   }
 
@@ -68,10 +75,24 @@ export class PrivateRepoModel {
       throw new Error('Updated date is required and must be a Date');
     }
 
-    // Validate URL format
-    const urlPattern = /^https:\/\/github\.com\/[^/]+\/[^/]+\/?$/;
-    if (!urlPattern.test(repo.url)) {
-      throw new Error('Repository URL must be a valid GitHub repository URL (https://github.com/owner/repo)');
+    // Validate provider field (default to 'github' for backward compatibility)
+    if (repo.provider && !['github', 'gitlab'].includes(repo.provider)) {
+      throw new Error('Provider must be either "github" or "gitlab"');
+    }
+
+    // Validate URL format based on provider
+    const provider = repo.provider || 'github';
+    if (provider === 'github') {
+      const urlPattern = /^https:\/\/github\.com\/[^/]+\/[^/]+\/?$/;
+      if (!urlPattern.test(repo.url)) {
+        throw new Error('Repository URL must be a valid GitHub repository URL (https://github.com/owner/repo)');
+      }
+    } else if (provider === 'gitlab') {
+      // GitLab can be self-hosted, so we allow any URL with /owner/repo pattern
+      const urlPattern = /^https?:\/\/[^/]+\/[^/]+\/[^/]+\/?$/;
+      if (!urlPattern.test(repo.url)) {
+        throw new Error('Repository URL must be a valid GitLab repository URL');
+      }
     }
 
     // Validate display name length (if provided)
@@ -83,20 +104,45 @@ export class PrivateRepoModel {
   }
 
   /**
-   * Parse GitHub repository URL to extract owner and repo name
+   * Parse repository URL to extract owner, repo name, and provider
+   * Supports GitHub, GitLab.com, and self-hosted GitLab instances
    */
-  static parseUrl(url: string): { owner: string; repo: string } | null {
-    const pattern = /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/?$/;
-    const match = url.match(pattern);
-
-    if (!match || !match[1] || !match[2]) {
-      return null;
+  static parseUrl(url: string): { owner: string; repo: string; provider: 'github' | 'gitlab'; instanceUrl?: string } | null {
+    // Try GitHub pattern
+    const githubPattern = /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/?$/;
+    const githubMatch = url.match(githubPattern);
+    if (githubMatch) {
+      return {
+        owner: githubMatch[1],
+        repo: githubMatch[2],
+        provider: 'github',
+      };
     }
 
-    return {
-      owner: match[1],
-      repo: match[2],
-    };
+    // Try GitLab.com pattern
+    const gitlabPattern = /^https:\/\/gitlab\.com\/([^/]+)\/([^/]+)\/?$/;
+    const gitlabMatch = url.match(gitlabPattern);
+    if (gitlabMatch) {
+      return {
+        owner: gitlabMatch[1],
+        repo: gitlabMatch[2],
+        provider: 'gitlab',
+      };
+    }
+
+    // Try self-hosted GitLab pattern (e.g., https://gitlab.company.com/owner/repo)
+    const selfHostedPattern = /^https?:\/\/([^/]+)\/([^/]+)\/([^/]+)\/?$/;
+    const selfHostedMatch = url.match(selfHostedPattern);
+    if (selfHostedMatch && !selfHostedMatch[1].includes('github.com')) {
+      return {
+        owner: selfHostedMatch[2],
+        repo: selfHostedMatch[3],
+        provider: 'gitlab',
+        instanceUrl: `https://${selfHostedMatch[1]}`,
+      };
+    }
+
+    return null;
   }
 
   /**

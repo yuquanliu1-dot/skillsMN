@@ -399,6 +399,8 @@ export interface PrivateRepo {
   addedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+  provider: 'github' | 'gitlab';
+  instanceUrl?: string; // For self-hosted GitLab instances
 }
 
 export interface PrivateRepoConfig {

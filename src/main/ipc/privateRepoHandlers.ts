@@ -32,16 +32,17 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
     IPC_CHANNELS.PRIVATE_REPO_ADD,
     async (
       _event,
-      { url, pat, displayName }: { url: string; pat: string; displayName?: string }
+      { url, pat, displayName, provider, instanceUrl }: { url: string; pat: string; displayName?: string; provider?: 'github' | 'gitlab'; instanceUrl?: string }
     ): Promise<IPCResponse<PrivateRepo>> => {
       try {
-        logger.debug('Adding private repository', 'PrivateRepoHandlers', { url });
+        logger.debug('Adding private repository', 'PrivateRepoHandlers', { url, provider });
 
-        const repo = await PrivateRepoService.addRepo(url, pat, displayName);
+        const repo = await PrivateRepoService.addRepo(url, pat, displayName, provider, instanceUrl);
 
         logger.info('Private repository added', 'PrivateRepoHandlers', {
           id: repo.id,
           url: repo.url,
+          provider: repo.provider,
         });
 
         return { success: true, data: repo };
@@ -55,7 +56,7 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
         // Provide actionable error messages
         if (errorMessage.includes('Invalid repository URL')) {
           errorCode = 'INVALID_URL';
-          actionableMessage = 'Invalid repository URL. Please use format: https://github.com/owner/repo';
+          actionableMessage = 'Invalid repository URL. Please use format: https://github.com/owner/repo or https://gitlab.com/owner/repo';
         } else if (errorMessage.includes('Failed to connect') || errorMessage.includes('authentication failed')) {
           errorCode = 'AUTH_FAILED';
           actionableMessage = 'Authentication failed. Please check your PAT has read access to this repository.';
