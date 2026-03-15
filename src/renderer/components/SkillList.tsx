@@ -190,52 +190,46 @@ export default function SkillList({
           )}
         </div>
 
-        {/* Bottom row: Filters + Sort + Count */}
-        <div className="flex items-center gap-4 flex-wrap">
+        {/* Bottom row: Filters + Sort (icon-only) */}
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Skill count */}
-          <div className="text-sm text-gray-500">
-            {filteredAndSortedSkills.length} of {skills.length} skills
-          </div>
+          <span className="text-xs text-gray-500">
+            {filteredAndSortedSkills.length}/{skills.length}
+          </span>
 
-          {/* Filter by source */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="filter-source" className="text-sm text-gray-700">
-              Filter:
-            </label>
+          <div className="flex items-center gap-1 ml-auto">
+            {/* Filter by source */}
             <select
               id="filter-source"
               value={filterSource}
               onChange={(e) => handleFilterChange(e.target.value as FilterSource)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
               aria-label="Filter by source"
+              title="Filter skills"
             >
               <option value="all">All</option>
               <option value="project">Project</option>
               <option value="global">Global</option>
             </select>
-          </div>
 
-          {/* Sort by */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="sort-by" className="text-sm text-gray-700">
-              Sort by:
-            </label>
+            {/* Sort by */}
             <select
               id="sort-by"
               value={sortBy}
               onChange={(e) => handleSortChange(e.target.value as SortBy)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
               aria-label="Sort by"
+              title="Sort skills"
             >
-              <option value="name">Name</option>
-              <option value="modified">Modified</option>
+              <option value="name">A-Z</option>
+              <option value="modified">Date</option>
             </select>
           </div>
         </div>
       </div>
 
       {/* Skill list with virtualization */}
-      <div ref={listRef} className="flex-1 overflow-hidden bg-gray-50 pt-1">
+      <div ref={listRef} className="flex-1 overflow-hidden bg-gray-50">
         {filteredAndSortedSkills.length > 0 ? (
           <List
             height={listHeight - 8}
