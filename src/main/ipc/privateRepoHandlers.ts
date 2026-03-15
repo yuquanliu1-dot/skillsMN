@@ -544,9 +544,17 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
 
         return { success: true, data: { sha: result.sha || '' } };
       } catch (error) {
-        logger.error('Failed to upload skill to private repo', 'PrivateRepoHandlers', error);
-
+        // Convert Error object to plain object for logging
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorData = error instanceof Error
+          ? { message: error.message, stack: error.stack, name: error.name }
+          : error;
+
+        logger.error('Failed to upload skill to private repo', 'PrivateRepoHandlers', {
+          error: errorData,
+          originalMessage: errorMessage
+        });
+
         let errorCode = 'UPLOAD_FAILED';
         let actionableMessage = errorMessage;
 
