@@ -235,27 +235,39 @@ export default function SkillCard({
 
         {/* Bottom row: Metadata */}
         <div className="flex items-center gap-4 h-4 text-xs text-gray-500">
-          <span className="flex items-center gap-1">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {new Date(skill.lastModified).toLocaleDateString()}
-          </span>
-          {skill.resourceCount > 0 && (
+          {/* Author */}
+          {skill.author && (
             <span className="flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 010 8zm12-4a4 4 0 11-8 0 4 4 0 010-8z" />
               </svg>
-              {skill.resourceCount}
+              <span className="truncate max-w-[100px]" title={skill.author}>{skill.author}</span>
             </span>
           )}
-          {skill.sourceMetadata && 'installedAt' in skill.sourceMetadata && (
-            <span className="flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              {new Date(skill.sourceMetadata.installedAt).toLocaleDateString()}
+
+          {/* Version */}
+          {skill.version && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border-0">
+              v{skill.version}
             </span>
+          )}
+
+          {/* Tags */}
+          {skill.tags && skill.tags.length > 0 && (
+            <div className="flex items-center gap-1 overflow-hidden flex-1">
+              {skill.tags.slice(0, 3).map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border-0 flex-shrink-0"
+                  title={tag}
+                >
+                  {tag}
+                </span>
+              ))}
+              {skill.tags.length > 3 && (
+                <span className="text-gray-400 flex-shrink-0">+{skill.tags.length - 3}</span>
+              )}
+            </div>
           )}
         </div>
       </div>
