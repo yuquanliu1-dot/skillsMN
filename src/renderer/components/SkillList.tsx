@@ -230,7 +230,7 @@ export default function SkillList({
                 aria-label="Sort by"
                 title="Sort skills"
               >
-                <option value="name">A-Z</option>
+                <option value="name">Name</option>
                 <option value="modified">Date</option>
               </select>
             </div>
