@@ -17,6 +17,12 @@ export interface Skill {
   name: string;
   /** Skill description from YAML frontmatter */
   description?: string;
+  /** Skill version from YAML frontmatter */
+  version?: string;
+  /** Skill author from YAML frontmatter */
+  author?: string;
+  /** Skill tags from YAML frontmatter */
+  tags?: string[];
   /** Origin directory type */
   source: SkillSource;
   /** Last modification timestamp */

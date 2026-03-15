@@ -51,6 +51,11 @@ export class SkillModel {
       description = description.substring(0, MAX_SKILL_DESCRIPTION_LENGTH);
     }
 
+    // Extract version, author, and tags from frontmatter
+    const version = frontmatter.version?.trim();
+    const author = frontmatter.author?.trim();
+    const tags = frontmatter.tags?.map(tag => tag.trim()).filter(tag => tag.length > 0);
+
     // Count resources (all files except skill.md)
     const resourceCount = await this.countResources(dirPath);
 
@@ -77,6 +82,9 @@ export class SkillModel {
       path: dirPath,
       name: validatedName,
       description,
+      version,
+      author,
+      tags,
       source,
       lastModified: dirStats.mtime,
       resourceCount,
@@ -110,6 +118,9 @@ export class SkillModel {
       const frontmatter: Partial<SkillFrontmatter> = {
         name: data.name,
         description: data.description,
+        version: data.version,
+        author: data.author,
+        tags: data.tags,
       };
 
       // Store in cache (T127)

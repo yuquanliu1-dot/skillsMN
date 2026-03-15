@@ -10,6 +10,7 @@ import type {
   FSEvent,
   SkillSource,
   IPCResponse,
+  PrivateRepo,
 } from '../../shared/types';
 
 /**
@@ -209,6 +210,21 @@ export const ipcClient = {
   // ============================================================================
   // Private Repository Operations
   // ============================================================================
+
+  /**
+   * List all private repositories
+   */
+  listPrivateRepos: async (): Promise<PrivateRepo[]> => {
+    if (!isElectron()) {
+      console.warn('[IPC Client] Running in browser mode - returning empty repos');
+      return [];
+    }
+    const response = await window.electronAPI.listPrivateRepos();
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Unknown error');
+    }
+    return response.data!;
+  },
 
   /**
    * Upload a skill to a private repository
