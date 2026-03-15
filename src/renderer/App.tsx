@@ -111,6 +111,7 @@ export default function App(): JSX.Element {
   const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | null>(null);
+  const [skillUpdates, setSkillUpdates] = useState<Record<string, { hasUpdate: boolean; remoteSHA?: string }>>({});
 
   // Ref to store latest loadSkills function for file watcher callback
   const loadSkillsRef = useRef<() => Promise<void>>(async () => {});
@@ -281,6 +282,65 @@ export default function App(): JSX.Element {
 
   // Keep ref updated with latest loadSkills function
   loadSkillsRef.current = loadSkills;
+
+  /**
+   * Check for skill updates
+   */
+  const checkForUpdates = useCallback(async (): Promise<void> => {
+    if (!state.skills || state.skills.length === 0) {
+      return;
+    }
+
+    try {
+      console.log('🔄 [checkForUpdates] Checking for skill updates...');
+      const updates = await ipcClient.checkForUpdates(state.skills);
+      console.log(`✅ [checkForUpdates] Found ${Object.keys(updates).filter(k => updates[k].hasUpdate).length} updates`);
+      setSkillUpdates(updates);
+    } catch (error) {
+      console.error('❌ [checkForUpdates] Failed to check for updates:', error);
+      // Don't show error toast for background update checks
+    }
+  }, [state.skills]);
+
+  /**
+   * Handle update skill
+   */
+  const handleUpdateSkill = async (skill: Skill, createBackup: boolean): Promise<void> => {
+    try {
+      const result = await ipcClient.updateSkillFromSource(skill.path, createBackup);
+
+      // Refresh skill list to reflect the update
+      await loadSkills();
+
+      // Re-check for updates
+      await checkForUpdates();
+
+      // Show success notification
+      const skillName = skill.name + (createBackup ? ' (backup created)' : '');
+      showToast(`Skill "${skillName}" updated successfully`, 'success');
+
+      console.log('Skill updated successfully:', skill.name, 'New path:', result.newPath);
+    } catch (error: any) {
+      console.error('Failed to update skill:', error);
+      showToast(`Failed to update skill: ${error.message}`, 'error');
+      throw error;
+    }
+  };
+
+  /**
+   * Check for updates when skills are loaded
+   */
+  useEffect(() => {
+    if (state.skills && state.skills.length > 0) {
+      // Check immediately when skills load
+      checkForUpdates();
+
+      // Set up periodic update checking (every 30 minutes)
+      const interval = setInterval(checkForUpdates, 30 * 60 * 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [state.skills?.length, checkForUpdates]);
 
   /**
    * Handle setup completion
@@ -617,6 +677,8 @@ export default function App(): JSX.Element {
                 onDeleteSkill={(skill) => setDeletingSkill(skill)}
                 onOpenFolder={handleOpenFolder}
                 selectedSkillPath={selectedSkillPath}
+                skillUpdates={skillUpdates}
+                onSkillUpdate={handleUpdateSkill}
               />
             </div>
 

@@ -9,6 +9,7 @@ import { FixedSizeList as List } from 'react-window';
 import type { Skill, FilterSource, SortBy } from '../../shared/types';
 import { SKILL_LIST_ITEM_HEIGHT } from '../../shared/constants';
 import SkillCard from './SkillCard';
+import { ipcClient } from '../services/ipcClient';
 
 interface SkillListProps {
   skills: Skill[];
@@ -18,6 +19,8 @@ interface SkillListProps {
   onDeleteSkill?: (skill: Skill) => void;
   onOpenFolder?: (skill: Skill) => void;
   selectedSkillPath?: string | null;
+  skillUpdates?: Record<string, { hasUpdate: boolean; remoteSHA?: string }>;
+  onSkillUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
 }
 
 export default function SkillList({
@@ -28,6 +31,8 @@ export default function SkillList({
   onDeleteSkill,
   onOpenFolder,
   selectedSkillPath,
+  skillUpdates = {},
+  onSkillUpdate,
 }: SkillListProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
@@ -81,10 +86,21 @@ export default function SkillList({
     setSearchQuery(query);
   }, []);
 
+  const handleSkillUpdate = useCallback(async (skill: Skill, createBackup: boolean): Promise<void> => {
+    if (onSkillUpdate) {
+      await onSkillUpdate(skill, createBackup);
+    } else {
+      // Default implementation using IPC
+      await ipcClient.updateSkillFromSource(skill.path, createBackup);
+    }
+  }, [onSkillUpdate]);
+
   // Row renderer for virtualized list
   const Row = useCallback(
     ({ index, style }: { index: number; style: React.CSSProperties }) => {
       const skill = filteredAndSortedSkills[index];
+      const updateInfo = skillUpdates[skill.path];
+
       return (
         <div style={style} className={`px-4 pb-2 ${index === 0 ? 'pt-2' : ''}`}>
           <SkillCard
@@ -94,11 +110,13 @@ export default function SkillList({
             onDelete={onDeleteSkill}
             onOpenFolder={onOpenFolder}
             isSelected={skill.path === selectedSkillPath}
+            hasUpdate={updateInfo?.hasUpdate || false}
+            onUpdate={handleSkillUpdate}
           />
         </div>
       );
     },
-    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath]
+    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath, skillUpdates, handleSkillUpdate]
   );
 
   // Update list height on container resize

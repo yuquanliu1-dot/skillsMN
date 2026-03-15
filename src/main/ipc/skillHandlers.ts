@@ -158,6 +158,64 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
     }
   );
 
+  // Handler for skill:check-updates
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_CHECK_UPDATES,
+    async (_event, { skills }: { skills: Skill[] }): Promise<IPCResponse<Map<string, { hasUpdate: boolean; remoteSHA?: string }>>> => {
+      try {
+        logger.debug('Checking for skill updates', 'SkillHandlers');
+        const updates = await skillService!.checkForUpdates(skills);
+
+        // Convert Map to plain object for IPC serialization
+        const updatesObject: Record<string, { hasUpdate: boolean; remoteSHA?: string }> = {};
+        updates.forEach((value, key) => {
+          updatesObject[key] = value;
+        });
+
+        logger.info(`Update check completed: ${updates.size} skills checked`, 'SkillHandlers');
+        return { success: true, data: updatesObject as any };
+      } catch (error) {
+        logger.error('Failed to check for updates', 'SkillHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for skill:update-skill
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_UPDATE_SKILL,
+    async (_event, { skillPath, createBackup }: { skillPath: string; createBackup: boolean }): Promise<IPCResponse<{ newPath: string }>> => {
+      try {
+        logger.debug(`Updating skill: ${skillPath}`, 'SkillHandlers');
+
+        // Get skill to determine source type
+        const skillData = await skillService!.getSkill(skillPath);
+        const skill = skillData.metadata;
+
+        if (!skill.sourceMetadata) {
+          throw new Error('Skill was not installed from a remote source');
+        }
+
+        // Update based on source type
+        if (skill.sourceMetadata.type === 'registry') {
+          // TODO: Implement registry skill update
+          throw new Error('Registry skill updates not yet implemented');
+        } else if (skill.sourceMetadata.type === 'private-repo') {
+          const result = await skillService!.updatePrivateSkill(skillPath, createBackup);
+          if (!result.success) {
+            throw new Error(result.error || 'Update failed');
+          }
+          return { success: true, data: { newPath: result.newPath || skillPath } };
+        } else {
+          throw new Error('Cannot update locally created skills');
+        }
+      } catch (error) {
+        logger.error('Failed to update skill', 'SkillHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
   // Handler for fs:watch-start
   ipcMain.handle(
     IPC_CHANNELS.FS_WATCH_START,

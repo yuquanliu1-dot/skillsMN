@@ -10,7 +10,7 @@ import * as os from 'os';
 import { SkillInstaller } from '../../../src/main/services/SkillInstaller';
 import { GitOperations } from '../../../src/main/utils/gitOperations';
 import { SkillDiscovery } from '../../../src/main/utils/skillDiscovery';
-import { createSkillSource } from '../../../src/main/models/SkillSource';
+import { createRegistrySource } from '../../../src/main/models/SkillSource';
 import type { InstallFromRegistryRequest, InstallProgressEvent } from '../../../src/shared/types';
 
 // Mock dependencies
@@ -19,7 +19,9 @@ jest.mock('path');
 jest.mock('os');
 jest.mock('../../../src/main/utils/gitOperations');
 jest.mock('../../../src/main/utils/skillDiscovery');
-jest.mock('../../../src/main/models/SkillSource');
+jest.mock('../../../src/main/models/SkillSource', () => ({
+  createRegistrySource: jest.fn(),
+}));
 jest.mock('uuid', () => ({ v4: () => 'test-uuid-1234' }));
 
 describe('SkillInstaller', () => {
@@ -46,8 +48,8 @@ describe('SkillInstaller', () => {
     } as any;
     (SkillDiscovery as jest.Mock).mockImplementation(() => mockSkillDiscovery);
 
-    // Mock createSkillSource
-    (createSkillSource as jest.Mock).mockReturnValue({
+    // Mock createRegistrySource
+    (createRegistrySource as jest.Mock).mockReturnValue({
       type: 'registry',
       registryUrl: 'https://skills.sh',
       source: 'owner/repo',
@@ -313,7 +315,7 @@ describe('SkillInstaller', () => {
 
       await skillInstaller.installFromRegistry(validRequest, testTargetDir);
 
-      expect(createSkillSource).toHaveBeenCalledWith(
+      expect(createRegistrySource).toHaveBeenCalledWith(
         validRequest.source,
         validRequest.skillId,
         'abc123def456'

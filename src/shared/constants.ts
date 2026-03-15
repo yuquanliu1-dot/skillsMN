@@ -120,6 +120,8 @@ export const IPC_CHANNELS = {
   SKILL_UPDATE: 'skill:update',
   SKILL_DELETE: 'skill:delete',
   SKILL_OPEN_FOLDER: 'skill:open-folder',
+  SKILL_CHECK_UPDATES: 'skill:check-updates',
+  SKILL_UPDATE_SKILL: 'skill:update-skill',
 
   // Configuration operations
   CONFIG_LOAD: 'config:load',

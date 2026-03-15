@@ -94,6 +94,29 @@ export const ipcClient = {
     }
   },
 
+  async checkForUpdates(skills: Skill[]): Promise<Record<string, { hasUpdate: boolean; remoteSHA?: string }>> {
+    if (!isElectron()) {
+      console.warn('[IPC Client] Cannot check updates in browser mode');
+      return {};
+    }
+    const response = await window.electronAPI.checkForUpdates(skills);
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Unknown error');
+    }
+    return response.data!;
+  },
+
+  async updateSkillFromSource(skillPath: string, createBackup: boolean = true): Promise<{ newPath: string }> {
+    if (!isElectron()) {
+      throw new Error('Cannot update skill in browser mode');
+    }
+    const response = await window.electronAPI.updateSkillFromSource(skillPath, createBackup);
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Unknown error');
+    }
+    return response.data!;
+  },
+
   // ============================================================================
   // Configuration Operations
   // ============================================================================

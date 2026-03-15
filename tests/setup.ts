@@ -39,6 +39,8 @@ global.window.electronAPI = {
   updateSkill: jest.fn(),
   deleteSkill: jest.fn(),
   openFolder: jest.fn(),
+  checkForUpdates: jest.fn(),
+  updateSkillFromSource: jest.fn(),
 
   // Dialog Operations
   selectDirectory: jest.fn(),

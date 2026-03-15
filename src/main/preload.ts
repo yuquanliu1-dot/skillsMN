@@ -64,6 +64,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_OPEN_FOLDER, { path });
   },
 
+  checkForUpdates: (
+    skills: Skill[]
+  ): Promise<IPCResponse<Record<string, { hasUpdate: boolean; remoteSHA?: string }>>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_CHECK_UPDATES, { skills });
+  },
+
+  updateSkillFromSource: (
+    skillPath: string,
+    createBackup: boolean = true
+  ): Promise<IPCResponse<{ newPath: string }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_UPDATE_SKILL, { skillPath, createBackup });
+  },
+
   // ============================================================================
   // Configuration Operations
   // ============================================================================

@@ -28,6 +28,13 @@ export interface ElectronAPI {
   ) => Promise<IPCResponse<Skill>>;
   deleteSkill: (path: string) => Promise<IPCResponse<void>>;
   openFolder: (path: string) => Promise<IPCResponse<void>>;
+  checkForUpdates: (
+    skills: Skill[]
+  ) => Promise<IPCResponse<Record<string, { hasUpdate: boolean; remoteSHA?: string }>>>;
+  updateSkillFromSource: (
+    skillPath: string,
+    createBackup?: boolean
+  ) => Promise<IPCResponse<{ newPath: string }>>;
 
   // Dialog Operations
   selectDirectory: () => Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>>;
@@ -59,6 +66,8 @@ export interface ElectronAPI {
     url: string;
     pat: string;
     displayName?: string;
+    provider?: 'github' | 'gitlab';
+    instanceUrl?: string;
   }) => Promise<IPCResponse<PrivateRepo>>;
   listPrivateRepos: () => Promise<IPCResponse<PrivateRepo[]>>;
   getPrivateRepo: (repoId: string) => Promise<IPCResponse<PrivateRepo | null>>;

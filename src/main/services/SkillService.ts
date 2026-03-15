@@ -16,8 +16,9 @@ import { GitHubService } from './GitHubService';
 import { decryptPAT } from '../utils/encryption';
 import { SkillModel } from '../models/Skill';
 import { SkillDirectoryModel } from '../models/SkillDirectory';
+import { createLocalSource, isRegistrySkill, isPrivateRepoSkill } from '../models/SkillSource';
 import { Configuration, Skill } from '../../shared/types';
-import { SKILL_FILE_NAME } from '../../shared/constants';
+import { SKILL_FILE_NAME, SOURCE_METADATA_FILE } from '../../shared/constants';
 
 export class SkillService {
   private frontmatterCache: Map<string, { data: any; timestamp: number }> = new Map();
@@ -206,6 +207,11 @@ export class SkillService {
     const template = SkillModel.generateTemplate(name);
     await fs.promises.writeFile(skillFile, template, 'utf-8');
 
+    // Create source metadata for local skill
+    const sourceMetadata = createLocalSource();
+    const metadataPath = path.join(skillDir, SOURCE_METADATA_FILE);
+    await fs.promises.writeFile(metadataPath, JSON.stringify(sourceMetadata, null, 2), 'utf-8');
+
     // Parse and return created skill (with cache)
     const skill = await SkillModel.fromDirectory(skillDir, directory, this.frontmatterCache);
 
@@ -315,7 +321,7 @@ export class SkillService {
   }
 
   /**
-   * Check for updates to skills installed from private repositories
+   * Check for updates to skills installed from private repositories and registry
    * Compares local commit SHAs with remote repository commit SHAs
    * @param skills - Array of skills to check for updates
    * @returns Map of skill paths to update status and remote SHA
@@ -334,59 +340,158 @@ export class SkillService {
     const updateMap = new Map<string, { hasUpdate: boolean; remoteSHA?: string }>();
 
     for (const skill of skills) {
-      // Only check skills installed from private repos
-      if (!skill.sourceRepoId || !skill.sourceRepoPath || !skill.installedDirectoryCommitSHA) {
-        continue;
-      }
-
       try {
-        const configService = await this.getConfigService();
-        const repo = await configService.getPrivateRepo(skill.sourceRepoId);
-
-        if (!repo) {
-          logger.warn(`Repository not found for skill: ${skill.name}`, 'SkillService', { repoId: skill.sourceRepoId });
+        // Check if skill has source metadata
+        if (!skill.sourceMetadata) {
           continue;
         }
 
-        // Decrypt PAT
-        const pat = decryptPAT(repo.patEncrypted);
-
-        // Get latest commit SHA for the directory
-        const owner = repo.owner;
-        const repoName = repo.repo;
-        const branch = repo.defaultBranch || 'main';
-
-        const commits = await GitHubService.getDirectoryCommits(
-          owner,
-          repoName,
-          pat,
-          skill.sourceRepoPath,
-          branch
-        );
-
-        if (commits && commits.length > 0) {
-          const latestCommitSHA = commits[0].sha;
-          const hasUpdate = latestCommitSHA !== skill.installedDirectoryCommitSHA;
-
-          updateMap.set(skill.path, {
-            hasUpdate,
-            remoteSHA: latestCommitSHA,
-          });
-
-          if (hasUpdate) {
-            logger.info(`Update available for skill: ${skill.name}`, 'SkillService', {
-              skillPath: skill.path,
-              localSHA: skill.installedDirectoryCommitSHA,
-              remoteSHA: latestCommitSHA,
-            });
+        // Handle different source types
+        if (isRegistrySkill(skill.sourceMetadata)) {
+          // Check registry skill for updates
+          const result = await this.checkRegistrySkillForUpdates(skill, skill.sourceMetadata);
+          if (result) {
+            updateMap.set(skill.path, result);
+          }
+        } else if (isPrivateRepoSkill(skill.sourceMetadata)) {
+          // Check private repo skill for updates
+          const result = await this.checkPrivateRepoSkillForUpdates(skill, skill.sourceMetadata);
+          if (result) {
+            updateMap.set(skill.path, result);
           }
         }
+        // Local skills don't have updates
       } catch (error) {
         logger.error(`Failed to check updates for skill: ${skill.name}`, 'SkillService', error);
       }
     }
 
     return updateMap;
+  }
+
+  /**
+   * Check for updates to a registry-installed skill
+   * Compares local commit SHA with remote repository commit SHA
+   */
+  private async checkRegistrySkillForUpdates(
+    skill: Skill,
+    sourceMetadata: import('../models/SkillSource').RegistrySource
+  ): Promise<{ hasUpdate: boolean; remoteSHA?: string } | null> {
+    if (!sourceMetadata.commitHash) {
+      logger.debug('No commit hash stored for registry skill, skipping update check', 'SkillService', {
+        skillPath: skill.path
+      });
+      return null;
+    }
+
+    try {
+      // Get latest commit SHA from remote repository using GitHub API
+      const [owner, repo] = sourceMetadata.source.split('/');
+
+      // Use GitHub API to get the latest commit for the skill directory
+      // Note: This requires the repository to be public (which registry skills are)
+      const commits = await GitHubService.getDirectoryCommits(
+        owner,
+        repo,
+        '', // No PAT needed for public repos
+        sourceMetadata.skillId,
+        'main' // Default branch for registry skills
+      );
+
+      if (!commits || commits.length === 0) {
+        logger.warn('Failed to get latest commit SHA for registry skill', 'SkillService', {
+          skill: skill.name,
+          source: sourceMetadata.source
+        });
+        return null;
+      }
+
+      const latestCommitSHA = commits[0].sha;
+      const hasUpdate = latestCommitSHA !== sourceMetadata.commitHash;
+
+      if (hasUpdate) {
+        logger.info(`Update available for registry skill: ${skill.name}`, 'SkillService', {
+          skillPath: skill.path,
+          localSHA: sourceMetadata.commitHash,
+          remoteSHA: latestCommitSHA,
+        });
+      }
+
+      return {
+        hasUpdate,
+        remoteSHA: latestCommitSHA,
+      };
+    } catch (error) {
+      logger.error(`Failed to check registry skill updates: ${skill.name}`, 'SkillService', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check for updates to a private repo-installed skill
+   * Compares local commit SHA with remote repository commit SHA
+   */
+  private async checkPrivateRepoSkillForUpdates(
+    skill: Skill,
+    sourceMetadata: import('../models/SkillSource').PrivateRepoSource
+  ): Promise<{ hasUpdate: boolean; remoteSHA?: string } | null> {
+    if (!sourceMetadata.commitHash) {
+      logger.debug('No commit hash stored for private repo skill, skipping update check', 'SkillService', {
+        skillPath: skill.path
+      });
+      return null;
+    }
+
+    try {
+      const configService = await this.getConfigService();
+      const repo = await configService.getPrivateRepo(sourceMetadata.repoId);
+
+      if (!repo) {
+        logger.warn(`Repository not found for skill: ${skill.name}`, 'SkillService', {
+          repoId: sourceMetadata.repoId
+        });
+        return null;
+      }
+
+      // Decrypt PAT
+      const pat = decryptPAT(repo.patEncrypted);
+
+      // Get latest commit SHA for the directory
+      const owner = repo.owner;
+      const repoName = repo.repo;
+      const branch = repo.defaultBranch || 'main';
+
+      const commits = await GitHubService.getDirectoryCommits(
+        owner,
+        repoName,
+        pat,
+        sourceMetadata.skillPath,
+        branch
+      );
+
+      if (commits && commits.length > 0) {
+        const latestCommitSHA = commits[0].sha;
+        const hasUpdate = latestCommitSHA !== sourceMetadata.commitHash;
+
+        if (hasUpdate) {
+          logger.info(`Update available for private repo skill: ${skill.name}`, 'SkillService', {
+            skillPath: skill.path,
+            localSHA: sourceMetadata.commitHash,
+            remoteSHA: latestCommitSHA,
+          });
+        }
+
+        return {
+          hasUpdate,
+          remoteSHA: latestCommitSHA,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      logger.error(`Failed to check private repo skill updates: ${skill.name}`, 'SkillService', error);
+      return null;
+    }
   }
 
   /**
@@ -416,13 +521,18 @@ export class SkillService {
     try {
       // Get current skill metadata
       const skill = await this.getSkill(skillPath);
-      if (!skill.metadata.sourceRepoId || !skill.metadata.sourceRepoPath) {
+
+      // Check if skill has source metadata
+      if (!skill.metadata.sourceMetadata || skill.metadata.sourceMetadata.type !== 'private-repo') {
         throw new Error('Skill was not installed from a private repository');
       }
 
+      const sourceMetadata = skill.metadata.sourceMetadata;
+      const repoId = sourceMetadata.repoId;
+
       // Get repository configuration
       const configService = await this.getConfigService();
-      const repo = await configService.getPrivateRepo(skill.metadata.sourceRepoId);
+      const repo = await configService.getPrivateRepo(repoId);
 
       if (!repo) {
         throw new Error('Source repository not found');
