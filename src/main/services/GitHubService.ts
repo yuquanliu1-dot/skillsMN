@@ -947,13 +947,31 @@ export class GitHubService {
     instanceUrl?: string
   ): Promise<{ success: boolean; sha?: string; error?: string }> {
     try {
+      const GITHUB_API_BASE = instanceUrl
+        ? `${instanceUrl}/api/v3`
+        : 'https://api.github.com';
+
       const fullPath = skillDirName.startsWith('/') ? `${skillDirName}/skill.md` : `${skillDirName}/skill.md`;
+
+      logger.info('GitHub upload parameters', 'GitHubService', {
+        owner,
+        repo,
+        skillDirName,
+        fullPath,
+        branch,
+        skillName,
+        apiBase: GITHUB_API_BASE,
+        hasInstanceUrl: !!instanceUrl
+      });
 
       // Check if file already exists to get its SHA for update
       let existingSha: string | undefined;
       try {
+        const checkUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}?ref=${branch}`;
+        logger.debug('Checking if file exists', 'GitHubService', { checkUrl });
+
         const checkResponse = await fetch(
-          `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}?ref=${branch}`,
+          checkUrl,
           {
             headers: {
               'Authorization': `token ${pat}`,
@@ -963,19 +981,45 @@ export class GitHubService {
           }
         );
 
+        logger.debug('File check response', 'GitHubService', {
+          status: checkResponse.status,
+          statusText: checkResponse.statusText
+        });
+
         if (checkResponse.ok) {
           const existingFile = await checkResponse.json();
           existingSha = existingFile.sha;
+          logger.debug('File exists, SHA retrieved', 'GitHubService', { sha: existingSha });
+        } else if (checkResponse.status === 404) {
+          logger.debug('File does not exist, will create new', 'GitHubService');
+        } else {
+          const errorText = await checkResponse.text();
+          logger.warn('File check failed', 'GitHubService', {
+            status: checkResponse.status,
+            error: errorText
+          });
         }
       } catch (error) {
-        // File doesn't exist, which is fine for creating new files
+        logger.warn('File check request failed', 'GitHubService', {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
 
       // Create or update the file
       const message = commitMessage || (existingSha ? `Update skill: ${skillName}` : `Add skill: ${skillName}`);
+      const uploadUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}`;
+
+      logger.info('Uploading skill to GitHub', 'GitHubService', {
+        url: uploadUrl,
+        method: 'PUT',
+        branch,
+        message,
+        hasExistingSha: !!existingSha,
+        contentLength: content.length
+      });
 
       const response = await fetch(
-        `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}`,
+        uploadUrl,
         {
           method: 'PUT',
           headers: {
@@ -993,8 +1037,18 @@ export class GitHubService {
         }
       );
 
+      logger.debug('Upload response received', 'GitHubService', {
+        status: response.status,
+        statusText: response.statusText
+      });
+
       if (!response.ok) {
         const errorData = await response.json();
+        logger.error('GitHub upload failed', 'GitHubService', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
         return {
           success: false,
           error: errorData.message || `GitHub API error: ${response.status} ${response.statusText}`,
