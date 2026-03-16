@@ -1,7 +1,8 @@
 /**
  * SkillCard Component
  *
- * Displays individual skill with install/update/delete functionality
+ * Fixed-height card for virtualized skill list with content truncation
+ * Height: 130px (fixed)
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -101,8 +102,9 @@ export default function SkillCard({
 
   return (
     <>
+      {/* Fixed height card: 136px */}
       <article
-        className={`p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer ${
+        className={`relative h-[136px] p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
           isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
         }`}
         onClick={handleClick}
@@ -112,10 +114,11 @@ export default function SkillCard({
         aria-label={`Skill: ${skill.name}`}
         aria-selected={isSelected}
       >
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+        {/* Top row: Name + Badges + Actions */}
+        <div className="flex items-start justify-between mb-2 h-[28px]">
+          <div className="flex-1 min-w-0 mr-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate" title={skill.name}>
                 {skill.name}
               </h4>
 
@@ -141,6 +144,13 @@ export default function SkillCard({
                 </span>
               )}
 
+              {/* Version */}
+              {skill.version && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-0">
+                  v{skill.version}
+                </span>
+              )}
+
               {/* Update Badge */}
               {hasUpdate && updateProgress !== 'success' && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex-shrink-0 border-0 animate-pulse">
@@ -154,32 +164,11 @@ export default function SkillCard({
                   ✓
                 </span>
               )}
-
-              {/* Version */}
-              {skill.version && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-0">
-                  v{skill.version}
-                </span>
-              )}
             </div>
-
-            {/* Description */}
-            {skill.description && (
-              <p
-                ref={descriptionRef}
-                className="text-xs text-slate-600 dark:text-slate-400 mb-1"
-                title={isTruncated ? skill.description : undefined}
-              >
-                {skill.description}
-              </p>
-            )}
-
-            {/* Path */}
-            <p className="text-xs text-slate-600 dark:text-slate-400">{skill.path}</p>
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {/* Update Button */}
             {hasUpdate && onUpdate && updateProgress !== 'success' && (
               <button
@@ -237,15 +226,35 @@ export default function SkillCard({
           </div>
         </div>
 
-        {/* Metadata row */}
-        <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+        {/* Middle row: Description */}
+        <div className="h-[20px] mb-2">
+          {skill.description && (
+            <p
+              ref={descriptionRef}
+              className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1"
+              title={isTruncated ? skill.description : undefined}
+            >
+              {skill.description}
+            </p>
+          )}
+        </div>
+
+        {/* Path row */}
+        <div className="h-[16px] mb-2">
+          <p className="text-xs text-slate-600 dark:text-slate-400 truncate" title={skill.path}>
+            {skill.path}
+          </p>
+        </div>
+
+        {/* Bottom row: Metadata */}
+        <div className="flex items-center gap-4 h-[16px] text-xs text-slate-500 dark:text-slate-400">
           {/* Author */}
           {skill.author && (
-            <span className="flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span className="flex items-center gap-1 min-w-0">
+              <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 010 8zm12-4a4 4 0 11-8 0 4 4 0 010-8z" />
               </svg>
-              <span className="truncate max-w-[100px]" title={skill.author}>{skill.author}</span>
+              <span className="truncate max-w-[120px]" title={skill.author}>{skill.author}</span>
             </span>
           )}
 
