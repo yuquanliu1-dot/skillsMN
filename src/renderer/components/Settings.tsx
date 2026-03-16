@@ -24,6 +24,12 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Project Directories State
+  const [projectDirectories, setProjectDirectories] = useState<string[]>([]);
+  const [showAddDirectoryForm, setShowAddDirectoryForm] = useState(false);
+  const [newDirectoryPath, setNewDirectoryPath] = useState('');
+  const [isAddingDirectory, setIsAddingDirectory] = useState(false);
+
   // Skill Editor Configuration State
   const [skillEditorConfig, setSkillEditorConfig] = useState<SkillEditorConfig>({
     fontSize: 14,
@@ -71,6 +77,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
       setDefaultInstallDirectory(config.defaultInstallDirectory);
       setEditorDefaultMode(config.editorDefaultMode);
       setAutoRefresh(config.autoRefresh);
+      setProjectDirectories(config.projectDirectories || []);
 
       // Load skill editor config with defaults
       if (config.skillEditor) {
@@ -117,6 +124,74 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
       console.error('Load repos error:', err);
     } finally {
       setIsLoadingRepos(false);
+    }
+  };
+
+  /**
+   * Handle add project directory
+   */
+  const handleAddDirectory = async () => {
+    if (!newDirectoryPath.trim()) return;
+
+    setIsAddingDirectory(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Test directory validity by checking if it exists and contains .claude folder
+      // We'll just check if the directory can be added - the validation happens on save
+      // For now, we'll just add it directly
+      const updatedDirectories = [...projectDirectories, newDirectoryPath];
+      setProjectDirectories(updatedDirectories);
+
+      // Save immediately
+      await onSave({ projectDirectories: updatedDirectories });
+
+      setSuccess('Project directory added successfully');
+      setNewDirectoryPath('');
+      setShowAddDirectoryForm(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to add directory';
+      setError(message);
+      console.error('Add directory error:', err);
+    } finally {
+      setIsAddingDirectory(false);
+    }
+  };
+
+  /**
+   * Handle remove project directory
+   */
+  const handleRemoveDirectory = async (directoryPath: string) => {
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const updatedDirectories = projectDirectories.filter(d => d !== directoryPath);
+      setProjectDirectories(updatedDirectories);
+
+      // Save immediately
+      await onSave({ projectDirectories: updatedDirectories });
+
+      setSuccess('Project directory removed');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to remove directory';
+      setError(message);
+      console.error('Remove directory error:', err);
+    }
+  };
+
+  /**
+   * Handle browse for directory
+   */
+  const handleBrowseDirectory = async () => {
+    try {
+      const response = await window.electronAPI.selectDirectory();
+      if (response.success && response.data && !response.data.canceled && response.data.filePaths.length > 0) {
+        setNewDirectoryPath(response.data.filePaths[0]);
+      }
+    } catch (err) {
+      console.error('Browse directory error:', err);
     }
   };
 
@@ -542,6 +617,101 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: activeTab === 'general' ? 'block' : 'none' }}>
+          {/* Project Directories */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Project Directories
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowAddDirectoryForm(!showAddDirectoryForm)}
+                className="btn btn-secondary btn-sm"
+                disabled={isAddingDirectory}
+              >
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Directory
+              </button>
+            </div>
+
+            {/* Add Directory Form */}
+            {showAddDirectoryForm && (
+              <div className="mb-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newDirectoryPath}
+                    onChange={(e) => setNewDirectoryPath(e.target.value)}
+                    placeholder="Select or enter directory path..."
+                    className="input flex-1 text-sm"
+                    disabled={isAddingDirectory}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleBrowseDirectory}
+                    className="btn btn-secondary btn-sm"
+                    disabled={isAddingDirectory}
+                  >
+                    Browse
+                  </button>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddDirectoryForm(false);
+                      setNewDirectoryPath('');
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    disabled={isAddingDirectory}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddDirectory}
+                    className="btn btn-primary btn-sm"
+                    disabled={isAddingDirectory || !newDirectoryPath.trim()}
+                  >
+                    {isAddingDirectory ? 'Adding...' : 'Add'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Directory List */}
+            {projectDirectories.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">
+                No project directories configured. Add a directory to get started.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {projectDirectories.map((dir) => (
+                  <div
+                    key={dir}
+                    className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg"
+                  >
+                    <span className="text-sm text-slate-700 font-mono truncate flex-1" title={dir}>
+                      {dir}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDirectory(dir)}
+                      className="btn btn-danger btn-sm ml-2"
+                      title="Remove directory"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Default Install Directory */}
           <div className="mb-3">
             <label

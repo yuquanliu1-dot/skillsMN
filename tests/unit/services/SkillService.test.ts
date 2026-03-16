@@ -41,6 +41,7 @@ describe('SkillService', () => {
     // Mock config
     mockConfig = {
       projectDirectory: '/test/project',
+      projectDirectories: ['/test/project'],
       defaultInstallDirectory: 'project',
       editorDefaultMode: 'edit',
       autoRefresh: true,

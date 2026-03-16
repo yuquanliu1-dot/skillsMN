@@ -14,7 +14,6 @@ interface SidebarProps {
   onViewChange: (view: ViewType) => void;
   onSettingsClick: () => void;
   config: Configuration | null;
-  onChangeProjectDirectory?: () => void;
 }
 
 export default function Sidebar({
@@ -22,7 +21,6 @@ export default function Sidebar({
   onViewChange,
   onSettingsClick,
   config,
-  onChangeProjectDirectory,
 }: SidebarProps): JSX.Element {
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
 
@@ -42,7 +40,7 @@ export default function Sidebar({
         </svg>
       ),
       description: 'Local Skills',
-      disabled: !config?.projectDirectory,
+      disabled: !config?.projectDirectories || config.projectDirectories.length === 0,
     },
     {
       id: 'discover' as const,
@@ -66,7 +64,7 @@ export default function Sidebar({
         </svg>
       ),
       description: 'Find public skills on GitHub',
-      disabled: !config?.projectDirectory,
+      disabled: !config?.projectDirectories || config.projectDirectories.length === 0,
     },
     {
       id: 'private-repos' as const,
@@ -89,7 +87,7 @@ export default function Sidebar({
         </svg>
       ),
       description: 'Manage private repositories',
-      disabled: !config?.projectDirectory,
+      disabled: !config?.projectDirectories || config.projectDirectories.length === 0,
     },
   ];
 
@@ -167,38 +165,17 @@ export default function Sidebar({
           )}
         </button>
 
-        {/* Project Directory Switch Button */}
-        {onChangeProjectDirectory && (
-          <button
-            onClick={onChangeProjectDirectory}
-            onMouseEnter={() => setShowTooltip('directory')}
-            onMouseLeave={() => setShowTooltip(null)}
-            className="w-full aspect-square rounded-xl flex items-center justify-center transition-all duration-200 relative text-gray-500 hover:text-blue-600 hover:bg-gray-50"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-              />
-            </svg>
-            {/* Tooltip */}
-            {showTooltip === 'directory' && (
-              <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded whitespace-nowrap z-50 shadow-lg animate-fade-in">
-                Switch Directory
-              </div>
-            )}
-          </button>
-        )}
-
         {/* Status Indicator */}
         <div className="w-full aspect-square rounded-xl flex items-center justify-center">
           <div
             className={`w-3 h-3 rounded-full ${
-              config?.projectDirectory ? 'bg-emerald-500' : 'bg-gray-300'
+              config?.projectDirectories && config.projectDirectories.length > 0 ? 'bg-emerald-500' : 'bg-gray-300'
             }`}
-            title={config?.projectDirectory ? `Project: ${config.projectDirectory}` : 'Project not configured'}
+            title={
+              config?.projectDirectories && config.projectDirectories.length > 0
+                ? `${config.projectDirectories.length} project director${config.projectDirectories.length === 1 ? 'y' : 'ies'} configured`
+                : 'No project directories configured'
+            }
           />
         </div>
       </div>

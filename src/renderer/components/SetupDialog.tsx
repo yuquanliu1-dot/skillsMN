@@ -54,6 +54,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
       // For now, we'll check if we can list skills from it
       const testConfig = {
         projectDirectory: cleanDir,
+        projectDirectories: [cleanDir],
         defaultInstallDirectory: 'project' as const,
         editorDefaultMode: 'edit' as const,
         autoRefresh: true,

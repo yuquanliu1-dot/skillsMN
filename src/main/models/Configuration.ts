@@ -39,6 +39,7 @@ export class ConfigurationModel {
   static createDefault(): Configuration {
     return {
       projectDirectory: null,
+      projectDirectories: [],
       defaultInstallDirectory: DEFAULT_INSTALL_DIRECTORY,
       editorDefaultMode: DEFAULT_EDITOR_MODE,
       autoRefresh: DEFAULT_AUTO_REFRESH,
@@ -50,7 +51,27 @@ export class ConfigurationModel {
    * Validate configuration
    */
   static validate(config: Partial<Configuration>): Configuration {
-    // Validate projectDirectory
+    // Migrate projectDirectory to projectDirectories if needed
+    if (config.projectDirectory && !config.projectDirectories) {
+      config.projectDirectories = [config.projectDirectory];
+    }
+
+    // Validate projectDirectories array
+    if (config.projectDirectories !== undefined) {
+      if (!Array.isArray(config.projectDirectories)) {
+        throw new Error('Project directories must be an array');
+      }
+
+      // Normalize and validate each directory path
+      config.projectDirectories = config.projectDirectories
+        .filter(dir => typeof dir === 'string')
+        .map(dir => path.normalize(dir));
+
+      // Deduplicate entries
+      config.projectDirectories = [...new Set(config.projectDirectories)];
+    }
+
+    // Validate projectDirectory (deprecated but still supported)
     if (config.projectDirectory !== null && config.projectDirectory !== undefined) {
       if (typeof config.projectDirectory !== 'string') {
         throw new Error('Project directory must be a string or null');
@@ -94,6 +115,7 @@ export class ConfigurationModel {
     // Return validated config with defaults
     return {
       projectDirectory: config.projectDirectory ?? null,
+      projectDirectories: config.projectDirectories ?? [],
       defaultInstallDirectory: config.defaultInstallDirectory ?? DEFAULT_INSTALL_DIRECTORY,
       editorDefaultMode: config.editorDefaultMode ?? DEFAULT_EDITOR_MODE,
       autoRefresh: config.autoRefresh ?? DEFAULT_AUTO_REFRESH,
@@ -127,6 +149,7 @@ export class ConfigurationModel {
   ): Configuration {
     return {
       projectDirectory: updates.projectDirectory ?? existing.projectDirectory,
+      projectDirectories: updates.projectDirectories ?? existing.projectDirectories,
       defaultInstallDirectory:
         updates.defaultInstallDirectory ?? existing.defaultInstallDirectory,
       editorDefaultMode: updates.editorDefaultMode ?? existing.editorDefaultMode,
@@ -136,9 +159,9 @@ export class ConfigurationModel {
   }
 
   /**
-   * Check if configuration is complete (has project directory)
+   * Check if configuration is complete (has at least one project directory)
    */
   static isComplete(config: Configuration): boolean {
-    return config.projectDirectory !== null;
+    return config.projectDirectories.length > 0;
   }
 }

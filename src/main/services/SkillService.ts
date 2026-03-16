@@ -30,10 +30,10 @@ export class SkillService {
 
   /**
    * List all skills from project and global directories
-   * Scans both directories for skill.md files and parses metadata
+   * Scans all configured project directories and the global directory for skill.md files
    * Uses frontmatter caching for improved performance
-   * @param config - Configuration object with project directory setting
-   * @returns Array of Skill objects from both directories
+   * @param config - Configuration object with project directories setting
+   * @returns Array of Skill objects from all directories
    * @example
    * const config = await configService.load();
    * const skills = await skillService.listAllSkills(config);
@@ -41,20 +41,20 @@ export class SkillService {
    */
   async listAllSkills(config: Configuration): Promise<Skill[]> {
     logger.info('Listing all skills', 'SkillService', {
-      projectDir: config.projectDirectory,
+      projectDirs: config.projectDirectories,
     });
 
     const skills: Skill[] = [];
 
-    // Scan global directory
+    // Scan global directory (always)
     const globalDir = SkillDirectoryModel.getGlobalDirectory();
     const globalSkills = await this.scanDirectory(globalDir, 'global');
     skills.push(...globalSkills);
 
-    // Scan project directory if configured
-    if (config.projectDirectory) {
-      const projectDir = SkillDirectoryModel.getProjectDirectory(config.projectDirectory);
-      const projectSkills = await this.scanDirectory(projectDir, 'project');
+    // Scan ALL configured project directories
+    for (const projectDir of config.projectDirectories) {
+      const fullDir = SkillDirectoryModel.getProjectDirectory(projectDir);
+      const projectSkills = await this.scanDirectory(fullDir, 'project');
       skills.push(...projectSkills);
     }
 
@@ -162,7 +162,7 @@ export class SkillService {
    * @param name - Skill name (will be converted to kebab-case for directory)
    * @param directory - 'project' or 'global' directory to create in
    * @returns Created Skill object with metadata
-   * @throws Error if skill already exists or path validation fails
+   * @throws Error if skill already exists, path validation fails, or no project directory configured
    * @example
    * const skill = await skillService.createSkill('Code Review', 'project');
    * console.log('Created:', skill.name, 'at', skill.path);
@@ -173,18 +173,25 @@ export class SkillService {
     // Get target directory
     const config = await this.getConfig();
     logger.debug(`Config loaded`, 'SkillService', {
-      hasProjectDirectory: !!config.projectDirectory,
-      projectDirectory: config.projectDirectory,
+      hasProjectDirectories: config.projectDirectories.length > 0,
+      projectDirectories: config.projectDirectories,
       requestedDirectory: directory
     });
 
-    const targetBase = directory === 'project' && config.projectDirectory
-      ? SkillDirectoryModel.getProjectDirectory(config.projectDirectory)
-      : SkillDirectoryModel.getGlobalDirectory();
+    let targetBase: string;
+    if (directory === 'project') {
+      if (config.projectDirectories.length === 0) {
+        throw new Error('No project directory configured. Please add a project directory in Settings.');
+      }
+      // Use the first project directory for new skills
+      targetBase = SkillDirectoryModel.getProjectDirectory(config.projectDirectories[0]);
+    } else {
+      targetBase = SkillDirectoryModel.getGlobalDirectory();
+    }
 
     logger.debug(`Target directory selected`, 'SkillService', {
       targetBase,
-      isProject: directory === 'project' && !!config.projectDirectory
+      isProject: directory === 'project'
     });
 
     // Generate kebab-case directory name

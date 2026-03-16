@@ -92,8 +92,10 @@ export interface SkillEditorConfig {
 }
 
 export interface Configuration {
-  /** Path to Claude project directory (null if not configured) */
-  projectDirectory: string | null;
+  /** @deprecated Use projectDirectories instead */
+  projectDirectory?: string | null;
+  /** Array of configured project directories */
+  projectDirectories: string[];
   /** Default location for new skills */
   defaultInstallDirectory: InstallDirectory;
   /** Default behavior when opening skills */

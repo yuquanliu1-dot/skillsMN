@@ -37,6 +37,7 @@ export const DEFAULT_AUTO_REFRESH = true;
 /** Configuration defaults */
 export const DEFAULT_CONFIG = {
   projectDirectory: null,
+  projectDirectories: [],
   defaultInstallDirectory: DEFAULT_INSTALL_DIRECTORY,
   editorDefaultMode: DEFAULT_EDITOR_MODE,
   autoRefresh: DEFAULT_AUTO_REFRESH,

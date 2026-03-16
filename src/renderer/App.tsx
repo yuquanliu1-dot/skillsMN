@@ -20,7 +20,6 @@ import PrivateRepoList from './components/PrivateRepoList';
 import Sidebar, { ViewType } from './components/Sidebar';
 import { RegistrySearchPanel } from './components/RegistrySearchPanel';
 import { AISkillCreationDialog } from './components/AISkillCreationDialog';
-import DirectoryChangeDialog from './components/DirectoryChangeDialog';
 
 type MainTab = 'local' | 'private-repos';
 
@@ -119,7 +118,6 @@ export default function App(): JSX.Element {
   const loadSkillsRef = useRef<() => Promise<void>>(async () => {});
   const [showAICreationDialog, setShowAICreationDialog] = useState(false);
   const [aiCreationDirectory, setAICreationDirectory] = useState<'project' | 'global'>('project');
-  const [showDirectoryChangeDialog, setShowDirectoryChangeDialog] = useState(false);
   const [viewingPrivateSkill, setViewingPrivateSkill] = useState<{
     skill: PrivateSkill;
     repo: PrivateRepo;
@@ -356,7 +354,7 @@ export default function App(): JSX.Element {
    */
   const handleSetupComplete = async (projectDirectory: string): Promise<void> => {
     try {
-      const config = await ipcClient.saveConfig({ projectDirectory });
+      const config = await ipcClient.saveConfig({ projectDirectories: [projectDirectory] });
       dispatch({ type: 'SET_CONFIG', payload: config });
       setShowSetup(false);
 
@@ -540,26 +538,6 @@ export default function App(): JSX.Element {
   };
 
   /**
-   * Handle change project directory
-   */
-  const handleChangeProjectDirectory = async (newDirectory: string): Promise<void> => {
-    try {
-      const config = await ipcClient.saveConfig({ projectDirectory: newDirectory });
-      dispatch({ type: 'SET_CONFIG', payload: config });
-      setShowDirectoryChangeDialog(false);
-
-      // Reload skills for the new directory
-      await loadSkills();
-
-      showToast('Project directory changed successfully', 'success');
-    } catch (error) {
-      console.error('Failed to change project directory:', error);
-      showToast(`Failed to change directory: ${(error as Error).message}`, 'error');
-      throw error;
-    }
-  };
-
-  /**
    * Handle viewing private skill content
    */
   const handleViewPrivateSkill = async (skill: PrivateSkill) => {
@@ -669,7 +647,6 @@ export default function App(): JSX.Element {
           onViewChange={setCurrentView}
           onSettingsClick={() => setShowSettings(true)}
           config={state.config}
-          onChangeProjectDirectory={() => setShowDirectoryChangeDialog(true)}
         />
 
         {/* Main Content Area */}
@@ -912,16 +889,6 @@ export default function App(): JSX.Element {
             showToast(`Skill "${uploadingSkill.name}" uploaded successfully!`, 'success');
             setUploadingSkill(null);
           }}
-        />
-      )}
-
-      {/* Directory Change Dialog */}
-      {state.config?.projectDirectory && (
-        <DirectoryChangeDialog
-          isOpen={showDirectoryChangeDialog}
-          currentDirectory={state.config.projectDirectory}
-          onClose={() => setShowDirectoryChangeDialog(false)}
-          onChangeDirectory={handleChangeProjectDirectory}
         />
       )}
 
