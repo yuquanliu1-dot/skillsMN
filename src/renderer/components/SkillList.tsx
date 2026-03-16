@@ -104,18 +104,20 @@ export default function SkillList({
       const updateInfo = skillUpdates[skill.path];
 
       return (
-        <div style={style} className="px-4 py-2">
-          <SkillCard
-            skill={skill}
-            onClick={onSkillClick}
-            onSelect={onSkillSelect}
-            onDelete={onDeleteSkill}
-            onOpenFolder={onOpenFolder}
-            isSelected={skill.path === selectedSkillPath}
-            hasUpdate={updateInfo?.hasUpdate || false}
-            onUpdate={handleSkillUpdate}
-            onUpload={onSkillUpload}
-          />
+        <div style={style}>
+          <div className="px-4">
+            <SkillCard
+              skill={skill}
+              onClick={onSkillClick}
+              onSelect={onSkillSelect}
+              onDelete={onDeleteSkill}
+              onOpenFolder={onOpenFolder}
+              isSelected={skill.path === selectedSkillPath}
+              hasUpdate={updateInfo?.hasUpdate || false}
+              onUpdate={handleSkillUpdate}
+              onUpload={onSkillUpload}
+            />
+          </div>
         </div>
       );
     },

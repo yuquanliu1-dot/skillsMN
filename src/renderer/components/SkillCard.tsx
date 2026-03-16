@@ -102,9 +102,9 @@ export default function SkillCard({
 
   return (
     <>
-      {/* Fixed height card: 136px */}
+      {/* Fixed height card: 136px + 8px bottom margin */}
       <article
-        className={`relative h-[136px] p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
+        className={`relative h-[136px] mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
           isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
         }`}
         onClick={handleClick}
