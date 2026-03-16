@@ -244,7 +244,7 @@ export default function SkillList({
       </div>
 
       {/* Skill list with virtualization */}
-      <div ref={listRef} className="flex-1 overflow-hidden bg-gray-50">
+      <div ref={listRef} className="flex-1 overflow-hidden bg-gray-50 pt-2">
         {filteredAndSortedSkills.length > 0 ? (
           <List
             height={listHeight - 8}
