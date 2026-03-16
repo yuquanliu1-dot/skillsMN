@@ -24,6 +24,8 @@ interface SkillEditorProps {
   content?: string;
   readOnly?: boolean;
   config?: SkillEditorConfig;
+  onUploadSkill?: (skill: Skill) => void;
+  onCommitChanges?: (skill: Skill) => void;
 }
 
 export default function SkillEditor({
@@ -44,6 +46,8 @@ export default function SkillEditor({
     tabSize: 2,
     wordWrap: true,
   },
+  onUploadSkill,
+  onCommitChanges,
 }: SkillEditorProps): JSX.Element {
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -689,6 +693,34 @@ export default function SkillEditor({
           {/* Read-only indicator */}
           {readOnly && (
             <span className="text-sm text-gray-500 italic">Read Only</span>
+          )}
+
+          {/* Upload to Repository button */}
+          {onUploadSkill && skill.sourceMetadata?.type === 'local' && (
+            <button
+              onClick={() => onUploadSkill(skill)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
+              title="Upload this skill to a repository"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Upload
+            </button>
+          )}
+
+          {/* Commit Changes button */}
+          {onCommitChanges && skill.sourceMetadata && skill.sourceMetadata.type !== 'local' && hasUnsavedChanges && (
+            <button
+              onClick={() => onCommitChanges(skill)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+              title="Commit your changes to the repository"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Commit Changes
+            </button>
           )}
         </div>
       </div>

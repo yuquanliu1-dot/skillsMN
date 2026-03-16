@@ -17,7 +17,6 @@ interface SkillCardProps {
   isSelected?: boolean;
   hasUpdate?: boolean;
   onUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
-  onUpload?: (skill: Skill) => void;
 }
 
 export default function SkillCard({
@@ -29,7 +28,6 @@ export default function SkillCard({
   isSelected,
   hasUpdate = false,
   onUpdate,
-  onUpload,
 }: SkillCardProps): JSX.Element {
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [createBackup, setCreateBackup] = useState(true);
@@ -207,24 +205,6 @@ export default function SkillCard({
               >
                 <svg className="w-4 h-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            )}
-
-            {/* Upload Button */}
-            {onUpload && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  onUpload(skill);
-                }}
-                className="p-1 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded"
-                aria-label="Upload to private repository"
-                title="Upload to private repository"
-              >
-                <svg className="w-4 h-4 text-purple-500 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4 0V4m0 12l4-4m-4 4l-4-4" />
                 </svg>
               </button>
             )}

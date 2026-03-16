@@ -14,6 +14,7 @@ import { lazy, Suspense } from 'react';
 const SkillEditor = lazy(() => import('./components/SkillEditor'));
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import UploadToPrivateRepoDialog from './components/UploadToPrivateRepoDialog';
+import CommitChangesDialog from './components/CommitChangesDialog';
 import Settings from './components/Settings';
 import ToastContainer, { ToastMessage } from './components/ToastContainer';
 import PrivateRepoList from './components/PrivateRepoList';
@@ -108,6 +109,7 @@ export default function App(): JSX.Element {
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
   const [uploadingSkill, setUploadingSkill] = useState<Skill | null>(null);
+  const [committingSkill, setCommittingSkill] = useState<Skill | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -332,6 +334,18 @@ export default function App(): JSX.Element {
    */
   const handleUploadSkill = async (skill: Skill): Promise<void> => {
     setUploadingSkill(skill);
+  };
+
+  /**
+   * Handle commit changes to repository
+   */
+  const handleCommitChanges = async (skill: Skill): Promise<void> => {
+    if (!skill.sourceMetadata || skill.sourceMetadata.type === 'local') {
+      showToast('This skill was not installed from a repository', 'error');
+      return;
+    }
+
+    setCommittingSkill(skill);
   };
 
   /**
@@ -665,7 +679,6 @@ export default function App(): JSX.Element {
                 selectedSkillPath={selectedSkillPath}
                 skillUpdates={skillUpdates}
                 onSkillUpdate={handleUpdateSkill}
-                onSkillUpload={handleUploadSkill}
               />
             </div>
 
@@ -701,6 +714,8 @@ export default function App(): JSX.Element {
                   onSave={handleSaveSkill}
                   isInline={true}
                   config={state.config?.skillEditor}
+                  onUploadSkill={handleUploadSkill}
+                  onCommitChanges={handleCommitChanges}
                 />
               </Suspense>
             ) : currentView === 'skills' && !editingSkill ? (
@@ -888,6 +903,21 @@ export default function App(): JSX.Element {
           onSuccess={() => {
             showToast(`Skill "${uploadingSkill.name}" uploaded successfully!`, 'success');
             setUploadingSkill(null);
+            loadSkills(); // Refresh skill list to update sourceMetadata
+          }}
+        />
+      )}
+
+      {/* Commit Changes Dialog */}
+      {committingSkill && (
+        <CommitChangesDialog
+          isOpen={committingSkill !== null}
+          skill={committingSkill}
+          onClose={() => setCommittingSkill(null)}
+          onSuccess={() => {
+            showToast(`Changes committed successfully for "${committingSkill.name}"!`, 'success');
+            setCommittingSkill(null);
+            loadSkills(); // Refresh skill list
           }}
         />
       )}
