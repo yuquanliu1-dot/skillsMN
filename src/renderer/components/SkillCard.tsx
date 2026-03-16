@@ -102,9 +102,9 @@ export default function SkillCard({
 
   return (
     <>
-      {/* Fixed height card: 136px + 8px bottom margin */}
+      {/* Fixed height card: 152px + 8px bottom margin */}
       <article
-        className={`relative h-[136px] mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
+        className={`relative h-[152px] mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
           isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
         }`}
         onClick={handleClick}
@@ -133,13 +133,18 @@ export default function SkillCard({
               </span>
 
               {/* Source Type Badge */}
+              {skill.sourceMetadata?.type === 'local' && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0" title="Created locally">
+                  Local
+                </span>
+              )}
               {skill.sourceMetadata?.type === 'registry' && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 flex-shrink-0 border-0">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 flex-shrink-0 border-0" title={`From ${skill.sourceMetadata.source}`}>
                   Registry
                 </span>
               )}
               {skill.sourceMetadata?.type === 'private-repo' && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex-shrink-0 border-0">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex-shrink-0 border-0" title={`From ${skill.sourceMetadata.repoPath}`}>
                   Private
                 </span>
               )}
@@ -245,6 +250,25 @@ export default function SkillCard({
             {skill.path}
           </p>
         </div>
+
+        {/* Source Info row */}
+        {skill.sourceMetadata && skill.sourceMetadata.type !== 'local' && (
+          <div className="h-[16px] mb-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            <span className="truncate" title={
+              skill.sourceMetadata.type === 'registry'
+                ? `${skill.sourceMetadata.source}/${skill.sourceMetadata.skillId}`
+                : skill.sourceMetadata.type === 'private-repo'
+                ? `${skill.sourceMetadata.repoPath}/${skill.sourceMetadata.skillPath}`
+                : ''
+            }>
+              {skill.sourceMetadata.type === 'registry' && `${skill.sourceMetadata.source}/${skill.sourceMetadata.skillId}`}
+              {skill.sourceMetadata.type === 'private-repo' && `${skill.sourceMetadata.repoPath}/${skill.sourceMetadata.skillPath}`}
+            </span>
+          </div>
+        )}
 
         {/* Bottom row: Metadata */}
         <div className="flex items-center gap-4 h-[16px] text-xs text-slate-500 dark:text-slate-400">
