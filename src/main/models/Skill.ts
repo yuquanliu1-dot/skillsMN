@@ -28,8 +28,8 @@ export class SkillModel {
       throw new Error(`Skill file not found: ${skillFilePath}`);
     }
 
-    // Get directory stats for lastModified
-    const dirStats = await fs.promises.stat(dirPath);
+    // Get skill.md file stats for lastModified (more accurate than directory stats)
+    const fileStats = await fs.promises.stat(skillFilePath);
 
     // Parse frontmatter (with caching support T127)
     const { frontmatter, isValid } = await this.parseFrontmatter(skillFilePath, cache);
@@ -86,7 +86,7 @@ export class SkillModel {
       author,
       tags,
       source,
-      lastModified: dirStats.mtime,
+      lastModified: fileStats.mtime,
       resourceCount,
       sourceMetadata,
     };

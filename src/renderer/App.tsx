@@ -5,7 +5,7 @@
  */
 
 import React, { createContext, useReducer, useEffect, useState, useCallback, useRef } from 'react';
-import type { Configuration, Skill, UIState, FilterSource, SortBy, PrivateSkill, PrivateRepo } from '../shared/types';
+import type { Configuration, Skill, UIState, FilterSource, SortBy, PrivateSkill, PrivateRepo, MigrationOptions, MigrationResult } from '../shared/types';
 import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
@@ -21,6 +21,7 @@ import PrivateRepoList from './components/PrivateRepoList';
 import Sidebar, { ViewType } from './components/Sidebar';
 import { RegistrySearchPanel } from './components/RegistrySearchPanel';
 import { AISkillCreationDialog } from './components/AISkillCreationDialog';
+import MigrationDialog from './components/MigrationDialog';
 
 type MainTab = 'local' | 'private-repos';
 
@@ -129,6 +130,9 @@ export default function App(): JSX.Element {
     skill: any;
     content: string;
   } | null>(null);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+  const [migrationGlobalSkills, setMigrationGlobalSkills] = useState<Skill[]>([]);
+  const [migrationProjectSkills, setMigrationProjectSkills] = useState<Skill[]>([]);
 
   /**
    * Load configuration on mount
@@ -141,6 +145,21 @@ export default function App(): JSX.Element {
         // Load configuration
         const config = await ipcClient.loadConfig();
         dispatch({ type: 'SET_CONFIG', payload: config });
+
+        // Check if migration is needed (before setup check)
+        if (!config.migrationPreferenceAsked) {
+          const migrationNeeded = await window.electronAPI.checkMigrationNeeded();
+          if (migrationNeeded.success && migrationNeeded.data) {
+            const skillsResponse = await window.electronAPI.detectExistingSkills();
+            if (skillsResponse.success && skillsResponse.data) {
+              setMigrationGlobalSkills(skillsResponse.data.global);
+              setMigrationProjectSkills(skillsResponse.data.project);
+              setShowMigrationDialog(true);
+              dispatch({ type: 'SET_LOADING', payload: false });
+              return;
+            }
+          }
+        }
 
         // Check if setup is needed
         if (!config.projectDirectory) {
@@ -392,6 +411,44 @@ export default function App(): JSX.Element {
   };
 
   /**
+   * Handle migration completion
+   */
+  const handleMigrationComplete = async (skills: Skill[], options: MigrationOptions): Promise<void> => {
+    try {
+      const result = await window.electronAPI.startMigration({ skills, options });
+
+      if (result.success && result.data) {
+        // Update config to mark migration as completed
+        await window.electronAPI.saveConfig({
+          migrationCompleted: true,
+          migrationPreferenceAsked: true,
+        });
+
+        setShowMigrationDialog(false);
+        showToast(`Successfully migrated ${result.data.migratedCount} skills!`, 'success');
+
+        // Reload skills
+        await loadSkills();
+      } else {
+        throw new Error(result.error?.message || 'Migration failed');
+      }
+    } catch (error) {
+      showToast(`Migration failed: ${(error as Error).message}`, 'error');
+      throw error;
+    }
+  };
+
+  /**
+   * Handle migration skip
+   */
+  const handleMigrationSkip = async (): Promise<void> => {
+    await window.electronAPI.saveConfig({
+      migrationPreferenceAsked: true,
+    });
+    setShowMigrationDialog(false);
+  };
+
+  /**
    * Show toast notification
    */
   const showToast = (message: string, type: ToastMessage['type'] = 'info', duration?: number): void => {
@@ -434,7 +491,7 @@ export default function App(): JSX.Element {
   /**
    * Handle save skill content
    */
-  const handleSaveSkill = async (content: string, loadedLastModified?: number): Promise<void> => {
+  const handleSaveSkill = async (content: string, loadedLastModified?: number): Promise<{ lastModified: number } | void> => {
     if (!editingSkill) return;
 
     try {
@@ -452,6 +509,11 @@ export default function App(): JSX.Element {
       showToast('Skill saved successfully', 'success');
 
       console.log('Skill saved successfully:', editingSkill.name);
+
+      // Return the updated lastModified timestamp from the response
+      if (response.data && response.data.lastModified) {
+        return { lastModified: new Date(response.data.lastModified).getTime() };
+      }
     } catch (error: any) {
       console.error('Failed to save skill:', error);
 
@@ -647,6 +709,21 @@ export default function App(): JSX.Element {
    */
   if (showSetup) {
     return <SetupDialog onComplete={handleSetupComplete} />;
+  }
+
+  /**
+   * Render migration dialog if needed
+   */
+  if (showMigrationDialog) {
+    return (
+      <MigrationDialog
+        isOpen={showMigrationDialog}
+        globalSkills={migrationGlobalSkills}
+        projectSkills={migrationProjectSkills}
+        onMigrate={handleMigrationComplete}
+        onSkip={handleMigrationSkip}
+      />
+    );
   }
 
   /**
