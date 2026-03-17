@@ -135,6 +135,69 @@ export class SkillDiscovery {
   }
 
   /**
+   * Find a skill by its internal name (from SKILL.md frontmatter)
+   *
+   * @param repoDir - Root directory of cloned repository
+   * @param skillName - Skill name from frontmatter (case-insensitive)
+   * @param maxDepth - Maximum recursion depth
+   * @returns Skill directory path or undefined if not found
+   */
+  async findSkillByInternalName(
+    repoDir: string,
+    skillName: string,
+    maxDepth: number = MAX_SEARCH_DEPTH
+  ): Promise<string | undefined> {
+    try {
+      const entries = await readdirAsync(repoDir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const fullPath = path.join(repoDir, entry.name);
+
+        // Check if this entry is a directory
+        if (entry.isDirectory()) {
+          const skillFilePath = path.join(fullPath, DEFAULT_SKILL_FILE);
+
+          // If SKILL.md exists, check its frontmatter name
+          if (fs.existsSync(skillFilePath)) {
+            try {
+              const content = await readFileAsync(skillFilePath, 'utf-8');
+              const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+
+              if (frontmatterMatch) {
+                const frontmatter = frontmatterMatch[1];
+                const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
+
+                if (nameMatch) {
+                  const internalName = nameMatch[1].trim();
+                  // Case-insensitive match
+                  if (internalName.toLowerCase() === skillName.toLowerCase()) {
+                    return fullPath;
+                  }
+                }
+              }
+            } catch (readError) {
+              console.warn(`[SkillDiscovery] Could not read ${skillFilePath}:`, readError);
+            }
+          }
+
+          // Recursively search subdirectories
+          if (maxDepth > 0) {
+            const found = await this.findSkillByInternalName(fullPath, skillName, maxDepth - 1);
+            if (found) {
+              return found;
+            }
+          }
+        }
+      }
+
+      return undefined;
+    } catch (error: any) {
+      console.warn(`[SkillDiscovery] Error searching for skill ${skillName}:`, error.message);
+      return undefined;
+    }
+  }
+
+  /**
    * Validate skill structure (directory has SKILL.md)
    *
    * @param skillDir - Path to skill directory
