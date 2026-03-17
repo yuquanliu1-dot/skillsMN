@@ -24,6 +24,10 @@ import type {
   InstallFromRegistryRequest,
   SkillInstallationStatus,
   InstallProgressEvent,
+  SkillSymlinkConfig,
+  MigrationOptions,
+  MigrationProgress,
+  MigrationResult,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
@@ -342,6 +346,55 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   removeInstallProgressListener: (): void => {
     ipcRenderer.removeAllListeners(IPC_CHANNELS.REGISTRY_INSTALL_PROGRESS);
+  },
+
+  // ============================================================================
+  // Symlink Operations
+  // ============================================================================
+
+  updateSymlink: (params: {
+    skillName: string;
+    config: SkillSymlinkConfig;
+  }): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SYMLINK_UPDATE, params);
+  },
+
+  getSymlinkStatus: (skillName: string): Promise<IPCResponse<SkillSymlinkConfig | null>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SYMLINK_GET_STATUS, { skillName });
+  },
+
+  getClaudeDirectories: (): Promise<IPCResponse<string[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SYMLINK_GET_CLAUDE_DIRS);
+  },
+
+  // ============================================================================
+  // Migration Operations
+  // ============================================================================
+
+  checkMigrationNeeded: (): Promise<IPCResponse<boolean>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_CHECK_NEEDED);
+  },
+
+  detectExistingSkills: (): Promise<IPCResponse<{
+    global: Skill[];
+    project: Skill[];
+  }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_DETECT_SKILLS);
+  },
+
+  startMigration: (params: {
+    skills: Skill[];
+    options: MigrationOptions;
+  }): Promise<IPCResponse<MigrationResult>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_START, params);
+  },
+
+  onMigrationProgress: (callback: (event: any, progress: MigrationProgress) => void): void => {
+    ipcRenderer.on(IPC_CHANNELS.MIGRATION_PROGRESS, callback);
+  },
+
+  removeMigrationProgressListener: (): void => {
+    ipcRenderer.removeAllListeners(IPC_CHANNELS.MIGRATION_PROGRESS);
   },
 });
 

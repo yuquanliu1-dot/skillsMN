@@ -17,15 +17,16 @@ import type { InstallFromRegistryRequest, InstallProgressEvent, RegistryErrorCod
 export class SkillInstaller {
   /**
    * Install a skill from the registry
+   * Always installs to application directory (centralized storage)
    *
    * @param request - Installation request with source, skillId, targetToolId
-   * @param targetDirectory - Target directory to install the skill
+   * @param appDirectory - Application skills directory (ignored, uses default)
    * @param onProgress - Optional progress callback
    * @returns Installation result with skill path and error details
    */
   async installFromRegistry(
     request: InstallFromRegistryRequest,
-    targetDirectory: string,
+    appDirectory: string,
     onProgress?: (event: InstallProgressEvent) => void
   ): Promise<{
     success: boolean;
@@ -38,14 +39,12 @@ export class SkillInstaller {
       source: request.source,
       skillId: request.skillId,
       targetToolId: request.targetToolId,
-      targetDirectory,
+      appDirectory,
       tempRoot,
       startTime: new Date().toISOString()
     };
 
-    logger.info('Repository cloned successfully', 'SkillInstaller', installContext);
-
-    logger.info('Starting skill installation', 'SkillInstaller', installContext);
+    logger.info('Starting skill installation to application directory', 'SkillInstaller', installContext);
 
     try {
       // Stage 1: Cloning repository
@@ -129,19 +128,19 @@ export class SkillInstaller {
         );
       }
 
-      // Stage 3: Copying to target directory
+      // Stage 3: Copying to application directory
       onProgress?.({
         stage: 'copying',
-        message: 'Copying skill to target directory...',
+        message: 'Copying skill to application directory...',
         progress: 60
       });
 
       // Slugify skill name for directory naming
       const slugifiedName = this.slugify(request.skillId);
-      const targetPath = path.join(targetDirectory, slugifiedName);
+      const targetPath = path.join(appDirectory, slugifiedName);
 
-      // Ensure target directory exists
-      await fs.promises.mkdir(targetDirectory, { recursive: true });
+      // Ensure application directory exists
+      await fs.promises.mkdir(appDirectory, { recursive: true });
 
       // Copy skill directory
       await this.copyDirectory(skillDir, targetPath);

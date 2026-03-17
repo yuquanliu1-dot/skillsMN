@@ -38,17 +38,15 @@ export class FileWatcher {
 
   /**
    * Start watching skill directories for file system changes
-   * Monitors both project and global skill directories
+   * Monitors the centralized application skills directory
    * Emits FS_CHANGE IPC events to renderer on file changes
-   * @param projectDir - Project directory path or null if not configured
-   * @param globalDir - Global skill directory path (required)
+   * @param applicationDir - Application skills directory path (required)
    * @example
-   * fileWatcher.start('/path/to/project/skills', '/home/user/.claude/skills');
+   * fileWatcher.start('D:/skillsMN/skills');
    */
-  async start(projectDir: string | null, globalDir: string): Promise<void> {
+  async start(applicationDir: string): Promise<void> {
     logger.info('Starting file watcher', 'FileWatcher', {
-      projectDir,
-      globalDir,
+      applicationDir,
     });
 
     if (this.subscriptions.length > 0) {
@@ -58,21 +56,14 @@ export class FileWatcher {
 
     const watchPaths: string[] = [];
 
-    // Add global directory
-    const validatedGlobal = this.pathValidator.validate(globalDir);
-    watchPaths.push(validatedGlobal);
-    logger.debug('Added global path to watch list', 'FileWatcher', { path: validatedGlobal });
-
-    // Add project directory if configured
-    if (projectDir) {
-      const validatedProject = this.pathValidator.validate(projectDir);
-      watchPaths.push(validatedProject);
-      logger.debug('Added project path to watch list', 'FileWatcher', { path: validatedProject });
-    }
+    // Add application directory
+    const validatedAppDir = this.pathValidator.validate(applicationDir);
+    watchPaths.push(validatedAppDir);
+    logger.debug('Added application path to watch list', 'FileWatcher', { path: validatedAppDir });
 
     logger.info('Starting to watch directories', 'FileWatcher', { watchPaths });
 
-    // Subscribe to each directory
+    // Subscribe to the directory
     for (const watchPath of watchPaths) {
       try {
         const subscription = await parcelWatcher.subscribe(

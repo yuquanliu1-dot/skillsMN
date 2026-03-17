@@ -17,11 +17,10 @@ import {
 } from '../utils/ErrorHandler';
 import { SkillService } from '../services/SkillService';
 import { PathValidator } from '../services/PathValidator';
-import { SkillDirectoryModel } from '../models/SkillDirectory';
-import { getConfigService } from './configHandlers';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { IPCResponse, IPCError, Skill, Configuration } from '../../shared/types';
 import { getFileWatcher } from '../index';
+import { getConfigService } from './configHandlers';
 
 let skillService: SkillService | null = null;
 
@@ -62,10 +61,15 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
   // Handler for skill:list
   ipcMain.handle(
     IPC_CHANNELS.SKILL_LIST,
-    async (_event, { config }: { config: Configuration }): Promise<IPCResponse<Skill[]>> => {
+    async (_event, { config }: { config?: Configuration }): Promise<IPCResponse<Skill[]>> => {
       try {
         logger.debug('Listing all skills', 'SkillHandlers');
-        const skills = await skillService!.listAllSkills(config);
+        // Load config if not provided
+        const skillConfig = config || (await getConfigService()?.load()) as Configuration;
+        if (!skillConfig) {
+          throw new ConfigurationError('Configuration not available');
+        }
+        const skills = await skillService!.listAllSkills(skillConfig);
         return { success: true, data: skills };
       } catch (error) {
         logger.error('Failed to list skills', 'SkillHandlers', error);
@@ -228,22 +232,15 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
           throw new Error('File watcher not initialized');
         }
 
-        // Get current configuration
-        const configService = getConfigService();
-        if (!configService) {
-          throw new Error('ConfigService not initialized');
+        // Get the application directory from path validator
+        const appDir = pathValidator.getApplicationDirectory();
+        if (!appDir) {
+          throw new Error('Application skills directory not configured');
         }
 
-        const config = await configService.load();
+        await fileWatcher.start(appDir);
 
-        const globalDir = SkillDirectoryModel.getGlobalDirectory();
-        const projectSkillsDir = config.projectDirectory
-          ? SkillDirectoryModel.getProjectDirectory(config.projectDirectory)
-          : null;
-
-        await fileWatcher.start(projectSkillsDir, globalDir);
-
-        logger.info('File system watcher started', 'SkillHandlers');
+        logger.info('File system watcher started', 'SkillHandlers', { appDir });
         return { success: true };
       } catch (error) {
         logger.error('Failed to start file watcher', 'SkillHandlers', error);

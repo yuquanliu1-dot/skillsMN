@@ -7,7 +7,7 @@
 // ============================================================================
 
 /** Skill markdown file name */
-export const SKILL_FILE_NAME = 'skill.md';
+export const SKILL_FILE_NAME = 'SKILL.md';
 
 /** Claude configuration directory name */
 export const CLAUDE_DIR_NAME = '.claude';
@@ -179,6 +179,17 @@ export const IPC_CHANNELS = {
   REGISTRY_CHECK_INSTALLED: 'registry:check-installed',
   REGISTRY_INSTALL_PROGRESS: 'registry:install:progress',
   REGISTRY_GET_CONTENT: 'registry:get-content',
+
+  // Symlink operations
+  SYMLINK_UPDATE: 'symlink:update',
+  SYMLINK_GET_STATUS: 'symlink:get-status',
+  SYMLINK_GET_CLAUDE_DIRS: 'symlink:get-claude-dirs',
+
+  // Migration operations
+  MIGRATION_CHECK_NEEDED: 'migration:check-needed',
+  MIGRATION_DETECT_SKILLS: 'migration:detect-skills',
+  MIGRATION_START: 'migration:start',
+  MIGRATION_PROGRESS: 'migration:progress',
 } as const;
 
 // ============================================================================

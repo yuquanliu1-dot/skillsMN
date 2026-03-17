@@ -19,7 +19,7 @@ loader.config({ monaco });
 interface SkillEditorProps {
   skill: Skill;
   onClose: () => void;
-  onSave: (content: string, loadedLastModified: number) => Promise<void>;
+  onSave: (content: string, loadedLastModified: number) => Promise<{ lastModified: number } | void>;
   isInline?: boolean;
   content?: string;
   readOnly?: boolean;
@@ -126,7 +126,9 @@ export default function SkillEditor({
 
         console.log('[SkillEditor] Content loaded successfully, length:', response.data.content.length);
         setContent(response.data.content);
-        setLoadedLastModified(new Date(skill.lastModified).getTime());
+        // Use the actual file modification time from the API response, not from the skill prop
+        // This ensures we have the precise filesystem timestamp for concurrent modification detection
+        setLoadedLastModified(new Date(response.data.metadata.lastModified).getTime());
         setHasUnsavedChanges(false);
       } catch (err) {
         if (!isMounted) return;
@@ -314,13 +316,20 @@ export default function SkillEditor({
       setAutoSaveStatus('saving');
       setError(null);
 
-      await onSave(content, loadedLastModified);
+      const response = await onSave(content, loadedLastModified);
+
+      // Update loadedLastModified with the actual file modification time from the response
+      // This ensures we use the precise filesystem timestamp instead of Date.now()
+      if (response && response.lastModified) {
+        setLoadedLastModified(new Date(response.lastModified).getTime());
+      } else {
+        // Fallback: use current time if response doesn't include lastModified
+        setLoadedLastModified(Date.now());
+      }
+
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setExternalChangeDetected(false);
-
-      // Update loadedLastModified after successful save
-      setLoadedLastModified(Date.now());
 
       console.log('Skill saved successfully');
     } catch (err: any) {
@@ -799,6 +808,65 @@ export default function SkillEditor({
           </div>
         </div>
       )}
+
+      {/* Symlink Control Bar */}
+      <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <span className="text-sm font-medium text-gray-700">
+              Link to Claude Code:
+            </span>
+            <button
+              onClick={async () => {
+                try {
+                  const newConfig = {
+                    enabled: !skill.isSymlinked,
+                    claudeDirectory: '~/.claude/skills', // Default to global
+                    createdAt: skill.symlinkConfig?.createdAt || new Date().toISOString(),
+                    lastModified: new Date().toISOString(),
+                  };
+
+                  // Update local state (note: this won't trigger re-render without parent update)
+                  skill.isSymlinked = newConfig.enabled;
+                  skill.symlinkConfig = newConfig;
+                } catch (error) {
+                  console.error('Failed to toggle symlink:', error);
+                  setError('Failed to update symlink configuration');
+                }
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full
+                transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                skill.isSymlinked ? 'bg-blue-600' : 'bg-gray-300'
+              }`}
+              role="switch"
+              aria-checked={skill.isSymlinked}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full
+                bg-white transition-transform shadow ${
+                skill.isSymlinked ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            {skill.isSymlinked ? (
+              <>
+                <svg className="h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Linked to {skill.symlinkConfig?.claudeDirectory}</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span>Not linked</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Loading state */}
       {isLoading && (

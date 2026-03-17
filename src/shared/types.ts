@@ -8,7 +8,7 @@
 // Skill Types
 // ============================================================================
 
-export type SkillSource = 'project' | 'global';
+export type SkillSource = 'project' | 'global' | 'application';
 
 export interface Skill {
   /** Canonical path to skill directory */
@@ -39,6 +39,10 @@ export interface Skill {
   installedAt?: Date;
   /** Source metadata for tracking skill origin and version */
   sourceMetadata?: import('../main/models/SkillSource').SkillSource;
+  /** Symlink configuration */
+  symlinkConfig?: SkillSymlinkConfig;
+  /** Whether skill is currently symlinked */
+  isSymlinked?: boolean;
 }
 
 export interface SkillDirectory {
@@ -61,6 +65,65 @@ export interface SkillFrontmatter {
   author?: string;
   /** Skill tags */
   tags?: string[];
+}
+
+// ============================================================================
+// Symlink Types
+// ============================================================================
+
+export interface SkillSymlinkConfig {
+  /** Whether symlink is enabled for this skill */
+  enabled: boolean;
+  /** Target Claude directory path */
+  claudeDirectory: string;
+  /** When symlink was created */
+  createdAt: string;
+  /** When symlink was last modified */
+  lastModified: string;
+}
+
+export interface SymlinksDatabase {
+  /** Database version for future migrations */
+  version: number;
+  /** Symlink configurations keyed by skill name */
+  symlinks: Record<string, SkillSymlinkConfig>;
+}
+
+// ============================================================================
+// Migration Types
+// ============================================================================
+
+export interface MigrationOptions {
+  /** Whether to move or copy skills */
+  moveOrCopy: 'move' | 'copy';
+  /** Whether to delete original files after migration */
+  deleteOriginals: boolean;
+}
+
+export interface MigrationProgress {
+  /** Current skill being migrated */
+  currentSkill: string;
+  /** Current skill index */
+  currentIndex: number;
+  /** Total skills to migrate */
+  totalSkills: number;
+  /** Percentage complete (0-100) */
+  percentage: number;
+  /** Current operation */
+  operation: 'detecting' | 'moving' | 'copying' | 'verifying' | 'completed' | 'failed';
+}
+
+export interface MigrationResult {
+  /** Whether migration was successful */
+  success: boolean;
+  /** Number of skills successfully migrated */
+  migratedCount: number;
+  /** Number of skills that failed */
+  failedCount: number;
+  /** Array of failed skill names with error messages */
+  failedSkills: Array<{ name: string; error: string }>;
+  /** Total time taken in milliseconds */
+  duration: number;
 }
 
 // ============================================================================
@@ -104,6 +167,12 @@ export interface Configuration {
   autoRefresh: boolean;
   /** Skill editor configuration */
   skillEditor?: SkillEditorConfig;
+  /** Application skills directory (primary storage location) */
+  applicationSkillsDirectory?: string;
+  /** Whether migration from old directories has been completed */
+  migrationCompleted?: boolean;
+  /** Whether user has been asked about migration preference */
+  migrationPreferenceAsked?: boolean;
 }
 
 // ============================================================================

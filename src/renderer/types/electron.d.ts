@@ -14,6 +14,10 @@ import type {
   SearchSkillResult,
   InstallFromRegistryRequest,
   InstallProgressEvent,
+  SkillSymlinkConfig,
+  MigrationOptions,
+  MigrationProgress,
+  MigrationResult,
 } from '../../shared/types';
 
 export interface ElectronAPI {
@@ -158,6 +162,27 @@ export interface ElectronAPI {
   ) => Promise<IPCResponse<string>>;
   onInstallProgress: (callback: (event: any, progress: InstallProgressEvent) => void) => void;
   removeInstallProgressListener: () => void;
+
+  // Symlink Operations (Feature - Skill Storage Architecture Refactoring)
+  updateSymlink: (params: {
+    skillName: string;
+    config: import('../../shared/types').SkillSymlinkConfig;
+  }) => Promise<IPCResponse<void>>;
+  getSymlinkStatus: (skillName: string) => Promise<IPCResponse<import('../../shared/types').SkillSymlinkConfig | null>>;
+  getClaudeDirectories: () => Promise<IPCResponse<string[]>>;
+
+  // Migration Operations (Feature - Skill Storage Architecture Refactoring)
+  checkMigrationNeeded: () => Promise<IPCResponse<boolean>>;
+  detectExistingSkills: () => Promise<IPCResponse<{
+    global: Skill[];
+    project: Skill[];
+  }>>;
+  startMigration: (params: {
+    skills: Skill[];
+    options: import('../../shared/types').MigrationOptions;
+  }) => Promise<IPCResponse<import('../../shared/types').MigrationResult>>;
+  onMigrationProgress: (callback: (event: any, progress: import('../../shared/types').MigrationProgress) => void) => void;
+  removeMigrationProgressListener: () => void;
 }
 
 declare global {

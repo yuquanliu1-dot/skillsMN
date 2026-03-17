@@ -141,7 +141,7 @@ export class GitLabService {
    */
   private static findSkillDirectories(tree: TreeItem[]): any[] {
     const skillFiles = tree.filter((item: TreeItem) => {
-      return item.type === 'blob' && item.path.endsWith('skill.md');
+      return item.type === 'blob' && item.path.endsWith('SKILL.md');
     });
 
     const skillDirectories = skillFiles.map((file: TreeItem) => {
@@ -351,7 +351,7 @@ export class GitLabService {
 
   /**
    * Upload a skill to a private GitLab repository
-   * Creates or updates the skill.md file and commits it to the repository
+   * Creates or updates the SKILL.md file and commits it to the repository
    *
    * @param owner - Repository owner (namespace)
    * @param repo - Repository name
@@ -377,7 +377,7 @@ export class GitLabService {
   ): Promise<{ success: boolean; sha?: string; error?: string }> {
     try {
       const baseUrl = instanceUrl || 'https://gitlab.com';
-      const fullPath = skillDirName.startsWith('/') ? `${skillDirName}/skill.md` : `${skillDirName}/skill.md`;
+      const fullPath = skillDirName.startsWith('/') ? `${skillDirName}/SKILL.md` : `${skillDirName}/SKILL.md`;
       const projectId = encodeURIComponent(`${owner}/${repo}`);
 
       const message = commitMessage || `Update skill: ${skillName}`;

@@ -13,8 +13,13 @@ import { registerAIHandlers, registerAITestHandler, registerAIConfigHandlers } f
 import { registerGitHubHandlers } from './ipc/gitHubHandlers';
 import { registerPrivateRepoHandlers } from './ipc/privateRepoHandlers';
 import { registerRegistryHandlers } from './ipc/registryHandlers';
+import { registerSymlinkHandlers } from './ipc/symlinkHandlers';
+import { registerMigrationHandlers } from './ipc/migrationHandlers';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
+import { SymlinkService } from './services/SymlinkService';
+import { MigrationService } from './services/MigrationService';
+import { SkillService } from './services/SkillService';
 import { SkillDirectoryModel } from './models/SkillDirectory';
 import { AIConfigService } from './services/AIConfigService';
 
@@ -165,6 +170,28 @@ async function initialize(): Promise<void> {
     // Register Private Repository handlers
     await registerPrivateRepoHandlers(pathValidator);
     logger.info('Private repository handlers registered', 'Main');
+
+    // Initialize services for symlink and migration
+    const symlinkService = new SymlinkService();
+    const skillService = new SkillService(pathValidator, symlinkService);
+    const migrationService = new MigrationService(skillService);
+
+    // Ensure application skills directory exists
+    await skillService.ensureApplicationDirectory(config);
+    logger.info('Application skills directory ensured', 'Main');
+
+    // Set application directory on path validator
+    const appDir = skillService.getApplicationSkillsDirectory(config);
+    pathValidator.setApplicationDirectory(appDir);
+    logger.info('Application directory set on path validator', 'Main', { appDir });
+
+    // Register symlink handlers
+    registerSymlinkHandlers(symlinkService, skillService, configService);
+    logger.info('Symlink handlers registered', 'Main');
+
+    // Register migration handlers
+    registerMigrationHandlers(migrationService, skillService, configService);
+    logger.info('Migration handlers registered', 'Main');
 
     // Create main window
     await createWindow();

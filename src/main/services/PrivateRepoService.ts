@@ -14,9 +14,11 @@ import { GitHubService } from './GitHubService';
 import { GitLabService } from './GitLabService';
 import { getGitProvider } from './GitProvider';
 import { SkillService } from './SkillService';
+import { SymlinkService } from './SymlinkService';
 import { PathValidator } from './PathValidator';
-import type { PrivateRepo, PrivateRepoConfig, PrivateSkill } from '../../shared/types';
-import { PRIVATE_REPOS_FILE_NAME } from '../../shared/constants';
+import { createPrivateRepoSource } from '../models/SkillSource';
+import type { PrivateRepo, PrivateRepoConfig, PrivateSkill, Configuration } from '../../shared/types';
+import { PRIVATE_REPOS_FILE_NAME, SOURCE_METADATA_FILE } from '../../shared/constants';
 
 export class PrivateRepoService {
   private static configPath: string | null = null;
@@ -464,12 +466,13 @@ export class PrivateRepoService {
   }
 
   /**
-   * Install a skill from a private repository to local directory
+   * Install a skill from a private repository to application directory
    * Downloads skill files and preserves directory structure
    * Handles conflicts based on resolution strategy
+   * Always installs to the centralized application skills directory
    * @param repoId - Source repository ID
    * @param skillPath - Path to skill directory in repository
-   * @param targetDirectory - 'project' or 'global' directory
+   * @param config - Application configuration for determining target directory
    * @param conflictResolution - Strategy: 'overwrite', 'rename', or 'skip'
    * @returns Object with success status, new path if successful, or error message
    * @throws Error if repository not found or download fails
@@ -477,7 +480,7 @@ export class PrivateRepoService {
    * const result = await PrivateRepoService.installSkill(
    *   'repo-123',
    *   'skills/my-skill',
-   *   'project',
+   *   config,
    *   'rename'
    * );
    * if (result.success) {
@@ -487,7 +490,7 @@ export class PrivateRepoService {
   static async installSkill(
     repoId: string,
     skillPath: string,
-    targetDirectory: 'project' | 'global',
+    config: Configuration,
     conflictResolution?: 'overwrite' | 'rename' | 'skip'
   ): Promise<{ success: boolean; newPath?: string; error?: string }> {
     try {
@@ -524,19 +527,15 @@ export class PrivateRepoService {
         throw new Error('No files found in skill directory');
       }
 
-      // Determine target path
-      const skillName = path.basename(skillPath);
-      const baseDir = targetDirectory === 'project' ? 'project' : 'global';
+      // Get application skills directory (centralized storage)
+      const appDirectory = SkillService.getApplicationSkillsDirectory(config);
 
-      // Get allowed directories from PathValidator
-      const allowedDirs = PathValidator.getAllowedDirectories();
-      const targetBasePath = allowedDirs[baseDir];
+      // Slugify skill name for directory naming
+      const skillName = this.slugify(path.basename(skillPath));
+      const targetPath = path.join(appDirectory, skillName);
 
-      if (!targetBasePath) {
-        throw new Error(`${targetDirectory} directory not configured`);
-      }
-
-      const targetPath = path.join(targetBasePath, skillName);
+      // Ensure application directory exists
+      await fs.ensureDir(appDirectory);
 
       // Check for conflicts
       const exists = await fs.pathExists(targetPath);
@@ -573,20 +572,16 @@ export class PrivateRepoService {
       }
 
       // Write source metadata for version tracking
-      const sourceMetadata = {
-        type: 'private-repo' as const,
+      const sourceMetadata = createPrivateRepoSource(
         repoId,
-        repoPath: `${repo.owner}/${repo.repo}`,
-        skillPath,
-        installedAt: new Date().toISOString(),
-        provider: repo.provider,
-        instanceUrl: repo.instanceUrl,
-      };
+        `${repo.owner}/${repo.repo}`,
+        skillPath
+      );
 
-      const metadataPath = path.join(finalPath, '.source.json');
+      const metadataPath = path.join(finalPath, SOURCE_METADATA_FILE);
       await fs.writeJson(metadataPath, sourceMetadata, { spaces: 2 });
 
-      logger.info('Installed skill from private repo', 'PrivateRepoService', {
+      logger.info('Installed skill from private repo to application directory', 'PrivateRepoService', {
         repoId,
         skillPath,
         targetPath: finalPath,
@@ -605,6 +600,16 @@ export class PrivateRepoService {
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
+  }
+
+  /**
+   * Slugify a string for use as a directory name
+   */
+  private static slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
   }
 
   /**

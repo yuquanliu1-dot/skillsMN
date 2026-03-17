@@ -1,10 +1,10 @@
 /**
  * PrivateSkillCard Component
  *
- * Displays individual skill from a private repository with install functionality
+ * Displays individual skill from a private repository with download functionality
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { PrivateSkill, PrivateRepo } from '../../shared/types';
 import PrivateInstallDialog from './PrivateInstallDialog';
 import ConflictResolutionDialog from './ConflictResolutionDialog';
@@ -21,6 +21,40 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [installProgress, setInstallProgress] = useState<'idle' | 'installing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
+  /**
+   * Check if skill is already downloaded
+   * Compare by directory name (basename) for more reliable matching
+   */
+  useEffect(() => {
+    checkIfDownloaded();
+  }, [skill.name, skill.path]);
+
+  const checkIfDownloaded = async () => {
+    setIsCheckingStatus(true);
+    try {
+      // Load current skills to check if this skill exists
+      const response = await window.electronAPI.listSkills();
+      if (response.success && response.data) {
+        // Extract directory name from skill path
+        const skillDirName = skill.path.split('/').pop() || skill.path.split('\\').pop() || skill.name;
+
+        // Check if any local skill's path contains this directory name
+        const exists = response.data.some(s => {
+          const localDirName = s.path.split('/').pop() || s.path.split('\\').pop() || '';
+          return localDirName === skillDirName || s.name === skill.name;
+        });
+
+        setIsDownloaded(exists);
+      }
+    } catch (error) {
+      console.error('Failed to check download status:', error);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
 
   const handleCardClick = () => {
     if (onSkillClick) {
@@ -28,8 +62,11 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
     }
   };
 
-  const handleInstallClick = (e: React.MouseEvent) => {
+  const handleDownloadClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
+    if (isDownloaded) {
+      return; // Don't allow re-download if already downloaded
+    }
     setShowInstallDialog(true);
     setInstallProgress('idle');
     setErrorMessage(null);
@@ -51,6 +88,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         setInstallProgress('success');
         setShowInstallDialog(false);
         setShowConflictDialog(false);
+        setIsDownloaded(true);
 
         // Notify parent component
         if (onInstallComplete) {
@@ -67,11 +105,11 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         setInstallProgress('idle');
       } else {
         setInstallProgress('error');
-        setErrorMessage(response.error?.message || 'Installation failed');
+        setErrorMessage(response.error?.message || 'Download failed');
       }
     } catch (err) {
       setInstallProgress('error');
-      setErrorMessage(err instanceof Error ? err.message : 'Installation failed');
+      setErrorMessage(err instanceof Error ? err.message : 'Download failed');
     }
   };
 
@@ -97,43 +135,62 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
       >
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
-            <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
-              {skill.name}
-            </h4>
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                {skill.name}
+              </h4>
+              {isDownloaded && !isCheckingStatus && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700">
+                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Downloaded
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-600 dark:text-slate-400">{skill.path}</p>
           </div>
 
-          {/* Install Button with Progress */}
+          {/* Download Button with Progress */}
           <button
-            onClick={handleInstallClick}
-            disabled={installProgress === 'installing'}
+            onClick={handleDownloadClick}
+            disabled={installProgress === 'installing' || isDownloaded || isCheckingStatus}
             className={`btn text-xs px-3 py-1 ml-2 ${
-              installProgress === 'success'
+              isDownloaded
+                ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                : installProgress === 'success'
                 ? 'bg-green-600 dark:bg-green-600 text-white hover:bg-green-700 dark:hover:bg-green-700'
                 : installProgress === 'error'
                 ? 'bg-red-600 dark:bg-red-600 text-white hover:bg-red-700 dark:hover:bg-red-700'
                 : 'bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700'
             }`}
-            aria-label={`Install skill: ${skill.name}`}
+            aria-label={`Download skill: ${skill.name}`}
             aria-busy={installProgress === 'installing'}
             aria-live="polite"
           >
-            {installProgress === 'idle' && 'Install'}
-            {installProgress === 'installing' && (
+            {isCheckingStatus && (
               <span className="flex items-center gap-1">
                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                Installing...
+                Checking...
               </span>
             )}
-            {installProgress === 'success' && (
+            {!isCheckingStatus && isDownloaded && 'Downloaded'}
+            {!isCheckingStatus && !isDownloaded && installProgress === 'idle' && 'Download'}
+            {!isCheckingStatus && !isDownloaded && installProgress === 'installing' && (
+              <span className="flex items-center gap-1">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                Downloading...
+              </span>
+            )}
+            {!isCheckingStatus && !isDownloaded && installProgress === 'success' && (
               <span className="flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                Installed!
+                Downloaded!
               </span>
             )}
-            {installProgress === 'error' && 'Retry'}
+            {!isCheckingStatus && !isDownloaded && installProgress === 'error' && 'Retry'}
           </button>
         </div>
 
@@ -155,7 +212,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div className="flex-1">
-                <p className="font-medium">Installation Failed</p>
+                <p className="font-medium">Download Failed</p>
                 <p className="mt-1">{errorMessage}</p>
               </div>
             </div>
@@ -179,7 +236,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <p className="font-medium">Skill installed successfully!</p>
+              <p className="font-medium">Skill downloaded successfully!</p>
             </div>
           </div>
         )}
@@ -232,7 +289,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         )}
       </article>
 
-      {/* Install Dialog */}
+      {/* Download Dialog */}
       {showInstallDialog && (
         <PrivateInstallDialog
           skill={skill}

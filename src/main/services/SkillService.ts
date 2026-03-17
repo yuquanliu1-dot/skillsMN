@@ -19,43 +19,94 @@ import { SkillDirectoryModel } from '../models/SkillDirectory';
 import { createLocalSource, isRegistrySkill, isPrivateRepoSkill } from '../models/SkillSource';
 import { Configuration, Skill } from '../../shared/types';
 import { SKILL_FILE_NAME, SOURCE_METADATA_FILE } from '../../shared/constants';
+import { SymlinkService } from './SymlinkService';
+import { app } from 'electron';
 
 export class SkillService {
   private frontmatterCache: Map<string, { data: any; timestamp: number }> = new Map();
   private readonly CACHE_TTL = 60000; // 1 minute cache TTL
 
   constructor(
-    private pathValidator: PathValidator
+    private pathValidator: PathValidator,
+    private symlinkService?: SymlinkService
   ) {}
 
   /**
-   * List all skills from project and global directories
-   * Scans all configured project directories and the global directory for skill.md files
+   * Get application skills directory path (static version for use without instance)
+   * Returns configured application directory or default location
+   * @param config - Configuration object
+   * @returns Application skills directory path
+   */
+  static getApplicationSkillsDirectory(config: Configuration): string {
+    if (config.applicationSkillsDirectory) {
+      return config.applicationSkillsDirectory;
+    }
+
+    // Default to skills subdirectory in app installation directory
+    const appPath = app.getAppPath();
+    return path.join(appPath, 'skills');
+  }
+
+  /**
+   * Get application skills directory path (instance method)
+   * Returns configured application directory or default location
+   * @param config - Configuration object
+   * @returns Application skills directory path
+   */
+  getApplicationSkillsDirectory(config: Configuration): string {
+    return SkillService.getApplicationSkillsDirectory(config);
+  }
+
+  /**
+   * Ensure application skills directory exists
+   * Creates directory if it doesn't exist
+   * @param config - Configuration object
+   */
+  async ensureApplicationDirectory(config: Configuration): Promise<void> {
+    const appDir = this.getApplicationSkillsDirectory(config);
+    await SkillDirectoryModel.ensureDirectory(appDir);
+    logger.info('Application skills directory ensured', 'SkillService', { appDir });
+  }
+
+  /**
+   * List all skills from application directory only
+   * Scans the centralized application directory for skill.md files
    * Uses frontmatter caching for improved performance
-   * @param config - Configuration object with project directories setting
-   * @returns Array of Skill objects from all directories
+   * Enriches skills with symlink information from SymlinkService
+   * @param config - Configuration object with application directory setting
+   * @returns Array of Skill objects from application directory
    * @example
    * const config = await configService.load();
    * const skills = await skillService.listAllSkills(config);
    * console.log(`Found ${skills.length} skills`);
    */
   async listAllSkills(config: Configuration): Promise<Skill[]> {
-    logger.info('Listing all skills', 'SkillService', {
-      projectDirs: config.projectDirectories,
-    });
+    logger.info('Listing all skills from application directory', 'SkillService');
 
-    const skills: Skill[] = [];
+    // Get application directory
+    const appDir = this.getApplicationSkillsDirectory(config);
 
-    // Scan global directory (always)
-    const globalDir = SkillDirectoryModel.getGlobalDirectory();
-    const globalSkills = await this.scanDirectory(globalDir, 'global');
-    skills.push(...globalSkills);
+    // Scan only application directory
+    const skills = await this.scanDirectory(appDir, 'application');
 
-    // Scan ALL configured project directories
-    for (const projectDir of config.projectDirectories) {
-      const fullDir = SkillDirectoryModel.getProjectDirectory(projectDir);
-      const projectSkills = await this.scanDirectory(fullDir, 'project');
-      skills.push(...projectSkills);
+    // Enrich with symlink information if SymlinkService is available
+    if (this.symlinkService) {
+      try {
+        const symlinkDb = await this.symlinkService.loadDatabase(appDir);
+
+        for (const skill of skills) {
+          const skillName = path.basename(skill.path);
+          skill.symlinkConfig = symlinkDb.symlinks[skillName];
+          skill.isSymlinked = skill.symlinkConfig?.enabled ?? false;
+        }
+
+        logger.debug('Skills enriched with symlink information', 'SkillService', {
+          skillCount: skills.length,
+          symlinkedCount: skills.filter(s => s.isSymlinked).length,
+        });
+      } catch (error) {
+        logger.warn('Failed to load symlink database, skipping enrichment', 'SkillService', { error });
+      }
     }
 
     logger.info(`Found ${skills.length} skills`, 'SkillService');
@@ -77,7 +128,7 @@ export class SkillService {
   /**
    * Scan a directory for skills
    */
-  private async scanDirectory(dirPath: string, source: 'project' | 'global'): Promise<Skill[]> {
+  private async scanDirectory(dirPath: string, source: 'project' | 'global' | 'application'): Promise<Skill[]> {
     logger.debug(`Scanning directory: ${dirPath}`, 'SkillService', { source });
 
     try {
@@ -158,40 +209,25 @@ export class SkillService {
 
   /**
    * Create a new skill with template content
+   * Always creates in application directory (centralized storage)
    * Generates kebab-case directory name and creates skill.md file
    * @param name - Skill name (will be converted to kebab-case for directory)
-   * @param directory - 'project' or 'global' directory to create in
+   * @param directory - Ignored (always creates in application directory)
    * @returns Created Skill object with metadata
-   * @throws Error if skill already exists, path validation fails, or no project directory configured
+   * @throws Error if skill already exists or path validation fails
    * @example
    * const skill = await skillService.createSkill('Code Review', 'project');
    * console.log('Created:', skill.name, 'at', skill.path);
    */
   async createSkill(name: string, directory: 'project' | 'global'): Promise<Skill> {
-    logger.info(`Creating skill: ${name}`, 'SkillService', { directory });
+    logger.info(`Creating skill: ${name}`, 'SkillService');
 
-    // Get target directory
+    // Get application directory (always use application directory)
     const config = await this.getConfig();
-    logger.debug(`Config loaded`, 'SkillService', {
-      hasProjectDirectories: config.projectDirectories.length > 0,
-      projectDirectories: config.projectDirectories,
-      requestedDirectory: directory
-    });
+    const targetBase = this.getApplicationSkillsDirectory(config);
 
-    let targetBase: string;
-    if (directory === 'project') {
-      if (config.projectDirectories.length === 0) {
-        throw new Error('No project directory configured. Please add a project directory in Settings.');
-      }
-      // Use the first project directory for new skills
-      targetBase = SkillDirectoryModel.getProjectDirectory(config.projectDirectories[0]);
-    } else {
-      targetBase = SkillDirectoryModel.getGlobalDirectory();
-    }
-
-    logger.debug(`Target directory selected`, 'SkillService', {
+    logger.debug(`Creating skill in application directory`, 'SkillService', {
       targetBase,
-      isProject: directory === 'project'
     });
 
     // Generate kebab-case directory name
@@ -220,7 +256,7 @@ export class SkillService {
     await fs.promises.writeFile(metadataPath, JSON.stringify(sourceMetadata, null, 2), 'utf-8');
 
     // Parse and return created skill (with cache)
-    const skill = await SkillModel.fromDirectory(skillDir, directory, this.frontmatterCache);
+    const skill = await SkillModel.fromDirectory(skillDir, 'application', this.frontmatterCache);
 
     logger.info(`Skill created: ${name}`, 'SkillService', { path: skillDir });
     return skill;
@@ -259,7 +295,17 @@ export class SkillService {
       const stats = await fs.promises.stat(skillFile);
       const actualLastModified = stats.mtimeMs;
 
-      if (actualLastModified > expectedLastModified) {
+      logger.debug('Timestamp comparison for concurrent modification check', 'SkillService', {
+        expectedLastModified,
+        actualLastModified,
+        difference: actualLastModified - expectedLastModified,
+        skillFile
+      });
+
+      // Allow 100ms tolerance for filesystem timestamp precision issues
+      // This prevents false positives from minor filesystem variations
+      const TOLERANCE_MS = 100;
+      if (actualLastModified > expectedLastModified + TOLERANCE_MS) {
         const error = new Error('File has been modified externally');
         (error as any).code = 'EXTERNAL_MODIFICATION';
         throw error;

@@ -168,7 +168,7 @@ export class GitHubService {
 
     try {
       // Search for repositories with skill.md files
-      const searchQuery = `${query} "skill.md" in:path`;
+      const searchQuery = `${query} "SKILL.md" in:path`;
       const url = `${GITHUB_API_BASE}/search/code?q=${encodeURIComponent(searchQuery)}&page=${page}&per_page=30`;
 
       // Use retry logic for network resilience
@@ -455,8 +455,8 @@ export class GitHubService {
       // Create skill directory
       await fs.ensureDir(targetPath);
 
-      // Write skill.md file
-      await fs.writeFile(path.join(targetPath, 'skill.md'), content, 'utf-8');
+      // Write SKILL.md file
+      await fs.writeFile(path.join(targetPath, 'SKILL.md'), content, 'utf-8');
 
       logger.info('Skill installed successfully', 'GitHubService', {
         targetPath,
@@ -601,7 +601,7 @@ export class GitHubService {
    */
   static findSkillDirectories(tree: any[]): any[] {
     const skillFiles = tree.filter((item: any) => {
-      return item.type === 'blob' && item.path.endsWith('skill.md');
+      return item.type === 'blob' && item.path.endsWith('SKILL.md');
     });
 
     const skillDirectories = skillFiles.map((file: any) => {

@@ -98,4 +98,16 @@ global.window.electronAPI = {
   removeGitHubInstallProgressListener: jest.fn(),
   setGitHubConflictPreference: jest.fn(),
   clearGitHubConflictPreference: jest.fn(),
+
+  // Symlink Operations
+  updateSymlink: jest.fn(),
+  getSymlinkStatus: jest.fn(),
+  getClaudeDirectories: jest.fn(),
+
+  // Migration Operations
+  checkMigrationNeeded: jest.fn(),
+  detectExistingSkills: jest.fn(),
+  startMigration: jest.fn(),
+  onMigrationProgress: jest.fn(),
+  removeMigrationProgressListener: jest.fn(),
 };

@@ -181,7 +181,7 @@ export interface AIErrorEvent {
 // Entity Types (imported from main models)
 // ============================================================================
 
-export type SkillSource = 'project' | 'global';
+export type SkillSource = 'project' | 'global' | 'application';
 
 export interface Skill {
   path: string;

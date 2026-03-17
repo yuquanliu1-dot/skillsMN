@@ -23,8 +23,26 @@ export interface AIStreamCallbacks {
 export class AIClientService {
   private static instance: AIClientService;
   private activeCallbacks: Map<string, AIStreamCallbacks> = new Map();
+  private isListenerRegistered: boolean = false;
 
   private constructor() {
+    // Event listener will be registered on first use
+  }
+
+  /**
+   * Ensure the AI chunk listener is registered
+   */
+  private ensureListenerRegistered(): void {
+    if (this.isListenerRegistered) {
+      return;
+    }
+
+    // Check if electronAPI is available
+    if (!window.electronAPI?.onAIChunk) {
+      console.warn('electronAPI not yet available, listener registration deferred');
+      return;
+    }
+
     // Register streaming event listener
     window.electronAPI.onAIChunk((_event, data) => {
       const { requestId, type, text, tool, isComplete, error } = data;
@@ -47,6 +65,8 @@ export class AIClientService {
         callbacks.onChunk(text);
       }
     });
+
+    this.isListenerRegistered = true;
   }
 
   /**
@@ -67,6 +87,9 @@ export class AIClientService {
     request: AIGenerationRequest,
     callbacks: AIStreamCallbacks
   ): Promise<void> {
+    // Ensure the event listener is registered
+    this.ensureListenerRegistered();
+
     // Store callbacks
     this.activeCallbacks.set(requestId, callbacks);
 
