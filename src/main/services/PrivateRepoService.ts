@@ -386,6 +386,50 @@ export class PrivateRepoService {
   }
 
   /**
+   * Parse frontmatter from skill content
+   * Extracts description and tags from YAML frontmatter
+   * @private
+   */
+  private static parseFrontmatterFromContent(content: string): { description?: string; tags?: string[] } {
+    try {
+      // Simple YAML frontmatter parser
+      const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
+      if (!frontmatterMatch) {
+        return {};
+      }
+
+      const frontmatterText = frontmatterMatch[1];
+      const result: { description?: string; tags?: string[] } = {};
+
+      // Parse description
+      const descMatch = frontmatterText.match(/^description:\s*["']?(.+?)["']?\s*$/m);
+      if (descMatch) {
+        result.description = descMatch[1].trim();
+      }
+
+      // Parse tags (array format)
+      const tagsMatch = frontmatterText.match(/^tags:\s*\n(\s+-\s+.+\n?)+/m);
+      if (tagsMatch) {
+        const tagLines = tagsMatch[0].split('\n').filter(line => line.trim().startsWith('-'));
+        result.tags = tagLines.map(line => line.replace(/^\s*-\s*/, '').trim());
+      }
+
+      // Parse tags (inline array format)
+      if (!result.tags) {
+        const tagsInlineMatch = frontmatterText.match(/^tags:\s*\[(.+)\]\s*$/m);
+        if (tagsInlineMatch) {
+          result.tags = tagsInlineMatch[1].split(',').map(tag => tag.trim().replace(/^["']|["']$/g, ''));
+        }
+      }
+
+      return result;
+    } catch (error) {
+      logger.warn('Failed to parse frontmatter from content', 'PrivateRepoService', { error });
+      return {};
+    }
+  }
+
+  /**
    * Get all skills from a private repository
    * Fetches skill directories and their commit history
    * Updates last sync time on success
@@ -426,8 +470,41 @@ export class PrivateRepoService {
         repo.instanceUrl
       );
 
+      // PERFORMANCE: Fetch frontmatter for all skills in parallel
+      // This populates description and tags fields
+      const skillsWithFrontmatter = await Promise.all(
+        skills.map(async (skill: any) => {
+          try {
+            // Fetch SKILL.md content
+            const skillContent = await (gitProvider as any).getPrivateRepoSkillContent?.(
+              repo.owner,
+              repo.repo,
+              skill.skillFilePath || `${skill.path}/SKILL.md`,
+              pat,
+              repo.defaultBranch || 'main',
+              repo.instanceUrl
+            );
+
+            // Parse frontmatter
+            const frontmatter = this.parseFrontmatterFromContent(skillContent || '');
+
+            return {
+              ...skill,
+              ...frontmatter,
+            };
+          } catch (error) {
+            // If frontmatter fetch fails, return skill without description/tags
+            logger.warn('Failed to fetch frontmatter for skill', 'PrivateRepoService', {
+              skillPath: skill.path,
+              error: error instanceof Error ? error.message : error,
+            });
+            return skill;
+          }
+        })
+      );
+
       // Convert to PrivateSkill format
-      const privateSkills: PrivateSkill[] = skills.map((skill: any) => {
+      const privateSkills: PrivateSkill[] = skillsWithFrontmatter.map((skill: any) => {
         const baseUrl = provider === 'gitlab' && repo.instanceUrl
           ? repo.instanceUrl
           : (provider === 'gitlab' ? 'https://gitlab.com' : 'https://raw.githubusercontent.com');
@@ -446,6 +523,8 @@ export class PrivateRepoService {
           fileCount: 1,
           directoryCommitSHA: skill.directoryCommitSHA,
           skillFilePath: skill.skillFilePath,
+          description: skill.description, // From frontmatter
+          tags: skill.tags, // From frontmatter
         };
       });
 
@@ -456,6 +535,7 @@ export class PrivateRepoService {
         repoId,
         count: privateSkills.length,
         provider,
+        withFrontmatter: privateSkills.filter(s => s.description || s.tags).length,
       });
 
       return privateSkills;
@@ -761,9 +841,10 @@ export class PrivateRepoService {
 
   /**
    * Upload a skill to a private repository
+   * Uploads all files in the skill directory, not just SKILL.md
    * @param repoId - ID of the private repository to upload to
-   * @param skillPath - Local path of the skill to upload
-   * @param skillContent - Content of the skill to upload
+   * @param skillPath - Local path of the skill directory to upload
+   * @param skillContent - Content of the SKILL.md file (for backward compatibility)
    * @param skillName - Name of the skill for commit message
    * @param commitMessage - Optional custom commit message
    * @returns Upload result with success status and optional error
@@ -774,7 +855,7 @@ export class PrivateRepoService {
     skillContent: string,
     skillName: string,
     commitMessage?: string
-  ): Promise<{ success: boolean; sha?: string; error?: string }> {
+  ): Promise<{ success: boolean; sha?: string; uploadedCount?: number; error?: string }> {
     try {
       const repo = await this.getRepo(repoId);
       if (!repo) {
@@ -791,13 +872,66 @@ export class PrivateRepoService {
       // Extract skill directory name from path (handle both Windows and Unix paths)
       const skillDirName = path.basename(skillPath);
 
-      // Call provider's upload method
-      const result = await (gitProvider as any).uploadSkill(
+      // Read all files from the skill directory
+      const files: Array<{ relativePath: string; content: string }> = [];
+
+      // Files to exclude from upload (local metadata and system files)
+      const EXCLUDED_FILES = new Set([
+        '.skill-source.json',    // Local installation metadata
+        '.source.json',          // Alternative source metadata
+        '.git',                  // Git directory
+        '.gitignore',            // Git ignore file
+        '.DS_Store',             // macOS system file
+        'Thumbs.db',             // Windows system file
+        '.skillmn',              // Application specific metadata
+      ]);
+
+      // Check if the skill directory exists
+      if (await fs.pathExists(skillPath)) {
+        const entries = await fs.readdir(skillPath, { withFileTypes: true });
+
+        for (const entry of entries) {
+          if (entry.isFile()) {
+            // Skip excluded files
+            if (EXCLUDED_FILES.has(entry.name)) {
+              logger.debug(`Skipping excluded file: ${entry.name}`, 'PrivateRepoService');
+              continue;
+            }
+
+            const filePath = path.join(skillPath, entry.name);
+            const content = await fs.readFile(filePath, 'utf-8');
+            files.push({
+              relativePath: entry.name,
+              content,
+            });
+            logger.debug(`Read file for upload: ${entry.name}`, 'PrivateRepoService');
+          }
+        }
+
+        logger.info(`Found ${files.length} files in skill directory`, 'PrivateRepoService', {
+          skillPath,
+          files: files.map(f => f.relativePath),
+        });
+      } else {
+        throw new Error(`Skill directory not found: ${skillPath}`);
+      }
+
+      // If no files found, fall back to just uploading SKILL.md content
+      if (files.length === 0) {
+        logger.warn('No files found in skill directory, using provided content', 'PrivateRepoService');
+        files.push({
+          relativePath: 'SKILL.md',
+          content: skillContent,
+        });
+      }
+
+      // Call provider's directory upload method
+      const result = await (gitProvider as any).uploadSkillDirectory(
         repo.owner,
         repo.repo,
         skillDirName,
         skillName,
-        skillContent,
+        files,
         pat,
         repo.defaultBranch || 'main',
         commitMessage,
@@ -805,10 +939,10 @@ export class PrivateRepoService {
       );
 
       if (result.success) {
-        logger.info('Successfully uploaded skill to private repo', 'PrivateRepoService', {
+        logger.info('Successfully uploaded skill directory to private repo', 'PrivateRepoService', {
           repoId,
           skillPath,
-          sha: result.sha,
+          uploadedCount: result.uploadedCount,
         });
       }
 
