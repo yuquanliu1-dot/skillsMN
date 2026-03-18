@@ -42,7 +42,7 @@ export class FileWatcher {
    * Emits FS_CHANGE IPC events to renderer on file changes
    * @param applicationDir - Application skills directory path (required)
    * @example
-   * fileWatcher.start('D:/skillsMN/skills');
+   * fileWatcher.start('/path/to/app/skills');
    */
   async start(applicationDir: string): Promise<void> {
     logger.info('Starting file watcher', 'FileWatcher', {
