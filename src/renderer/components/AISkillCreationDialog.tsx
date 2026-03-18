@@ -2,6 +2,7 @@
  * AI Skill Creation Dialog Component
  *
  * Dialog for AI-powered skill creation with streaming preview and tool feedback
+ * All skills are saved to the centralized application directory
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -11,18 +12,15 @@ import { ipcClient } from '../services/ipcClient';
 interface AISkillCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  directory: 'project' | 'global';
   onSkillCreated: () => void;
 }
 
 export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
   isOpen,
   onClose,
-  directory,
   onSkillCreated,
 }) => {
   const [prompt, setPrompt] = useState('');
-  const [directoryPath, setDirectoryPath] = useState<string>('');
 
   const {
     status,
@@ -48,28 +46,6 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
   });
 
   /**
-   * Load directory path when dialog opens
-   */
-  useEffect(() => {
-    if (isOpen) {
-      async function loadDirectoryPath() {
-        try {
-          const config = await ipcClient.loadConfig();
-          if (directory === 'project' && config.projectDirectory) {
-            setDirectoryPath(`${config.projectDirectory}/.claude/skills`);
-          } else {
-            setDirectoryPath('Global Skills Directory');
-          }
-        } catch (error) {
-          console.error('Failed to load directory path:', error);
-          setDirectoryPath(directory === 'project' ? 'Project Skills Directory' : 'Global Skills Directory');
-        }
-      }
-      loadDirectoryPath();
-    }
-  }, [isOpen, directory]);
-
-  /**
    * Reset state when dialog opens/closes
    */
   useEffect(() => {
@@ -87,15 +63,9 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
       return;
     }
 
-    // Build context with target directory info
-    const skillContext = {
-      targetDirectory: directory,
-      targetPath: directoryPath,
-    };
-
-    // Pass target path as part of the request
-    await generate(prompt, 'new', skillContext);
-  }, [prompt, directory, directoryPath, generate]);
+    // Skills are always saved to the centralized application directory
+    await generate(prompt, 'new');
+  }, [prompt, generate]);
 
   /**
    * Parse skill name from YAML frontmatter
@@ -132,9 +102,10 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
         return;
       }
 
-      console.log('Creating skill:', skillName, 'in directory:', directory);
+      console.log('Creating skill:', skillName);
 
-      const newSkill = await ipcClient.createSkill(skillName, directory);
+      // Create skill (always in application directory)
+      const newSkill = await ipcClient.createSkill(skillName);
       await ipcClient.updateSkill(newSkill.path, content);
 
       console.log('Skill created successfully');
@@ -145,7 +116,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
       const errorMsg = error instanceof Error ? error.message : 'Failed to create skill';
       alert('Failed to create skill: ' + errorMsg);
     }
-  }, [content, directory, parseSkillNameFromFrontmatter, onClose, onSkillCreated]);
+  }, [content, parseSkillNameFromFrontmatter, onClose, onSkillCreated]);
 
   /**
    * Handle escape key to close
@@ -175,7 +146,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
         }
       }}
     >
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700">
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -202,55 +173,30 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
 
         {/* Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top Section - Directory Info */}
-          <div className="px-6 py-4 border-b border-gray-200 bg-white">
-            <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          {/* Top Section - Info */}
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700 px-3 py-2 rounded-lg">
+              <svg className="w-4 h-4 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="font-medium">Save to:</span>
-              <code className="font-mono text-xs bg-white px-2 py-0.5 rounded border border-gray-200 flex-1 truncate">
-                {directoryPath || 'Loading...'}
-              </code>
+              <span>Skills are saved to your centralized skills library</span>
             </div>
           </div>
 
-          {/* Middle Section - Preview & Tools */}
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-            {/* Tool Calls */}
-            {toolCalls.length > 0 && (
-              <div className="mb-4 space-y-2">
-                {toolCalls.map((tool, index) => (
-                  <div key={index} className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm">
-                    <svg className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-blue-900">{tool.name}</div>
-                      {tool.input && (
-                        <pre className="text-xs text-blue-700 mt-1 whitespace-pre-wrap break-words">
-                          {typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input, null, 2)}
-                        </pre>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Preview */}
-            <div className="flex flex-col">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">Preview</label>
+          {/* Middle Section - Unified Preview Window */}
+          <div className="flex-1 flex flex-col overflow-hidden p-6 bg-slate-50 dark:bg-slate-900">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3 flex-shrink-0">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Preview</label>
+              <div className="flex items-center gap-3">
                 {isStreaming && (
-                  <div className="flex items-center gap-2 text-sm text-purple-600">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-pulse"></div>
+                  <div className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400">
+                    <div className="w-2 h-2 bg-purple-600 dark:bg-purple-400 rounded-full animate-pulse"></div>
                     <span>Streaming...</span>
                   </div>
                 )}
                 {isComplete && (
-                  <div className="flex items-center gap-1 text-sm text-green-600">
+                  <div className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -258,26 +204,64 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                   </div>
                 )}
               </div>
+            </div>
 
-              <div className="bg-white border border-gray-300 rounded-lg p-4 min-h-[300px]">
+            {/* Unified Preview Window */}
+            <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden flex flex-col">
+              {/* Scrollable Content Area */}
+              <div className="flex-1 overflow-y-auto p-4">
                 {error ? (
-                  <div className="text-red-600 text-sm">
+                  <div className="text-red-600 dark:text-red-400 text-sm">
                     <div className="font-medium mb-1">Error</div>
                     <div>{error}</div>
                   </div>
-                ) : content ? (
-                  <pre className="text-sm font-mono whitespace-pre-wrap break-words">
-                    {content}
-                    {isStreaming && <span className="inline-block w-2 h-4 bg-purple-600 animate-pulse ml-1">|</span>}
-                  </pre>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-                    <div className="text-center">
-                      <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7l2-4h10l2 4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
-                      </svg>
-                      <p>Generated content will appear here</p>
-                    </div>
+                  <div className="space-y-4">
+                    {/* Tool Calls */}
+                    {toolCalls.length > 0 && (
+                      <div className="space-y-2">
+                        {toolCalls.map((tool, index) => (
+                          <div key={index} className="flex items-start gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-2 text-sm">
+                            <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-blue-900 dark:text-blue-300">{tool.name}</div>
+                              {tool.input && (
+                                <pre className="text-xs text-blue-700 dark:text-blue-400 mt-1 whitespace-pre-wrap break-words">
+                                  {typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input, null, 2)}
+                                </pre>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Generated Content */}
+                    {content ? (
+                      <div>
+                        {toolCalls.length > 0 && (
+                          <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 mt-2">
+                            Generated Skill
+                          </div>
+                        )}
+                        <pre className="text-sm font-mono whitespace-pre-wrap break-words text-slate-800 dark:text-slate-200">
+                          {content}
+                          {isStreaming && <span className="inline-block w-2 h-4 bg-purple-600 dark:bg-purple-400 animate-pulse ml-1">|</span>}
+                        </pre>
+                      </div>
+                    ) : toolCalls.length === 0 && (
+                      <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm min-h-[200px]">
+                        <div className="text-center">
+                          <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7l2-4h10l2 4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                          </svg>
+                          <p>Generated content will appear here</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -285,7 +269,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
           </div>
 
           {/* Bottom Section - Input & Controls */}
-          <div className="px-6 py-4 border-t border-gray-200 bg-white space-y-3">
+          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 space-y-3">
             {/* Input */}
             <div className="relative">
               <textarea
@@ -293,10 +277,10 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isStreaming}
                 placeholder="Describe the skill you want to create..."
-                className="w-full h-20 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
+                className="w-full h-20 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
                 maxLength={2000}
               />
-              <div className="absolute bottom-2 right-2 text-xs text-gray-400">
+              <div className="absolute bottom-2 right-2 text-xs text-slate-400 dark:text-slate-500">
                 {prompt.length}/2000
               </div>
             </div>
@@ -340,7 +324,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                     Retry
                   </button>
                   {isComplete && (
-                    <div className="flex-1 flex items-center justify-center gap-2 text-green-600 bg-green-50 rounded-lg px-4 py-2">
+                    <div className="flex-1 flex items-center justify-center gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg px-4 py-2">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
