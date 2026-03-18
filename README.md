@@ -10,7 +10,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org/)
 [![Electron](https://img.shields.io/badge/Electron-Latest-blue.svg)](https://www.electronjs.org/)
 
-[English](#features) | [简体中文](#功能特性) | [Documentation](#documentation) | [Contributing](#contributing)
+[English](#features) | [简体中文](README_CN.md#功能特性) | [Documentation](#documentation) | [Contributing](#contributing)
 
 </div>
 
@@ -34,16 +34,20 @@ skillsMN is an Electron-based desktop application that provides a unified interf
 <div align="center">
 
 ### Main Interface
-*Coming soon*
+![Main Interface](docs/screenshots/main-interface.png)
+*Clean, dark-mode interface with skill management*
 
 ### Skill Editor
-*Coming soon*
+![Skill Editor](docs/screenshots/skill-editor.png)
+*Monaco editor with syntax highlighting for skill editing*
 
 ### Registry Search
-*Coming soon*
+![Registry Search](docs/screenshots/registry-search.png)
+*Search and install skills from skills.sh registry*
 
 ### AI Generation
-*Coming soon*
+![AI Generation](docs/screenshots/ai-generation.png)
+*Generate skills using natural language with AI assistance*
 
 </div>
 
