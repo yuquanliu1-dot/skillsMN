@@ -60,6 +60,15 @@ tests/**/.claude/
 *.temp
 .cache/
 
+# Development test scripts
+diagnose-*.js
+monitor-*.js
+test-*.js
+!tests/
+
+# Local application data
+skills/
+
 # Electron Builder
 *.blockmap
 *.exe
