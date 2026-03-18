@@ -63,11 +63,41 @@ export default function SkillEditor({
   const [isAIInsertPopoverOpen, setIsAIInsertPopoverOpen] = useState<boolean>(false);
   const [insertPosition, setInsertPosition] = useState<{ line: number; column: number } | null>(null);
   const [insertPopoverPosition, setInsertPopoverPosition] = useState<{ x: number; y: number } | undefined>();
+  const [symlinkEnabled, setSymlinkEnabled] = useState<boolean>(skill.isSymlinked ?? false);
+  const [symlinkConfig, setSymlinkConfig] = useState(skill.symlinkConfig);
+  const [claudeDirectories, setClaudeDirectories] = useState<string[]>([]);
+  const [selectedDirectory, setSelectedDirectory] = useState<string>(skill.symlinkConfig?.claudeDirectory || '~/.claude/skills');
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // AI generation hook for rewrite
   const { status: aiStatus, content: aiContent, generate, reset: resetAI } = useAIGeneration();
+
+  /**
+   * Load Claude directories on mount
+   */
+  useEffect(() => {
+    async function loadClaudeDirectories() {
+      try {
+        const response = await window.electronAPI.getClaudeDirectories();
+        if (response.success && response.data) {
+          setClaudeDirectories(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to load Claude directories:', error);
+      }
+    }
+    loadClaudeDirectories();
+  }, []);
+
+  /**
+   * Sync symlink state when skill changes
+   */
+  useEffect(() => {
+    setSymlinkEnabled(skill.isSymlinked ?? false);
+    setSymlinkConfig(skill.symlinkConfig);
+    setSelectedDirectory(skill.symlinkConfig?.claudeDirectory || '~/.claude/skills');
+  }, [skill.path, skill.isSymlinked, skill.symlinkConfig]);
 
   /**
    * Load skill content on mount
@@ -241,8 +271,11 @@ export default function SkillEditor({
 
   /**
    * Handle content changes
+   * Skip auto-save in read-only mode
    */
   const handleContentChange = useCallback((value: string | undefined) => {
+    // Skip content change handling in read-only mode
+    if (readOnly) return;
     if (value !== undefined) {
       setContent(value);
       setHasUnsavedChanges(true);
@@ -260,7 +293,7 @@ export default function SkillEditor({
         }, config.autoSaveDelay);
       }
     }
-  }, [config.autoSaveEnabled, config.autoSaveDelay]);
+  }, [config.autoSaveEnabled, config.autoSaveDelay, readOnly]);
 
   /**
    * Auto-save handler
@@ -304,6 +337,8 @@ export default function SkillEditor({
    * Save skill content
    */
   const handleSave = useCallback(async () => {
+    // Skip save in read-only mode
+    if (readOnly) return;
     if (isSaving || !hasUnsavedChanges || !loadedLastModified) return;
 
     // Cancel auto-save timer
@@ -427,8 +462,8 @@ export default function SkillEditor({
 
         console.log('Creating skill with name:', skillName);
 
-        // Create the skill in the project directory
-        const newSkill = await ipcClient.createSkill(skillName, 'project');
+        // Create the skill in the application directory
+        const newSkill = await ipcClient.createSkill(skillName);
         console.log('Skill created:', newSkill);
 
         // Update the skill with the generated content
@@ -612,8 +647,11 @@ export default function SkillEditor({
 
   /**
    * Detect external changes to skill (T082)
+   * Skip detection in read-only mode since user cannot edit
    */
   useEffect(() => {
+    // Skip external change detection in read-only mode
+    if (readOnly) return;
     if (!skill || isLoading || !loadedLastModified) return;
 
     const currentLastModified = new Date(skill.lastModified).getTime();
@@ -643,7 +681,7 @@ export default function SkillEditor({
         setExternalChangeDetected(true);
       }
     }
-  }, [skill.lastModified, loadedLastModified, hasUnsavedChanges, skill.path, isLoading]);
+  }, [skill.lastModified, loadedLastModified, hasUnsavedChanges, skill.path, isLoading, readOnly]);
 
   const containerClasses = isInline
     ? "h-full flex flex-col bg-white"
@@ -677,11 +715,20 @@ export default function SkillEditor({
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{skill.name}</h2>
             <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span
-                className={`badge ${skill.source === 'project' ? 'badge-project' : 'badge-global'}`}
-              >
-                {skill.source === 'project' ? 'Project' : 'Global'}
-              </span>
+              {/* Source badge based on sourceMetadata.type */}
+              {skill.sourceMetadata?.type === 'local' && (
+                <span className="badge badge-local">Local</span>
+              )}
+              {skill.sourceMetadata?.type === 'registry' && (
+                <span className="badge badge-registry" title={`From ${skill.sourceMetadata.source}`}>
+                  {skill.sourceMetadata.source}
+                </span>
+              )}
+              {skill.sourceMetadata?.type === 'private-repo' && (
+                <span className="badge badge-private" title={`From ${skill.sourceMetadata.repoPath}`}>
+                  Private
+                </span>
+              )}
               {hasUnsavedChanges && (
                 <span className="text-yellow-600 flex items-center gap-1">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -704,12 +751,12 @@ export default function SkillEditor({
             <span className="text-sm text-gray-500 italic">Read Only</span>
           )}
 
-          {/* Upload to Repository button */}
-          {onUploadSkill && skill.sourceMetadata?.type === 'local' && (
+          {/* Upload to Repository button - Available for all skill types */}
+          {onUploadSkill && (
             <button
               onClick={() => onUploadSkill(skill)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
-              title="Upload this skill to a repository"
+              title="Upload this skill to a private repository"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -810,8 +857,9 @@ export default function SkillEditor({
       )}
 
       {/* Symlink Control Bar */}
-      <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
-        <div className="flex items-center justify-between">
+      {!readOnly && (
+        <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
+          <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <span className="text-sm font-medium text-gray-700">
               Link to Claude Code:
@@ -820,53 +868,117 @@ export default function SkillEditor({
               onClick={async () => {
                 try {
                   const newConfig = {
-                    enabled: !skill.isSymlinked,
-                    claudeDirectory: '~/.claude/skills', // Default to global
-                    createdAt: skill.symlinkConfig?.createdAt || new Date().toISOString(),
+                    enabled: !symlinkEnabled,
+                    claudeDirectory: selectedDirectory,
+                    createdAt: symlinkConfig?.createdAt || new Date().toISOString(),
                     lastModified: new Date().toISOString(),
                   };
 
-                  // Update local state (note: this won't trigger re-render without parent update)
-                  skill.isSymlinked = newConfig.enabled;
-                  skill.symlinkConfig = newConfig;
+                  // Call API to update symlink
+                  const response = await window.electronAPI.updateSymlink({
+                    skillName: skill.name,
+                    config: newConfig,
+                  });
+
+                  if (!response.success) {
+                    throw new Error(response.error?.message || 'Failed to update symlink');
+                  }
+
+                  // Update local state
+                  setSymlinkEnabled(newConfig.enabled);
+                  setSymlinkConfig(newConfig);
                 } catch (error) {
                   console.error('Failed to toggle symlink:', error);
-                  setError('Failed to update symlink configuration');
+                  setError(error instanceof Error ? error.message : 'Failed to update symlink configuration');
                 }
               }}
               className={`relative inline-flex h-6 w-11 items-center rounded-full
                 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                skill.isSymlinked ? 'bg-blue-600' : 'bg-gray-300'
+                symlinkEnabled ? 'bg-blue-600' : 'bg-gray-300'
               }`}
               role="switch"
-              aria-checked={skill.isSymlinked}
+              aria-checked={symlinkEnabled}
             >
               <span className={`inline-block h-4 w-4 transform rounded-full
                 bg-white transition-transform shadow ${
-                skill.isSymlinked ? 'translate-x-6' : 'translate-x-1'
+                symlinkEnabled ? 'translate-x-6' : 'translate-x-1'
               }`} />
             </button>
           </div>
 
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            {skill.isSymlinked ? (
-              <>
-                <svg className="h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Linked to {skill.symlinkConfig?.claudeDirectory}</span>
-              </>
-            ) : (
-              <>
-                <svg className="h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                <span>Not linked</span>
-              </>
+          <div className="flex items-center space-x-3">
+            {/* Directory selector */}
+            {symlinkEnabled && (
+              <select
+                value={selectedDirectory}
+                onChange={async (e) => {
+                  const newDir = e.target.value;
+                  setSelectedDirectory(newDir);
+
+                  // Update symlink to new directory
+                  try {
+                    const newConfig = {
+                      enabled: true,
+                      claudeDirectory: newDir,
+                      createdAt: symlinkConfig?.createdAt || new Date().toISOString(),
+                      lastModified: new Date().toISOString(),
+                    };
+
+                    const response = await window.electronAPI.updateSymlink({
+                      skillName: skill.name,
+                      config: newConfig,
+                    });
+
+                    if (!response.success) {
+                      throw new Error(response.error?.message || 'Failed to update symlink');
+                    }
+
+                    setSymlinkConfig(newConfig);
+                  } catch (error) {
+                    console.error('Failed to change symlink directory:', error);
+                    setError(error instanceof Error ? error.message : 'Failed to update symlink');
+                  }
+                }}
+                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {claudeDirectories.map((dir) => {
+                  // Format display name - show ~ for home directory
+                  const homeDir = dir.split('.claude')[0].replace(/[\/\\]$/, '');
+                  const displayPath = dir.includes('.claude/skills')
+                    ? `${homeDir}.claude/skills`
+                    : dir;
+                  const isGlobal = dir.endsWith('.claude/skills') && !dir.includes('/.claude/skills') && !dir.includes('\\.claude\\skills');
+
+                  return (
+                    <option key={dir} value={dir}>
+                      {isGlobal ? '~/.claude/skills (Global)' : displayPath}
+                    </option>
+                  );
+                })}
+              </select>
             )}
+
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              {symlinkEnabled ? (
+                <>
+                  <svg className="h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>Linked</span>
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <span>Not linked</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
+      )}
 
       {/* Loading state */}
       {isLoading && (
