@@ -252,6 +252,22 @@ export interface FSEvent {
 export type FilterSource = 'all' | 'local' | 'registry' | 'private-repo';
 export type SortBy = 'name' | 'modified';
 
+/**
+ * Version comparison result for skill updates
+ */
+export interface VersionComparison {
+  /** Whether an update is available (remote > local) */
+  hasUpdate: boolean;
+  /** Whether upload is available (local > remote, private repo only) */
+  canUpload: boolean;
+  /** Local version string */
+  localVersion?: string;
+  /** Remote version string */
+  remoteVersion?: string;
+  /** Remote commit SHA for update tracking */
+  remoteSHA?: string;
+}
+
 export interface UIState {
   /** Currently selected skill path */
   selectedSkill: string | null;

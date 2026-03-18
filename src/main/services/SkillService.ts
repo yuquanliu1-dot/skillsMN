@@ -17,10 +17,11 @@ import { decryptPAT } from '../utils/encryption';
 import { SkillModel } from '../models/Skill';
 import { SkillDirectoryModel } from '../models/SkillDirectory';
 import { createLocalSource, isRegistrySkill, isPrivateRepoSkill } from '../models/SkillSource';
-import { Configuration, Skill } from '../../shared/types';
+import { Configuration, Skill, VersionComparison } from '../../shared/types';
 import { SKILL_FILE_NAME, SOURCE_METADATA_FILE } from '../../shared/constants';
 import { SymlinkService } from './SymlinkService';
 import { app } from 'electron';
+import { compareVersions } from '../utils/versionUtils';
 
 export class SkillService {
   private frontmatterCache: Map<string, { data: any; timestamp: number }> = new Map();
@@ -389,9 +390,9 @@ export class SkillService {
 
   /**
    * Check for updates to skills installed from private repositories and registry
-   * Compares local commit SHAs with remote repository commit SHAs
+   * Compares local versions with remote versions to determine update/upload status
    * @param skills - Array of skills to check for updates
-   * @returns Map of skill paths to update status and remote SHA
+   * @returns Map of skill paths to version comparison result
    * @example
    * const skills = await skillService.listAllSkills(config);
    * const updates = await skillService.checkForUpdates(skills);
@@ -399,12 +400,15 @@ export class SkillService {
    *   if (status.hasUpdate) {
    *     console.log('Update available for:', path);
    *   }
+   *   if (status.canUpload) {
+   *     console.log('Can upload to remote:', path);
+   *   }
    * });
    */
   async checkForUpdates(
     skills: Skill[]
-  ): Promise<Map<string, { hasUpdate: boolean; remoteSHA?: string }>> {
-    const updateMap = new Map<string, { hasUpdate: boolean; remoteSHA?: string }>();
+  ): Promise<Map<string, VersionComparison>> {
+    const updateMap = new Map<string, VersionComparison>();
 
     for (const skill of skills) {
       try {
@@ -421,7 +425,7 @@ export class SkillService {
             updateMap.set(skill.path, result);
           }
         } else if (isPrivateRepoSkill(skill.sourceMetadata)) {
-          // Check private repo skill for updates
+          // Check private repo skill for updates (also checks for upload)
           const result = await this.checkPrivateRepoSkillForUpdates(skill, skill.sourceMetadata);
           if (result) {
             updateMap.set(skill.path, result);
@@ -438,12 +442,12 @@ export class SkillService {
 
   /**
    * Check for updates to a registry-installed skill
-   * Compares local commit SHA with remote repository commit SHA
+   * Compares local version with remote version and commit SHA
    */
   private async checkRegistrySkillForUpdates(
     skill: Skill,
     sourceMetadata: import('../models/SkillSource').RegistrySource
-  ): Promise<{ hasUpdate: boolean; remoteSHA?: string } | null> {
+  ): Promise<VersionComparison | null> {
     if (!sourceMetadata.commitHash) {
       logger.debug('No commit hash stored for registry skill, skipping update check', 'SkillService', {
         skillPath: skill.path
@@ -474,11 +478,53 @@ export class SkillService {
       }
 
       const latestCommitSHA = commits[0].sha;
-      const hasUpdate = latestCommitSHA !== sourceMetadata.commitHash;
+      const commitChanged = latestCommitSHA !== sourceMetadata.commitHash;
+
+      // Default to commit-based detection if version comparison is not possible
+      let hasUpdate = commitChanged;
+      let remoteVersion: string | undefined;
+
+      // Try to fetch remote version for comparison
+      if (commitChanged && skill.version) {
+        try {
+          const remoteContent = await GitHubService.getPrivateRepoSkillContent(
+            owner,
+            repo,
+            `${sourceMetadata.skillId}/${SKILL_FILE_NAME}`,
+            '', // No PAT needed for public repos
+            'main'
+          );
+
+          // Extract version from remote content's frontmatter
+          const versionMatch = remoteContent.match(/^version:\s*["']?([^"'\n]+)["']?\s*$/m);
+          if (versionMatch) {
+            remoteVersion = versionMatch[1].trim();
+
+            // Compare versions: only show update if remote version is newer
+            const versionComparison = compareVersions(skill.version, remoteVersion);
+            hasUpdate = versionComparison < 0; // Remote is newer
+
+            logger.debug('Registry skill version comparison', 'SkillService', {
+              skill: skill.name,
+              localVersion: skill.version,
+              remoteVersion,
+              hasUpdate,
+            });
+          }
+        } catch (versionError) {
+          // Fall back to commit-based detection if version fetch fails
+          logger.debug('Failed to fetch remote version, using commit-based detection', 'SkillService', {
+            skill: skill.name,
+            error: versionError instanceof Error ? versionError.message : versionError,
+          });
+        }
+      }
 
       if (hasUpdate) {
         logger.info(`Update available for registry skill: ${skill.name}`, 'SkillService', {
           skillPath: skill.path,
+          localVersion: skill.version,
+          remoteVersion,
           localSHA: sourceMetadata.commitHash,
           remoteSHA: latestCommitSHA,
         });
@@ -486,6 +532,9 @@ export class SkillService {
 
       return {
         hasUpdate,
+        canUpload: false, // Registry skills don't support upload
+        localVersion: skill.version,
+        remoteVersion,
         remoteSHA: latestCommitSHA,
       };
     } catch (error) {
@@ -496,12 +545,12 @@ export class SkillService {
 
   /**
    * Check for updates to a private repo-installed skill
-   * Compares local commit SHA with remote repository commit SHA
+   * Compares local version with remote version to determine update/upload status
    */
   private async checkPrivateRepoSkillForUpdates(
     skill: Skill,
     sourceMetadata: import('../models/SkillSource').PrivateRepoSource
-  ): Promise<{ hasUpdate: boolean; remoteSHA?: string } | null> {
+  ): Promise<VersionComparison | null> {
     if (!sourceMetadata.commitHash) {
       logger.debug('No commit hash stored for private repo skill, skipping update check', 'SkillService', {
         skillPath: skill.path
@@ -538,18 +587,90 @@ export class SkillService {
 
       if (commits && commits.length > 0) {
         const latestCommitSHA = commits[0].sha;
-        const hasUpdate = latestCommitSHA !== sourceMetadata.commitHash;
+        const commitChanged = latestCommitSHA !== sourceMetadata.commitHash;
+
+        // Default to commit-based detection
+        let hasUpdate = commitChanged;
+        let canUpload = false;
+        let remoteVersion: string | undefined;
+
+        // Try to fetch remote version for comparison
+        if (skill.version) {
+          try {
+            const remoteContent = await GitHubService.getPrivateRepoSkillContent(
+              owner,
+              repoName,
+              `${sourceMetadata.skillPath}/${SKILL_FILE_NAME}`,
+              pat,
+              branch
+            );
+
+            // Extract version from remote content's frontmatter
+            const versionMatch = remoteContent.match(/^version:\s*["']?([^"'\n]+)["']?\s*$/m);
+            if (versionMatch) {
+              remoteVersion = versionMatch[1].trim();
+
+              // Compare versions
+              const versionComparison = compareVersions(skill.version, remoteVersion);
+
+              if (versionComparison < 0) {
+                // Local < Remote: show update
+                hasUpdate = true;
+                canUpload = false;
+              } else if (versionComparison > 0) {
+                // Local > Remote: show upload
+                hasUpdate = false;
+                canUpload = true;
+              } else {
+                // Versions equal: use commit-based detection
+                hasUpdate = commitChanged;
+                canUpload = false;
+              }
+
+              logger.debug('Private repo skill version comparison', 'SkillService', {
+                skill: skill.name,
+                localVersion: skill.version,
+                remoteVersion,
+                versionComparison,
+                hasUpdate,
+                canUpload,
+              });
+            }
+          } catch (versionError) {
+            // Fall back to commit-based detection if version fetch fails
+            logger.debug('Failed to fetch remote version, using commit-based detection', 'SkillService', {
+              skill: skill.name,
+              error: versionError instanceof Error ? versionError.message : versionError,
+            });
+          }
+        } else if (commitChanged) {
+          // No local version, use commit-based detection
+          hasUpdate = true;
+        }
 
         if (hasUpdate) {
           logger.info(`Update available for private repo skill: ${skill.name}`, 'SkillService', {
             skillPath: skill.path,
+            localVersion: skill.version,
+            remoteVersion,
             localSHA: sourceMetadata.commitHash,
             remoteSHA: latestCommitSHA,
           });
         }
 
+        if (canUpload) {
+          logger.info(`Local version newer for private repo skill: ${skill.name}`, 'SkillService', {
+            skillPath: skill.path,
+            localVersion: skill.version,
+            remoteVersion,
+          });
+        }
+
         return {
           hasUpdate,
+          canUpload,
+          localVersion: skill.version,
+          remoteVersion,
           remoteSHA: latestCommitSHA,
         };
       }

@@ -28,6 +28,7 @@ import type {
   MigrationOptions,
   MigrationProgress,
   MigrationResult,
+  VersionComparison,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
@@ -68,7 +69,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   checkForUpdates: (
     skills: Skill[]
-  ): Promise<IPCResponse<Record<string, { hasUpdate: boolean; remoteSHA?: string }>>> => {
+  ): Promise<IPCResponse<Record<string, VersionComparison>>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_CHECK_UPDATES, { skills });
   },
 

@@ -11,6 +11,7 @@ import type {
   SkillSource,
   IPCResponse,
   PrivateRepo,
+  VersionComparison,
 } from '../../shared/types';
 
 /**
@@ -97,7 +98,7 @@ export const ipcClient = {
     }
   },
 
-  async checkForUpdates(skills: Skill[]): Promise<Record<string, { hasUpdate: boolean; remoteSHA?: string }>> {
+  async checkForUpdates(skills: Skill[]): Promise<Record<string, VersionComparison>> {
     if (!isElectron()) {
       console.warn('[IPC Client] Cannot check updates in browser mode');
       return {};

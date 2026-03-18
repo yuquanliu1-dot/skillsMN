@@ -18,6 +18,11 @@ import type {
   MigrationOptions,
   MigrationProgress,
   MigrationResult,
+  VersionComparison,
+  RateLimitInfo,
+  CuratedSource,
+  SearchResult,
+  InstallProgress,
 } from '../../shared/types';
 
 export interface ElectronAPI {
@@ -34,7 +39,7 @@ export interface ElectronAPI {
   openFolder: (path: string) => Promise<IPCResponse<void>>;
   checkForUpdates: (
     skills: Skill[]
-  ) => Promise<IPCResponse<Record<string, { hasUpdate: boolean; remoteSHA?: string }>>>;
+  ) => Promise<IPCResponse<Record<string, VersionComparison>>>;
   updateSkillFromSource: (
     skillPath: string,
     createBackup?: boolean

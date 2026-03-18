@@ -5,7 +5,7 @@
  */
 
 import React, { createContext, useReducer, useEffect, useState, useCallback, useRef } from 'react';
-import type { Configuration, Skill, UIState, FilterSource, SortBy, PrivateSkill, PrivateRepo, MigrationOptions, MigrationResult } from '../shared/types';
+import type { Configuration, Skill, UIState, FilterSource, SortBy, PrivateSkill, PrivateRepo, MigrationOptions, MigrationResult, VersionComparison } from '../shared/types';
 import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
@@ -115,7 +115,7 @@ export default function App(): JSX.Element {
   const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | null>(null);
-  const [skillUpdates, setSkillUpdates] = useState<Record<string, { hasUpdate: boolean; remoteSHA?: string }>>({});
+  const [skillUpdates, setSkillUpdates] = useState<Record<string, VersionComparison>>({});
 
   // Ref to store latest loadSkills function for file watcher callback
   const loadSkillsRef = useRef<() => Promise<void>>(async () => {});
@@ -785,6 +785,7 @@ export default function App(): JSX.Element {
                 selectedSkillPath={selectedSkillPath}
                 skillUpdates={skillUpdates}
                 onSkillUpdate={handleUpdateSkill}
+                onSkillUpload={handleUploadSkill}
               />
             </div>
 

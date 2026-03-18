@@ -6,7 +6,7 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { FixedSizeList as List } from 'react-window';
-import type { Skill, FilterSource, SortBy } from '../../shared/types';
+import type { Skill, FilterSource, SortBy, VersionComparison } from '../../shared/types';
 import { SKILL_LIST_ITEM_HEIGHT } from '../../shared/constants';
 import SkillCard from './SkillCard';
 import { ipcClient } from '../services/ipcClient';
@@ -20,8 +20,9 @@ interface SkillListProps {
   onDeleteSkill?: (skill: Skill) => void;
   onOpenFolder?: (skill: Skill) => void;
   selectedSkillPath?: string | null;
-  skillUpdates?: Record<string, { hasUpdate: boolean; remoteSHA?: string }>;
+  skillUpdates?: Record<string, VersionComparison>;
   onSkillUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
+  onSkillUpload?: (skill: Skill) => Promise<void>;
 }
 
 export default function SkillList({
@@ -35,6 +36,7 @@ export default function SkillList({
   selectedSkillPath,
   skillUpdates = {},
   onSkillUpdate,
+  onSkillUpload,
 }: SkillListProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
@@ -104,7 +106,7 @@ export default function SkillList({
   const Row = useCallback(
     ({ index, style }: { index: number; style: React.CSSProperties }) => {
       const skill = filteredAndSortedSkills[index];
-      const updateInfo = skillUpdates[skill.path];
+      const versionStatus = skillUpdates[skill.path];
 
       return (
         <div style={style}>
@@ -116,14 +118,15 @@ export default function SkillList({
               onDelete={onDeleteSkill}
               onOpenFolder={onOpenFolder}
               isSelected={skill.path === selectedSkillPath}
-              hasUpdate={updateInfo?.hasUpdate || false}
+              versionStatus={versionStatus}
               onUpdate={handleSkillUpdate}
+              onUpload={onSkillUpload}
             />
           </div>
         </div>
       );
     },
-    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath, skillUpdates, handleSkillUpdate]
+    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath, skillUpdates, handleSkillUpdate, onSkillUpload]
   );
 
   // Update list height on container resize
