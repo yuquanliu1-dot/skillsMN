@@ -495,6 +495,8 @@ export interface PrivateSkill {
   fileCount?: number;
   directoryCommitSHA?: string;
   skillFilePath?: string; // Path to SKILL.md file
+  description?: string; // Skill description from frontmatter
+  tags?: string[]; // Skill tags from frontmatter
 }
 
 export interface ContentValidationResult {
