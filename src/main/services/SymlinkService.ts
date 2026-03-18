@@ -16,6 +16,21 @@ export class SymlinkService {
   private readonly SYMLINKS_DB_FILE = '.symlinks.json';
   private readonly DB_VERSION = 1;
 
+  // In-memory cache for symlinks database
+  private databaseCache: Map<string, SymlinksDatabase> = new Map();
+
+  /**
+   * Expand tilde (~) in path to actual home directory
+   * @param filePath - Path that may contain ~
+   * @returns Expanded path
+   */
+  private expandTilde(filePath: string): string {
+    if (filePath.startsWith('~/') || filePath === '~') {
+      return filePath.replace('~', os.homedir());
+    }
+    return filePath;
+  }
+
   /**
    * Get path to symlinks database file
    * Database is stored in application skills directory
@@ -27,10 +42,21 @@ export class SymlinkService {
   /**
    * Load symlinks database from disk
    * Creates empty database if it doesn't exist
+   * Uses in-memory cache to reduce file system reads
    * @param appSkillsDir - Application skills directory path
    * @returns Symlinks database object
    */
   async loadDatabase(appSkillsDir: string): Promise<SymlinksDatabase> {
+    // Check cache first
+    const cached = this.databaseCache.get(appSkillsDir);
+    if (cached) {
+      logger.debug('Symlinks database loaded from cache', 'SymlinkService', {
+        path: appSkillsDir,
+        symlinkCount: Object.keys(cached.symlinks).length,
+      });
+      return cached;
+    }
+
     const dbPath = this.getSymlinksDatabasePath(appSkillsDir);
 
     try {
@@ -38,7 +64,10 @@ export class SymlinkService {
         const content = await fs.promises.readFile(dbPath, 'utf-8');
         const db = JSON.parse(content) as SymlinksDatabase;
 
-        logger.debug('Symlinks database loaded', 'SymlinkService', {
+        // Cache the loaded database
+        this.databaseCache.set(appSkillsDir, db);
+
+        logger.debug('Symlinks database loaded from disk', 'SymlinkService', {
           path: dbPath,
           symlinkCount: Object.keys(db.symlinks).length,
         });
@@ -58,12 +87,16 @@ export class SymlinkService {
       symlinks: {},
     };
 
+    // Cache the empty database
+    this.databaseCache.set(appSkillsDir, emptyDb);
+
     logger.info('Created new symlinks database', 'SymlinkService', { path: dbPath });
     return emptyDb;
   }
 
   /**
    * Save symlinks database to disk
+   * Updates in-memory cache after successful save
    * @param appSkillsDir - Application skills directory path
    * @param db - Symlinks database to save
    */
@@ -77,6 +110,9 @@ export class SymlinkService {
       // Write database
       const content = JSON.stringify(db, null, 2);
       await fs.promises.writeFile(dbPath, content, 'utf-8');
+
+      // Update cache
+      this.databaseCache.set(appSkillsDir, db);
 
       logger.debug('Symlinks database saved', 'SymlinkService', {
         path: dbPath,
@@ -92,6 +128,22 @@ export class SymlinkService {
   }
 
   /**
+   * Clear the in-memory cache for a specific directory or all directories
+   * @param appSkillsDir - Optional directory to clear cache for. If not provided, clears all.
+   */
+  clearCache(appSkillsDir?: string): void {
+    if (appSkillsDir) {
+      this.databaseCache.delete(appSkillsDir);
+      logger.debug('Symlinks database cache cleared for directory', 'SymlinkService', {
+        path: appSkillsDir,
+      });
+    } else {
+      this.databaseCache.clear();
+      logger.debug('Symlinks database cache cleared for all directories', 'SymlinkService');
+    }
+  }
+
+  /**
    * Create symlink from skill directory to target directory
    * Uses junction on Windows (no admin required), symlink on Unix
    * @param skillPath - Source skill directory path (in app directory)
@@ -99,12 +151,16 @@ export class SymlinkService {
    * @throws Error if symlink creation fails or target already exists
    */
   async createSymlink(skillPath: string, targetDir: string): Promise<void> {
+    // Expand tilde in target directory path
+    const expandedTargetDir = this.expandTilde(targetDir);
     const skillName = path.basename(skillPath);
-    const linkPath = path.join(targetDir, skillName);
+    const linkPath = path.join(expandedTargetDir, skillName);
 
     logger.info('Creating symlink', 'SymlinkService', {
       source: skillPath,
       target: linkPath,
+      originalTargetDir: targetDir,
+      expandedTargetDir,
       platform: process.platform,
     });
 
@@ -134,7 +190,7 @@ export class SymlinkService {
       }
 
       // Ensure target directory exists
-      await fs.promises.mkdir(targetDir, { recursive: true });
+      await fs.promises.mkdir(expandedTargetDir, { recursive: true });
 
       // Create symlink with platform-appropriate type
       if (process.platform === 'win32') {
@@ -162,10 +218,12 @@ export class SymlinkService {
    * @param targetDir - Target directory containing symlink
    */
   async removeSymlink(skillPath: string, targetDir: string): Promise<void> {
+    // Expand tilde in target directory path
+    const expandedTargetDir = this.expandTilde(targetDir);
     const skillName = path.basename(skillPath);
-    const linkPath = path.join(targetDir, skillName);
+    const linkPath = path.join(expandedTargetDir, skillName);
 
-    logger.info('Removing symlink', 'SymlinkService', { linkPath });
+    logger.info('Removing symlink', 'SymlinkService', { linkPath, originalTargetDir: targetDir });
 
     try {
       // Check if symlink exists

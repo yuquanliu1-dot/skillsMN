@@ -120,6 +120,9 @@ export class ConfigurationModel {
       editorDefaultMode: config.editorDefaultMode ?? DEFAULT_EDITOR_MODE,
       autoRefresh: config.autoRefresh ?? DEFAULT_AUTO_REFRESH,
       skillEditor: config.skillEditor ?? DEFAULT_SKILL_EDITOR_CONFIG,
+      applicationSkillsDirectory: config.applicationSkillsDirectory,
+      migrationCompleted: config.migrationCompleted,
+      migrationPreferenceAsked: config.migrationPreferenceAsked,
     };
   }
 
@@ -155,6 +158,9 @@ export class ConfigurationModel {
       editorDefaultMode: updates.editorDefaultMode ?? existing.editorDefaultMode,
       autoRefresh: updates.autoRefresh ?? existing.autoRefresh,
       skillEditor: updates.skillEditor ?? existing.skillEditor ?? DEFAULT_SKILL_EDITOR_CONFIG,
+      applicationSkillsDirectory: updates.applicationSkillsDirectory ?? existing.applicationSkillsDirectory,
+      migrationCompleted: updates.migrationCompleted ?? existing.migrationCompleted,
+      migrationPreferenceAsked: updates.migrationPreferenceAsked ?? existing.migrationPreferenceAsked,
     };
   }
 

@@ -119,8 +119,9 @@ export default function App(): JSX.Element {
 
   // Ref to store latest loadSkills function for file watcher callback
   const loadSkillsRef = useRef<() => Promise<void>>(async () => {});
+  // Ref to prevent concurrent loadSkills calls
+  const isLoadingSkillsRef = useRef(false);
   const [showAICreationDialog, setShowAICreationDialog] = useState(false);
-  const [aiCreationDirectory, setAICreationDirectory] = useState<'project' | 'global'>('project');
   const [viewingPrivateSkill, setViewingPrivateSkill] = useState<{
     skill: PrivateSkill;
     repo: PrivateRepo;
@@ -290,7 +291,14 @@ export default function App(): JSX.Element {
       return;
     }
 
+    // Prevent concurrent loads
+    if (isLoadingSkillsRef.current) {
+      console.log('⚠️ [loadSkills] Already loading, skipping duplicate call');
+      return;
+    }
+
     try {
+      isLoadingSkillsRef.current = true;
       console.log('🔄 [loadSkills] Starting to load skills...');
       const skills = await ipcClient.listSkills(state.config);
       console.log(`✅ [loadSkills] Loaded ${skills.length} skills`);
@@ -298,6 +306,8 @@ export default function App(): JSX.Element {
     } catch (error) {
       console.error('❌ [loadSkills] Failed to load skills:', error);
       dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
+    } finally {
+      isLoadingSkillsRef.current = false;
     }
   }, [state.config]);
 
@@ -467,9 +477,10 @@ export default function App(): JSX.Element {
   /**
    * Handle create skill
    */
-  const handleCreateSkill = async (name: string, directory: 'project' | 'global'): Promise<void> => {
+  const handleCreateSkill = async (name: string): Promise<void> => {
     try {
-      const response = await window.electronAPI.createSkill(name, directory);
+      // Skills are always created in the application directory
+      const response = await window.electronAPI.createSkill(name);
       if (!response.success) {
         throw new Error(response.error?.message || 'Failed to create skill');
       }
@@ -650,19 +661,25 @@ export default function App(): JSX.Element {
    * Handle viewing discover skill content
    */
   const handleViewDiscoverSkill = async (skill: any) => {
+    console.log('🔍 handleViewDiscoverSkill called with skill:', skill);
     try {
       // Fetch skill content from the registry
+      console.log('📡 Fetching skill content from registry...', skill.source, skill.skillId);
       const response = await window.electronAPI.getRegistrySkillContent(
         skill.source,
         skill.skillId
       );
 
+      console.log('📦 Registry response:', response);
+
       if (response.success && response.data) {
+        console.log('✅ Skill content loaded, length:', response.data.length);
         setViewingDiscoverSkill({
           skill,
           content: response.data,
         });
       } else {
+        console.error('❌ Failed to load skill content:', response.error);
         throw new Error(response.error?.message || 'Failed to load skill content');
       }
     } catch (error) {
@@ -944,19 +961,16 @@ export default function App(): JSX.Element {
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onCreateSkill={handleCreateSkill}
-        onOpenAICreation={(directory) => {
-          setAICreationDirectory(directory);
+        onOpenAICreation={() => {
           setShowCreateDialog(false);
           setShowAICreationDialog(true);
         }}
-        defaultDirectory={state.config?.defaultInstallDirectory || 'project'}
       />
 
       {/* AI Skill Creation Dialog */}
       <AISkillCreationDialog
         isOpen={showAICreationDialog}
         onClose={() => setShowAICreationDialog(false)}
-        directory={aiCreationDirectory}
         onSkillCreated={() => {
           loadSkills();
           showToast('Skill created successfully with AI!', 'success');
