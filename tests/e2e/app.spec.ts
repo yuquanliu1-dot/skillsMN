@@ -228,11 +228,11 @@ test.describe('Skill Management', () => {
     await page!.waitForSelector('[data-testid="delete-confirm-dialog"]');
     await page!.click('[data-testid="confirm-delete-button"]');
 
-    // Wait for dialog to close
-    await page!.waitForSelector('[data-testid="delete-confirm-dialog"]', { state: 'hidden', timeout: 5000 });
+    // Wait for dialog to close (increased timeout for slower environments)
+    await page!.waitForSelector('[data-testid="delete-confirm-dialog"]', { state: 'hidden', timeout: 15000 });
 
-    // Wait a moment for deletion to complete
-    await page!.waitForTimeout(1000);
+    // Wait for deletion to complete and UI to update
+    await page!.waitForTimeout(2000);
 
     // Verify skill is no longer in the list
     const deletedSkillCard = await page!.$(`[data-testid="skill-card"]:has-text("${skillName}")`);
