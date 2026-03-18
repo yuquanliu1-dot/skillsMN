@@ -36,6 +36,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
   const [newRepoInstanceUrl, setNewRepoInstanceUrl] = useState('');
   const [isAddingRepo, setIsAddingRepo] = useState(false);
   const [testingRepoId, setTestingRepoId] = useState<string | null>(null);
+  const [repoTestResults, setRepoTestResults] = useState<Record<string, { success: boolean; error?: string }>>({});
 
   // Step 3: AI Configuration
   const [aiConfig, setAiConfig] = useState<AIConfiguration | null>(null);
@@ -50,6 +51,27 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
       loadAIConfig();
     }
   }, [currentStep, aiConfig]);
+
+  // Load existing private repos when private repos step is shown
+  useEffect(() => {
+    if (currentStep === 'private-repos') {
+      loadPrivateRepos();
+    }
+  }, [currentStep]);
+
+  /**
+   * Load existing private repositories configuration
+   */
+  const loadPrivateRepos = async () => {
+    try {
+      const response = await window.electronAPI.listPrivateRepos();
+      if (response.success && response.data) {
+        setPrivateRepos(response.data);
+      }
+    } catch (err) {
+      console.error('Load private repos error:', err);
+    }
+  };
 
   /**
    * Load AI configuration
@@ -181,6 +203,42 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
       console.error('Add repo error:', err);
     } finally {
       setIsAddingRepo(false);
+    }
+  };
+
+  /**
+   * Handle test repository connection
+   */
+  const handleTestRepoConnection = async (repoId: string) => {
+    setTestingRepoId(repoId);
+    setError(null);
+
+    try {
+      const response = await window.electronAPI.testPrivateRepoConnection(repoId);
+
+      if (response.success && response.data) {
+        setRepoTestResults(prev => ({
+          ...prev,
+          [repoId]: { success: response.data!.valid }
+        }));
+      } else {
+        setRepoTestResults(prev => ({
+          ...prev,
+          [repoId]: {
+            success: false,
+            error: response.error?.message || 'Connection test failed'
+          }
+        }));
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Connection test failed';
+      setRepoTestResults(prev => ({
+        ...prev,
+        [repoId]: { success: false, error: message }
+      }));
+      console.error('Test repo connection error:', err);
+    } finally {
+      setTestingRepoId(null);
     }
   };
 
@@ -617,17 +675,60 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                             </svg>
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-semibold text-slate-900">
-                              {repo.displayName || `${repo.owner}/${repo.repo}`}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-slate-900">
+                                {repo.displayName || `${repo.owner}/${repo.repo}`}
+                              </p>
+                              <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${
+                                repo.provider === 'github' ? 'bg-gray-100 text-gray-700' : 'bg-orange-100 text-orange-700'
+                              }`}>
+                                {repo.provider}
+                              </span>
+                            </div>
                             <p className="text-xs text-slate-500 mt-1 font-mono">{repo.url}</p>
+                            {repoTestResults[repo.id] && (
+                              <div className={`mt-2 text-xs flex items-center gap-1 ${
+                                repoTestResults[repo.id].success ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {repoTestResults[repo.id].success ? (
+                                  <>
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span>Connection verified</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    <span>{repoTestResults[repo.id].error || 'Connection failed'}</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                          repo.provider === 'github' ? 'bg-gray-100 text-gray-700' : 'bg-orange-100 text-orange-700'
-                        }`}>
-                          {repo.provider}
-                        </span>
+                        <button
+                          onClick={() => handleTestRepoConnection(repo.id)}
+                          disabled={testingRepoId === repo.id}
+                          className="px-3 py-1.5 text-xs font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                          title="Test connection"
+                        >
+                          {testingRepoId === repo.id ? (
+                            <>
+                              <div className="w-3 h-3 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                              <span>Testing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              <span>Test</span>
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
                   ))}

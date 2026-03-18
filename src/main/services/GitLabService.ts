@@ -541,7 +541,7 @@ export class GitLabService {
     branch: string = 'main',
     commitMessage?: string,
     instanceUrl?: string
-  ): Promise<{ success: boolean; uploadedCount?: number; errors?: string[]; error?: string }> {
+  ): Promise<{ success: boolean; uploadedCount?: number; commitSha?: string; errors?: string[]; error?: string }> {
     const baseUrl = instanceUrl || 'https://gitlab.com';
     const projectId = encodeURIComponent(`${owner}/${repo}`);
     const REQUEST_TIMEOUT = 30000; // 30 seconds timeout
@@ -661,21 +661,49 @@ export class GitLabService {
         }
       }
 
+      // Get the latest commit SHA after upload
+      let commitSha: string | undefined;
+      try {
+        const commitResponse = await fetchWithTimeout(
+          `${baseUrl}/api/v4/projects/${projectId}/repository/commits?ref_name=${branch}&per_page=1`,
+          {
+            method: 'GET',
+            headers: {
+              'PRIVATE-TOKEN': pat,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (commitResponse.ok) {
+          const commits = await commitResponse.json();
+          if (commits && commits.length > 0) {
+            commitSha = commits[0].id;
+            logger.debug('Retrieved latest commit SHA after upload', 'GitLabService', { commitSha });
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to retrieve commit SHA after upload', 'GitLabService', { error });
+      }
+
       if (uploadedCount === files.length) {
         logger.info('All files uploaded successfully', 'GitLabService', {
           uploadedCount,
           totalFiles: files.length,
+          commitSha,
         });
-        return { success: true, uploadedCount };
+        return { success: true, uploadedCount, commitSha };
       } else if (uploadedCount > 0) {
         logger.warn('Partial upload completed', 'GitLabService', {
           uploadedCount,
           totalFiles: files.length,
           errors,
+          commitSha,
         });
         return {
           success: true,
           uploadedCount,
+          commitSha,
           errors: errors.length > 0 ? errors : undefined,
         };
       } else {

@@ -145,6 +145,26 @@ export class PrivateRepoService {
       const finalProvider = provider || detectedProvider;
       const finalInstanceUrl = instanceUrl || detectedInstanceUrl;
 
+      // Check for duplicate PAT
+      if (!this.config) {
+        await this.initialize();
+      }
+
+      for (const existingRepo of this.config!.repositories) {
+        try {
+          const existingPat = safeStorage.decryptString(Buffer.from(existingRepo.patEncrypted, 'base64'));
+          if (existingPat === pat) {
+            throw new Error(`This PAT is already used by repository: ${existingRepo.displayName || existingRepo.url}. Please use a different PAT.`);
+          }
+        } catch (decryptError) {
+          // If decryption fails, skip this repo (it might be corrupted)
+          logger.warn('Failed to decrypt PAT for comparison', 'PrivateRepoService', {
+            repoId: existingRepo.id,
+            error: decryptError
+          });
+        }
+      }
+
       // Get appropriate provider service
       const gitProvider = getGitProvider(finalProvider);
 
@@ -170,10 +190,6 @@ export class PrivateRepoService {
       newRepo.description = connectionTest.repository?.description;
 
       // Add to config
-      if (!this.config) {
-        await this.initialize();
-      }
-
       this.config!.repositories.push(newRepo);
       await this.saveConfig();
 
@@ -943,7 +959,11 @@ export class PrivateRepoService {
           repoId,
           skillPath,
           uploadedCount: result.uploadedCount,
+          commitSha: result.commitSha,
         });
+
+        // Update skill's source metadata to private-repo
+        await this.updateSkillSourceToPrivateRepo(skillPath, repoId, repo, skillDirName, result.commitSha);
       }
 
       return result;
@@ -953,6 +973,49 @@ export class PrivateRepoService {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  /**
+   * Update a skill's source metadata to private-repo after uploading
+   * This ensures future update checks are performed against the private repository
+   * @param skillPath - Local path of the skill directory
+   * @param repoId - ID of the private repository
+   * @param repo - Private repository object
+   * @param skillDirName - Skill directory name
+   * @param commitSha - Optional commit SHA from the upload
+   * @private
+   */
+  private static async updateSkillSourceToPrivateRepo(
+    skillPath: string,
+    repoId: string,
+    repo: PrivateRepo,
+    skillDirName: string,
+    commitSha?: string
+  ): Promise<void> {
+    try {
+      const metadataPath = path.join(skillPath, SOURCE_METADATA_FILE);
+
+      // Create new private-repo source metadata
+      const newSourceMetadata = createPrivateRepoSource(
+        repoId,
+        `${repo.owner}/${repo.repo}`,
+        skillDirName,
+        commitSha
+      );
+
+      // Write the updated metadata
+      await fs.writeJson(metadataPath, newSourceMetadata, { spaces: 2 });
+
+      logger.info('Updated skill source metadata to private-repo', 'PrivateRepoService', {
+        skillPath,
+        repoId,
+        repoPath: `${repo.owner}/${repo.repo}`,
+        skillDirName,
+      });
+    } catch (error) {
+      logger.error('Failed to update skill source metadata', 'PrivateRepoService', error);
+      // Don't throw - this is not critical to the upload operation
     }
   }
 }
