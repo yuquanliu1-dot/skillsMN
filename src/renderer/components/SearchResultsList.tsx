@@ -16,6 +16,8 @@ interface SearchResultsListProps {
 }
 
 export const SearchResultsList: React.FC<SearchResultsListProps> = ({ results, targetDirectory, onInstallComplete, onSkillClick }) => {
+  console.log('📋 SearchResultsList render, onSkillClick exists:', !!onSkillClick);
+
   if (results.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">

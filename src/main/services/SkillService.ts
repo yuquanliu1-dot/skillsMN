@@ -199,6 +199,20 @@ export class SkillService {
     // Get skill metadata (with cache)
     const metadata = await SkillModel.fromDirectory(validatedPath, source, this.frontmatterCache);
 
+    // Enrich with symlink information
+    if (this.symlinkService) {
+      try {
+        const config = await this.getConfig();
+        const appDir = this.getApplicationSkillsDirectory(config);
+        const symlinkDb = await this.symlinkService.loadDatabase(appDir);
+        const skillName = path.basename(validatedPath);
+        metadata.symlinkConfig = symlinkDb.symlinks[skillName];
+        metadata.isSymlinked = metadata.symlinkConfig?.enabled ?? false;
+      } catch (error) {
+        logger.warn('Failed to load symlink info for skill', 'SkillService', { error });
+      }
+    }
+
     // Read skill content
     const skillFile = path.join(validatedPath, SKILL_FILE_NAME);
     const content = await fs.promises.readFile(skillFile, 'utf-8');
@@ -219,7 +233,7 @@ export class SkillService {
    * const skill = await skillService.createSkill('Code Review', 'project');
    * console.log('Created:', skill.name, 'at', skill.path);
    */
-  async createSkill(name: string, directory: 'project' | 'global'): Promise<Skill> {
+  async createSkill(name: string, _directory?: 'project' | 'global' | 'application'): Promise<Skill> {
     logger.info(`Creating skill: ${name}`, 'SkillService');
 
     // Get application directory (always use application directory)

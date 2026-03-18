@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Configuration, InstallDirectory, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig } from '../../shared/types';
+import type { Configuration, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig } from '../../shared/types';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -17,7 +17,6 @@ interface SettingsProps {
 export default function Settings({ isOpen, onClose, config, onSave }: SettingsProps): JSX.Element | null {
   console.log('[Settings] Component rendering', { isOpen, activeTab: undefined });
 
-  const [defaultInstallDirectory, setDefaultInstallDirectory] = useState<InstallDirectory>('project');
   const [editorDefaultMode, setEditorDefaultMode] = useState<EditorMode>('edit');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -74,7 +73,6 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
    */
   useEffect(() => {
     if (isOpen && config) {
-      setDefaultInstallDirectory(config.defaultInstallDirectory);
       setEditorDefaultMode(config.editorDefaultMode);
       setAutoRefresh(config.autoRefresh);
       setProjectDirectories(config.projectDirectories || []);
@@ -206,7 +204,6 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
 
     try {
       await onSave({
-        defaultInstallDirectory,
         editorDefaultMode,
         autoRefresh,
         skillEditor: skillEditorConfig,
@@ -712,26 +709,6 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
             )}
           </div>
 
-          {/* Default Install Directory */}
-          <div className="mb-3">
-            <label
-              htmlFor="default-install-directory"
-              className="block text-sm font-medium text-slate-700 mb-1.5"
-            >
-              Default Install Directory
-            </label>
-            <select
-              id="default-install-directory"
-              value={defaultInstallDirectory}
-              onChange={(e) => setDefaultInstallDirectory(e.target.value as InstallDirectory)}
-              className="select w-full"
-              disabled={isSaving}
-            >
-              <option value="project">Project Directory</option>
-              <option value="global">Global Directory</option>
-            </select>
-          </div>
-
           {/* Editor Default Mode */}
           <div className="mb-3">
             <label
@@ -770,9 +747,14 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
           <div className="pt-4 border-t border-slate-200">
             <h3 className="text-sm font-medium text-slate-700 mb-2.5">Keyboard Shortcuts</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+              {/* General Shortcuts */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">Create new skill</span>
                 <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+N</kbd>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600">Refresh skill list</span>
+                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+R</kbd>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">Save skill</span>
@@ -786,9 +768,22 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 <span className="text-slate-600">Delete skill</span>
                 <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Delete</kbd>
               </div>
-              <div className="flex items-center justify-between text-sm col-span-2">
+              <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">Close dialog</span>
-                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Escape</kbd>
+                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Esc</kbd>
+              </div>
+
+              {/* AI Shortcuts */}
+              <div className="col-span-2 pt-2 mt-2 border-t border-slate-100">
+                <div className="text-xs font-medium text-slate-500 mb-2">AI Shortcuts (in editor)</div>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600">AI Rewrite</span>
+                <kbd className="px-2 py-0.5 bg-purple-50 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+R</kbd>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600">AI Insert</span>
+                <kbd className="px-2 py-0.5 bg-purple-50 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+I</kbd>
               </div>
             </div>
           </div>

@@ -148,8 +148,28 @@ async function initialize(): Promise<void> {
     fileWatcher = new FileWatcher(pathValidator);
     logger.info('File watcher initialized', 'Main');
 
-    // Register skill handlers with path validator
-    registerSkillHandlers(pathValidator);
+    // Initialize services for symlink and migration first
+    const symlinkService = new SymlinkService();
+    const skillService = new SkillService(pathValidator, symlinkService);
+    const migrationService = new MigrationService(skillService);
+
+    // Ensure application skills directory exists
+    await skillService.ensureApplicationDirectory(config);
+    logger.info('Application skills directory ensured', 'Main');
+
+    // Set application directory on path validator and update config
+    const appDir = skillService.getApplicationSkillsDirectory(config);
+    pathValidator.setApplicationDirectory(appDir);
+    logger.info('Application directory set on path validator', 'Main', { appDir });
+
+    // Update config with applicationSkillsDirectory if not already set
+    if (!config.applicationSkillsDirectory) {
+      await configService.save({ applicationSkillsDirectory: appDir });
+      logger.info('Updated config with applicationSkillsDirectory', 'Main', { appDir });
+    }
+
+    // Register skill handlers with path validator and symlink service
+    registerSkillHandlers(pathValidator, symlinkService);
     logger.info('Skill handlers registered', 'Main');
 
     // Register AI handlers
@@ -170,20 +190,6 @@ async function initialize(): Promise<void> {
     // Register Private Repository handlers
     await registerPrivateRepoHandlers(pathValidator);
     logger.info('Private repository handlers registered', 'Main');
-
-    // Initialize services for symlink and migration
-    const symlinkService = new SymlinkService();
-    const skillService = new SkillService(pathValidator, symlinkService);
-    const migrationService = new MigrationService(skillService);
-
-    // Ensure application skills directory exists
-    await skillService.ensureApplicationDirectory(config);
-    logger.info('Application skills directory ensured', 'Main');
-
-    // Set application directory on path validator
-    const appDir = skillService.getApplicationSkillsDirectory(config);
-    pathValidator.setApplicationDirectory(appDir);
-    logger.info('Application directory set on path validator', 'Main', { appDir });
 
     // Register symlink handlers
     registerSymlinkHandlers(symlinkService, skillService, configService);

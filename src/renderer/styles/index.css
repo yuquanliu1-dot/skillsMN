@@ -213,18 +213,6 @@
     letter-spacing: 0.025em;
   }
 
-  .badge-project {
-    background: rgba(59, 130, 246, 0.15);
-    color: #60A5FA;                   /* Blue-400 */
-    border: 1px solid rgba(59, 130, 246, 0.3);
-  }
-
-  .badge-global {
-    background: rgba(168, 85, 247, 0.15);
-    color: #C084FC;                   /* Purple-400 */
-    border: 1px solid rgba(168, 85, 247, 0.3);
-  }
-
   .badge-success {
     background: rgba(16, 185, 129, 0.15);
     color: #34D399;                   /* Green-400 */
@@ -241,6 +229,24 @@
     background: rgba(239, 68, 68, 0.15);
     color: #F87171;                   /* Red-400 */
     border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .badge-local {
+    background: rgba(107, 114, 128, 0.15);
+    color: #9CA3AF;                   /* Gray-400 */
+    border: 1px solid rgba(107, 114, 128, 0.3);
+  }
+
+  .badge-registry {
+    background: rgba(6, 182, 212, 0.15);
+    color: #22D3EE;                   /* Cyan-400 */
+    border: 1px solid rgba(6, 182, 212, 0.3);
+  }
+
+  .badge-private {
+    background: rgba(168, 85, 247, 0.15);
+    color: #C084FC;                   /* Purple-400 */
+    border: 1px solid rgba(168, 85, 247, 0.3);
   }
 
   /* --------------------------------------------------------------------------
@@ -820,4 +826,40 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+}
+
+/* ============================================================================
+   MONACO EDITOR CONTEXT MENU ICONS
+   ============================================================================ */
+
+/* AI Rewrite context menu item */
+.monaco-menu .action-label[aria-label*="AI Rewrite"],
+.monaco-menu .action-label[title*="AI Rewrite"] {
+  position: relative;
+  padding-left: 28px !important;
+}
+
+.monaco-menu .action-label[aria-label*="AI Rewrite"]::before,
+.monaco-menu .action-label[title*="AI Rewrite"]::before {
+  content: "✨";
+  position: absolute;
+  left: 8px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* AI Insert context menu item */
+.monaco-menu .action-label[aria-label*="AI Insert"],
+.monaco-menu .action-label[title*="AI Insert"] {
+  position: relative;
+  padding-left: 28px !important;
+}
+
+.monaco-menu .action-label[aria-label*="AI Insert"]::before,
+.monaco-menu .action-label[title*="AI Insert"]::before {
+  content: "🪄";
+  position: absolute;
+  left: 8px;
+  font-size: 16px;
+  line-height: 1;
 }

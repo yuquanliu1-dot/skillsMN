@@ -110,15 +110,12 @@ export function useCreateSkill() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createSkill = useCallback(async (name: string, directory: 'project' | 'global'): Promise<Skill | null> => {
+  const createSkill = useCallback(async (name: string): Promise<Skill | null> => {
     setCreating(true);
     setError(null);
 
     try {
-      const response = await window.electronAPI.createSkill(
-        name,
-        directory
-      );
+      const response = await window.electronAPI.createSkill(name);
 
       if (response.success && response.data) {
         return response.data;

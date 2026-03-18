@@ -1,10 +1,11 @@
 /**
  * InstallDialog Component
  *
- * Modal dialog for installing skills from the registry with tool selection
+ * Modal dialog for installing skills from the registry
+ * All skills are installed to the centralized application directory
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { XMarkIcon } from './icons/XMarkIcon';
 import { ExclamationTriangleIcon } from './icons/ExclamationTriangleIcon';
 import { ArrowPathIcon } from './icons/ArrowPathIcon';
@@ -15,9 +16,10 @@ interface InstallDialogProps {
   skillId: string;
   source: string;
   onClose: () => void;
-  onInstall: (targetToolId: string) => Promise<void>;
+  onInstall: () => Promise<void>;
   isInstalling: boolean;
   installProgress?: string;
+  installError?: string;
 }
 
 /**
@@ -82,9 +84,8 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
   onInstall,
   isInstalling,
   installProgress,
+  installError,
 }) => {
-  const [selectedTool, setSelectedTool] = useState<string>('claude-code');
-  const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -92,9 +93,6 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
   useEffect(() => {
     if (isOpen && cancelButtonRef.current) {
       cancelButtonRef.current.focus();
-    }
-    if (!isOpen) {
-      setError(null);
     }
   }, [isOpen]);
 
@@ -113,21 +111,14 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
   }, [isOpen, isInstalling, onClose]);
 
   const handleInstall = async () => {
-    setError(null);
     try {
-      await onInstall(selectedTool);
+      await onInstall();
+      // Only close on success - errors are displayed in the dialog
       onClose();
     } catch (err: any) {
-      setError({
-        code: err.code || 'REGISTRY_INSTALLATION_ERROR',
-        message: err.message || 'Installation failed'
-      });
+      // Error is handled by parent component and passed via installError prop
+      console.error('Install error:', err);
     }
-  };
-
-  const handleRetry = () => {
-    setError(null);
-    handleInstall();
   };
 
   const getErrorConfig = (errorCode: string) => {
@@ -140,9 +131,6 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
   };
 
   if (!isOpen) return null;
-
-  const currentErrorConfig = error ? getErrorConfig(error.code) : null;
-  const canRetry = currentErrorConfig?.retryable && !isInstalling;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -193,47 +181,13 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
             <p className="text-sm font-mono text-slate-900 dark:text-white">{source}</p>
           </div>
 
-          {/* Tool Selection */}
-          {!error && (
-            <div>
-              <label className="block text-sm font-medium text-slate-900 dark:text-white mb-3">
-                Install to Tool
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md cursor-pointer hover:border-primary transition-colors">
-                  <input
-                    type="radio"
-                    name="targetTool"
-                    value="claude-code"
-                    checked={selectedTool === 'claude-code'}
-                    onChange={(e) => setSelectedTool(e.target.value)}
-                    className="w-4 h-4 text-primary focus:ring-primary cursor-pointer"
-                    disabled={isInstalling}
-                  />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-slate-900 dark:text-white">Claude Code</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Install for Claude Code CLI</div>
-                  </div>
-                </label>
-
-                <label className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md cursor-pointer hover:border-primary transition-colors">
-                  <input
-                    type="radio"
-                    name="targetTool"
-                    value="claude-desktop"
-                    checked={selectedTool === 'claude-desktop'}
-                    onChange={(e) => setSelectedTool(e.target.value)}
-                    className="w-4 h-4 text-primary focus:ring-primary cursor-pointer"
-                    disabled={isInstalling}
-                  />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-slate-900 dark:text-white">Claude Desktop</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Install for Claude Desktop app</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          )}
+          {/* Installation Info */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-md p-3">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              This skill will be installed to the application's skill directory.
+              You can configure symlink settings after installation.
+            </p>
+          </div>
 
           {/* Progress */}
           {isInstalling && installProgress && (
@@ -246,72 +200,37 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
           )}
 
           {/* Error */}
-          {error && currentErrorConfig && (
-            <div className="space-y-3">
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
-                <div className="flex items-start gap-3">
-                  <ExclamationTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-1">
-                      {currentErrorConfig.title}
-                    </h3>
-                    <p className="text-sm text-red-700 dark:text-red-300 mb-2">
-                      {error.message}
-                    </p>
-                    <p className="text-xs text-red-600 dark:text-red-400 font-medium">
-                      {currentErrorConfig.action}
-                    </p>
-                  </div>
+          {installError && (
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-md p-3">
+              <div className="flex items-start gap-3">
+                <ExclamationTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200">Installation Failed</p>
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1">{installError}</p>
                 </div>
               </div>
-
-              {/* Retry Button */}
-              {canRetry && (
-                <button
-                  onClick={handleRetry}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md transition-colors cursor-pointer"
-                >
-                  <ArrowPathIcon className="w-4 h-4" />
-                  Try Again
-                </button>
-              )}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        {!error && (
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
-            <button
-              onClick={onClose}
-              disabled={isInstalling}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleInstall}
-              disabled={isInstalling}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-600 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {isInstalling ? 'Installing...' : 'Install'}
-            </button>
-          </div>
-        )}
-
-        {/* Error Footer */}
-        {error && (
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500"
-            >
-              Close
-            </button>
-          </div>
-        )}
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
+          <button
+            onClick={onClose}
+            disabled={isInstalling}
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleInstall}
+            disabled={isInstalling}
+            className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-600 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {isInstalling ? 'Installing...' : 'Install'}
+          </button>
+        </div>
       </div>
     </div>
   );
 };
-

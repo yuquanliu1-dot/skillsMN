@@ -24,7 +24,7 @@ export interface ElectronAPI {
   // Skill Operations
   listSkills: (config?: Configuration) => Promise<IPCResponse<Skill[]>>;
   getSkill: (path: string) => Promise<IPCResponse<{ metadata: Skill; content: string }>>;
-  createSkill: (name: string, directory: string) => Promise<IPCResponse<Skill>>;
+  createSkill: (name: string) => Promise<IPCResponse<Skill>>;
   updateSkill: (
     path: string,
     content: string,
@@ -104,7 +104,6 @@ export interface ElectronAPI {
   installPrivateRepoSkill: (params: {
     repoId: string;
     skillPath: string;
-    targetDirectory: 'project' | 'global';
     conflictResolution?: 'overwrite' | 'rename' | 'skip';
   }) => Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>>;
   checkPrivateSkillUpdates: () => Promise<IPCResponse<Map<string, { hasUpdate: boolean }>>>;

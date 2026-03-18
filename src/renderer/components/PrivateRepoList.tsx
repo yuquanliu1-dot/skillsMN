@@ -4,9 +4,11 @@
  * Displays and browses skills from configured private repositories
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { PrivateRepo, PrivateSkill } from '../../shared/types';
 import PrivateSkillCard from './PrivateSkillCard';
+
+type SortBy = 'name' | 'modified';
 
 interface PrivateRepoListProps {
   onInstallSkill?: (skill: PrivateSkill, repo: PrivateRepo) => void;
@@ -46,12 +48,32 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
   const [skills, setSkills] = useState<PrivateSkill[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('name');
   const [isLoadingRepos, setIsLoadingRepos] = useState(true);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAuthError, setIsAuthError] = useState(false);
   const [visibleCount, setVisibleCount] = useState(50); // Pagination for large lists
+
+  // Sort skills
+  const sortedSkills = useMemo(() => {
+    if (!skills || skills.length === 0) return skills;
+
+    const sorted = [...skills];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'modified':
+          return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [skills, sortBy]);
 
   /**
    * Load repositories on mount
@@ -225,6 +247,11 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
     <div data-testid="private-repos-list" className="h-full flex flex-col">
       {/* Header with filters and search */}
       <div className="border-b border-gray-200 p-4 space-y-3 flex-shrink-0 bg-white">
+        {/* Title */}
+        <h2 className="text-lg font-semibold text-gray-900">
+          Private Repositories
+        </h2>
+
         {/* Top row: Search + Refresh button */}
         <div className="flex items-center gap-3">
           {/* Search */}
@@ -278,7 +305,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
           </button>
         </div>
 
-        {/* Bottom row: Repository selector + Skills count */}
+        {/* Bottom row: Repository selector + Skills count + Sort */}
         <div className="flex items-center gap-4 flex-wrap">
           {/* Repository selector */}
           <div className="flex items-center gap-2 flex-1">
@@ -302,11 +329,30 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
             </select>
           </div>
 
-          {/* Skills count */}
+          {/* Skills count and Sort */}
           {selectedRepoId && skills.length > 0 && (
-            <div className="text-sm text-gray-500">
-              {skills.length} skills
-            </div>
+            <>
+              <span className="text-xs text-gray-500">
+                {skills.length} skills
+              </span>
+
+              <div className="flex items-center gap-1 ml-auto">
+                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                <select
+                  id="sort-by-private"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortBy)}
+                  className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
+                  aria-label="Sort by"
+                  title="Sort skills"
+                >
+                  <option value="name">Name</option>
+                  <option value="modified">Date</option>
+                </select>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -413,7 +459,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
               </button>
             )}
           </div>
-        ) : skills.length === 0 ? (
+        ) : sortedSkills.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,7 +483,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
         ) : (
           <>
             <ul className="space-y-0">
-              {skills.slice(0, visibleCount).map((skill) => (
+              {sortedSkills.slice(0, visibleCount).map((skill) => (
                 <li key={skill.path}>
                   <PrivateSkillCard
                     skill={skill}
@@ -450,22 +496,22 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
             </ul>
 
             {/* Load More Button for Large Lists */}
-            {skills.length > visibleCount && (
+            {sortedSkills.length > visibleCount && (
               <div className="mt-4 text-center">
                 <button
                   onClick={() => setVisibleCount(prev => prev + 50)}
                   className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  aria-label={`Load more skills (${skills.length - visibleCount} remaining)`}
+                  aria-label={`Load more skills (${sortedSkills.length - visibleCount} remaining)`}
                 >
-                  Load More ({skills.length - visibleCount} remaining)
+                  Load More ({sortedSkills.length - visibleCount} remaining)
                 </button>
               </div>
             )}
 
             {/* Skills Count Indicator */}
-            {skills.length > 50 && (
+            {sortedSkills.length > 50 && (
               <div className="mt-2 text-center text-xs text-gray-500">
-                Showing {Math.min(visibleCount, skills.length)} of {skills.length} skills
+                Showing {Math.min(visibleCount, sortedSkills.length)} of {sortedSkills.length} skills
               </div>
             )}
           </>

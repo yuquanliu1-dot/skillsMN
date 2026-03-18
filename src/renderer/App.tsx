@@ -768,6 +768,7 @@ export default function App(): JSX.Element {
                 onSkillClick={(skill) => setEditingSkill(skill)}
                 onSkillSelect={(skill) => setSelectedSkillPath(skill.path)}
                 onCreateSkill={() => setShowCreateDialog(true)}
+                onOpenAICreation={() => setShowAICreationDialog(true)}
                 onDeleteSkill={(skill) => setDeletingSkill(skill)}
                 onOpenFolder={handleOpenFolder}
                 selectedSkillPath={selectedSkillPath}
@@ -961,10 +962,6 @@ export default function App(): JSX.Element {
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onCreateSkill={handleCreateSkill}
-        onOpenAICreation={() => {
-          setShowCreateDialog(false);
-          setShowAICreationDialog(true);
-        }}
       />
 
       {/* AI Skill Creation Dialog */}
