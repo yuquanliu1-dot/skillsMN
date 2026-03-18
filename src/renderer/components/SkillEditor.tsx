@@ -190,7 +190,7 @@ export default function SkillEditor({
     // Add custom context menu action for AI Rewrite
     editor.addAction({
       id: 'ai-rewrite',
-      label: 'AI Rewrite',
+      label: '\u2728 AI Rewrite',  // ✨ sparkle emoji as Unicode
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyR],
       contextMenuGroupId: 'navigation',
       contextMenuOrder: 1.5,
@@ -231,7 +231,7 @@ export default function SkillEditor({
     // Add custom context menu action for AI Insert
     editor.addAction({
       id: 'ai-insert',
-      label: 'AI Insert',
+      label: '\u{1FA84} AI Insert',  // 🪄 magic wand emoji as Unicode
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyI],
       contextMenuGroupId: 'navigation',
       contextMenuOrder: 1.6,

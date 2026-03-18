@@ -832,36 +832,38 @@
    MONACO EDITOR CONTEXT MENU ICONS
    ============================================================================ */
 
-/* AI Rewrite context menu item */
-.monaco-menu .action-label[aria-label*="AI Rewrite"],
-.monaco-menu .action-label[title*="AI Rewrite"] {
-  position: relative;
-  padding-left: 28px !important;
+/* Universal approach: Add icons to all action labels in Monaco menus */
+.monaco-menu .action-item .action-label::before {
+  margin-right: 6px;
+  font-size: 14px;
 }
 
-.monaco-menu .action-label[aria-label*="AI Rewrite"]::before,
-.monaco-menu .action-label[title*="AI Rewrite"]::before {
-  content: "✨";
-  position: absolute;
-  left: 8px;
-  font-size: 16px;
-  line-height: 1;
+/* Specific icons for AI Rewrite and AI Insert */
+.monaco-menu .action-item:nth-child(n) .action-label::before {
+  content: "";
 }
 
-/* AI Insert context menu item */
-.monaco-menu .action-label[aria-label*="AI Insert"],
-.monaco-menu .action-label[title*="AI Insert"] {
-  position: relative;
-  padding-left: 28px !important;
+/* Try multiple selector strategies for AI Rewrite */
+.monaco-menu .action-item .action-label[action-label*="AI Rewrite"]::before,
+.monaco-menu .action-item .action-label[aria-label*="AI Rewrite"]::before,
+.monaco-menu .action-item .action-label[title*="AI Rewrite"]::before {
+  content: "✨ " !important;
 }
 
-.monaco-menu .action-label[aria-label*="AI Insert"]::before,
-.monaco-menu .action-label[title*="AI Insert"]::before {
-  content: "🪄";
-  position: absolute;
-  left: 8px;
-  font-size: 16px;
-  line-height: 1;
+/* Try multiple selector strategies for AI Insert */
+.monaco-menu .action-item .action-label[action-label*="AI Insert"]::before,
+.monaco-menu .action-item .action-label[aria-label*="AI Insert"]::before,
+.monaco-menu .action-item .action-label[title*="AI Insert"]::before {
+  content: "🪄 " !important;
+}
+
+/* Debug: Add red border to confirm CSS is loaded */
+.monaco-menu {
+  border: 1px solid transparent;
+}
+
+.monaco-menu:hover {
+  border: 1px solid rgba(59, 130, 246, 0.1);
 }
 
 /* ============================================================================
