@@ -4,8 +4,8 @@
  * Root component with React Context for state management
  */
 
-import React, { createContext, useReducer, useEffect, useState } from 'react';
-import type { Configuration, Skill, UIState, FilterSource, SortBy, PrivateSkill, PrivateRepo } from '../shared/types';
+import React, { createContext, useReducer, useEffect, useState, useCallback, useRef } from 'react';
+import type { Configuration, Skill, UIState, FilterSource, SortBy, PrivateSkill, PrivateRepo, MigrationOptions, MigrationResult } from '../shared/types';
 import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
@@ -13,11 +13,15 @@ import CreateSkillDialog from './components/CreateSkillDialog';
 import { lazy, Suspense } from 'react';
 const SkillEditor = lazy(() => import('./components/SkillEditor'));
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
+import UploadToPrivateRepoDialog from './components/UploadToPrivateRepoDialog';
+import CommitChangesDialog from './components/CommitChangesDialog';
 import Settings from './components/Settings';
 import ToastContainer, { ToastMessage } from './components/ToastContainer';
 import PrivateRepoList from './components/PrivateRepoList';
 import Sidebar, { ViewType } from './components/Sidebar';
-import SearchPanel from './components/SearchPanel';
+import { RegistrySearchPanel } from './components/RegistrySearchPanel';
+import { AISkillCreationDialog } from './components/AISkillCreationDialog';
+import MigrationDialog from './components/MigrationDialog';
 
 type MainTab = 'local' | 'private-repos';
 
@@ -105,15 +109,31 @@ export default function App(): JSX.Element {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
+  const [uploadingSkill, setUploadingSkill] = useState<Skill | null>(null);
+  const [committingSkill, setCommittingSkill] = useState<Skill | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | null>(null);
+  const [skillUpdates, setSkillUpdates] = useState<Record<string, { hasUpdate: boolean; remoteSHA?: string }>>({});
+
+  // Ref to store latest loadSkills function for file watcher callback
+  const loadSkillsRef = useRef<() => Promise<void>>(async () => {});
+  // Ref to prevent concurrent loadSkills calls
+  const isLoadingSkillsRef = useRef(false);
+  const [showAICreationDialog, setShowAICreationDialog] = useState(false);
   const [viewingPrivateSkill, setViewingPrivateSkill] = useState<{
     skill: PrivateSkill;
     repo: PrivateRepo;
     content: string;
   } | null>(null);
+  const [viewingDiscoverSkill, setViewingDiscoverSkill] = useState<{
+    skill: any;
+    content: string;
+  } | null>(null);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+  const [migrationGlobalSkills, setMigrationGlobalSkills] = useState<Skill[]>([]);
+  const [migrationProjectSkills, setMigrationProjectSkills] = useState<Skill[]>([]);
 
   /**
    * Load configuration on mount
@@ -126,6 +146,21 @@ export default function App(): JSX.Element {
         // Load configuration
         const config = await ipcClient.loadConfig();
         dispatch({ type: 'SET_CONFIG', payload: config });
+
+        // Check if migration is needed (before setup check)
+        if (!config.migrationPreferenceAsked) {
+          const migrationNeeded = await window.electronAPI.checkMigrationNeeded();
+          if (migrationNeeded.success && migrationNeeded.data) {
+            const skillsResponse = await window.electronAPI.detectExistingSkills();
+            if (skillsResponse.success && skillsResponse.data) {
+              setMigrationGlobalSkills(skillsResponse.data.global);
+              setMigrationProjectSkills(skillsResponse.data.project);
+              setShowMigrationDialog(true);
+              dispatch({ type: 'SET_LOADING', payload: false });
+              return;
+            }
+          }
+        }
 
         // Check if setup is needed
         if (!config.projectDirectory) {
@@ -151,14 +186,31 @@ export default function App(): JSX.Element {
           // Continue anyway - the directory might become available later
         }
 
-        // Start file watcher
-        await ipcClient.startWatching();
+        // Start file watcher if autoRefresh is enabled
+        console.log('🔍 [App.tsx] Checking autoRefresh setting:', config.autoRefresh);
+        if (config.autoRefresh !== false) {  // Default to true if not set
+          console.log('🚀 [App.tsx] AutoRefresh enabled, starting file watcher...');
+          try {
+            await ipcClient.startWatching();
+            console.log('✅ [App.tsx] startWatching() completed successfully');
+          } catch (error) {
+            console.error('❌ [App.tsx] Failed to start file watcher:', error);
+          }
 
-        // Subscribe to file system changes
-        ipcClient.onFSChange(async (event) => {
-          console.log('File system change detected:', event);
-          await loadSkills();
-        });
+          // Remove any existing listener before adding new one
+          ipcClient.removeFSChangeListener();
+
+          // Subscribe to file system changes
+          ipcClient.onFSChange(async (event) => {
+            console.log('🔔 [App.tsx] File system change detected:', event);
+            console.log('🔔 [App.tsx] Calling loadSkills...');
+            await loadSkillsRef.current();
+            console.log('✅ [App.tsx] loadSkills completed');
+          });
+          console.log('File system watcher started on initialization');
+        } else {
+          console.log('⚠️ [App.tsx] AutoRefresh disabled, skipping file watcher');
+        }
 
         dispatch({ type: 'SET_LOADING', payload: false });
       } catch (error) {
@@ -233,38 +285,177 @@ export default function App(): JSX.Element {
   /**
    * Load skills from file system
    */
-  async function loadSkills(): Promise<void> {
-    if (!state.config) return;
+  const loadSkills = useCallback(async (): Promise<void> => {
+    if (!state.config) {
+      console.log('⚠️ [loadSkills] No config, skipping');
+      return;
+    }
+
+    // Prevent concurrent loads
+    if (isLoadingSkillsRef.current) {
+      console.log('⚠️ [loadSkills] Already loading, skipping duplicate call');
+      return;
+    }
 
     try {
+      isLoadingSkillsRef.current = true;
+      console.log('🔄 [loadSkills] Starting to load skills...');
       const skills = await ipcClient.listSkills(state.config);
+      console.log(`✅ [loadSkills] Loaded ${skills.length} skills`);
       dispatch({ type: 'SET_SKILLS', payload: skills });
     } catch (error) {
-      console.error('Failed to load skills:', error);
+      console.error('❌ [loadSkills] Failed to load skills:', error);
       dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
+    } finally {
+      isLoadingSkillsRef.current = false;
     }
-  }
+  }, [state.config]);
+
+  // Keep ref updated with latest loadSkills function
+  loadSkillsRef.current = loadSkills;
+
+  /**
+   * Check for skill updates
+   */
+  const checkForUpdates = useCallback(async (): Promise<void> => {
+    if (!state.skills || state.skills.length === 0) {
+      return;
+    }
+
+    try {
+      console.log('🔄 [checkForUpdates] Checking for skill updates...');
+      const updates = await ipcClient.checkForUpdates(state.skills);
+      console.log(`✅ [checkForUpdates] Found ${Object.keys(updates).filter(k => updates[k].hasUpdate).length} updates`);
+      setSkillUpdates(updates);
+    } catch (error) {
+      console.error('❌ [checkForUpdates] Failed to check for updates:', error);
+      // Don't show error toast for background update checks
+    }
+  }, [state.skills]);
+
+  /**
+   * Handle update skill
+   */
+  const handleUpdateSkill = async (skill: Skill, createBackup: boolean): Promise<void> => {
+    try {
+      const result = await ipcClient.updateSkillFromSource(skill.path, createBackup);
+
+      // Refresh skill list to reflect the update
+      await loadSkills();
+
+      // Re-check for updates
+      await checkForUpdates();
+
+      // Show success notification
+      const skillName = skill.name + (createBackup ? ' (backup created)' : '');
+      showToast(`Skill "${skillName}" updated successfully`, 'success');
+
+      console.log('Skill updated successfully:', skill.name, 'New path:', result.newPath);
+    } catch (error: any) {
+      console.error('Failed to update skill:', error);
+      showToast(`Failed to update skill: ${error.message}`, 'error');
+      throw error;
+    }
+  };
+
+  /**
+   * Handle upload skill to private repository
+   */
+  const handleUploadSkill = async (skill: Skill): Promise<void> => {
+    setUploadingSkill(skill);
+  };
+
+  /**
+   * Handle commit changes to repository
+   */
+  const handleCommitChanges = async (skill: Skill): Promise<void> => {
+    if (!skill.sourceMetadata || skill.sourceMetadata.type === 'local') {
+      showToast('This skill was not installed from a repository', 'error');
+      return;
+    }
+
+    setCommittingSkill(skill);
+  };
+
+  /**
+   * Check for updates when skills are loaded
+   */
+  useEffect(() => {
+    if (state.skills && state.skills.length > 0) {
+      // Check immediately when skills load
+      checkForUpdates();
+
+      // Set up periodic update checking (every 30 minutes)
+      const interval = setInterval(checkForUpdates, 30 * 60 * 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [state.skills?.length, checkForUpdates]);
 
   /**
    * Handle setup completion
    */
   const handleSetupComplete = async (projectDirectory: string): Promise<void> => {
     try {
-      const config = await ipcClient.saveConfig({ projectDirectory });
+      const config = await ipcClient.saveConfig({ projectDirectories: [projectDirectory] });
       dispatch({ type: 'SET_CONFIG', payload: config });
       setShowSetup(false);
 
-      // Start file watcher
-      await ipcClient.startWatching();
+      // Start file watcher if autoRefresh is enabled (default: true)
+      if (config.autoRefresh !== false) {
+        await ipcClient.startWatching();
 
-      // Subscribe to file system changes
-      ipcClient.onFSChange(async (event) => {
-        console.log('File system change detected:', event);
-        await loadSkills();
-      });
+        // Remove any existing listener before adding new one
+        ipcClient.removeFSChangeListener();
+
+        // Subscribe to file system changes
+        ipcClient.onFSChange(async (event) => {
+          console.log('File system change detected:', event);
+          await loadSkillsRef.current();
+        });
+        console.log('File system watcher started after setup');
+      }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
     }
+  };
+
+  /**
+   * Handle migration completion
+   */
+  const handleMigrationComplete = async (skills: Skill[], options: MigrationOptions): Promise<void> => {
+    try {
+      const result = await window.electronAPI.startMigration({ skills, options });
+
+      if (result.success && result.data) {
+        // Update config to mark migration as completed
+        await window.electronAPI.saveConfig({
+          migrationCompleted: true,
+          migrationPreferenceAsked: true,
+        });
+
+        setShowMigrationDialog(false);
+        showToast(`Successfully migrated ${result.data.migratedCount} skills!`, 'success');
+
+        // Reload skills
+        await loadSkills();
+      } else {
+        throw new Error(result.error?.message || 'Migration failed');
+      }
+    } catch (error) {
+      showToast(`Migration failed: ${(error as Error).message}`, 'error');
+      throw error;
+    }
+  };
+
+  /**
+   * Handle migration skip
+   */
+  const handleMigrationSkip = async (): Promise<void> => {
+    await window.electronAPI.saveConfig({
+      migrationPreferenceAsked: true,
+    });
+    setShowMigrationDialog(false);
   };
 
   /**
@@ -286,9 +477,10 @@ export default function App(): JSX.Element {
   /**
    * Handle create skill
    */
-  const handleCreateSkill = async (name: string, directory: 'project' | 'global'): Promise<void> => {
+  const handleCreateSkill = async (name: string): Promise<void> => {
     try {
-      const response = await window.electronAPI.createSkill(name, directory);
+      // Skills are always created in the application directory
+      const response = await window.electronAPI.createSkill(name);
       if (!response.success) {
         throw new Error(response.error?.message || 'Failed to create skill');
       }
@@ -310,7 +502,7 @@ export default function App(): JSX.Element {
   /**
    * Handle save skill content
    */
-  const handleSaveSkill = async (content: string, loadedLastModified?: number): Promise<void> => {
+  const handleSaveSkill = async (content: string, loadedLastModified?: number): Promise<{ lastModified: number } | void> => {
     if (!editingSkill) return;
 
     try {
@@ -328,6 +520,11 @@ export default function App(): JSX.Element {
       showToast('Skill saved successfully', 'success');
 
       console.log('Skill saved successfully:', editingSkill.name);
+
+      // Return the updated lastModified timestamp from the response
+      if (response.data && response.data.lastModified) {
+        return { lastModified: new Date(response.data.lastModified).getTime() };
+      }
     } catch (error: any) {
       console.error('Failed to save skill:', error);
 
@@ -389,10 +586,36 @@ export default function App(): JSX.Element {
    */
   const handleSaveSettings = async (settings: Partial<Configuration>): Promise<void> => {
     try {
+      const oldConfig = state.config;
       const updatedConfig = await ipcClient.saveConfig(settings);
 
       // Update local state
       dispatch({ type: 'SET_CONFIG', payload: updatedConfig });
+
+      // Handle autoRefresh changes
+      if (oldConfig && 'autoRefresh' in settings) {
+        const wasWatching = oldConfig.autoRefresh !== false;
+        const shouldWatch = updatedConfig.autoRefresh !== false;
+
+        if (!wasWatching && shouldWatch) {
+          // Start watching
+          await ipcClient.startWatching();
+
+          // Remove any existing listener before adding new one
+          ipcClient.removeFSChangeListener();
+
+          ipcClient.onFSChange(async (event) => {
+            console.log('File system change detected:', event);
+            await loadSkillsRef.current();
+          });
+          console.log('File system watcher started');
+        } else if (wasWatching && !shouldWatch) {
+          // Stop watching
+          await ipcClient.stopWatching();
+          ipcClient.removeFSChangeListener();
+          console.log('File system watcher stopped');
+        }
+      }
 
       console.log('Settings saved successfully');
     } catch (error) {
@@ -406,13 +629,19 @@ export default function App(): JSX.Element {
    */
   const handleViewPrivateSkill = async (skill: PrivateSkill) => {
     try {
-      const repo = state.config?.privateRepos?.find(r => r.id === skill.repoId);
+      // Get repository from PrivateRepoService
+      const reposResponse = await window.electronAPI.listPrivateRepos();
+      if (!reposResponse.success || !reposResponse.data) {
+        throw new Error('Failed to load repositories');
+      }
+
+      const repo = reposResponse.data.find(r => r.id === skill.repoId);
       if (!repo) {
         showToast('Repository not found', 'error');
         return;
       }
 
-      const response = await window.electronAPI.getPrivateRepoSkillContent(repo.id, skill.path);
+      const response = await window.electronAPI.getPrivateRepoSkillContent(repo.id, skill.skillFilePath || skill.path);
       if (response.success && response.data) {
         setViewingPrivateSkill({
           skill,
@@ -424,6 +653,37 @@ export default function App(): JSX.Element {
       }
     } catch (error) {
       console.error('Failed to view private skill:', error);
+      showToast(`Failed to load skill: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
+  };
+
+  /**
+   * Handle viewing discover skill content
+   */
+  const handleViewDiscoverSkill = async (skill: any) => {
+    console.log('🔍 handleViewDiscoverSkill called with skill:', skill);
+    try {
+      // Fetch skill content from the registry
+      console.log('📡 Fetching skill content from registry...', skill.source, skill.skillId);
+      const response = await window.electronAPI.getRegistrySkillContent(
+        skill.source,
+        skill.skillId
+      );
+
+      console.log('📦 Registry response:', response);
+
+      if (response.success && response.data) {
+        console.log('✅ Skill content loaded, length:', response.data.length);
+        setViewingDiscoverSkill({
+          skill,
+          content: response.data,
+        });
+      } else {
+        console.error('❌ Failed to load skill content:', response.error);
+        throw new Error(response.error?.message || 'Failed to load skill content');
+      }
+    } catch (error) {
+      console.error('Failed to view discover skill:', error);
       showToast(`Failed to load skill: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
@@ -469,6 +729,21 @@ export default function App(): JSX.Element {
   }
 
   /**
+   * Render migration dialog if needed
+   */
+  if (showMigrationDialog) {
+    return (
+      <MigrationDialog
+        isOpen={showMigrationDialog}
+        globalSkills={migrationGlobalSkills}
+        projectSkills={migrationProjectSkills}
+        onMigrate={handleMigrationComplete}
+        onSkip={handleMigrationSkip}
+      />
+    );
+  }
+
+  /**
    * Render main application
    */
   return (
@@ -478,13 +753,14 @@ export default function App(): JSX.Element {
         <Sidebar
           currentView={currentView}
           onViewChange={setCurrentView}
+          onSettingsClick={() => setShowSettings(true)}
           config={state.config}
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden" data-testid="main-content">
           {/* Skills List - Column 2 (flexible) */}
-          <div className="flex-1 max-w-[360px] border-r border-gray-200 bg-white overflow-hidden flex flex-col">
+          <div className="flex-1 max-w-[360px] border-r border-gray-200 bg-white overflow-hidden flex flex-col" data-testid="skills-list">
             {/* Keep all views mounted but hidden to preserve state */}
             <div style={{ display: currentView === 'skills' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
               <SkillList
@@ -495,15 +771,16 @@ export default function App(): JSX.Element {
                 onDeleteSkill={(skill) => setDeletingSkill(skill)}
                 onOpenFolder={handleOpenFolder}
                 selectedSkillPath={selectedSkillPath}
+                skillUpdates={skillUpdates}
+                onSkillUpdate={handleUpdateSkill}
               />
             </div>
 
             <div style={{ display: currentView === 'discover' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
-              <SearchPanel
-                isOpen={true}
-                onClose={() => setCurrentView('skills')}
+              <RegistrySearchPanel
+                config={state.config}
                 onInstallComplete={loadSkills}
-                isInline={true}
+                onSkillClick={handleViewDiscoverSkill}
               />
             </div>
 
@@ -512,20 +789,12 @@ export default function App(): JSX.Element {
                 onSkillClick={handleViewPrivateSkill}
               />
             </div>
-
-            <div style={{ display: currentView === 'settings' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
-              <Settings
-                isOpen={true}
-                onClose={() => setCurrentView('skills')}
-                config={state.config}
-                onSave={handleSaveSettings}
-              />
-            </div>
           </div>
 
           {/* Detail Panel - Column 3 (adaptive width) */}
-          <div className="flex-1 border-l border-gray-200 bg-white overflow-hidden">
-            {editingSkill ? (
+          <div className="flex-1 border-l border-gray-200 bg-white overflow-hidden" data-testid="detail-panel">
+            {/* Skills View - Show editing skill or empty state */}
+            {currentView === 'skills' && editingSkill ? (
               <Suspense
                 fallback={
                   <div className="flex items-center justify-center h-full">
@@ -538,9 +807,89 @@ export default function App(): JSX.Element {
                   onClose={() => setEditingSkill(null)}
                   onSave={handleSaveSkill}
                   isInline={true}
+                  config={state.config?.skillEditor}
+                  onUploadSkill={handleUploadSkill}
+                  onCommitChanges={handleCommitChanges}
                 />
               </Suspense>
-            ) : viewingPrivateSkill ? (
+            ) : currentView === 'skills' && !editingSkill ? (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-lg font-medium">No Skill Selected</p>
+                  <p className="text-sm text-gray-400 mt-2">Select a skill to view details</p>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Discover View - Show discover skill or empty state */}
+            {currentView === 'discover' && viewingDiscoverSkill ? (
+              <div className="h-full flex flex-col">
+                <div className="p-4 border-b border-gray-200 bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        {viewingDiscoverSkill.skill.name}
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {viewingDiscoverSkill.skill.source}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setViewingDiscoverSkill(null)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      aria-label="Close preview"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-text-muted">Loading editor...</div>
+                      </div>
+                    }
+                  >
+                    <SkillEditor
+                      skill={{
+                        path: viewingDiscoverSkill.skill.skillId,
+                        name: viewingDiscoverSkill.skill.name,
+                        source: 'project',
+                        lastModified: new Date(),
+                        resourceCount: 0,
+                      }}
+                      content={viewingDiscoverSkill.content}
+                      onClose={() => setViewingDiscoverSkill(null)}
+                      onSave={async () => {
+                        showToast('Registry skills are read-only. Install them to edit.', 'info');
+                      }}
+                      isInline={true}
+                      readOnly={true}
+                      config={state.config?.skillEditor}
+                    />
+                  </Suspense>
+                </div>
+              </div>
+            ) : currentView === 'discover' && !viewingDiscoverSkill ? (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <p className="text-lg font-medium">No Skill Selected</p>
+                  <p className="text-sm text-gray-400 mt-2">Search and select a skill to preview</p>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Private Repos View - Show private skill or empty state */}
+            {currentView === 'private-repos' && viewingPrivateSkill ? (
               <div className="h-full flex flex-col">
                 <div className="p-4 border-b border-gray-200 bg-gray-50">
                   <div className="flex items-start justify-between">
@@ -582,25 +931,27 @@ export default function App(): JSX.Element {
                       content={viewingPrivateSkill.content}
                       onClose={() => setViewingPrivateSkill(null)}
                       onSave={async () => {
-                        showToast('Private repository skills are read-only', 'info');
+                        showToast('Private repository skills are read-only. Install them to edit.', 'info');
                       }}
                       isInline={true}
                       readOnly={true}
+                      config={state.config?.skillEditor}
                     />
                   </Suspense>
                 </div>
               </div>
-            ) : (
+            ) : currentView === 'private-repos' && !viewingPrivateSkill ? (
               <div className="h-full flex items-center justify-center text-gray-400">
                 <div className="text-center">
                   <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-2-4a2 2 0 114 0v1h-4v-1z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                   </svg>
                   <p className="text-lg font-medium">No Skill Selected</p>
-                  <p className="text-sm text-gray-400 mt-2">Select a skill to view details</p>
+                  <p className="text-sm text-gray-400 mt-2">Select a skill from private repos to preview</p>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -610,7 +961,20 @@ export default function App(): JSX.Element {
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onCreateSkill={handleCreateSkill}
-        defaultDirectory={state.config?.defaultInstallDirectory || 'project'}
+        onOpenAICreation={() => {
+          setShowCreateDialog(false);
+          setShowAICreationDialog(true);
+        }}
+      />
+
+      {/* AI Skill Creation Dialog */}
+      <AISkillCreationDialog
+        isOpen={showAICreationDialog}
+        onClose={() => setShowAICreationDialog(false)}
+        onSkillCreated={() => {
+          loadSkills();
+          showToast('Skill created successfully with AI!', 'success');
+        }}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -621,8 +985,44 @@ export default function App(): JSX.Element {
         onConfirm={handleDeleteSkill}
       />
 
+      {/* Upload to Private Repository Dialog */}
+      {uploadingSkill && (
+        <UploadToPrivateRepoDialog
+          isOpen={uploadingSkill !== null}
+          skill={uploadingSkill}
+          onClose={() => setUploadingSkill(null)}
+          onSuccess={() => {
+            showToast(`Skill "${uploadingSkill.name}" uploaded successfully!`, 'success');
+            setUploadingSkill(null);
+            loadSkills(); // Refresh skill list to update sourceMetadata
+          }}
+        />
+      )}
+
+      {/* Commit Changes Dialog */}
+      {committingSkill && (
+        <CommitChangesDialog
+          isOpen={committingSkill !== null}
+          skill={committingSkill}
+          onClose={() => setCommittingSkill(null)}
+          onSuccess={() => {
+            showToast(`Changes committed successfully for "${committingSkill.name}"!`, 'success');
+            setCommittingSkill(null);
+            loadSkills(); // Refresh skill list
+          }}
+        />
+      )}
+
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {/* Settings Modal */}
+      <Settings
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        config={state.config}
+        onSave={handleSaveSettings}
+      />
     </AppContext.Provider>
   );
 }

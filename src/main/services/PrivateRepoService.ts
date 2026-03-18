@@ -11,10 +11,14 @@ import { safeStorage } from 'electron';
 import { logger } from '../utils/Logger';
 import { PrivateRepoModel } from '../models/PrivateRepo';
 import { GitHubService } from './GitHubService';
+import { GitLabService } from './GitLabService';
+import { getGitProvider } from './GitProvider';
 import { SkillService } from './SkillService';
+import { SymlinkService } from './SymlinkService';
 import { PathValidator } from './PathValidator';
-import type { PrivateRepo, PrivateRepoConfig, PrivateSkill } from '../../shared/types';
-import { PRIVATE_REPOS_FILE_NAME } from '../../shared/constants';
+import { createPrivateRepoSource } from '../models/SkillSource';
+import type { PrivateRepo, PrivateRepoConfig, PrivateSkill, Configuration } from '../../shared/types';
+import { PRIVATE_REPOS_FILE_NAME, SOURCE_METADATA_FILE } from '../../shared/constants';
 
 export class PrivateRepoService {
   private static configPath: string | null = null;
@@ -105,31 +109,47 @@ export class PrivateRepoService {
   /**
    * Add a private repository configuration
    * Validates URL, tests connection, and encrypts PAT before storing
-   * @param url - GitHub repository URL (https://github.com/owner/repo)
+   * @param url - Repository URL (GitHub or GitLab)
    * @param pat - Personal Access Token with repo access
    * @param displayName - Optional friendly name for the repository
+   * @param provider - Git provider ('github' or 'gitlab')
+   * @param instanceUrl - Optional instance URL for self-hosted GitLab
    * @returns Created PrivateRepo object with encrypted PAT
    * @throws Error if URL is invalid, connection fails, or save fails
    * @example
    * const repo = await PrivateRepoService.addRepo(
    *   'https://github.com/myorg/skills',
    *   'ghp_xxxxxxxxxxxx',
-   *   'My Organization Skills'
+   *   'My Organization Skills',
+   *   'github'
    * );
    * console.log('Added repo:', repo.id);
    */
-  static async addRepo(url: string, pat: string, displayName?: string): Promise<PrivateRepo> {
+  static async addRepo(
+    url: string,
+    pat: string,
+    displayName?: string,
+    provider?: 'github' | 'gitlab',
+    instanceUrl?: string
+  ): Promise<PrivateRepo> {
     try {
       // Parse URL
       const parsed = PrivateRepoModel.parseUrl(url);
       if (!parsed) {
-        throw new Error('Invalid repository URL. Must be https://github.com/owner/repo');
+        throw new Error('Invalid repository URL. Must be a valid GitHub or GitLab repository URL');
       }
 
-      const { owner, repo } = parsed;
+      const { owner, repo, provider: detectedProvider, instanceUrl: detectedInstanceUrl } = parsed;
+
+      // Use provided values or fall back to detected values
+      const finalProvider = provider || detectedProvider;
+      const finalInstanceUrl = instanceUrl || detectedInstanceUrl;
+
+      // Get appropriate provider service
+      const gitProvider = getGitProvider(finalProvider);
 
       // Test connection
-      const connectionTest = await GitHubService.testConnection(owner, repo, pat);
+      const connectionTest = await gitProvider.testConnection(owner, repo, pat, finalInstanceUrl);
       if (!connectionTest.valid) {
         throw new Error(connectionTest.error || 'Failed to connect to repository');
       }
@@ -138,7 +158,14 @@ export class PrivateRepoService {
       const patEncrypted = safeStorage.encryptString(pat).toString('base64');
 
       // Create repository entry
-      const newRepo = PrivateRepoModel.create(owner, repo, patEncrypted, displayName);
+      const newRepo = PrivateRepoModel.create(
+        owner,
+        repo,
+        patEncrypted,
+        displayName,
+        finalProvider,
+        finalInstanceUrl
+      );
       newRepo.defaultBranch = connectionTest.repository?.defaultBranch || 'main';
       newRepo.description = connectionTest.repository?.description;
 
@@ -153,6 +180,7 @@ export class PrivateRepoService {
       logger.info('Added private repository', 'PrivateRepoService', {
         id: newRepo.id,
         url: newRepo.url,
+        provider: finalProvider,
       });
 
       return newRepo;
@@ -329,7 +357,16 @@ export class PrivateRepoService {
       // Decrypt PAT
       const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
 
-      const result = await GitHubService.testConnection(repo.owner, repo.repo, pat);
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
+      const result = await gitProvider.testConnection(
+        repo.owner,
+        repo.repo,
+        pat,
+        repo.instanceUrl
+      );
 
       if (result.valid && result.repository) {
         // Update repository metadata
@@ -345,6 +382,50 @@ export class PrivateRepoService {
         valid: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  /**
+   * Parse frontmatter from skill content
+   * Extracts description and tags from YAML frontmatter
+   * @private
+   */
+  private static parseFrontmatterFromContent(content: string): { description?: string; tags?: string[] } {
+    try {
+      // Simple YAML frontmatter parser
+      const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
+      if (!frontmatterMatch) {
+        return {};
+      }
+
+      const frontmatterText = frontmatterMatch[1];
+      const result: { description?: string; tags?: string[] } = {};
+
+      // Parse description
+      const descMatch = frontmatterText.match(/^description:\s*["']?(.+?)["']?\s*$/m);
+      if (descMatch) {
+        result.description = descMatch[1].trim();
+      }
+
+      // Parse tags (array format)
+      const tagsMatch = frontmatterText.match(/^tags:\s*\n(\s+-\s+.+\n?)+/m);
+      if (tagsMatch) {
+        const tagLines = tagsMatch[0].split('\n').filter(line => line.trim().startsWith('-'));
+        result.tags = tagLines.map(line => line.replace(/^\s*-\s*/, '').trim());
+      }
+
+      // Parse tags (inline array format)
+      if (!result.tags) {
+        const tagsInlineMatch = frontmatterText.match(/^tags:\s*\[(.+)\]\s*$/m);
+        if (tagsInlineMatch) {
+          result.tags = tagsInlineMatch[1].split(',').map(tag => tag.trim().replace(/^["']|["']$/g, ''));
+        }
+      }
+
+      return result;
+    } catch (error) {
+      logger.warn('Failed to parse frontmatter from content', 'PrivateRepoService', { error });
+      return {};
     }
   }
 
@@ -371,28 +452,81 @@ export class PrivateRepoService {
       // Decrypt PAT
       const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
 
-      const skills = await GitHubService.getPrivateRepoSkills(
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
+      const skills = await (gitProvider as any).getPrivateRepoSkills?.(
         repo.owner,
         repo.repo,
         pat,
-        repo.defaultBranch
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
+      ) || await (gitProvider as any).getSkills?.(
+        repo.owner,
+        repo.repo,
+        pat,
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
+      );
+
+      // PERFORMANCE: Fetch frontmatter for all skills in parallel
+      // This populates description and tags fields
+      const skillsWithFrontmatter = await Promise.all(
+        skills.map(async (skill: any) => {
+          try {
+            // Fetch SKILL.md content
+            const skillContent = await (gitProvider as any).getPrivateRepoSkillContent?.(
+              repo.owner,
+              repo.repo,
+              skill.skillFilePath || `${skill.path}/SKILL.md`,
+              pat,
+              repo.defaultBranch || 'main',
+              repo.instanceUrl
+            );
+
+            // Parse frontmatter
+            const frontmatter = this.parseFrontmatterFromContent(skillContent || '');
+
+            return {
+              ...skill,
+              ...frontmatter,
+            };
+          } catch (error) {
+            // If frontmatter fetch fails, return skill without description/tags
+            logger.warn('Failed to fetch frontmatter for skill', 'PrivateRepoService', {
+              skillPath: skill.path,
+              error: error instanceof Error ? error.message : error,
+            });
+            return skill;
+          }
+        })
       );
 
       // Convert to PrivateSkill format
-      const privateSkills: PrivateSkill[] = skills.map((skill: any) => ({
-        name: skill.name,
-        path: skill.path,
-        directoryPath: skill.path,
-        downloadUrl: `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repo.defaultBranch}/${skill.skillFilePath}`,
-        lastModified: skill.lastCommitDate || new Date(),
-        repoId: repo.id,
-        repoName: `${repo.owner}/${repo.repo}`,
-        lastCommitMessage: skill.lastCommitMessage,
-        lastCommitAuthor: skill.lastCommitAuthor,
-        lastCommitDate: skill.lastCommitDate,
-        fileCount: 1,
-        directoryCommitSHA: skill.directoryCommitSHA,
-      }));
+      const privateSkills: PrivateSkill[] = skillsWithFrontmatter.map((skill: any) => {
+        const baseUrl = provider === 'gitlab' && repo.instanceUrl
+          ? repo.instanceUrl
+          : (provider === 'gitlab' ? 'https://gitlab.com' : 'https://raw.githubusercontent.com');
+
+        return {
+          name: skill.name,
+          path: skill.path,
+          directoryPath: skill.path,
+          downloadUrl: `${baseUrl}/${repo.owner}/${repo.repo}/${repo.defaultBranch}/${skill.skillFilePath}`,
+          lastModified: skill.lastCommitDate || new Date(),
+          repoId: repo.id,
+          repoName: `${repo.owner}/${repo.repo}`,
+          lastCommitMessage: skill.lastCommitMessage,
+          lastCommitAuthor: skill.lastCommitAuthor,
+          lastCommitDate: skill.lastCommitDate,
+          fileCount: 1,
+          directoryCommitSHA: skill.directoryCommitSHA,
+          skillFilePath: skill.skillFilePath,
+          description: skill.description, // From frontmatter
+          tags: skill.tags, // From frontmatter
+        };
+      });
 
       // Update last sync time
       await this.updateRepo(repoId, {});
@@ -400,6 +534,8 @@ export class PrivateRepoService {
       logger.info('Retrieved skills from private repo', 'PrivateRepoService', {
         repoId,
         count: privateSkills.length,
+        provider,
+        withFrontmatter: privateSkills.filter(s => s.description || s.tags).length,
       });
 
       return privateSkills;
@@ -410,12 +546,13 @@ export class PrivateRepoService {
   }
 
   /**
-   * Install a skill from a private repository to local directory
+   * Install a skill from a private repository to application directory
    * Downloads skill files and preserves directory structure
    * Handles conflicts based on resolution strategy
+   * Always installs to the centralized application skills directory
    * @param repoId - Source repository ID
    * @param skillPath - Path to skill directory in repository
-   * @param targetDirectory - 'project' or 'global' directory
+   * @param config - Application configuration for determining target directory
    * @param conflictResolution - Strategy: 'overwrite', 'rename', or 'skip'
    * @returns Object with success status, new path if successful, or error message
    * @throws Error if repository not found or download fails
@@ -423,7 +560,7 @@ export class PrivateRepoService {
    * const result = await PrivateRepoService.installSkill(
    *   'repo-123',
    *   'skills/my-skill',
-   *   'project',
+   *   config,
    *   'rename'
    * );
    * if (result.success) {
@@ -433,7 +570,7 @@ export class PrivateRepoService {
   static async installSkill(
     repoId: string,
     skillPath: string,
-    targetDirectory: 'project' | 'global',
+    config: Configuration,
     conflictResolution?: 'overwrite' | 'rename' | 'skip'
   ): Promise<{ success: boolean; newPath?: string; error?: string }> {
     try {
@@ -445,32 +582,40 @@ export class PrivateRepoService {
       // Decrypt PAT
       const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
 
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
       // Download skill directory
-      const files = await GitHubService.downloadPrivateDirectory(
+      const files = await (gitProvider as any).downloadPrivateDirectory?.(
         repo.owner,
         repo.repo,
         skillPath,
         pat,
-        repo.defaultBranch
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
+      ) || await (gitProvider as any).downloadDirectory?.(
+        repo.owner,
+        repo.repo,
+        skillPath,
+        pat,
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
       );
 
       if (files.size === 0) {
         throw new Error('No files found in skill directory');
       }
 
-      // Determine target path
-      const skillName = path.basename(skillPath);
-      const baseDir = targetDirectory === 'project' ? 'project' : 'global';
+      // Get application skills directory (centralized storage)
+      const appDirectory = SkillService.getApplicationSkillsDirectory(config);
 
-      // Get allowed directories from PathValidator
-      const allowedDirs = PathValidator.getAllowedDirectories();
-      const targetBasePath = allowedDirs[baseDir];
+      // Slugify skill name for directory naming
+      const skillName = this.slugify(path.basename(skillPath));
+      const targetPath = path.join(appDirectory, skillName);
 
-      if (!targetBasePath) {
-        throw new Error(`${targetDirectory} directory not configured`);
-      }
-
-      const targetPath = path.join(targetBasePath, skillName);
+      // Ensure application directory exists
+      await fs.ensureDir(appDirectory);
 
       // Check for conflicts
       const exists = await fs.pathExists(targetPath);
@@ -506,11 +651,22 @@ export class PrivateRepoService {
         await fs.writeFile(absolutePath, content, 'utf-8');
       }
 
-      logger.info('Installed skill from private repo', 'PrivateRepoService', {
+      // Write source metadata for version tracking
+      const sourceMetadata = createPrivateRepoSource(
+        repoId,
+        `${repo.owner}/${repo.repo}`,
+        skillPath
+      );
+
+      const metadataPath = path.join(finalPath, SOURCE_METADATA_FILE);
+      await fs.writeJson(metadataPath, sourceMetadata, { spaces: 2 });
+
+      logger.info('Installed skill from private repo to application directory', 'PrivateRepoService', {
         repoId,
         skillPath,
         targetPath: finalPath,
         fileCount: files.size,
+        provider,
       });
 
       return {
@@ -524,6 +680,16 @@ export class PrivateRepoService {
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
+  }
+
+  /**
+   * Slugify a string for use as a directory name
+   */
+  private static slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
   }
 
   /**
@@ -646,18 +812,147 @@ export class PrivateRepoService {
       // Decrypt PAT
       const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
 
-      const content = await GitHubService.getPrivateRepoSkillContent(
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
+      const content = await (gitProvider as any).getPrivateRepoSkillContent?.(
         repo.owner,
         repo.repo,
         skillPath,
         pat,
-        repo.branch
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
+      ) || await (gitProvider as any).getSkillContent?.(
+        repo.owner,
+        repo.repo,
+        skillPath,
+        pat,
+        repo.defaultBranch || 'main',
+        repo.instanceUrl
       );
 
       return content;
     } catch (error) {
       logger.error('Failed to get skill content', 'PrivateRepoService', error);
       throw error;
+    }
+  }
+
+  /**
+   * Upload a skill to a private repository
+   * Uploads all files in the skill directory, not just SKILL.md
+   * @param repoId - ID of the private repository to upload to
+   * @param skillPath - Local path of the skill directory to upload
+   * @param skillContent - Content of the SKILL.md file (for backward compatibility)
+   * @param skillName - Name of the skill for commit message
+   * @param commitMessage - Optional custom commit message
+   * @returns Upload result with success status and optional error
+   */
+  static async uploadSkillToRepo(
+    repoId: string,
+    skillPath: string,
+    skillContent: string,
+    skillName: string,
+    commitMessage?: string
+  ): Promise<{ success: boolean; sha?: string; uploadedCount?: number; error?: string }> {
+    try {
+      const repo = await this.getRepo(repoId);
+      if (!repo) {
+        throw new Error('Repository not found');
+      }
+
+      // Decrypt PAT
+      const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
+
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
+      // Extract skill directory name from path (handle both Windows and Unix paths)
+      const skillDirName = path.basename(skillPath);
+
+      // Read all files from the skill directory
+      const files: Array<{ relativePath: string; content: string }> = [];
+
+      // Files to exclude from upload (local metadata and system files)
+      const EXCLUDED_FILES = new Set([
+        '.skill-source.json',    // Local installation metadata
+        '.source.json',          // Alternative source metadata
+        '.git',                  // Git directory
+        '.gitignore',            // Git ignore file
+        '.DS_Store',             // macOS system file
+        'Thumbs.db',             // Windows system file
+        '.skillmn',              // Application specific metadata
+      ]);
+
+      // Check if the skill directory exists
+      if (await fs.pathExists(skillPath)) {
+        const entries = await fs.readdir(skillPath, { withFileTypes: true });
+
+        for (const entry of entries) {
+          if (entry.isFile()) {
+            // Skip excluded files
+            if (EXCLUDED_FILES.has(entry.name)) {
+              logger.debug(`Skipping excluded file: ${entry.name}`, 'PrivateRepoService');
+              continue;
+            }
+
+            const filePath = path.join(skillPath, entry.name);
+            const content = await fs.readFile(filePath, 'utf-8');
+            files.push({
+              relativePath: entry.name,
+              content,
+            });
+            logger.debug(`Read file for upload: ${entry.name}`, 'PrivateRepoService');
+          }
+        }
+
+        logger.info(`Found ${files.length} files in skill directory`, 'PrivateRepoService', {
+          skillPath,
+          files: files.map(f => f.relativePath),
+        });
+      } else {
+        throw new Error(`Skill directory not found: ${skillPath}`);
+      }
+
+      // If no files found, fall back to just uploading SKILL.md content
+      if (files.length === 0) {
+        logger.warn('No files found in skill directory, using provided content', 'PrivateRepoService');
+        files.push({
+          relativePath: 'SKILL.md',
+          content: skillContent,
+        });
+      }
+
+      // Call provider's directory upload method
+      const result = await (gitProvider as any).uploadSkillDirectory(
+        repo.owner,
+        repo.repo,
+        skillDirName,
+        skillName,
+        files,
+        pat,
+        repo.defaultBranch || 'main',
+        commitMessage,
+        repo.instanceUrl
+      );
+
+      if (result.success) {
+        logger.info('Successfully uploaded skill directory to private repo', 'PrivateRepoService', {
+          repoId,
+          skillPath,
+          uploadedCount: result.uploadedCount,
+        });
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to upload skill to private repo', 'PrivateRepoService', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 }

@@ -2,9 +2,10 @@
  * PrivateSkillCard Component
  *
  * Displays individual skill from a private repository with install functionality
+ * Styled to match the main SkillCard component
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { PrivateSkill, PrivateRepo } from '../../shared/types';
 import PrivateInstallDialog from './PrivateInstallDialog';
 import ConflictResolutionDialog from './ConflictResolutionDialog';
@@ -21,6 +22,34 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [installProgress, setInstallProgress] = useState<'idle' | 'installing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
+  /**
+   * Check if skill is already installed
+   */
+  useEffect(() => {
+    checkIfInstalled();
+  }, [skill.name, skill.path]);
+
+  const checkIfInstalled = async () => {
+    setIsCheckingStatus(true);
+    try {
+      const response = await window.electronAPI.listSkills();
+      if (response.success && response.data) {
+        const skillDirName = skill.path.split('/').pop() || skill.path.split('\\').pop() || skill.name;
+        const exists = response.data.some(s => {
+          const localDirName = s.path.split('/').pop() || s.path.split('\\').pop() || '';
+          return localDirName === skillDirName || s.name === skill.name;
+        });
+        setIsInstalled(exists);
+      }
+    } catch (error) {
+      console.error('Failed to check install status:', error);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
 
   const handleCardClick = () => {
     if (onSkillClick) {
@@ -29,13 +58,16 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
   };
 
   const handleInstallClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
+    if (isInstalled) {
+      return;
+    }
     setShowInstallDialog(true);
     setInstallProgress('idle');
     setErrorMessage(null);
   };
 
-  const handleInstall = async (targetDirectory: 'project' | 'global', conflictResolution?: 'overwrite' | 'rename' | 'skip') => {
+  const handleInstall = async (conflictResolution?: 'overwrite' | 'rename' | 'skip') => {
     setInstallProgress('installing');
     setErrorMessage(null);
 
@@ -43,7 +75,6 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
       const response = await window.electronAPI.installPrivateRepoSkill({
         repoId: repo.id,
         skillPath: skill.path,
-        targetDirectory,
         conflictResolution,
       });
 
@@ -51,13 +82,12 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         setInstallProgress('success');
         setShowInstallDialog(false);
         setShowConflictDialog(false);
+        setIsInstalled(true);
 
-        // Notify parent component
         if (onInstallComplete) {
           onInstallComplete();
         }
 
-        // Auto-dismiss success message after 3 seconds
         setTimeout(() => {
           setInstallProgress('idle');
         }, 3000);
@@ -76,147 +106,153 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
   };
 
   const handleConflictResolve = async (resolution: 'overwrite' | 'rename' | 'skip') => {
-    await handleInstall('project', resolution);
+    await handleInstall(resolution);
   };
 
   return (
     <>
-      <article className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1">
-            <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
-              {skill.name}
-            </h4>
-            <p className="text-xs text-slate-600 dark:text-slate-400">{skill.path}</p>
+      {/* Card matching main SkillCard style: fixed height 136px */}
+      <article
+        onClick={handleCardClick}
+        className={`relative h-[136px] mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors ${
+          onSkillClick ? 'cursor-pointer' : ''
+        } overflow-hidden`}
+        role={onSkillClick ? 'button' : undefined}
+        tabIndex={onSkillClick ? 0 : undefined}
+        onKeyPress={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            handleCardClick();
+          }
+        }}
+        aria-label={onSkillClick ? `View ${skill.name} details` : undefined}
+      >
+        {/* Top row: Name + Badges + Actions */}
+        <div className="flex items-start justify-between mb-2 h-[28px]">
+          <div className="flex-1 min-w-0 mr-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate" title={skill.name}>
+                {skill.name}
+              </h4>
+
+              {/* Source Badge */}
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex-shrink-0 border-0">
+                {repo.provider === 'gitlab' ? 'GitLab' : 'GitHub'}
+              </span>
+
+              {/* Installed Badge */}
+              {isInstalled && !isCheckingStatus && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0">
+                  Installed
+                </span>
+              )}
+
+              {/* Success Badge */}
+              {installProgress === 'success' && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0">
+                  ✓
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Install Button with Progress */}
-          <button
-            onClick={handleInstallClick}
-            disabled={installProgress === 'installing'}
-            className={`btn text-xs px-3 py-1 ml-2 ${
-              installProgress === 'success'
-                ? 'bg-green-600 dark:bg-green-600 text-white hover:bg-green-700 dark:hover:bg-green-700'
-                : installProgress === 'error'
-                ? 'bg-red-600 dark:bg-red-600 text-white hover:bg-red-700 dark:hover:bg-red-700'
-                : 'bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700'
-            }`}
-            aria-label={`Install skill: ${skill.name}`}
-            aria-busy={installProgress === 'installing'}
-            aria-live="polite"
-          >
-            {installProgress === 'idle' && 'Install'}
-            {installProgress === 'installing' && (
-              <span className="flex items-center gap-1">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                Installing...
-              </span>
-            )}
-            {installProgress === 'success' && (
-              <span className="flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Installed!
-              </span>
-            )}
-            {installProgress === 'error' && 'Retry'}
-          </button>
+          {/* Right: Install Button */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={handleInstallClick}
+              disabled={installProgress === 'installing' || isInstalled || isCheckingStatus}
+              className={`btn text-xs px-3 py-1 ${
+                isInstalled
+                  ? 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                  : installProgress === 'success'
+                  ? 'bg-green-600 dark:bg-green-600 text-white'
+                  : installProgress === 'error'
+                  ? 'bg-red-600 dark:bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+              aria-label={`Install skill: ${skill.name}`}
+              aria-busy={installProgress === 'installing'}
+              aria-live="polite"
+            >
+              {isCheckingStatus && (
+                <span className="flex items-center gap-1">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                </span>
+              )}
+              {!isCheckingStatus && isInstalled && 'Install'}
+              {!isCheckingStatus && !isInstalled && installProgress === 'idle' && 'Install'}
+              {!isCheckingStatus && !isInstalled && installProgress === 'installing' && (
+                <span className="flex items-center gap-1">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                </span>
+              )}
+              {!isCheckingStatus && !isInstalled && installProgress === 'error' && 'Retry'}
+            </button>
+          </div>
         </div>
 
         {/* Error Message */}
         {installProgress === 'error' && errorMessage && (
-          <div
-            className="mb-2 p-2 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded text-xs text-red-600 dark:text-red-400"
-            role="alert"
-            aria-live="polite"
-          >
-            <div className="flex items-start gap-2">
-              <svg
-                className="w-4 h-4 flex-shrink-0 mt-0.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
+          <div className="mb-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded text-xs text-red-600 dark:text-red-400">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <div className="flex-1">
-                <p className="font-medium">Installation Failed</p>
-                <p className="mt-1">{errorMessage}</p>
-              </div>
+              <span className="truncate">{errorMessage}</span>
             </div>
           </div>
         )}
 
-        {/* Success Message */}
-        {installProgress === 'success' && (
-          <div
-            className="mb-2 p-2 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded text-xs text-green-600 dark:text-green-400"
-            role="status"
-            aria-live="polite"
-          >
-            <div className="flex items-center gap-2">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <p className="font-medium">Skill installed successfully!</p>
-            </div>
-          </div>
-        )}
-
-        {skill.lastCommitMessage && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{skill.lastCommitMessage}</p>
-        )}
-
-        <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-          {skill.lastCommitAuthor && (
-            <span className="flex items-center gap-1">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-              By {skill.lastCommitAuthor}
-            </span>
-          )}
-          {skill.lastCommitDate && (
-            <time dateTime={new Date(skill.lastCommitDate).toISOString()}>
-              {new Date(skill.lastCommitDate).toLocaleDateString()}
-            </time>
-          )}
-          {skill.fileCount !== undefined && (
-            <span className="flex items-center gap-1">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              {skill.fileCount} files
-            </span>
+        {/* Description row */}
+        <div className="h-[20px] mb-2">
+          {skill.description ? (
+            <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1" title={skill.description}>
+              {skill.description}
+            </p>
+          ) : (
+            <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+              No description
+            </p>
           )}
         </div>
 
-        {/* Directory Commit SHA (if available) */}
-        {skill.directoryCommitSHA && (
-          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-            <p className="text-xs text-slate-400 dark:text-slate-500 font-mono truncate">
-              SHA: {skill.directoryCommitSHA.substring(0, 8)}
+        {/* Commit message row */}
+        <div className="h-[20px] mb-2">
+          {skill.lastCommitMessage && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1" title={skill.lastCommitMessage}>
+              {skill.lastCommitMessage}
             </p>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Bottom row: Author + Tags */}
+        <div className="flex items-center gap-3 h-[20px] overflow-hidden">
+          {skill.lastCommitAuthor && (
+            <span className="flex items-center gap-1 min-w-0 flex-shrink-0">
+              <svg className="w-3 h-3 flex-shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[100px]" title={skill.lastCommitAuthor}>{skill.lastCommitAuthor}</span>
+            </span>
+          )}
+
+          {/* Tags */}
+          {skill.tags && skill.tags.length > 0 && (
+            <div className="flex items-center gap-1 overflow-hidden flex-1">
+              {skill.tags.slice(0, 3).map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-0 flex-shrink-0"
+                  title={tag}
+                >
+                  {tag}
+                </span>
+              ))}
+              {skill.tags.length > 3 && (
+                <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">+{skill.tags.length - 3}</span>
+              )}
+            </div>
+          )}
+        </div>
       </article>
 
       {/* Install Dialog */}
@@ -238,7 +274,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         <ConflictResolutionDialog
           repositoryName={repo.displayName || `${repo.owner}/${repo.repo}`}
           skillFilePath={skill.path}
-          downloadUrl="" // Not used for private repos
+          downloadUrl=""
           onClose={() => setShowConflictDialog(false)}
           onResolve={handleConflictResolve}
         />

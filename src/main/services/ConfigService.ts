@@ -30,11 +30,12 @@ export class ConfigService {
   /**
    * Load configuration from disk
    * Creates default configuration if file doesn't exist
+   * Auto-migrates projectDirectory to projectDirectories if needed
    * @returns Loaded or default Configuration object
    * @throws ConfigurationError if file read fails (returns defaults on corruption)
    * @example
    * const config = await configService.load();
-   * console.log(config.projectDirectory);
+   * console.log(config.projectDirectories);
    */
   async load(): Promise<Configuration> {
     try {
@@ -57,10 +58,30 @@ export class ConfigService {
 
       // Validate and merge with defaults
       const validatedConfig = ConfigurationModel.validate(rawConfig);
+
+      // Check if we need to migrate old projectDirectory to new projectDirectories
+      const needsMigration = rawConfig.projectDirectory &&
+                             !rawConfig.projectDirectories &&
+                             validatedConfig.projectDirectories.length > 0;
+
+      if (needsMigration) {
+        logger.info('Migrating projectDirectory to projectDirectories', 'ConfigService', {
+          oldDirectory: rawConfig.projectDirectory,
+          newDirectories: validatedConfig.projectDirectories,
+        });
+
+        // Save migrated config immediately
+        await fs.promises.writeFile(
+          this.configPath,
+          JSON.stringify(validatedConfig, null, 2),
+          'utf-8'
+        );
+      }
+
       this.config = validatedConfig;
 
       logger.info('Configuration loaded successfully', 'ConfigService', {
-        hasProjectDirectory: validatedConfig.projectDirectory !== null,
+        projectDirectoryCount: validatedConfig.projectDirectories.length,
       });
 
       return validatedConfig;
@@ -105,7 +126,7 @@ export class ConfigService {
       this.config = validated;
 
       logger.info('Configuration saved successfully', 'ConfigService', {
-        hasProjectDirectory: validated.projectDirectory !== null,
+        projectDirectoryCount: validated.projectDirectories.length,
       });
 
       return validated;

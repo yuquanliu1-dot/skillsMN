@@ -8,6 +8,7 @@ import { ipcMain } from 'electron';
 import { logger } from '../utils/Logger';
 import { PrivateRepoService } from '../services/PrivateRepoService';
 import { PathValidator } from '../services/PathValidator';
+import { getConfigService } from './configHandlers';
 import { IPC_CHANNELS } from '../../shared/constants';
 import type { PrivateRepo, PrivateSkill, IPCResponse } from '../../shared/types';
 
@@ -32,16 +33,17 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
     IPC_CHANNELS.PRIVATE_REPO_ADD,
     async (
       _event,
-      { url, pat, displayName }: { url: string; pat: string; displayName?: string }
+      { url, pat, displayName, provider, instanceUrl }: { url: string; pat: string; displayName?: string; provider?: 'github' | 'gitlab'; instanceUrl?: string }
     ): Promise<IPCResponse<PrivateRepo>> => {
       try {
-        logger.debug('Adding private repository', 'PrivateRepoHandlers', { url });
+        logger.debug('Adding private repository', 'PrivateRepoHandlers', { url, provider });
 
-        const repo = await PrivateRepoService.addRepo(url, pat, displayName);
+        const repo = await PrivateRepoService.addRepo(url, pat, displayName, provider, instanceUrl);
 
         logger.info('Private repository added', 'PrivateRepoHandlers', {
           id: repo.id,
           url: repo.url,
+          provider: repo.provider,
         });
 
         return { success: true, data: repo };
@@ -55,7 +57,7 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
         // Provide actionable error messages
         if (errorMessage.includes('Invalid repository URL')) {
           errorCode = 'INVALID_URL';
-          actionableMessage = 'Invalid repository URL. Please use format: https://github.com/owner/repo';
+          actionableMessage = 'Invalid repository URL. Please use format: https://github.com/owner/repo or https://gitlab.com/owner/repo';
         } else if (errorMessage.includes('Failed to connect') || errorMessage.includes('authentication failed')) {
           errorCode = 'AUTH_FAILED';
           actionableMessage = 'Authentication failed. Please check your PAT has read access to this repository.';
@@ -316,12 +318,10 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
       {
         repoId,
         skillPath,
-        targetDirectory,
         conflictResolution,
       }: {
         repoId: string;
         skillPath: string;
-        targetDirectory: 'project' | 'global';
         conflictResolution?: 'overwrite' | 'rename' | 'skip';
       }
     ): Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>> => {
@@ -329,13 +329,19 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
         logger.debug('Installing skill from private repository', 'PrivateRepoHandlers', {
           repoId,
           skillPath,
-          targetDirectory,
         });
+
+        // Load config to get application directory
+        const configService = getConfigService();
+        if (!configService) {
+          throw new Error('ConfigService not initialized');
+        }
+        const config = await configService.load();
 
         const result = await PrivateRepoService.installSkill(
           repoId,
           skillPath,
-          targetDirectory,
+          config,
           conflictResolution
         );
 
@@ -360,7 +366,7 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
           actionableMessage = 'Repository not found. It may have been removed. Please refresh and try again.';
         } else if (errorMessage.includes('not configured')) {
           errorCode = 'INVALID_TARGET';
-          actionableMessage = `${targetDirectory} directory not configured. Please set it in Settings → General.`;
+          actionableMessage = 'Application skills directory not configured. Please check your settings.';
         } else if (errorMessage.includes('Skill not found')) {
           errorCode = 'SKILL_NOT_FOUND';
           actionableMessage = 'Skill not found in repository. It may have been moved or deleted. Please refresh the skill list.';
@@ -369,7 +375,7 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
           actionableMessage = 'Not enough disk space to install skill. Please free up space and try again.';
         } else if (errorMessage.includes('EACCES') || errorMessage.includes('permission')) {
           errorCode = 'PERMISSION_DENIED';
-          actionableMessage = 'Permission denied. Please check write permissions for the target directory.';
+          actionableMessage = 'Permission denied. Please check write permissions for the application directory.';
         } else if (errorMessage.includes('already exists') && !conflictResolution) {
           errorCode = 'CONFLICT';
           actionableMessage = 'Skill already exists. Please choose to overwrite, rename, or skip.';
@@ -484,6 +490,88 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
         } else if (errorMessage.includes('authentication failed') || errorMessage.includes('401')) {
           errorCode = 'AUTH_FAILED';
           actionableMessage = 'PAT has expired. Please update your PAT in Settings → Repositories.';
+        }
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: actionableMessage,
+          },
+        };
+      }
+    }
+  );
+
+  // Handler for private-repo:upload-skill
+  ipcMain.handle(
+    'private-repo:upload-skill',
+    async (
+      _event,
+      {
+        repoId,
+        skillPath,
+        skillContent,
+        skillName,
+        commitMessage,
+      }: {
+        repoId: string;
+        skillPath: string;
+        skillContent: string;
+        skillName: string;
+        commitMessage?: string;
+      }
+    ): Promise<IPCResponse<{ sha: string }>> => {
+      try {
+        logger.debug('Uploading skill to private repository', 'PrivateRepoHandlers', {
+          repoId,
+          skillPath,
+          skillName,
+        });
+
+        const result = await PrivateRepoService.uploadSkillToRepo(
+          repoId,
+          skillPath,
+          skillContent,
+          skillName,
+          commitMessage
+        );
+
+        if (!result.success) {
+          throw new Error(result.error || 'Upload failed');
+        }
+
+        logger.info('Successfully uploaded skill to private repo', 'PrivateRepoHandlers', {
+          repoId,
+          skillPath,
+          sha: result.sha,
+        });
+
+        return { success: true, data: { sha: result.sha || '' } };
+      } catch (error) {
+        // Convert Error object to plain object for logging
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorData = error instanceof Error
+          ? { message: error.message, stack: error.stack, name: error.name }
+          : error;
+
+        logger.error('Failed to upload skill to private repo', 'PrivateRepoHandlers', {
+          error: errorData,
+          originalMessage: errorMessage
+        });
+
+        let errorCode = 'UPLOAD_FAILED';
+        let actionableMessage = errorMessage;
+
+        if (errorMessage.includes('Repository not found')) {
+          errorCode = 'REPO_NOT_FOUND';
+          actionableMessage = 'Repository not found. It may have been removed. Please refresh and try again.';
+        } else if (errorMessage.includes('authentication failed') || errorMessage.includes('401')) {
+          errorCode = 'AUTH_FAILED';
+          actionableMessage = 'PAT has expired or lacks write permissions. Please update your PAT in Settings → Repositories.';
+        } else if (errorMessage.includes('403')) {
+          errorCode = 'FORBIDDEN';
+          actionableMessage = 'Access forbidden. Please ensure your PAT has write permissions.';
         }
 
         return {

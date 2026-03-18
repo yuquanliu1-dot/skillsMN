@@ -9,7 +9,8 @@ import path from 'path';
 import matter from 'gray-matter';
 import { logger } from '../utils/Logger';
 import { Skill, SkillFrontmatter, SkillSource } from '../../shared/types';
-import { SKILL_FILE_NAME, MAX_SKILL_NAME_LENGTH, MAX_SKILL_DESCRIPTION_LENGTH } from '../../shared/constants';
+import { SkillSource as SkillSourceType, validateSkillSource } from './SkillSource';
+import { SKILL_FILE_NAME, MAX_SKILL_NAME_LENGTH, MAX_SKILL_DESCRIPTION_LENGTH, SOURCE_METADATA_FILE } from '../../shared/constants';
 
 export class SkillModel {
   /**
@@ -27,8 +28,8 @@ export class SkillModel {
       throw new Error(`Skill file not found: ${skillFilePath}`);
     }
 
-    // Get directory stats for lastModified
-    const dirStats = await fs.promises.stat(dirPath);
+    // Get skill.md file stats for lastModified (more accurate than directory stats)
+    const fileStats = await fs.promises.stat(skillFilePath);
 
     // Parse frontmatter (with caching support T127)
     const { frontmatter, isValid } = await this.parseFrontmatter(skillFilePath, cache);
@@ -50,16 +51,44 @@ export class SkillModel {
       description = description.substring(0, MAX_SKILL_DESCRIPTION_LENGTH);
     }
 
+    // Extract version, author, and tags from frontmatter
+    const version = frontmatter.version?.trim();
+    const author = frontmatter.author?.trim();
+    const tags = frontmatter.tags?.map(tag => tag.trim()).filter(tag => tag.length > 0);
+
     // Count resources (all files except skill.md)
     const resourceCount = await this.countResources(dirPath);
+
+    // Read source metadata if available
+    let sourceMetadata: SkillSourceType | undefined;
+    const metadataPath = path.join(dirPath, SOURCE_METADATA_FILE);
+    if (fs.existsSync(metadataPath)) {
+      try {
+        const metadataContent = await fs.promises.readFile(metadataPath, 'utf-8');
+        const parsedMetadata = JSON.parse(metadataContent);
+
+        if (validateSkillSource(parsedMetadata)) {
+          sourceMetadata = parsedMetadata;
+          logger.debug('Source metadata loaded', 'SkillModel', { dirPath, type: sourceMetadata.type });
+        } else {
+          logger.warn('Invalid source metadata format', 'SkillModel', { dirPath });
+        }
+      } catch (error) {
+        logger.warn('Failed to read source metadata', 'SkillModel', { dirPath, error });
+      }
+    }
 
     const skill: Skill = {
       path: dirPath,
       name: validatedName,
       description,
+      version,
+      author,
+      tags,
       source,
-      lastModified: dirStats.mtime,
+      lastModified: fileStats.mtime,
       resourceCount,
+      sourceMetadata,
     };
 
     logger.debug(`Skill model created: ${validatedName}`, 'SkillModel', { path: dirPath, source });
@@ -89,6 +118,9 @@ export class SkillModel {
       const frontmatter: Partial<SkillFrontmatter> = {
         name: data.name,
         description: data.description,
+        version: data.version,
+        author: data.author,
+        tags: data.tags,
       };
 
       // Store in cache (T127)

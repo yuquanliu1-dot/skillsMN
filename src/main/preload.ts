@@ -20,6 +20,14 @@ import type {
   CuratedSource,
   InstallProgress,
   AIConfiguration,
+  SearchSkillResult,
+  InstallFromRegistryRequest,
+  SkillInstallationStatus,
+  InstallProgressEvent,
+  SkillSymlinkConfig,
+  MigrationOptions,
+  MigrationProgress,
+  MigrationResult,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
@@ -37,11 +45,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GET, { path });
   },
 
-  createSkill: (
-    name: string,
-    directory: SkillSource
-  ): Promise<IPCResponse<Skill>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_CREATE, { name, directory });
+  createSkill: (name: string): Promise<IPCResponse<Skill>> => {
+    // Skills are always created in the centralized application directory
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_CREATE, { name, directory: 'application' });
   },
 
   updateSkill: (
@@ -60,6 +66,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_OPEN_FOLDER, { path });
   },
 
+  checkForUpdates: (
+    skills: Skill[]
+  ): Promise<IPCResponse<Record<string, { hasUpdate: boolean; remoteSHA?: string }>>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_CHECK_UPDATES, { skills });
+  },
+
+  updateSkillFromSource: (
+    skillPath: string,
+    createBackup: boolean = true
+  ): Promise<IPCResponse<{ newPath: string }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_UPDATE_SKILL, { skillPath, createBackup });
+  },
+
   // ============================================================================
   // Configuration Operations
   // ============================================================================
@@ -72,6 +91,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     config: Partial<Configuration>
   ): Promise<IPCResponse<Configuration>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.CONFIG_SAVE, { config });
+  },
+
+  selectDirectory: (): Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SELECT_DIRECTORY);
   },
 
   // ============================================================================
@@ -87,7 +110,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   onFSChange: (callback: (event: FSEvent) => void): void => {
+    console.log('[Preload] onFSChange: Registering listener for', IPC_CHANNELS.FS_CHANGE);
     ipcRenderer.on(IPC_CHANNELS.FS_CHANGE, (_event, change) => {
+      console.log('[Preload] Received FS_CHANGE event:', change);
       callback(change as FSEvent);
     });
   },
@@ -182,10 +207,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_SEARCH_SKILLS, params);
   },
 
-  installPrivateSkill: (params: {
+  installPrivateRepoSkill: (params: {
     repoId: string;
     skillPath: string;
-    targetDirectory: 'project' | 'global';
     conflictResolution?: 'overwrite' | 'rename' | 'skip';
   }): Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_INSTALL_SKILL, params);
@@ -204,6 +228,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   getPrivateRepoSkillContent: (repoId: string, skillPath: string): Promise<IPCResponse<string>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_GET_SKILL_CONTENT, { repoId, skillPath });
+  },
+
+  uploadSkillToPrivateRepo: (params: {
+    repoId: string;
+    skillPath: string;
+    skillContent: string;
+    skillName: string;
+    commitMessage?: string;
+  }): Promise<IPCResponse<{ sha: string }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_UPLOAD_SKILL, params);
   },
 
   // ============================================================================
@@ -269,6 +303,95 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   removeGitHubInstallProgressListener: (): void => {
     ipcRenderer.removeAllListeners(IPC_CHANNELS.GITHUB_INSTALL_PROGRESS);
+  },
+
+  // ============================================================================
+  // Registry Operations (Feature 006 - Skills Registry Search)
+  // ============================================================================
+
+  searchRegistry: (
+    query: string,
+    limit?: number
+  ): Promise<IPCResponse<SearchSkillResult[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.REGISTRY_SEARCH, { query, limit });
+  },
+
+  installFromRegistry: (
+    request: InstallFromRegistryRequest,
+    targetDirectory: string
+  ): Promise<IPCResponse<{ success: boolean; skillPath?: string; error?: string }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.REGISTRY_INSTALL, { request, targetDirectory });
+  },
+
+  checkSkillInstalled: (
+    skillId: string,
+    targetDirectory: string
+  ): Promise<IPCResponse<SkillInstallationStatus>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.REGISTRY_CHECK_INSTALLED, { skillId, targetDirectory });
+  },
+
+  getRegistrySkillContent: (
+    source: string,
+    skillId: string
+  ): Promise<IPCResponse<string>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.REGISTRY_GET_CONTENT, { source, skillId });
+  },
+
+  onInstallProgress: (callback: (event: any, progress: InstallProgressEvent) => void): void => {
+    ipcRenderer.on(IPC_CHANNELS.REGISTRY_INSTALL_PROGRESS, callback);
+  },
+
+  removeInstallProgressListener: (): void => {
+    ipcRenderer.removeAllListeners(IPC_CHANNELS.REGISTRY_INSTALL_PROGRESS);
+  },
+
+  // ============================================================================
+  // Symlink Operations
+  // ============================================================================
+
+  updateSymlink: (params: {
+    skillName: string;
+    config: SkillSymlinkConfig;
+  }): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SYMLINK_UPDATE, params);
+  },
+
+  getSymlinkStatus: (skillName: string): Promise<IPCResponse<SkillSymlinkConfig | null>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SYMLINK_GET_STATUS, { skillName });
+  },
+
+  getClaudeDirectories: (): Promise<IPCResponse<string[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SYMLINK_GET_CLAUDE_DIRS);
+  },
+
+  // ============================================================================
+  // Migration Operations
+  // ============================================================================
+
+  checkMigrationNeeded: (): Promise<IPCResponse<boolean>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_CHECK_NEEDED);
+  },
+
+  detectExistingSkills: (): Promise<IPCResponse<{
+    global: Skill[];
+    project: Skill[];
+  }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_DETECT_SKILLS);
+  },
+
+  startMigration: (params: {
+    skills: Skill[];
+    options: MigrationOptions;
+  }): Promise<IPCResponse<MigrationResult>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_START, params);
+  },
+
+  onMigrationProgress: (callback: (event: any, progress: MigrationProgress) => void): void => {
+    ipcRenderer.on(IPC_CHANNELS.MIGRATION_PROGRESS, callback);
+  },
+
+  removeMigrationProgressListener: (): void => {
+    ipcRenderer.removeAllListeners(IPC_CHANNELS.MIGRATION_PROGRESS);
   },
 });
 

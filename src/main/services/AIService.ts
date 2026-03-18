@@ -1,18 +1,24 @@
 /**
- * AI Service
+ * AI Service (Using Claude Agent SDK)
  *
- * Handles AI-powered skill generation using Claude API with streaming support
+ * Handles AI-powered skill generation using Claude Agent SDK
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { safeStorage } from 'electron';
-import * as https from 'https';
 import { logger } from '../utils/Logger';
 import type { AIGenerationRequest, AIStreamChunk } from '../models/AIGenerationRequest';
 import { validateAIGenerationRequest } from '../models/AIGenerationRequest';
 import type { AIConfiguration } from '../../shared/types';
 
-let anthropic: Anthropic | null = null;
+// Dynamic imports for Claude Agent SDK (ES Module)
+type ClaudeAgentSDK = {
+  query: any;
+  createSdkMcpServer: any;
+  tool: any;
+};
+
+let sdkModule: ClaudeAgentSDK | null = null;
+
 let currentConfig: AIConfiguration | null = null;
 
 /**
@@ -21,7 +27,27 @@ let currentConfig: AIConfiguration | null = null;
 const activeStreams = new Map<string, AbortController>();
 
 /**
- * AI Service for skill generation
+ * Load Claude Agent SDK module dynamically
+ * Uses Function constructor to prevent TypeScript from transpiling import() to require()
+ */
+async function loadSDK(): Promise<ClaudeAgentSDK> {
+  if (!sdkModule) {
+    // Use Function constructor to prevent TypeScript from transpiling to require()
+    // This is necessary because @anthropic-ai/claude-agent-sdk is an ES Module
+    const dynamicImport = new Function('modulePath', 'return import(modulePath)');
+    const module = await dynamicImport('@anthropic-ai/claude-agent-sdk');
+
+    sdkModule = {
+      query: module.query,
+      createSdkMcpServer: module.createSdkMcpServer,
+      tool: module.tool,
+    };
+  }
+  return sdkModule;
+}
+
+/**
+ * AI Service for skill generation using Claude Agent SDK
  */
 export class AIService {
   /**
@@ -29,9 +55,6 @@ export class AIService {
    * Falls back to base64 encoding if encryption is not available (not recommended for production)
    * @param apiKey - Plain text API key to encrypt
    * @returns Encrypted API key as base64 string
-   * @example
-   * const encrypted = AIService.encryptAPIKey('sk-ant-...');
-   * // Store encrypted key in configuration
    */
   static encryptAPIKey(apiKey: string): string {
     if (!safeStorage.isEncryptionAvailable()) {
@@ -45,12 +68,9 @@ export class AIService {
 
   /**
    * Decrypt API key using Electron safeStorage
-   * Decrypts a previously encrypted API key for use with the Anthropic SDK
+   * Decrypts a previously encrypted API key for use with the Agent SDK
    * @param encryptedKey - Encrypted API key as base64 string
    * @returns Decrypted plain text API key
-   * @example
-   * const config = await AIConfigService.loadConfig();
-   * const decryptedKey = AIService.decryptAPIKey(config.apiKey);
    */
   static decryptAPIKey(encryptedKey: string): string {
     if (!safeStorage.isEncryptionAvailable()) {
@@ -64,33 +84,26 @@ export class AIService {
 
   /**
    * Initialize AI service with configuration
-   * Decrypts the API key and creates an Anthropic client instance
-   * Must be called before using generateStream or testConnection
-   * @param config - AI configuration containing encrypted API key and settings
-   * @throws Error if API key decryption fails or initialization fails
-   * @example
-   * const config = await AIConfigService.loadConfig();
-   * await AIService.initialize(config);
+   * Sets up the Claude Agent SDK with the provided configuration
+   * @param config - AI configuration containing API key and settings
+   * @throws Error if initialization fails
    */
   static async initialize(config: AIConfiguration): Promise<void> {
     try {
-      // API key should already be decrypted (from AIConfigService.loadConfig or frontend input)
-      const apiKey = config.apiKey;
-      currentConfig = config; // Store config for custom endpoint handling
+      // API key should already be decrypted
+      currentConfig = config;
 
-      // Build client options
-      const options: any = { apiKey };
+      // Set environment variables for Claude Agent SDK
+      process.env.ANTHROPIC_API_KEY = config.apiKey;
 
-      // Add custom base URL if provided
       if (config.baseUrl) {
-        options.baseURL = config.baseUrl;
-        logger.info('Using custom base URL, will use direct HTTP requests for compatibility', 'AIService');
+        process.env.ANTHROPIC_BASE_URL = config.baseUrl;
+        logger.info('Using custom base URL for Claude Agent SDK', 'AIService', {
+          hasCustomBaseUrl: !!config.baseUrl
+        });
       }
 
-      anthropic = new Anthropic(options);
-      logger.info('AI service initialized successfully', 'AIService', {
-        hasCustomBaseUrl: !!config.baseUrl
-      });
+      logger.info('AI service initialized successfully with Claude Agent SDK', 'AIService');
     } catch (error) {
       logger.error('Failed to initialize AI service', 'AIService', error);
       throw new Error('Failed to initialize AI service. Please check your API key.');
@@ -102,8 +115,6 @@ export class AIService {
    * Re-initializes the service with new configuration
    * @param config - New AI configuration to apply
    * @throws Error if initialization fails
-   * @example
-   * await AIService.updateConfiguration(newConfig);
    */
   static async updateConfiguration(config: AIConfiguration): Promise<void> {
     await AIService.initialize(config);
@@ -111,34 +122,18 @@ export class AIService {
 
   /**
    * Check if AI service is initialized and ready to use
-   * @returns True if Anthropic client is initialized, false otherwise
-   * @example
-   * if (!AIService.isInitialized()) {
-   *   await AIService.initialize(config);
-   * }
+   * @returns True if configuration is loaded, false otherwise
    */
   static isInitialized(): boolean {
-    return anthropic !== null;
+    return currentConfig !== null;
   }
 
   /**
-   * Generate skill content with streaming support
+   * Generate skill content with streaming support using Claude Agent SDK
    * Creates an async generator that yields chunks of generated text
-   * Supports new skill creation, modification, insertion, and replacement modes
    * @param requestId - Unique identifier for this generation request (used for cancellation)
    * @param request - AI generation request containing mode, prompt, and optional current content
    * @yields AIStreamChunk objects containing text chunks, completion status, and potential errors
-   * @example
-   * for await (const chunk of AIService.generateStream('req-1', {
-   *   mode: 'new',
-   *   prompt: 'Create a skill for code review'
-   * })) {
-   *   if (chunk.error) {
-   *     console.error(chunk.error);
-   *     break;
-   *   }
-   *   process.stdout.write(chunk.text);
-   * }
    */
   static async *generateStream(
     requestId: string,
@@ -147,7 +142,7 @@ export class AIService {
     // Validate request
     const validationError = validateAIGenerationRequest(request);
     if (validationError) {
-      yield { text: '', isComplete: false, error: validationError };
+      yield { type: 'error', text: '', isComplete: false, error: validationError };
       return;
     }
 
@@ -156,48 +151,104 @@ export class AIService {
     activeStreams.set(requestId, abortController);
 
     try {
-      logger.info('Starting AI generation', 'AIService', { mode: request.mode, requestId });
+      logger.info('Starting AI generation with Claude Agent SDK', 'AIService', { mode: request.mode, requestId });
 
-      // Build the system prompt based on generation mode
-      const systemPrompt = AIService.buildSystemPrompt(request.mode);
-      
       // Build the user prompt
       const userPrompt = AIService.buildUserPrompt(request);
 
-      // Create streaming message
-      const stream = await anthropic.messages.stream({
-        model: 'claude-sonnet-4-6-20250514',
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
+      // Build system prompt (Agent SDK will automatically load skills)
+      const systemPrompt = AIService.buildSystemPrompt(request.mode, request);
+
+      // Load SDK and use query
+      const { query } = await loadSDK();
+
+      // Determine working directory (project root)
+      const workingDirectory = request?.skillContext?.targetPath
+        ? require('path').dirname(request.skillContext.targetPath)
+        : process.cwd();
+
+      // Use Claude Agent SDK query with permission to execute tools
+      const stream = query({
+        prompt: userPrompt,
+        options: {
+          systemPrompt,
+          // Use configured model
+          model: currentConfig?.model || 'claude-sonnet-4-6-20250514',
+          // Set working directory
+          cwd: workingDirectory,
+          // Allow file operations without prompting
+          permissionMode: 'acceptEdits',
+          // Auto-allow Write and Bash tools
+          allowedTools: ['Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill'],
+        },
       });
 
       let fullText = '';
 
       // Process stream events
-      for await (const event of stream) {
+      for await (const item of stream) {
         // Check if cancelled
         if (abortController.signal.aborted) {
           logger.info('AI generation cancelled', 'AIService', { requestId });
-          yield { text: fullText, isComplete: false, error: 'Generation cancelled' };
+          yield { type: 'error', text: fullText, isComplete: false, error: 'Generation cancelled' };
           return;
         }
 
-        // Handle text delta events
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
-          const chunk = event.delta.text;
-          fullText += chunk;
+        // Handle different message types
+        switch (item.type) {
+          case 'assistant':
+            // Process assistant messages
+            for (const piece of item.message.content) {
+              if (piece.type === 'text') {
+                const chunk = piece.text;
+                fullText += chunk;
+                yield { type: 'text', text: chunk, isComplete: false };
+              } else if (piece.type === 'tool_use') {
+                // Send tool usage to frontend
+                logger.debug('Agent using tool', 'AIService', {
+                  tool: piece.name,
+                  input: piece.input
+                });
 
-          // Yield chunk for streaming to UI (every 200ms)
-          yield { text: chunk, isComplete: false };
+                yield {
+                  type: 'tool_use',
+                  tool: {
+                    name: piece.name,
+                    input: piece.input
+                  },
+                  isComplete: false
+                };
+              }
+            }
+            break;
+
+          case 'user':
+            // Process tool results
+            for (const piece of item.message.content) {
+              // Type guard: check if piece is an object with 'type' property
+              if (typeof piece === 'object' && piece !== null && 'type' in piece && piece.type === 'tool_result') {
+                const toolResult = piece as { type: 'tool_result'; content: any[] };
+                for (const inner of toolResult.content) {
+                  // Type guard: check if it's an object with 'type' property
+                  if (typeof inner === 'object' && inner !== null && 'type' in inner && inner.type === 'text') {
+                    // Tool results are included in the response
+                    const textContent = inner as { type: 'text'; text: string };
+                    fullText += textContent.text;
+                    yield { type: 'text', text: textContent.text, isComplete: false };
+                  }
+                }
+              }
+            }
+            break;
+
+          case 'system':
+            // Log system messages
+            if (item.subtype === 'init') {
+              logger.debug('Agent session initialized', 'AIService', {
+                sessionId: item.session_id
+              });
+            }
+            break;
         }
       }
 
@@ -207,11 +258,11 @@ export class AIService {
         length: fullText.length,
       });
 
-      yield { text: '', isComplete: true };
+      yield { type: 'complete', text: '', isComplete: true };
     } catch (error) {
       logger.error('AI generation failed', 'AIService', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      yield { text: '', isComplete: false, error: errorMessage };
+      yield { type: 'error', text: '', isComplete: false, error: errorMessage };
     } finally {
       activeStreams.delete(requestId);
     }
@@ -222,12 +273,6 @@ export class AIService {
    * Aborts the ongoing generation request and cleans up resources
    * @param requestId - ID of the generation request to cancel
    * @returns True if cancellation was successful, false if request not found
-   * @example
-   * // Start generation
-   * const generator = AIService.generateStream('req-1', request);
-   *
-   * // Later, cancel it
-   * AIService.cancelGeneration('req-1');
    */
   static cancelGeneration(requestId: string): boolean {
     const controller = activeStreams.get(requestId);
@@ -241,105 +286,33 @@ export class AIService {
   }
 
   /**
-   * Make a direct HTTP request to a custom endpoint
-   * Used for third-party Anthropic-compatible APIs that need special handling
-   * @private
-   */
-  private static async makeDirectRequest(
-    endpoint: string,
-    requestBody: any
-  ): Promise<any> {
-    return new Promise((resolve, reject) => {
-      if (!currentConfig) {
-        reject(new Error('AI service not initialized'));
-        return;
-      }
-
-      // API key is already decrypted in currentConfig
-      const apiKey = currentConfig.apiKey;
-      const url = new URL(currentConfig.baseUrl!);
-      const path = `${url.pathname}${endpoint}`;
-
-      const requestData = JSON.stringify(requestBody);
-
-      const options = {
-        hostname: url.hostname,
-        port: url.port || 443,
-        path: path,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(requestData),
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
-        }
-      };
-
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try {
-            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-              resolve(JSON.parse(data));
-            } else {
-              const error = JSON.parse(data);
-              reject(new Error(`${res.statusCode} ${JSON.stringify(error)}`));
-            }
-          } catch (e) {
-            reject(new Error(`Failed to parse response: ${data}`));
-          }
-        });
-      });
-
-      req.on('error', reject);
-      req.write(requestData);
-      req.end();
-    });
-  }
-
-  /**
    * Test AI connection by making a simple API request
    * Verifies that the API key is valid and the service is accessible
    * @returns Object with success status, optional error message, and latency in milliseconds
-   * @example
-   * const result = await AIService.testConnection();
-   * if (result.success) {
-   *   console.log(`Connection OK (${result.latency}ms)`);
-   * } else {
-   *   console.error(`Connection failed: ${result.error}`);
-   * }
    */
   static async testConnection(): Promise<{ success: boolean; error?: string; latency?: number }> {
     try {
-      logger.info('Testing AI connection', 'AIService');
+      logger.info('Testing AI connection with Claude Agent SDK', 'AIService');
 
       const startTime = Date.now();
 
-      // Use direct HTTP request for custom endpoints
-      if (currentConfig?.baseUrl) {
-        await AIService.makeDirectRequest('/v1/messages', {
-          model: currentConfig.model || 'glm-5',
-          max_tokens: 10,
-          messages: [
-            {
-              role: 'user',
-              content: 'Say "OK" if you can read this.',
-            },
-          ],
-        });
-      } else {
-        // Use SDK for standard Anthropic API
-        await anthropic!.messages.create({
-          model: 'claude-sonnet-4-6-20250514',
-          max_tokens: 10,
-          messages: [
-            {
-              role: 'user',
-              content: 'Say "OK" if you can read this.',
-            },
-          ],
-        });
+      // Load SDK
+      const { query } = await loadSDK();
+
+      // Use a simple query to test the connection
+      const stream = query({
+        prompt: 'Say "OK" if you can read this.',
+        options: {
+          model: currentConfig?.model || 'claude-sonnet-4-6-20250514',
+        },
+      });
+
+      // Just consume the stream to verify it works
+      for await (const item of stream) {
+        if (item.type === 'assistant') {
+          // We got a response, connection is working
+          break;
+        }
       }
 
       const latency = Date.now() - startTime;
@@ -355,77 +328,84 @@ export class AIService {
 
   /**
    * Build system prompt based on generation mode
+   * Note: Claude Agent SDK will automatically load and access skills from .claude/skills/
+   * @private
    */
-  private static buildSystemPrompt(mode: AIGenerationRequest['mode']): string {
-    const basePrompt = `You are an expert skill creator for Claude Code, a desktop application that helps developers manage Claude Code skills. A skill is a YAML + Markdown file that extends Claude's capabilities with specialized knowledge.
+  private static buildSystemPrompt(mode: AIGenerationRequest['mode'], request?: AIGenerationRequest): string {
+    const basePrompt = `You are an expert skill creator for Claude Code. You have access to the skill-creator skill which provides comprehensive guidelines for creating effective skills.
+
+When generating skill content:
+- Use the skill-creator skill as your guide for best practices
+- Follow proper YAML frontmatter format (name, description, version, author, tags)
+- Write comprehensive Markdown content with clear structure
+- Include practical examples and step-by-step instructions
+- Use proper formatting (headings, lists, code blocks)
+- You CAN use the Write tool to directly create skill files
+- You CAN use Bash and other tools as needed
+- Use the Skill tool to access skill-creator guidance
 
 Skills follow this format:
 ---
 name: Skill Name
-description: Brief description of the skill
+description: Brief description
+version: 1.0.0
+author: Author Name
+tags: [tag1, tag2, tag3]
 ---
 
 # Skill Content
 
-Markdown content here with instructions, examples, and guidance.
+Markdown content with instructions, examples, and guidance.`;
 
-Guidelines for skill generation:
-- Use clear, concise language
-- Include practical examples
-- Provide step-by-step instructions when appropriate
-- Use proper YAML syntax in frontmatter
-- Follow Markdown best practices
-- Make content actionable and specific`;
+    const targetPath = request?.skillContext?.targetPath;
+    const modeInstructions = {
+      new: targetPath
+        ? `\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user's requirements. Use the skill-creator skill for guidance.
 
-    switch (mode) {
-      case 'new':
-        return `${basePrompt}
+IMPORTANT: A skill is a DIRECTORY containing a skill.md file. Follow these steps:
+1. Use the Bash tool to create a directory at: ${targetPath}
+   The directory name should be based on the skill name (use kebab-case, e.g., "my-skill-name")
+2. Use the Write tool to create the skill.md file inside that directory: ${targetPath}/skill.md
+3. The skill.md file must contain YAML frontmatter and Markdown content
 
-You are generating a NEW skill from scratch based on the user's prompt. Create complete, production-ready skill content.`;
+Example structure:
+   ${targetPath}/
+   └── skill.md (contains YAML frontmatter + Markdown content)
 
-      case 'modify':
-        return `${basePrompt}
+You must create BOTH the directory AND the skill.md file.`
+        : '\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user\'s requirements. Use the skill-creator skill for guidance.',
 
-You are MODIFYING existing skill content based on the user's instructions. Improve, expand, or refine the existing content while preserving its core purpose.`;
+      modify: '\n\nYou are MODIFYING an existing skill. Improve, expand, or refine the content while preserving its core purpose. Use the Write tool to save changes to the skill.md file. Refer to skill-creator for best practices.',
 
-      case 'insert':
-        return `${basePrompt}
+      insert: '\n\nYou are INSERTING new content into an existing skill at a specified position. Generate content that fits naturally. Use the Write tool to save changes to the skill.md file. Follow skill-creator guidelines.',
 
-You are INSERTING new content into existing skill content at a specified position. Generate content that fits naturally into the existing skill.`;
+      replace: '\n\nYou are REPLACING a selected portion of an existing skill. Generate replacement content that maintains context and flow. Use the Write tool to save changes to the skill.md file. Use skill-creator as reference.'
+    };
 
-      case 'replace':
-        return `${basePrompt}
-
-You are REPLACING a selected portion of existing skill content with new content. Generate replacement content that maintains context and flow.`;
-
-      default:
-        return basePrompt;
-    }
+    return basePrompt + (modeInstructions[mode] || '');
   }
 
   /**
    * Build user prompt based on request
+   * @private
    */
   private static buildUserPrompt(request: AIGenerationRequest): string {
+    const currentContent = request.skillContext?.content;
+    const cursorPosition = request.skillContext?.cursorPosition;
+    const selectedText = request.skillContext?.selectedText;
+
     switch (request.mode) {
       case 'new':
         return `Create a new skill with the following requirements:\n\n${request.prompt}`;
 
       case 'modify':
-        return `Modify the following skill content according to these instructions:\n\n${request.prompt}\n\nCurrent content:\n\n${request.currentContent}`;
+        return `Modify the following skill content according to these instructions:\n\n${request.prompt}\n\nCurrent content:\n\n${currentContent || ''}`;
 
       case 'insert':
-        const insertPos = request.selectionStart ?? 0;
-        return `Insert new content at position ${insertPos} in the following skill content.\n\nInstructions: ${request.prompt}\n\nCurrent content:\n\n${request.currentContent}`;
+        return `Insert new content at position ${cursorPosition ?? 0} in the following skill content.\n\nInstructions: ${request.prompt}\n\nCurrent content:\n\n${currentContent || ''}`;
 
       case 'replace':
-        const startPos = request.selectionStart ?? 0;
-        const endPos = request.selectionEnd ?? startPos;
-        const beforeSelection = request.currentContent?.substring(0, startPos) || '';
-        const selectedText = request.currentContent?.substring(startPos, endPos) || '';
-        const afterSelection = request.currentContent?.substring(endPos) || '';
-
-        return `Replace the following selected text with new content:\n\nSelected text: "${selectedText}"\n\nInstructions: ${request.prompt}\n\nContext before selection:\n${beforeSelection}\n\nContext after selection:\n${afterSelection}\n\nGenerate ONLY the replacement text, not the entire content.`;
+        return `Replace the following selected text with new content:\n\nSelected text: "${selectedText || ''}"\n\nInstructions: ${request.prompt}\n\nCurrent content:\n${currentContent || ''}\n\nGenerate ONLY the replacement text, not the entire content.`;
 
       default:
         return request.prompt;

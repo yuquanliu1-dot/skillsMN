@@ -114,6 +114,8 @@ export default function Toast({
 
   return (
     <div
+      data-testid="toast"
+      data-toast-type={type}
       className={`
         fixed bottom-4 right-4 z-50
         flex items-center gap-3 px-4 py-3 rounded-lg border
@@ -128,7 +130,7 @@ export default function Toast({
       aria-live="polite"
     >
       <div className="flex-shrink-0">{getIcon()}</div>
-      <p className="text-sm font-medium">{message}</p>
+      <p data-testid="toast-message" className="text-sm font-medium">{message}</p>
       <button
         onClick={handleClose}
         className="flex-shrink-0 ml-2 hover:opacity-70 transition-opacity"

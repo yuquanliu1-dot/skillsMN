@@ -7,7 +7,7 @@
 // ============================================================================
 
 /** Skill markdown file name */
-export const SKILL_FILE_NAME = 'skill.md';
+export const SKILL_FILE_NAME = 'SKILL.md';
 
 /** Claude configuration directory name */
 export const CLAUDE_DIR_NAME = '.claude';
@@ -37,6 +37,7 @@ export const DEFAULT_AUTO_REFRESH = true;
 /** Configuration defaults */
 export const DEFAULT_CONFIG = {
   projectDirectory: null,
+  projectDirectories: [],
   defaultInstallDirectory: DEFAULT_INSTALL_DIRECTORY,
   editorDefaultMode: DEFAULT_EDITOR_MODE,
   autoRefresh: DEFAULT_AUTO_REFRESH,
@@ -72,7 +73,7 @@ export const FS_POLL_INTERVAL_MS = 100;
 // ============================================================================
 
 /** Skill list item height in pixels */
-export const SKILL_LIST_ITEM_HEIGHT = 96;
+export const SKILL_LIST_ITEM_HEIGHT = 144; // 136px card + 8px margin
 
 /** Minimum window width in pixels */
 export const MIN_WINDOW_WIDTH = 1024;
@@ -120,11 +121,14 @@ export const IPC_CHANNELS = {
   SKILL_UPDATE: 'skill:update',
   SKILL_DELETE: 'skill:delete',
   SKILL_OPEN_FOLDER: 'skill:open-folder',
+  SKILL_CHECK_UPDATES: 'skill:check-updates',
+  SKILL_UPDATE_SKILL: 'skill:update-skill',
 
   // Configuration operations
   CONFIG_LOAD: 'config:load',
   CONFIG_SAVE: 'config:save',
   CONFIG_TEST_AI: 'config:test-ai',
+  DIALOG_SELECT_DIRECTORY: 'dialog:select-directory',
 
   // File system watching
   FS_WATCH_START: 'fs:watch-start',
@@ -167,12 +171,25 @@ export const IPC_CHANNELS = {
   PRIVATE_REPO_UPDATE_SKILL: 'private-repo:update-skill',
   PRIVATE_REPO_GET_SKILL_METADATA: 'private-repo:get-skill-metadata',
   PRIVATE_REPO_GET_SKILL_CONTENT: 'private-repo:get-skill-content',
+  PRIVATE_REPO_UPLOAD_SKILL: 'private-repo:upload-skill',
 
   // Skills Registry operations (Feature 006)
   REGISTRY_SEARCH: 'registry:search',
   REGISTRY_INSTALL: 'registry:install',
   REGISTRY_CHECK_INSTALLED: 'registry:check-installed',
   REGISTRY_INSTALL_PROGRESS: 'registry:install:progress',
+  REGISTRY_GET_CONTENT: 'registry:get-content',
+
+  // Symlink operations
+  SYMLINK_UPDATE: 'symlink:update',
+  SYMLINK_GET_STATUS: 'symlink:get-status',
+  SYMLINK_GET_CLAUDE_DIRS: 'symlink:get-claude-dirs',
+
+  // Migration operations
+  MIGRATION_CHECK_NEEDED: 'migration:check-needed',
+  MIGRATION_DETECT_SKILLS: 'migration:detect-skills',
+  MIGRATION_START: 'migration:start',
+  MIGRATION_PROGRESS: 'migration:progress',
 } as const;
 
 // ============================================================================
@@ -220,32 +237,3 @@ export const SHORTCUTS = {
   CLOSE_EDITOR: 'Ctrl+W',
   DELETE: 'Delete',
 } as const;
-
-// ============================================================================
-// Skills Registry Constants (Feature 006)
-// ============================================================================
-
-/** Skills.sh registry API base URL */
-export const REGISTRY_API_BASE_URL = 'https://skills.sh';
-
-/** Skills.sh API search endpoint */
-export const REGISTRY_SEARCH_ENDPOINT = '/api/search';
-
-/** Default search limit */
-export const REGISTRY_DEFAULT_LIMIT = 20;
-
-/** Search debounce delay in milliseconds */
-export const REGISTRY_SEARCH_DEBOUNCE_MS = 400;
-
-/** API request timeout in milliseconds */
-export const REGISTRY_API_TIMEOUT_MS = 10000;
-
-/** Search results target time in milliseconds */
-export const REGISTRY_SEARCH_TARGET_MS = 3000;
-
-/** Installation target time in seconds (excluding network) */
-export const REGISTRY_INSTALL_TARGET_S = 30;
-
-/** Installation progress update interval in milliseconds */
-export const REGISTRY_INSTALL_PROGRESS_INTERVAL_MS = 2000;
-

@@ -35,7 +35,21 @@ class Logger {
     let output = parts.join(' ');
 
     if (entry.data !== undefined) {
-      output += ` | ${JSON.stringify(entry.data, null, 2)}`;
+      // Handle Error objects specially since their properties are not enumerable
+      let dataToLog = entry.data;
+      if (entry.data instanceof Error) {
+        const errorObj: any = {
+          name: entry.data.name,
+          message: entry.data.message,
+          stack: entry.data.stack,
+        };
+        // Safely access cause property (ES2022+)
+        if ('cause' in entry.data) {
+          errorObj.cause = (entry.data as any).cause;
+        }
+        dataToLog = errorObj;
+      }
+      output += ` | ${JSON.stringify(dataToLog, null, 2)}`;
     }
 
     return output;

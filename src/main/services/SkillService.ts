@@ -8,6 +8,7 @@ import fs from 'fs';
 import fsExtra from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import trash from 'trash';
 import { logger } from '../utils/Logger';
 import { PathValidator } from './PathValidator';
 import { ConfigService } from './ConfigService';
@@ -15,45 +16,97 @@ import { GitHubService } from './GitHubService';
 import { decryptPAT } from '../utils/encryption';
 import { SkillModel } from '../models/Skill';
 import { SkillDirectoryModel } from '../models/SkillDirectory';
+import { createLocalSource, isRegistrySkill, isPrivateRepoSkill } from '../models/SkillSource';
 import { Configuration, Skill } from '../../shared/types';
-import { SKILL_FILE_NAME } from '../../shared/constants';
+import { SKILL_FILE_NAME, SOURCE_METADATA_FILE } from '../../shared/constants';
+import { SymlinkService } from './SymlinkService';
+import { app } from 'electron';
 
 export class SkillService {
   private frontmatterCache: Map<string, { data: any; timestamp: number }> = new Map();
   private readonly CACHE_TTL = 60000; // 1 minute cache TTL
 
   constructor(
-    private pathValidator: PathValidator
+    private pathValidator: PathValidator,
+    private symlinkService?: SymlinkService
   ) {}
 
   /**
-   * List all skills from project and global directories
-   * Scans both directories for skill.md files and parses metadata
+   * Get application skills directory path (static version for use without instance)
+   * Returns configured application directory or default location
+   * @param config - Configuration object
+   * @returns Application skills directory path
+   */
+  static getApplicationSkillsDirectory(config: Configuration): string {
+    if (config.applicationSkillsDirectory) {
+      return config.applicationSkillsDirectory;
+    }
+
+    // Default to skills subdirectory in app installation directory
+    const appPath = app.getAppPath();
+    return path.join(appPath, 'skills');
+  }
+
+  /**
+   * Get application skills directory path (instance method)
+   * Returns configured application directory or default location
+   * @param config - Configuration object
+   * @returns Application skills directory path
+   */
+  getApplicationSkillsDirectory(config: Configuration): string {
+    return SkillService.getApplicationSkillsDirectory(config);
+  }
+
+  /**
+   * Ensure application skills directory exists
+   * Creates directory if it doesn't exist
+   * @param config - Configuration object
+   */
+  async ensureApplicationDirectory(config: Configuration): Promise<void> {
+    const appDir = this.getApplicationSkillsDirectory(config);
+    await SkillDirectoryModel.ensureDirectory(appDir);
+    logger.info('Application skills directory ensured', 'SkillService', { appDir });
+  }
+
+  /**
+   * List all skills from application directory only
+   * Scans the centralized application directory for skill.md files
    * Uses frontmatter caching for improved performance
-   * @param config - Configuration object with project directory setting
-   * @returns Array of Skill objects from both directories
+   * Enriches skills with symlink information from SymlinkService
+   * @param config - Configuration object with application directory setting
+   * @returns Array of Skill objects from application directory
    * @example
    * const config = await configService.load();
    * const skills = await skillService.listAllSkills(config);
    * console.log(`Found ${skills.length} skills`);
    */
   async listAllSkills(config: Configuration): Promise<Skill[]> {
-    logger.info('Listing all skills', 'SkillService', {
-      projectDir: config.projectDirectory,
-    });
+    logger.info('Listing all skills from application directory', 'SkillService');
 
-    const skills: Skill[] = [];
+    // Get application directory
+    const appDir = this.getApplicationSkillsDirectory(config);
 
-    // Scan global directory
-    const globalDir = SkillDirectoryModel.getGlobalDirectory();
-    const globalSkills = await this.scanDirectory(globalDir, 'global');
-    skills.push(...globalSkills);
+    // Scan only application directory
+    const skills = await this.scanDirectory(appDir, 'application');
 
-    // Scan project directory if configured
-    if (config.projectDirectory) {
-      const projectDir = SkillDirectoryModel.getProjectDirectory(config.projectDirectory);
-      const projectSkills = await this.scanDirectory(projectDir, 'project');
-      skills.push(...projectSkills);
+    // Enrich with symlink information if SymlinkService is available
+    if (this.symlinkService) {
+      try {
+        const symlinkDb = await this.symlinkService.loadDatabase(appDir);
+
+        for (const skill of skills) {
+          const skillName = path.basename(skill.path);
+          skill.symlinkConfig = symlinkDb.symlinks[skillName];
+          skill.isSymlinked = skill.symlinkConfig?.enabled ?? false;
+        }
+
+        logger.debug('Skills enriched with symlink information', 'SkillService', {
+          skillCount: skills.length,
+          symlinkedCount: skills.filter(s => s.isSymlinked).length,
+        });
+      } catch (error) {
+        logger.warn('Failed to load symlink database, skipping enrichment', 'SkillService', { error });
+      }
     }
 
     logger.info(`Found ${skills.length} skills`, 'SkillService');
@@ -75,7 +128,7 @@ export class SkillService {
   /**
    * Scan a directory for skills
    */
-  private async scanDirectory(dirPath: string, source: 'project' | 'global'): Promise<Skill[]> {
+  private async scanDirectory(dirPath: string, source: 'project' | 'global' | 'application'): Promise<Skill[]> {
     logger.debug(`Scanning directory: ${dirPath}`, 'SkillService', { source });
 
     try {
@@ -156,9 +209,10 @@ export class SkillService {
 
   /**
    * Create a new skill with template content
+   * Always creates in application directory (centralized storage)
    * Generates kebab-case directory name and creates skill.md file
    * @param name - Skill name (will be converted to kebab-case for directory)
-   * @param directory - 'project' or 'global' directory to create in
+   * @param directory - Ignored (always creates in application directory)
    * @returns Created Skill object with metadata
    * @throws Error if skill already exists or path validation fails
    * @example
@@ -166,23 +220,14 @@ export class SkillService {
    * console.log('Created:', skill.name, 'at', skill.path);
    */
   async createSkill(name: string, directory: 'project' | 'global'): Promise<Skill> {
-    logger.info(`Creating skill: ${name}`, 'SkillService', { directory });
+    logger.info(`Creating skill: ${name}`, 'SkillService');
 
-    // Get target directory
+    // Get application directory (always use application directory)
     const config = await this.getConfig();
-    logger.debug(`Config loaded`, 'SkillService', {
-      hasProjectDirectory: !!config.projectDirectory,
-      projectDirectory: config.projectDirectory,
-      requestedDirectory: directory
-    });
+    const targetBase = this.getApplicationSkillsDirectory(config);
 
-    const targetBase = directory === 'project' && config.projectDirectory
-      ? SkillDirectoryModel.getProjectDirectory(config.projectDirectory)
-      : SkillDirectoryModel.getGlobalDirectory();
-
-    logger.debug(`Target directory selected`, 'SkillService', {
+    logger.debug(`Creating skill in application directory`, 'SkillService', {
       targetBase,
-      isProject: directory === 'project' && !!config.projectDirectory
     });
 
     // Generate kebab-case directory name
@@ -205,8 +250,13 @@ export class SkillService {
     const template = SkillModel.generateTemplate(name);
     await fs.promises.writeFile(skillFile, template, 'utf-8');
 
+    // Create source metadata for local skill
+    const sourceMetadata = createLocalSource();
+    const metadataPath = path.join(skillDir, SOURCE_METADATA_FILE);
+    await fs.promises.writeFile(metadataPath, JSON.stringify(sourceMetadata, null, 2), 'utf-8');
+
     // Parse and return created skill (with cache)
-    const skill = await SkillModel.fromDirectory(skillDir, directory, this.frontmatterCache);
+    const skill = await SkillModel.fromDirectory(skillDir, 'application', this.frontmatterCache);
 
     logger.info(`Skill created: ${name}`, 'SkillService', { path: skillDir });
     return skill;
@@ -245,7 +295,17 @@ export class SkillService {
       const stats = await fs.promises.stat(skillFile);
       const actualLastModified = stats.mtimeMs;
 
-      if (actualLastModified > expectedLastModified) {
+      logger.debug('Timestamp comparison for concurrent modification check', 'SkillService', {
+        expectedLastModified,
+        actualLastModified,
+        difference: actualLastModified - expectedLastModified,
+        skillFile
+      });
+
+      // Allow 100ms tolerance for filesystem timestamp precision issues
+      // This prevents false positives from minor filesystem variations
+      const TOLERANCE_MS = 100;
+      if (actualLastModified > expectedLastModified + TOLERANCE_MS) {
         const error = new Error('File has been modified externally');
         (error as any).code = 'EXTERNAL_MODIFICATION';
         throw error;
@@ -281,8 +341,7 @@ export class SkillService {
     // Validate path
     const validatedPath = this.pathValidator.validate(skillPath);
 
-    // Move to recycle bin using dynamic import for ES module
-    const { default: trash } = await import('trash');
+    // Move to recycle bin
     await trash(validatedPath);
 
     logger.info(`Skill moved to recycle bin: ${skillPath}`, 'SkillService');
@@ -315,7 +374,7 @@ export class SkillService {
   }
 
   /**
-   * Check for updates to skills installed from private repositories
+   * Check for updates to skills installed from private repositories and registry
    * Compares local commit SHAs with remote repository commit SHAs
    * @param skills - Array of skills to check for updates
    * @returns Map of skill paths to update status and remote SHA
@@ -334,59 +393,158 @@ export class SkillService {
     const updateMap = new Map<string, { hasUpdate: boolean; remoteSHA?: string }>();
 
     for (const skill of skills) {
-      // Only check skills installed from private repos
-      if (!skill.sourceRepoId || !skill.sourceRepoPath || !skill.installedDirectoryCommitSHA) {
-        continue;
-      }
-
       try {
-        const configService = await this.getConfigService();
-        const repo = await configService.getPrivateRepo(skill.sourceRepoId);
-
-        if (!repo) {
-          logger.warn(`Repository not found for skill: ${skill.name}`, 'SkillService', { repoId: skill.sourceRepoId });
+        // Check if skill has source metadata
+        if (!skill.sourceMetadata) {
           continue;
         }
 
-        // Decrypt PAT
-        const pat = decryptPAT(repo.patEncrypted);
-
-        // Get latest commit SHA for the directory
-        const owner = repo.owner;
-        const repoName = repo.repo;
-        const branch = repo.defaultBranch || 'main';
-
-        const commits = await GitHubService.getDirectoryCommits(
-          owner,
-          repoName,
-          pat,
-          skill.sourceRepoPath,
-          branch
-        );
-
-        if (commits && commits.length > 0) {
-          const latestCommitSHA = commits[0].sha;
-          const hasUpdate = latestCommitSHA !== skill.installedDirectoryCommitSHA;
-
-          updateMap.set(skill.path, {
-            hasUpdate,
-            remoteSHA: latestCommitSHA,
-          });
-
-          if (hasUpdate) {
-            logger.info(`Update available for skill: ${skill.name}`, 'SkillService', {
-              skillPath: skill.path,
-              localSHA: skill.installedDirectoryCommitSHA,
-              remoteSHA: latestCommitSHA,
-            });
+        // Handle different source types
+        if (isRegistrySkill(skill.sourceMetadata)) {
+          // Check registry skill for updates
+          const result = await this.checkRegistrySkillForUpdates(skill, skill.sourceMetadata);
+          if (result) {
+            updateMap.set(skill.path, result);
+          }
+        } else if (isPrivateRepoSkill(skill.sourceMetadata)) {
+          // Check private repo skill for updates
+          const result = await this.checkPrivateRepoSkillForUpdates(skill, skill.sourceMetadata);
+          if (result) {
+            updateMap.set(skill.path, result);
           }
         }
+        // Local skills don't have updates
       } catch (error) {
         logger.error(`Failed to check updates for skill: ${skill.name}`, 'SkillService', error);
       }
     }
 
     return updateMap;
+  }
+
+  /**
+   * Check for updates to a registry-installed skill
+   * Compares local commit SHA with remote repository commit SHA
+   */
+  private async checkRegistrySkillForUpdates(
+    skill: Skill,
+    sourceMetadata: import('../models/SkillSource').RegistrySource
+  ): Promise<{ hasUpdate: boolean; remoteSHA?: string } | null> {
+    if (!sourceMetadata.commitHash) {
+      logger.debug('No commit hash stored for registry skill, skipping update check', 'SkillService', {
+        skillPath: skill.path
+      });
+      return null;
+    }
+
+    try {
+      // Get latest commit SHA from remote repository using GitHub API
+      const [owner, repo] = sourceMetadata.source.split('/');
+
+      // Use GitHub API to get the latest commit for the skill directory
+      // Note: This requires the repository to be public (which registry skills are)
+      const commits = await GitHubService.getDirectoryCommits(
+        owner,
+        repo,
+        '', // No PAT needed for public repos
+        sourceMetadata.skillId,
+        'main' // Default branch for registry skills
+      );
+
+      if (!commits || commits.length === 0) {
+        logger.warn('Failed to get latest commit SHA for registry skill', 'SkillService', {
+          skill: skill.name,
+          source: sourceMetadata.source
+        });
+        return null;
+      }
+
+      const latestCommitSHA = commits[0].sha;
+      const hasUpdate = latestCommitSHA !== sourceMetadata.commitHash;
+
+      if (hasUpdate) {
+        logger.info(`Update available for registry skill: ${skill.name}`, 'SkillService', {
+          skillPath: skill.path,
+          localSHA: sourceMetadata.commitHash,
+          remoteSHA: latestCommitSHA,
+        });
+      }
+
+      return {
+        hasUpdate,
+        remoteSHA: latestCommitSHA,
+      };
+    } catch (error) {
+      logger.error(`Failed to check registry skill updates: ${skill.name}`, 'SkillService', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check for updates to a private repo-installed skill
+   * Compares local commit SHA with remote repository commit SHA
+   */
+  private async checkPrivateRepoSkillForUpdates(
+    skill: Skill,
+    sourceMetadata: import('../models/SkillSource').PrivateRepoSource
+  ): Promise<{ hasUpdate: boolean; remoteSHA?: string } | null> {
+    if (!sourceMetadata.commitHash) {
+      logger.debug('No commit hash stored for private repo skill, skipping update check', 'SkillService', {
+        skillPath: skill.path
+      });
+      return null;
+    }
+
+    try {
+      const configService = await this.getConfigService();
+      const repo = await configService.getPrivateRepo(sourceMetadata.repoId);
+
+      if (!repo) {
+        logger.warn(`Repository not found for skill: ${skill.name}`, 'SkillService', {
+          repoId: sourceMetadata.repoId
+        });
+        return null;
+      }
+
+      // Decrypt PAT
+      const pat = decryptPAT(repo.patEncrypted);
+
+      // Get latest commit SHA for the directory
+      const owner = repo.owner;
+      const repoName = repo.repo;
+      const branch = repo.defaultBranch || 'main';
+
+      const commits = await GitHubService.getDirectoryCommits(
+        owner,
+        repoName,
+        pat,
+        sourceMetadata.skillPath,
+        branch
+      );
+
+      if (commits && commits.length > 0) {
+        const latestCommitSHA = commits[0].sha;
+        const hasUpdate = latestCommitSHA !== sourceMetadata.commitHash;
+
+        if (hasUpdate) {
+          logger.info(`Update available for private repo skill: ${skill.name}`, 'SkillService', {
+            skillPath: skill.path,
+            localSHA: sourceMetadata.commitHash,
+            remoteSHA: latestCommitSHA,
+          });
+        }
+
+        return {
+          hasUpdate,
+          remoteSHA: latestCommitSHA,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      logger.error(`Failed to check private repo skill updates: ${skill.name}`, 'SkillService', error);
+      return null;
+    }
   }
 
   /**
@@ -416,13 +574,18 @@ export class SkillService {
     try {
       // Get current skill metadata
       const skill = await this.getSkill(skillPath);
-      if (!skill.metadata.sourceRepoId || !skill.metadata.sourceRepoPath) {
+
+      // Check if skill has source metadata
+      if (!skill.metadata.sourceMetadata || skill.metadata.sourceMetadata.type !== 'private-repo') {
         throw new Error('Skill was not installed from a private repository');
       }
 
+      const sourceMetadata = skill.metadata.sourceMetadata;
+      const repoId = sourceMetadata.repoId;
+
       // Get repository configuration
       const configService = await this.getConfigService();
-      const repo = await configService.getPrivateRepo(skill.metadata.sourceRepoId);
+      const repo = await configService.getPrivateRepo(repoId);
 
       if (!repo) {
         throw new Error('Source repository not found');
@@ -684,16 +847,10 @@ installedAt: ${new Date().toISOString()}
   }
 
   /**
-   * Get configuration (temporary - should use ConfigService)
+   * Get configuration from ConfigService
    */
   private async getConfig(): Promise<Configuration> {
-    // This should be injected or retrieved from ConfigService
-    // For now, return a minimal config
-    return {
-      projectDirectory: null,
-      defaultInstallDirectory: 'project',
-      editorDefaultMode: 'edit',
-      autoRefresh: true,
-    };
+    const configService = await this.getConfigService();
+    return await configService.load();
   }
 }

@@ -28,6 +28,19 @@ export function registerAIHandlers(): void {
           throw new Error('Window not found');
         }
 
+        // Ensure AI service is initialized
+        if (!AIService.isInitialized()) {
+          logger.info('AI service not initialized, loading config...', 'AIHandlers');
+          const config = await AIConfigService.loadConfig();
+
+          if (!config.apiKey) {
+            throw new Error('API key not configured. Please configure your API key in Settings.');
+          }
+
+          await AIService.initialize(config);
+          logger.info('AI service initialized successfully', 'AIHandlers');
+        }
+
         // Start streaming generation
         const stream = AIService.generateStream(requestId, request);
 
@@ -35,8 +48,10 @@ export function registerAIHandlers(): void {
         for await (const chunk of stream) {
           // Send chunk to renderer
           win.webContents.send(IPC_CHANNELS.AI_CHUNK, {
-            type: 'ai:chunk',
-            chunk: chunk.text,
+            requestId,
+            type: chunk.type,  // 'text' or 'tool_use'
+            text: chunk.text,
+            tool: chunk.tool,
             isComplete: chunk.isComplete,
             error: chunk.error,
           });

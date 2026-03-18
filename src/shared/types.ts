@@ -8,7 +8,7 @@
 // Skill Types
 // ============================================================================
 
-export type SkillSource = 'project' | 'global';
+export type SkillSource = 'project' | 'global' | 'application';
 
 export interface Skill {
   /** Canonical path to skill directory */
@@ -17,20 +17,32 @@ export interface Skill {
   name: string;
   /** Skill description from YAML frontmatter */
   description?: string;
+  /** Skill version from YAML frontmatter */
+  version?: string;
+  /** Skill author from YAML frontmatter */
+  author?: string;
+  /** Skill tags from YAML frontmatter */
+  tags?: string[];
   /** Origin directory type */
   source: SkillSource;
   /** Last modification timestamp */
   lastModified: Date;
   /** Count of non-skill.md files in directory */
   resourceCount: number;
-  /** Source repository ID for installed skills */
+  /** Source repository ID for installed skills (deprecated - use sourceMetadata) */
   sourceRepoId?: string;
-  /** Source repository path (owner/repo) */
+  /** Source repository path (owner/repo) (deprecated - use sourceMetadata) */
   sourceRepoPath?: string;
-  /** Installed directory commit SHA */
+  /** Installed directory commit SHA (deprecated - use sourceMetadata) */
   installedDirectoryCommitSHA?: string;
-  /** Installation timestamp */
+  /** Installation timestamp (deprecated - use sourceMetadata) */
   installedAt?: Date;
+  /** Source metadata for tracking skill origin and version */
+  sourceMetadata?: import('../main/models/SkillSource').SkillSource;
+  /** Symlink configuration */
+  symlinkConfig?: SkillSymlinkConfig;
+  /** Whether skill is currently symlinked */
+  isSymlinked?: boolean;
 }
 
 export interface SkillDirectory {
@@ -56,23 +68,111 @@ export interface SkillFrontmatter {
 }
 
 // ============================================================================
+// Symlink Types
+// ============================================================================
+
+export interface SkillSymlinkConfig {
+  /** Whether symlink is enabled for this skill */
+  enabled: boolean;
+  /** Target Claude directory path */
+  claudeDirectory: string;
+  /** When symlink was created */
+  createdAt: string;
+  /** When symlink was last modified */
+  lastModified: string;
+}
+
+export interface SymlinksDatabase {
+  /** Database version for future migrations */
+  version: number;
+  /** Symlink configurations keyed by skill name */
+  symlinks: Record<string, SkillSymlinkConfig>;
+}
+
+// ============================================================================
+// Migration Types
+// ============================================================================
+
+export interface MigrationOptions {
+  /** Whether to move or copy skills */
+  moveOrCopy: 'move' | 'copy';
+  /** Whether to delete original files after migration */
+  deleteOriginals: boolean;
+}
+
+export interface MigrationProgress {
+  /** Current skill being migrated */
+  currentSkill: string;
+  /** Current skill index */
+  currentIndex: number;
+  /** Total skills to migrate */
+  totalSkills: number;
+  /** Percentage complete (0-100) */
+  percentage: number;
+  /** Current operation */
+  operation: 'detecting' | 'moving' | 'copying' | 'verifying' | 'completed' | 'failed';
+}
+
+export interface MigrationResult {
+  /** Whether migration was successful */
+  success: boolean;
+  /** Number of skills successfully migrated */
+  migratedCount: number;
+  /** Number of skills that failed */
+  failedCount: number;
+  /** Array of failed skill names with error messages */
+  failedSkills: Array<{ name: string; error: string }>;
+  /** Total time taken in milliseconds */
+  duration: number;
+}
+
+// ============================================================================
 // Configuration Types
 // ============================================================================
 
 export type InstallDirectory = 'project' | 'global';
 export type EditorMode = 'edit' | 'preview';
 
+export interface SkillEditorConfig {
+  /** Editor font size */
+  fontSize: number;
+  /** Editor theme */
+  theme: 'light' | 'dark';
+  /** Auto-save enabled */
+  autoSaveEnabled: boolean;
+  /** Auto-save delay in milliseconds */
+  autoSaveDelay: number;
+  /** Show minimap */
+  showMinimap: boolean;
+  /** Line numbers display mode */
+  lineNumbers: 'on' | 'off' | 'relative';
+  /** Editor font family */
+  fontFamily: string;
+  /** Tab size */
+  tabSize: number;
+  /** Word wrap enabled */
+  wordWrap: boolean;
+}
+
 export interface Configuration {
-  /** Path to Claude project directory (null if not configured) */
-  projectDirectory: string | null;
+  /** @deprecated Use projectDirectories instead */
+  projectDirectory?: string | null;
+  /** Array of configured project directories */
+  projectDirectories: string[];
   /** Default location for new skills */
   defaultInstallDirectory: InstallDirectory;
   /** Default behavior when opening skills */
   editorDefaultMode: EditorMode;
   /** Auto-refresh skill list on file changes */
   autoRefresh: boolean;
-  /** GitHub Personal Access Token for public skill discovery (optional, for higher rate limits) */
-  githubToken?: string;
+  /** Skill editor configuration */
+  skillEditor?: SkillEditorConfig;
+  /** Application skills directory (primary storage location) */
+  applicationSkillsDirectory?: string;
+  /** Whether migration from old directories has been completed */
+  migrationCompleted?: boolean;
+  /** Whether user has been asked about migration preference */
+  migrationPreferenceAsked?: boolean;
 }
 
 // ============================================================================
@@ -149,7 +249,7 @@ export interface FSEvent {
 // UI State Types
 // ============================================================================
 
-export type FilterSource = 'all' | 'project' | 'global';
+export type FilterSource = 'all' | 'local' | 'registry' | 'private-repo';
 export type SortBy = 'name' | 'modified';
 
 export interface UIState {
@@ -195,8 +295,15 @@ export interface AIGenerationRequest {
 }
 
 export interface AIStreamChunk {
-  /** Chunk of generated text */
-  text: string;
+  /** Type of chunk */
+  type: 'text' | 'tool_use' | 'complete' | 'error';
+  /** Chunk of generated text (for type: 'text') */
+  text?: string;
+  /** Tool information (for type: 'tool_use') */
+  tool?: {
+    name: string;
+    input?: any;
+  };
   /** Whether this is the final chunk */
   isComplete: boolean;
   /** Error message if generation failed */
@@ -365,6 +472,8 @@ export interface PrivateRepo {
   addedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+  provider: 'github' | 'gitlab';
+  instanceUrl?: string; // For self-hosted GitLab instances
 }
 
 export interface PrivateRepoConfig {
@@ -385,6 +494,9 @@ export interface PrivateSkill {
   lastCommitDate?: Date;
   fileCount?: number;
   directoryCommitSHA?: string;
+  skillFilePath?: string; // Path to SKILL.md file
+  description?: string; // Skill description from frontmatter
+  tags?: string[]; // Skill tags from frontmatter
 }
 
 export interface ContentValidationResult {
@@ -423,14 +535,15 @@ export interface InstallFromRegistryRequest {
   source: string;
   /** Skill identifier to install */
   skillId: string;
-  /** Target tool identifier */
-  targetToolId: string;
+  /** Target tool identifier (optional - no longer used) */
+  targetToolId?: string;
 }
 
 /**
- * Source metadata for tracking installed skills
+ * Source metadata for tracking installed skills (alias for unified SkillSource)
+ * @deprecated Use SkillSource types from '../main/models/SkillSource' instead
  */
-export interface SkillSourceMetadata {
+export type SkillSourceMetadata = {
   /** Source type identifier */
   type: 'registry';
   /** Base URL of the registry */
@@ -443,7 +556,7 @@ export interface SkillSourceMetadata {
   installedAt: string;
   /** Git commit hash (optional) */
   commitHash?: string;
-}
+};
 
 /**
  * Response from skills.sh registry search API

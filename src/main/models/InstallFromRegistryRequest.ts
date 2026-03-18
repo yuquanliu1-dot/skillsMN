@@ -12,8 +12,8 @@ export interface InstallFromRegistryRequest {
   source: string;
   /** Skill identifier to install */
   skillId: string;
-  /** Target tool identifier (e.g., "claude-code", "claude-desktop") */
-  targetToolId: string;
+  /** Target tool identifier (optional - no longer used) */
+  targetToolId?: string;
 }
 
 /**
@@ -62,10 +62,7 @@ export function validateInstallRequest(data: unknown): data is InstallFromRegist
     return false;
   }
 
-  // Validate targetToolId: non-empty string
-  if (typeof obj.targetToolId !== 'string' || obj.targetToolId.length === 0) {
-    return false;
-  }
+  // targetToolId is optional and no longer validated
 
   return true;
 }

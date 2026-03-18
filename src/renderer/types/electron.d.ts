@@ -11,6 +11,13 @@ import type {
   PrivateRepo,
   PrivateSkill,
   AIConfiguration,
+  SearchSkillResult,
+  InstallFromRegistryRequest,
+  InstallProgressEvent,
+  SkillSymlinkConfig,
+  MigrationOptions,
+  MigrationProgress,
+  MigrationResult,
 } from '../../shared/types';
 
 export interface ElectronAPI {
@@ -25,9 +32,16 @@ export interface ElectronAPI {
   ) => Promise<IPCResponse<Skill>>;
   deleteSkill: (path: string) => Promise<IPCResponse<void>>;
   openFolder: (path: string) => Promise<IPCResponse<void>>;
+  checkForUpdates: (
+    skills: Skill[]
+  ) => Promise<IPCResponse<Record<string, { hasUpdate: boolean; remoteSHA?: string }>>>;
+  updateSkillFromSource: (
+    skillPath: string,
+    createBackup?: boolean
+  ) => Promise<IPCResponse<{ newPath: string }>>;
 
   // Dialog Operations
-  selectDirectory: () => Promise<{ canceled: boolean; filePaths: string[] } | null>;
+  selectDirectory: () => Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>>;
 
   // Configuration Operations
   loadConfig: () => Promise<IPCResponse<Configuration>>;
@@ -56,6 +70,8 @@ export interface ElectronAPI {
     url: string;
     pat: string;
     displayName?: string;
+    provider?: 'github' | 'gitlab';
+    instanceUrl?: string;
   }) => Promise<IPCResponse<PrivateRepo>>;
   listPrivateRepos: () => Promise<IPCResponse<PrivateRepo[]>>;
   getPrivateRepo: (repoId: string) => Promise<IPCResponse<PrivateRepo | null>>;
@@ -78,6 +94,13 @@ export interface ElectronAPI {
     query: string;
   }) => Promise<IPCResponse<PrivateSkill[]>>;
   getPrivateRepoSkillContent: (repoId: string, skillPath: string) => Promise<IPCResponse<string>>;
+  uploadSkillToPrivateRepo: (params: {
+    repoId: string;
+    skillPath: string;
+    skillContent: string;
+    skillName: string;
+    commitMessage?: string;
+  }) => Promise<IPCResponse<{ sha: string }>>;
   installPrivateRepoSkill: (params: {
     repoId: string;
     skillPath: string;
@@ -122,6 +145,44 @@ export interface ElectronAPI {
   }) => Promise<IPCResponse<{ cancelled: boolean; cleanedUp: boolean }>>;
   onGitHubInstallProgress: (callback: (event: any, progress: InstallProgress) => void) => void;
   removeGitHubInstallProgressListener: () => void;
+
+  // Registry Operations (Feature 006 - Skills Registry Search)
+  searchRegistry: (query: string, limit?: number) => Promise<IPCResponse<SearchSkillResult[]>>;
+  installFromRegistry: (
+    request: InstallFromRegistryRequest,
+    targetDirectory: string
+  ) => Promise<IPCResponse<{ success: boolean; skillPath?: string; error?: string; errorCode?: string }>>;
+  checkSkillInstalled: (
+    skillId: string,
+    targetDirectory: string
+  ) => Promise<IPCResponse<{ installed: boolean }>>;
+  getRegistrySkillContent: (
+    source: string,
+    skillId: string
+  ) => Promise<IPCResponse<string>>;
+  onInstallProgress: (callback: (event: any, progress: InstallProgressEvent) => void) => void;
+  removeInstallProgressListener: () => void;
+
+  // Symlink Operations (Feature - Skill Storage Architecture Refactoring)
+  updateSymlink: (params: {
+    skillName: string;
+    config: import('../../shared/types').SkillSymlinkConfig;
+  }) => Promise<IPCResponse<void>>;
+  getSymlinkStatus: (skillName: string) => Promise<IPCResponse<import('../../shared/types').SkillSymlinkConfig | null>>;
+  getClaudeDirectories: () => Promise<IPCResponse<string[]>>;
+
+  // Migration Operations (Feature - Skill Storage Architecture Refactoring)
+  checkMigrationNeeded: () => Promise<IPCResponse<boolean>>;
+  detectExistingSkills: () => Promise<IPCResponse<{
+    global: Skill[];
+    project: Skill[];
+  }>>;
+  startMigration: (params: {
+    skills: Skill[];
+    options: import('../../shared/types').MigrationOptions;
+  }) => Promise<IPCResponse<import('../../shared/types').MigrationResult>>;
+  onMigrationProgress: (callback: (event: any, progress: import('../../shared/types').MigrationProgress) => void) => void;
+  removeMigrationProgressListener: () => void;
 }
 
 declare global {

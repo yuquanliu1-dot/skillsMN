@@ -4,7 +4,7 @@
  * IPC handlers for configuration operations
  */
 
-import { ipcMain } from 'electron';
+import { ipcMain, dialog } from 'electron';
 import { logger } from '../utils/Logger';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { ConfigService } from '../services/ConfigService';
@@ -64,6 +64,32 @@ export function registerConfigHandlers(): void {
         return { success: true, data: updated };
       } catch (error) {
         logger.error('Failed to save configuration', 'ConfigHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for dialog:select-directory
+  ipcMain.handle(
+    IPC_CHANNELS.DIALOG_SELECT_DIRECTORY,
+    async (): Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>> => {
+      try {
+        logger.debug('Opening directory selection dialog', 'ConfigHandlers');
+        const result = await dialog.showOpenDialog({
+          properties: ['openDirectory', 'createDirectory'],
+          title: 'Select Claude Project Directory',
+          buttonLabel: 'Select Directory',
+        });
+
+        return {
+          success: true,
+          data: {
+            canceled: result.canceled,
+            filePaths: result.filePaths,
+          },
+        };
+      } catch (error) {
+        logger.error('Failed to open directory dialog', 'ConfigHandlers', error);
         return { success: false, error: toIPCError(error) };
       }
     }

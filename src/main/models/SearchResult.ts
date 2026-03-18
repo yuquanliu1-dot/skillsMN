@@ -5,7 +5,7 @@
  */
 
 export interface SkillFileMatch {
-  /** Path to skill.md file within repository */
+  /** Path to SKILL.md file within repository */
   path: string;
   /** Directory path containing the skill */
   directoryPath: string;
@@ -88,7 +88,7 @@ export function createSearchResultFromGitHub(data: any): SearchResult {
   // Extract skill files from repository tree
   if (data.tree && Array.isArray(data.tree)) {
     for (const item of data.tree) {
-      if (item.type === 'blob' && item.path.endsWith('skill.md')) {
+      if (item.type === 'blob' && item.path.endsWith('SKILL.md')) {
         const directoryPath = item.path.substring(0, item.path.lastIndexOf('/'));
         
         skillFiles.push({

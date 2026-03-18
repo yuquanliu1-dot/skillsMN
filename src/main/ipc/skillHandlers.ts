@@ -17,12 +17,12 @@ import {
 } from '../utils/ErrorHandler';
 import { SkillService } from '../services/SkillService';
 import { PathValidator } from '../services/PathValidator';
-import { SkillDirectoryModel } from '../models/SkillDirectory';
-import { getConfigService } from './configHandlers';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { IPCResponse, IPCError, Skill, Configuration } from '../../shared/types';
 import { getFileWatcher } from '../index';
+import { getConfigService } from './configHandlers';
 
+import { SymlinkService } from '../services/SymlinkService';
 let skillService: SkillService | null = null;
 
 /**
@@ -51,21 +51,26 @@ function toIPCError(error: unknown): IPCError {
   return { code, message };
 }
 
-/**
+ /**
  * Initialize skill service and register IPC handlers
  */
-export function registerSkillHandlers(pathValidator: PathValidator): void {
+export function registerSkillHandlers(pathValidator: PathValidator, symlinkService: SymlinkService): void {
   // Initialize skill service
-  skillService = new SkillService(pathValidator);
+  skillService = new SkillService(pathValidator, symlinkService);
   logger.info('Skill service initialized', 'SkillHandlers');
 
   // Handler for skill:list
   ipcMain.handle(
     IPC_CHANNELS.SKILL_LIST,
-    async (_event, { config }: { config: Configuration }): Promise<IPCResponse<Skill[]>> => {
+    async (_event, { config }: { config?: Configuration }): Promise<IPCResponse<Skill[]>> => {
       try {
         logger.debug('Listing all skills', 'SkillHandlers');
-        const skills = await skillService!.listAllSkills(config);
+        // Load config if not provided
+        const skillConfig = config || (await getConfigService()?.load()) as Configuration;
+        if (!skillConfig) {
+          throw new ConfigurationError('Configuration not available');
+        }
+        const skills = await skillService!.listAllSkills(skillConfig);
         return { success: true, data: skills };
       } catch (error) {
         logger.error('Failed to list skills', 'SkillHandlers', error);
@@ -94,11 +99,13 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
     IPC_CHANNELS.SKILL_CREATE,
     async (
       _event,
-      { name, directory }: { name: string; directory: 'project' | 'global' }
+      { name, directory }: { name: string; directory?: 'project' | 'global' | 'application' }
     ): Promise<IPCResponse<Skill>> => {
       try {
-        logger.debug(`Creating skill: ${name}`, 'SkillHandlers', { directory });
-        const skill = await skillService!.createSkill(name, directory);
+        logger.debug(`Creating skill: ${name}`, 'SkillHandlers');
+        // Skills are always created in the centralized application directory
+        // The directory parameter is ignored but kept for backward compatibility
+        const skill = await skillService!.createSkill(name, 'application');
         logger.info(`Skill created: ${name}`, 'SkillHandlers');
         return { success: true, data: skill };
       } catch (error) {
@@ -158,6 +165,64 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
     }
   );
 
+  // Handler for skill:check-updates
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_CHECK_UPDATES,
+    async (_event, { skills }: { skills: Skill[] }): Promise<IPCResponse<Map<string, { hasUpdate: boolean; remoteSHA?: string }>>> => {
+      try {
+        logger.debug('Checking for skill updates', 'SkillHandlers');
+        const updates = await skillService!.checkForUpdates(skills);
+
+        // Convert Map to plain object for IPC serialization
+        const updatesObject: Record<string, { hasUpdate: boolean; remoteSHA?: string }> = {};
+        updates.forEach((value, key) => {
+          updatesObject[key] = value;
+        });
+
+        logger.info(`Update check completed: ${updates.size} skills checked`, 'SkillHandlers');
+        return { success: true, data: updatesObject as any };
+      } catch (error) {
+        logger.error('Failed to check for updates', 'SkillHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for skill:update-skill
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_UPDATE_SKILL,
+    async (_event, { skillPath, createBackup }: { skillPath: string; createBackup: boolean }): Promise<IPCResponse<{ newPath: string }>> => {
+      try {
+        logger.debug(`Updating skill: ${skillPath}`, 'SkillHandlers');
+
+        // Get skill to determine source type
+        const skillData = await skillService!.getSkill(skillPath);
+        const skill = skillData.metadata;
+
+        if (!skill.sourceMetadata) {
+          throw new Error('Skill was not installed from a remote source');
+        }
+
+        // Update based on source type
+        if (skill.sourceMetadata.type === 'registry') {
+          // TODO: Implement registry skill update
+          throw new Error('Registry skill updates not yet implemented');
+        } else if (skill.sourceMetadata.type === 'private-repo') {
+          const result = await skillService!.updatePrivateSkill(skillPath, createBackup);
+          if (!result.success) {
+            throw new Error(result.error || 'Update failed');
+          }
+          return { success: true, data: { newPath: result.newPath || skillPath } };
+        } else {
+          throw new Error('Cannot update locally created skills');
+        }
+      } catch (error) {
+        logger.error('Failed to update skill', 'SkillHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
   // Handler for fs:watch-start
   ipcMain.handle(
     IPC_CHANNELS.FS_WATCH_START,
@@ -170,21 +235,15 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
           throw new Error('File watcher not initialized');
         }
 
-        // Get current configuration
-        const configService = getConfigService();
-        if (!configService) {
-          throw new Error('ConfigService not initialized');
+        // Get the application directory from path validator
+        const appDir = pathValidator.getApplicationDirectory();
+        if (!appDir) {
+          throw new Error('Application skills directory not configured');
         }
 
-        const config = await configService.load();
+        await fileWatcher.start(appDir);
 
-        const globalDir = SkillDirectoryModel.getGlobalDirectory();
-        const projectSkillsDir = config.projectDirectory
-          ? SkillDirectoryModel.getProjectDirectory(config.projectDirectory)
-          : null;
-        fileWatcher.start(projectSkillsDir, globalDir);
-
-        logger.info('File system watcher started', 'SkillHandlers');
+        logger.info('File system watcher started', 'SkillHandlers', { appDir });
         return { success: true };
       } catch (error) {
         logger.error('Failed to start file watcher', 'SkillHandlers', error);
@@ -205,7 +264,7 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
           throw new Error('File watcher not initialized');
         }
 
-        fileWatcher.stop();
+        await fileWatcher.stop();
 
         logger.info('File system watcher stopped', 'SkillHandlers');
         return { success: true };

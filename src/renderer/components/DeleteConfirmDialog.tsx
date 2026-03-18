@@ -85,7 +85,7 @@ export default function DeleteConfirmDialog({
         }
       }}
     >
-      <div className="bg-white border border-slate-300 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+      <div data-testid="delete-confirm-dialog" className="bg-white border border-slate-300 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -154,13 +154,20 @@ export default function DeleteConfirmDialog({
 
           <div className="p-3 bg-slate-100 rounded-md">
             <p className="text-sm text-slate-500">
-              <span
-                className={`badge ${
-                  skill.source === 'project' ? 'badge-project' : 'badge-global'
-                } mr-2`}
-              >
-                {skill.source === 'project' ? 'Project' : 'Global'}
-              </span>
+              {/* Source badge based on sourceMetadata.type */}
+              {skill.sourceMetadata?.type === 'local' && (
+                <span className="badge badge-local mr-2">Local</span>
+              )}
+              {skill.sourceMetadata?.type === 'registry' && (
+                <span className="badge badge-registry mr-2" title={`From ${skill.sourceMetadata.source}`}>
+                  {skill.sourceMetadata.source}
+                </span>
+              )}
+              {skill.sourceMetadata?.type === 'private-repo' && (
+                <span className="badge badge-private mr-2" title={`From ${skill.sourceMetadata.repoPath}`}>
+                  Private
+                </span>
+              )}
               {skill.resourceCount > 0 && (
                 <span className="flex items-center gap-1 mt-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,6 +217,7 @@ export default function DeleteConfirmDialog({
             Cancel
           </button>
           <button
+            data-testid="confirm-delete-button"
             onClick={handleConfirm}
             disabled={isDeleting}
             className="btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"

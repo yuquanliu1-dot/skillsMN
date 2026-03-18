@@ -25,6 +25,7 @@ interface AIState {
   content: string;
   error: string | null;
   requestId: string | null;
+  toolCalls: Array<{ name: string; input?: any }>;
 }
 
 /**
@@ -33,6 +34,7 @@ interface AIState {
 type AIAction =
   | { type: 'START_GENERATION'; requestId: string }
   | { type: 'CHUNK'; chunk: string }
+  | { type: 'TOOL_USE'; tool: { name: string; input?: any } }
   | { type: 'COMPLETE' }
   | { type: 'ERROR'; error: string }
   | { type: 'RESET' };
@@ -45,6 +47,7 @@ const initialState: AIState = {
   content: '',
   error: null,
   requestId: null,
+  toolCalls: [],
 };
 
 /**
@@ -59,12 +62,19 @@ function aiReducer(state: AIState, action: AIAction): AIState {
         content: '',
         error: null,
         requestId: action.requestId,
+        toolCalls: [],
       };
 
     case 'CHUNK':
       return {
         ...state,
         content: state.content + action.chunk,
+      };
+
+    case 'TOOL_USE':
+      return {
+        ...state,
+        toolCalls: [...state.toolCalls, action.tool],
       };
 
     case 'COMPLETE':
@@ -114,6 +124,7 @@ interface UseAIGenerationReturn {
   status: AIGenerationState;
   content: string;
   error: string | null;
+  toolCalls: Array<{ name: string; input?: any }>;
   isStreaming: boolean;
   isComplete: boolean;
   isIdle: boolean;
@@ -158,6 +169,9 @@ export function useAIGeneration(options?: UseAIGenerationOptions): UseAIGenerati
       await aiClient.generateStream(requestId, request, {
         onChunk: (chunk) => {
           dispatch({ type: 'CHUNK', chunk });
+        },
+        onToolUse: (tool) => {
+          dispatch({ type: 'TOOL_USE', tool });
         },
         onComplete: () => {
           dispatch({ type: 'COMPLETE' });
@@ -217,6 +231,7 @@ export function useAIGeneration(options?: UseAIGenerationOptions): UseAIGenerati
     status: state.status,
     content: state.content,
     error: state.error,
+    toolCalls: state.toolCalls,
     isStreaming: state.status === 'STREAMING',
     isComplete: state.status === 'COMPLETE',
     isIdle: state.status === 'IDLE',

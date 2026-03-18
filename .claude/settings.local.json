@@ -34,7 +34,9 @@
       "Bash(git ls-remote:*)",
       "Bash(git branch:*)",
       "Bash(ls -d specs/[0-9]*-skills-registry-search 2>/dev/null || echo \"No specs directories found\")",
-      "Bash(ls -d specs/[0-9]*-* 2>/dev/null | sed 's/specs\\\\///' | sed 's/-.*$//' | sort -n | tail -1 || echo \"0\")"
+      "Bash(ls -d specs/[0-9]*-* 2>/dev/null | sed 's/specs\\\\///' | sed 's/-.*$//' | sort -n | tail -1 || echo \"0\")",
+      "Bash(cd /d D:\\\\skillsMN\\\\src\\\\renderer\\\\components && mv AIRewritePopover.tsx AIAssistantPopover.tsx)",
+      "Bash(gh pr:*)"
     ]
   }
 }
