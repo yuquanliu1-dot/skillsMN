@@ -49,6 +49,11 @@ playwright-report/
 tests/screenshots/
 *.trace
 trace.zip
+# Test data and fixtures generated during testing
+tests/performance/.claude/
+tests/security/.claude/
+tests/**/test-output/
+tests/**/.claude/
 
 # Temporary files
 *.tmp
