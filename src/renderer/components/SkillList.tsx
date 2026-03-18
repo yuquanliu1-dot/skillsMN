@@ -44,9 +44,12 @@ export default function SkillList({
   const filteredAndSortedSkills = useMemo(() => {
     let result = [...skills];
 
-    // Filter by source
+    // Filter by source type (local, registry, private-repo)
     if (filterSource !== 'all') {
-      result = result.filter((skill) => skill.source === filterSource);
+      result = result.filter((skill) => {
+        const sourceType = skill.sourceMetadata?.type || 'local';
+        return sourceType === filterSource;
+      });
     }
 
     // Filter by search query
@@ -214,8 +217,9 @@ export default function SkillList({
                 title="Filter skills"
               >
                 <option value="all">All</option>
-                <option value="project">Project</option>
-                <option value="global">Global</option>
+                <option value="local">Local</option>
+                <option value="registry">Registry</option>
+                <option value="private-repo">Private</option>
               </select>
             </div>
 

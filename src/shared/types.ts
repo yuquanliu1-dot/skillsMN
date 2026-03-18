@@ -249,7 +249,7 @@ export interface FSEvent {
 // UI State Types
 // ============================================================================
 
-export type FilterSource = 'all' | 'project' | 'global';
+export type FilterSource = 'all' | 'local' | 'registry' | 'private-repo';
 export type SortBy = 'name' | 'modified';
 
 export interface UIState {
@@ -289,10 +289,6 @@ export interface AIGenerationRequest {
     content?: string;
     cursorPosition?: number;
     selectedText?: string;
-    /** Target directory for new skills */
-    targetDirectory?: 'project' | 'global';
-    /** Target path where the skill will be saved */
-    targetPath?: string;
   };
   /** Request timestamp */
   timestamp?: Date;
@@ -537,8 +533,8 @@ export interface InstallFromRegistryRequest {
   source: string;
   /** Skill identifier to install */
   skillId: string;
-  /** Target tool identifier */
-  targetToolId: string;
+  /** Target tool identifier (optional - no longer used) */
+  targetToolId?: string;
 }
 
 /**
