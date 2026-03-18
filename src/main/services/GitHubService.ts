@@ -946,39 +946,62 @@ export class GitHubService {
     commitMessage?: string,
     instanceUrl?: string
   ): Promise<{ success: boolean; sha?: string; error?: string }> {
+    const GITHUB_API_BASE = instanceUrl
+      ? `${instanceUrl}/api/v3`
+      : 'https://api.github.com';
+
+    const fullPath = skillDirName.startsWith('/') ? `${skillDirName}/SKILL.md` : `${skillDirName}/SKILL.md`;
+    const REQUEST_TIMEOUT = 30000; // 30 seconds timeout
+
+    logger.info('GitHub upload parameters', 'GitHubService', {
+      owner,
+      repo,
+      skillDirName,
+      fullPath,
+      branch,
+      skillName,
+      apiBase: GITHUB_API_BASE,
+      hasInstanceUrl: !!instanceUrl
+    });
+
+    // Helper function to create abort controller with timeout
+    const createTimeoutController = () => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      return controller;
+    };
+
+    // Helper function to fetch with timeout
+    const fetchWithTimeout = async (url: string, options: any): Promise<any> => {
+      const controller = createTimeoutController();
+      return fetch(url, { ...options, signal: controller.signal });
+    };
+
     try {
-      const GITHUB_API_BASE = instanceUrl
-        ? `${instanceUrl}/api/v3`
-        : 'https://api.github.com';
-
-      const fullPath = skillDirName.startsWith('/') ? `${skillDirName}/skill.md` : `${skillDirName}/skill.md`;
-
-      logger.info('GitHub upload parameters', 'GitHubService', {
-        owner,
-        repo,
-        skillDirName,
-        fullPath,
-        branch,
-        skillName,
-        apiBase: GITHUB_API_BASE,
-        hasInstanceUrl: !!instanceUrl
-      });
-
-      // Check if file already exists to get its SHA for update
+      // Check if file already exists to get its SHA for update (with retry)
       let existingSha: string | undefined;
       try {
         const checkUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}?ref=${branch}`;
         logger.debug('Checking if file exists', 'GitHubService', { checkUrl });
 
-        const checkResponse = await fetch(
-          checkUrl,
-          {
-            headers: {
-              'Authorization': `token ${pat}`,
-              'Accept': 'application/vnd.github.v3+json',
-              'User-Agent': 'skillsMN-App',
-            },
-          }
+        const checkResponse = await retryWithBackoff(
+          async () => {
+            const response = await fetchWithTimeout(checkUrl, {
+              headers: {
+                'Authorization': `token ${pat}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'User-Agent': 'skillsMN-App',
+              },
+            });
+            // Check for rate limit
+            if (response.status === 429) {
+              const error: any = new Error('Rate limit exceeded');
+              error.status = 429;
+              throw error;
+            }
+            return response;
+          },
+          { maxAttempts: 3, initialDelay: 1000 }
         );
 
         logger.debug('File check response', 'GitHubService', {
@@ -1005,7 +1028,7 @@ export class GitHubService {
         });
       }
 
-      // Create or update the file
+      // Create or update the file (with retry)
       const message = commitMessage || (existingSha ? `Update skill: ${skillName}` : `Add skill: ${skillName}`);
       const uploadUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}`;
 
@@ -1018,23 +1041,32 @@ export class GitHubService {
         contentLength: content.length
       });
 
-      const response = await fetch(
-        uploadUrl,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `token ${pat}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'skillsMN-App',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message,
-            content: Buffer.from(content).toString('base64'),
-            branch,
-            ...(existingSha && { sha: existingSha }),
-          }),
-        }
+      const response = await retryWithBackoff(
+        async () => {
+          const res = await fetchWithTimeout(uploadUrl, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `token ${pat}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'User-Agent': 'skillsMN-App',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message,
+              content: Buffer.from(content).toString('base64'),
+              branch,
+              ...(existingSha && { sha: existingSha }),
+            }),
+          });
+          // Check for rate limit
+          if (res.status === 429) {
+            const error: any = new Error('Rate limit exceeded');
+            error.status = 429;
+            throw error;
+          }
+          return res;
+        },
+        { maxAttempts: 3, initialDelay: 2000 }
       );
 
       logger.debug('Upload response received', 'GitHubService', {
@@ -1061,9 +1093,204 @@ export class GitHubService {
         sha: data.content.sha,
       };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload skill';
+
+      // Provide more helpful error messages
+      let userMessage = errorMessage;
+      if (errorMessage.includes('abort') || errorMessage.includes('timeout')) {
+        userMessage = 'Request timed out. Please check your network connection and try again.';
+      } else if (errorMessage.includes('socket hang up')) {
+        userMessage = 'Connection was closed unexpectedly. Please try again.';
+      } else if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('network')) {
+        userMessage = 'Network error. Please check your internet connection.';
+      }
+
+      logger.error('GitHub upload error', 'GitHubService', {
+        error: errorMessage,
+        userMessage
+      });
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to upload skill',
+        error: userMessage,
+      };
+    }
+  }
+
+  /**
+   * Upload all files from a skill directory to a private GitHub repository
+   * Creates or updates each file and commits them to the repository
+   *
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param skillDirName - Directory name for the skill
+   * @param skillName - Name of the skill (for commit message)
+   * @param files - Array of files with relative path and content
+   * @param pat - Personal Access Token with repo scope
+   * @param branch - Branch to commit to (default: 'main')
+   * @param commitMessage - Optional custom commit message
+   * @param instanceUrl - Optional instance URL (for GitHub Enterprise)
+   * @returns Object with success status and uploaded file count or error message
+   */
+  static async uploadSkillDirectory(
+    owner: string,
+    repo: string,
+    skillDirName: string,
+    skillName: string,
+    files: Array<{ relativePath: string; content: string }>,
+    pat: string,
+    branch: string = 'main',
+    commitMessage?: string,
+    instanceUrl?: string
+  ): Promise<{ success: boolean; uploadedCount?: number; errors?: string[]; error?: string }> {
+    const GITHUB_API_BASE = instanceUrl
+      ? `${instanceUrl}/api/v3`
+      : 'https://api.github.com';
+
+    const REQUEST_TIMEOUT = 30000; // 30 seconds timeout
+    const errors: string[] = [];
+    let uploadedCount = 0;
+
+    logger.info('GitHub directory upload parameters', 'GitHubService', {
+      owner,
+      repo,
+      skillDirName,
+      branch,
+      skillName,
+      fileCount: files.length,
+      apiBase: GITHUB_API_BASE,
+    });
+
+    // Helper function to create abort controller with timeout
+    const createTimeoutController = () => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      return controller;
+    };
+
+    // Helper function to fetch with timeout
+    const fetchWithTimeout = async (url: string, options: any): Promise<any> => {
+      const controller = createTimeoutController();
+      return fetch(url, { ...options, signal: controller.signal });
+    };
+
+    try {
+      // Upload each file
+      for (const file of files) {
+        // Construct the full path in the repository
+        const relativePath = file.relativePath.startsWith('/')
+          ? file.relativePath.slice(1)
+          : file.relativePath;
+        const fullPath = `${skillDirName}/${relativePath}`;
+
+        try {
+          // Check if file already exists to get its SHA for update
+          let existingSha: string | undefined;
+          try {
+            const checkUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}?ref=${branch}`;
+            const checkResponse = await retryWithBackoff(
+              async () => {
+                const response = await fetchWithTimeout(checkUrl, {
+                  headers: {
+                    'Authorization': `token ${pat}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'skillsMN-App',
+                  },
+                });
+                if (response.status === 429) {
+                  const error: any = new Error('Rate limit exceeded');
+                  error.status = 429;
+                  throw error;
+                }
+                return response;
+              },
+              { maxAttempts: 3, initialDelay: 1000 }
+            );
+
+            if (checkResponse.ok) {
+              const existingFile = await checkResponse.json();
+              existingSha = existingFile.sha;
+            }
+          } catch (checkError) {
+            // File doesn't exist or error checking - continue with create
+          }
+
+          // Create or update the file
+          const message = commitMessage ||
+            (existingSha ? `Update ${relativePath} in ${skillName}` : `Add ${relativePath} to ${skillName}`);
+          const uploadUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}`;
+
+          const response = await retryWithBackoff(
+            async () => {
+              const res = await fetchWithTimeout(uploadUrl, {
+                method: 'PUT',
+                headers: {
+                  'Authorization': `token ${pat}`,
+                  'Accept': 'application/vnd.github.v3+json',
+                  'User-Agent': 'skillsMN-App',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  message,
+                  content: Buffer.from(file.content).toString('base64'),
+                  branch,
+                  ...(existingSha && { sha: existingSha }),
+                }),
+              });
+              if (res.status === 429) {
+                const error: any = new Error('Rate limit exceeded');
+                error.status = 429;
+                throw error;
+              }
+              return res;
+            },
+            { maxAttempts: 3, initialDelay: 2000 }
+          );
+
+          if (response.ok) {
+            uploadedCount++;
+            logger.debug(`Uploaded file: ${fullPath}`, 'GitHubService');
+          } else {
+            const errorData = await response.json();
+            errors.push(`Failed to upload ${relativePath}: ${errorData.message || response.statusText}`);
+          }
+        } catch (fileError) {
+          const errorMsg = fileError instanceof Error ? fileError.message : 'Unknown error';
+          errors.push(`Failed to upload ${relativePath}: ${errorMsg}`);
+        }
+      }
+
+      if (uploadedCount === files.length) {
+        logger.info('All files uploaded successfully', 'GitHubService', {
+          uploadedCount,
+          totalFiles: files.length,
+        });
+        return { success: true, uploadedCount };
+      } else if (uploadedCount > 0) {
+        logger.warn('Partial upload completed', 'GitHubService', {
+          uploadedCount,
+          totalFiles: files.length,
+          errors,
+        });
+        return {
+          success: true,
+          uploadedCount,
+          errors: errors.length > 0 ? errors : undefined,
+        };
+      } else {
+        logger.error('All file uploads failed', 'GitHubService', { errors });
+        return {
+          success: false,
+          error: 'All file uploads failed',
+          errors,
+        };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload skill directory';
+      logger.error('GitHub directory upload error', 'GitHubService', { error: errorMessage });
+      return {
+        success: false,
+        error: errorMessage,
       };
     }
   }

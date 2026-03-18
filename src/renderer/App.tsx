@@ -758,9 +758,9 @@ export default function App(): JSX.Element {
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden" data-testid="main-content">
           {/* Skills List - Column 2 (flexible) */}
-          <div className="flex-1 max-w-[360px] border-r border-gray-200 bg-white overflow-hidden flex flex-col">
+          <div className="flex-1 max-w-[360px] border-r border-gray-200 bg-white overflow-hidden flex flex-col" data-testid="skills-list">
             {/* Keep all views mounted but hidden to preserve state */}
             <div style={{ display: currentView === 'skills' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
               <SkillList
@@ -792,7 +792,7 @@ export default function App(): JSX.Element {
           </div>
 
           {/* Detail Panel - Column 3 (adaptive width) */}
-          <div className="flex-1 border-l border-gray-200 bg-white overflow-hidden">
+          <div className="flex-1 border-l border-gray-200 bg-white overflow-hidden" data-testid="detail-panel">
             {/* Skills View - Show editing skill or empty state */}
             {currentView === 'skills' && editingSkill ? (
               <Suspense

@@ -692,7 +692,7 @@ export default function SkillEditor({
   const footerBg = isInline ? "bg-gray-50 border-gray-200" : "bg-gray-50 border-gray-200";
 
   return (
-    <div className={containerClasses}>
+    <div data-testid="skill-editor" className={containerClasses}>
       {/* Header */}
       <div className={`border-b ${borderColor} px-4 py-3 flex items-center justify-between ${headerBg}`}>
         <div className="flex items-center gap-3">

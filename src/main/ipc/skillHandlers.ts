@@ -22,6 +22,7 @@ import { IPCResponse, IPCError, Skill, Configuration } from '../../shared/types'
 import { getFileWatcher } from '../index';
 import { getConfigService } from './configHandlers';
 
+import { SymlinkService } from '../services/SymlinkService';
 let skillService: SkillService | null = null;
 
 /**
@@ -50,12 +51,12 @@ function toIPCError(error: unknown): IPCError {
   return { code, message };
 }
 
-/**
+ /**
  * Initialize skill service and register IPC handlers
  */
-export function registerSkillHandlers(pathValidator: PathValidator): void {
+export function registerSkillHandlers(pathValidator: PathValidator, symlinkService: SymlinkService): void {
   // Initialize skill service
-  skillService = new SkillService(pathValidator);
+  skillService = new SkillService(pathValidator, symlinkService);
   logger.info('Skill service initialized', 'SkillHandlers');
 
   // Handler for skill:list
@@ -98,11 +99,13 @@ export function registerSkillHandlers(pathValidator: PathValidator): void {
     IPC_CHANNELS.SKILL_CREATE,
     async (
       _event,
-      { name, directory }: { name: string; directory: 'project' | 'global' }
+      { name, directory }: { name: string; directory?: 'project' | 'global' | 'application' }
     ): Promise<IPCResponse<Skill>> => {
       try {
-        logger.debug(`Creating skill: ${name}`, 'SkillHandlers', { directory });
-        const skill = await skillService!.createSkill(name, directory);
+        logger.debug(`Creating skill: ${name}`, 'SkillHandlers');
+        // Skills are always created in the centralized application directory
+        // The directory parameter is ignored but kept for backward compatibility
+        const skill = await skillService!.createSkill(name, 'application');
         logger.info(`Skill created: ${name}`, 'SkillHandlers');
         return { success: true, data: skill };
       } catch (error) {

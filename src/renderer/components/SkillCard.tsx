@@ -2,7 +2,7 @@
  * SkillCard Component
  *
  * Fixed-height card for virtualized skill list with content truncation
- * Height: 130px (fixed)
+ * Height: 128px (fixed)
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -100,9 +100,9 @@ export default function SkillCard({
 
   return (
     <>
-      {/* Fixed height card: 152px + 8px bottom margin */}
+      {/* Fixed height card: 136px + 8px bottom margin */}
       <article
-        className={`relative h-[152px] mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
+        className={`relative h-[136px] mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
           isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
         }`}
         onClick={handleClick}
@@ -111,24 +111,15 @@ export default function SkillCard({
         role="button"
         aria-label={`Skill: ${skill.name}`}
         aria-selected={isSelected}
+        data-testid="skill-card"
       >
         {/* Top row: Name + Badges + Actions */}
         <div className="flex items-start justify-between mb-2 h-[28px]">
           <div className="flex-1 min-w-0 mr-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate" title={skill.name}>
+              <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate" title={skill.name} data-testid="skill-name">
                 {skill.name}
               </h4>
-
-              {/* Source Badge */}
-              <span className={`
-                inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0 border-0
-                ${skill.source === 'project'
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}
-              `}>
-                {skill.source === 'project' ? 'P' : 'G'}
-              </span>
 
               {/* Source Type Badge */}
               {skill.sourceMetadata?.type === 'local' && (
@@ -199,6 +190,7 @@ export default function SkillCard({
             {/* Delete Button */}
             {onDelete && (
               <button
+                data-testid="delete-button"
                 onClick={handleDelete}
                 className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                 aria-label="Delete"
@@ -222,13 +214,6 @@ export default function SkillCard({
               {skill.description}
             </p>
           )}
-        </div>
-
-        {/* Path row */}
-        <div className="h-[16px] mb-2">
-          <p className="text-xs text-slate-600 dark:text-slate-400 truncate" title={skill.path}>
-            {skill.path}
-          </p>
         </div>
 
         {/* Source Info row */}

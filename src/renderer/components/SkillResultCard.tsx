@@ -26,6 +26,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
   const [showDialog, setShowDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
   const [installProgress, setInstallProgress] = useState<string>('');
+  const [installError, setInstallError] = useState<string>('');
   const [isInstalled, setIsInstalled] = useState(false);
   const [installedAt, setInstalledAt] = useState<string | undefined>();
 
@@ -45,12 +46,14 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
   }, [skill.skillId, targetDirectory]);
 
   const handleInstallClick = () => {
+    setInstallError('');
     setShowDialog(true);
   };
 
-  const handleInstall = async (targetToolId: string) => {
+  const handleInstall = async () => {
     setIsInstalling(true);
     setInstallProgress('Starting installation...');
+    setInstallError('');
 
     // Subscribe to progress updates
     const unsubscribe = onInstallProgress((progress) => {
@@ -61,8 +64,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
       await installFromRegistry(
         {
           source: skill.source,
-          skillId: skill.skillId,
-          targetToolId
+          skillId: skill.skillId
         },
         targetDirectory
       );
@@ -71,9 +73,10 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
       setInstalledAt(new Date().toISOString());
       setShowDialog(false);
       onInstallComplete?.(skill);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Installation failed:', error);
-      throw error;
+      setInstallError(error.message || 'Installation failed');
+      throw error; // Re-throw so InstallDialog knows it failed
     } finally {
       setIsInstalling(false);
       setInstallProgress('');
@@ -86,11 +89,17 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
   };
 
   const handleSkillNameClick = () => {
+    console.log('🖱️ SkillResultCard handleSkillNameClick called');
+    console.log('📋 onSkillClick callback exists:', !!onSkillClick);
+    console.log('📦 Skill data:', skill);
+
     if (onSkillClick) {
       // If onSkillClick callback is provided, use it to show skill in third column
+      console.log('✅ Calling onSkillClick callback');
       onSkillClick(skill);
     } else {
       // Fallback: open skill details on skills.sh in new tab
+      console.log('🌐 Opening external link (no callback provided)');
       const encodedSource = encodeURIComponent(skill.source);
       const encodedSkillId = encodeURIComponent(skill.skillId);
       const url = `https://skills.sh/${encodedSource}/${encodedSkillId}`;
@@ -100,7 +109,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
 
   return (
     <>
-      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 hover:shadow-md transition-all border border-transparent hover:border-primary/20">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 hover:shadow-md transition-all border border-transparent hover:border-primary/20" data-testid="skill-card">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             {/* Clickable skill name with external link icon */}
@@ -109,6 +118,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
                 onClick={handleSkillNameClick}
                 className="text-sm font-semibold text-slate-900 dark:text-white hover:text-primary dark:hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-1.5 group"
                 aria-label={`View ${skill.name} details on skills.sh (opens in new tab)`}
+                data-testid="skill-name"
               >
                 {skill.name}
                 <ExternalLinkIcon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 group-hover:text-primary dark:group-hover:text-primary transition-colors" />
@@ -142,6 +152,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
                 : 'bg-primary hover:bg-blue-600 text-white hover:shadow-md'
             }`}
             aria-label={isInstalled ? 'Already installed' : isInstalling ? 'Installing...' : 'Install skill'}
+            data-testid="install-button"
           >
             {isInstalling ? (
               <span className="flex items-center gap-2">
@@ -149,7 +160,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
                 Installing
               </span>
             ) : isInstalled ? (
-              'Installed'
+              'Install'
             ) : (
               'Install'
             )}
@@ -178,6 +189,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
           onInstall={handleInstall}
           isInstalling={isInstalling}
           installProgress={installProgress}
+          installError={installError}
         />
       )}
     </>

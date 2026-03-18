@@ -222,7 +222,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div data-testid="private-repos-list" className="h-full flex flex-col">
       {/* Header with filters and search */}
       <div className="border-b border-gray-200 p-4 space-y-3 flex-shrink-0 bg-white">
         {/* Top row: Search + Refresh button */}
@@ -436,7 +436,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
           </div>
         ) : (
           <>
-            <ul className="space-y-3">
+            <ul className="space-y-0">
               {skills.slice(0, visibleCount).map((skill) => (
                 <li key={skill.path}>
                   <PrivateSkillCard

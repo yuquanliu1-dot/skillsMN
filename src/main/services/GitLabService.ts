@@ -7,6 +7,7 @@
 
 import fetch from 'node-fetch';
 import { logger } from '../utils/Logger';
+import { retryWithBackoff } from '../utils/retry';
 import type { TreeItem, Commit, SkillMetadata } from './GitProvider';
 
 /**
@@ -375,37 +376,42 @@ export class GitLabService {
     commitMessage?: string,
     instanceUrl?: string
   ): Promise<{ success: boolean; sha?: string; error?: string }> {
+    const baseUrl = instanceUrl || 'https://gitlab.com';
+    const fullPath = skillDirName.startsWith('/') ? `${skillDirName}/SKILL.md` : `${skillDirName}/SKILL.md`;
+    const projectId = encodeURIComponent(`${owner}/${repo}`);
+    const REQUEST_TIMEOUT = 30000; // 30 seconds timeout
+
+    const message = commitMessage || `Update skill: ${skillName}`;
+
+    // Helper function to create abort controller with timeout
+    const createTimeoutController = () => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      return controller;
+    };
+
+    // Helper function to fetch with timeout
+    const fetchWithTimeout = async (url: string, options: any): Promise<any> => {
+      const controller = createTimeoutController();
+      return fetch(url, { ...options, signal: controller.signal });
+    };
+
     try {
-      const baseUrl = instanceUrl || 'https://gitlab.com';
-      const fullPath = skillDirName.startsWith('/') ? `${skillDirName}/SKILL.md` : `${skillDirName}/SKILL.md`;
-      const projectId = encodeURIComponent(`${owner}/${repo}`);
+      logger.info('Uploading skill to GitLab', 'GitLabService', {
+        baseUrl,
+        projectId,
+        fullPath,
+        branch,
+        skillName,
+      });
 
-      const message = commitMessage || `Update skill: ${skillName}`;
-
-      // GitLab API for creating/updating files
-      const response = await fetch(
-        `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodeURIComponent(fullPath)}`,
-        {
-          method: 'PUT',
-          headers: {
-            'PRIVATE-TOKEN': pat,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            branch,
-            content,
-            commit_message: message,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        // Try creating the file if update fails (file might not exist)
-        if (response.status === 404) {
-          const createResponse = await fetch(
+      // Try to update the file first
+      const response = await retryWithBackoff(
+        async () => {
+          const res = await fetchWithTimeout(
             `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodeURIComponent(fullPath)}`,
             {
-              method: 'POST',
+              method: 'PUT',
               headers: {
                 'PRIVATE-TOKEN': pat,
                 'Content-Type': 'application/json',
@@ -413,9 +419,49 @@ export class GitLabService {
               body: JSON.stringify({
                 branch,
                 content,
-                commit_message: `Add skill: ${skillName}`,
+                commit_message: message,
               }),
             }
+          );
+          // Check for rate limit
+          if (res.status === 429) {
+            const error: any = new Error('Rate limit exceeded');
+            error.status = 429;
+            throw error;
+          }
+          return res;
+        },
+        { maxAttempts: 3, initialDelay: 2000 }
+      );
+
+      if (!response.ok) {
+        // Try creating the file if update fails (file might not exist)
+        if (response.status === 404) {
+          const createResponse = await retryWithBackoff(
+            async () => {
+              const res = await fetchWithTimeout(
+                `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodeURIComponent(fullPath)}`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'PRIVATE-TOKEN': pat,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    branch,
+                    content,
+                    commit_message: `Add skill: ${skillName}`,
+                  }),
+                }
+              );
+              if (res.status === 429) {
+                const error: any = new Error('Rate limit exceeded');
+                error.status = 429;
+                throw error;
+              }
+              return res;
+            },
+            { maxAttempts: 3, initialDelay: 2000 }
           );
 
           if (!createResponse.ok) {
@@ -446,9 +492,206 @@ export class GitLabService {
         sha: data.commit_id,
       };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload skill';
+
+      // Provide more helpful error messages
+      let userMessage = errorMessage;
+      if (errorMessage.includes('abort') || errorMessage.includes('timeout')) {
+        userMessage = 'Request timed out. Please check your network connection and try again.';
+      } else if (errorMessage.includes('socket hang up')) {
+        userMessage = 'Connection was closed unexpectedly. Please try again.';
+      } else if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('network')) {
+        userMessage = 'Network error. Please check your internet connection.';
+      }
+
+      logger.error('GitLab upload error', 'GitLabService', {
+        error: errorMessage,
+        userMessage
+      });
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to upload skill',
+        error: userMessage,
+      };
+    }
+  }
+
+  /**
+   * Upload all files from a skill directory to a private GitLab repository
+   * Creates or updates each file and commits them to the repository
+   *
+   * @param owner - Repository owner/namespace
+   * @param repo - Repository name
+   * @param skillDirName - Directory name for the skill
+   * @param skillName - Name of the skill (for commit message)
+   * @param files - Array of files with relative path and content
+   * @param pat - Personal Access Token with api scope
+   * @param branch - Branch to commit to (default: 'main')
+   * @param commitMessage - Optional custom commit message
+   * @param instanceUrl - Optional instance URL (for self-hosted GitLab)
+   * @returns Object with success status and uploaded file count or error message
+   */
+  static async uploadSkillDirectory(
+    owner: string,
+    repo: string,
+    skillDirName: string,
+    skillName: string,
+    files: Array<{ relativePath: string; content: string }>,
+    pat: string,
+    branch: string = 'main',
+    commitMessage?: string,
+    instanceUrl?: string
+  ): Promise<{ success: boolean; uploadedCount?: number; errors?: string[]; error?: string }> {
+    const baseUrl = instanceUrl || 'https://gitlab.com';
+    const projectId = encodeURIComponent(`${owner}/${repo}`);
+    const REQUEST_TIMEOUT = 30000; // 30 seconds timeout
+    const errors: string[] = [];
+    let uploadedCount = 0;
+
+    // Helper function to create abort controller with timeout
+    const createTimeoutController = () => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      return controller;
+    };
+
+    // Helper function to fetch with timeout
+    const fetchWithTimeout = async (url: string, options: any): Promise<any> => {
+      const controller = createTimeoutController();
+      return fetch(url, { ...options, signal: controller.signal });
+    };
+
+    logger.info('GitLab directory upload parameters', 'GitLabService', {
+      baseUrl,
+      projectId,
+      skillDirName,
+      branch,
+      skillName,
+      fileCount: files.length,
+    });
+
+    try {
+      // Upload each file
+      for (const file of files) {
+        // Construct the full path in the repository
+        const relativePath = file.relativePath.startsWith('/')
+          ? file.relativePath.slice(1)
+          : file.relativePath;
+        const fullPath = `${skillDirName}/${relativePath}`;
+
+        try {
+          const message = commitMessage || `Update ${relativePath} in ${skillName}`;
+
+          // Try to update the file first
+          const response = await retryWithBackoff(
+            async () => {
+              const res = await fetchWithTimeout(
+                `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodeURIComponent(fullPath)}`,
+                {
+                  method: 'PUT',
+                  headers: {
+                    'PRIVATE-TOKEN': pat,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    branch,
+                    content: file.content,
+                    commit_message: message,
+                  }),
+                }
+              );
+              if (res.status === 429) {
+                const error: any = new Error('Rate limit exceeded');
+                error.status = 429;
+                throw error;
+              }
+              return res;
+            },
+            { maxAttempts: 3, initialDelay: 2000 }
+          );
+
+          if (!response.ok) {
+            // Try creating the file if update fails (file might not exist)
+            if (response.status === 404) {
+              const createResponse = await retryWithBackoff(
+                async () => {
+                  const res = await fetchWithTimeout(
+                    `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodeURIComponent(fullPath)}`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'PRIVATE-TOKEN': pat,
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        branch,
+                        content: file.content,
+                        commit_message: `Add ${relativePath} to ${skillName}`,
+                      }),
+                    }
+                  );
+                  if (res.status === 429) {
+                    const error: any = new Error('Rate limit exceeded');
+                    error.status = 429;
+                    throw error;
+                  }
+                  return res;
+                },
+                { maxAttempts: 3, initialDelay: 2000 }
+              );
+
+              if (createResponse.ok) {
+                uploadedCount++;
+                logger.debug(`Created file: ${fullPath}`, 'GitLabService');
+              } else {
+                const errorData = await createResponse.json();
+                errors.push(`Failed to create ${relativePath}: ${errorData.message || 'Unknown error'}`);
+              }
+            } else {
+              const errorData = await response.json();
+              errors.push(`Failed to update ${relativePath}: ${errorData.message || 'Unknown error'}`);
+            }
+          } else {
+            uploadedCount++;
+            logger.debug(`Updated file: ${fullPath}`, 'GitLabService');
+          }
+        } catch (fileError) {
+          const errorMsg = fileError instanceof Error ? fileError.message : 'Unknown error';
+          errors.push(`Failed to upload ${relativePath}: ${errorMsg}`);
+        }
+      }
+
+      if (uploadedCount === files.length) {
+        logger.info('All files uploaded successfully', 'GitLabService', {
+          uploadedCount,
+          totalFiles: files.length,
+        });
+        return { success: true, uploadedCount };
+      } else if (uploadedCount > 0) {
+        logger.warn('Partial upload completed', 'GitLabService', {
+          uploadedCount,
+          totalFiles: files.length,
+          errors,
+        });
+        return {
+          success: true,
+          uploadedCount,
+          errors: errors.length > 0 ? errors : undefined,
+        };
+      } else {
+        logger.error('All file uploads failed', 'GitLabService', { errors });
+        return {
+          success: false,
+          error: 'All file uploads failed',
+          errors,
+        };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload skill directory';
+      logger.error('GitLab directory upload error', 'GitLabService', { error: errorMessage });
+      return {
+        success: false,
+        error: errorMessage,
       };
     }
   }

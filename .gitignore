@@ -44,6 +44,11 @@ yarn-error.log*
 # Testing
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
+tests/screenshots/
+*.trace
+trace.zip
 
 # Temporary files
 *.tmp

@@ -45,11 +45,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GET, { path });
   },
 
-  createSkill: (
-    name: string,
-    directory: SkillSource
-  ): Promise<IPCResponse<Skill>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_CREATE, { name, directory });
+  createSkill: (name: string): Promise<IPCResponse<Skill>> => {
+    // Skills are always created in the centralized application directory
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_CREATE, { name, directory: 'application' });
   },
 
   updateSkill: (
@@ -209,10 +207,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_SEARCH_SKILLS, params);
   },
 
-  installPrivateSkill: (params: {
+  installPrivateRepoSkill: (params: {
     repoId: string;
     skillPath: string;
-    targetDirectory: 'project' | 'global';
     conflictResolution?: 'overwrite' | 'rename' | 'skip';
   }): Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_INSTALL_SKILL, params);

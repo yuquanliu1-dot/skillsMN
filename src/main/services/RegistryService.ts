@@ -106,7 +106,7 @@ export class RegistryService {
 
   /**
    * Get skill content from registry
-   * Clones the repository and discovers the skill to read SKILL.md
+   * Uses GitHub API to fetch file content directly without cloning
    *
    * @param source - Skill source (e.g., "anthropics/skills")
    * @param skillId - Skill identifier (internal name from frontmatter)
@@ -115,6 +115,53 @@ export class RegistryService {
   async getSkillContent(source: string, skillId: string): Promise<string> {
     console.log(`[RegistryService] Fetching skill content: ${source}/${skillId}`);
 
+    // Try different possible paths for the skill
+    const possiblePaths = [
+      `${skillId}/SKILL.md`,
+      `skills/${skillId}/SKILL.md`,
+      `${skillId}/skill.md`,
+      `skills/${skillId}/skill.md`
+    ];
+
+    // Try to fetch from raw GitHub content
+    for (const skillPath of possiblePaths) {
+      try {
+        const rawUrl = `https://raw.githubusercontent.com/${source}/main/${skillPath}`;
+        console.log(`[RegistryService] Trying: ${rawUrl}`);
+
+        const response = await fetch(rawUrl, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'skillsMN-Desktop/1.0'
+          },
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        });
+
+        if (response.ok) {
+          const content = await response.text();
+          console.log(`[RegistryService] Skill content fetched from ${skillPath} (${content.length} chars)`);
+          return content;
+        }
+      } catch (error: any) {
+        // Log but continue to next path
+        console.log(`[RegistryService] Failed to fetch from ${skillPath}: ${error.message}`);
+      }
+    }
+
+    // If all direct fetch attempts fail, fall back to cloning
+    console.log(`[RegistryService] Direct fetch failed, falling back to cloning repository`);
+    return await this.getSkillContentByCloning(source, skillId);
+  }
+
+  /**
+   * Fallback method: Get skill content by cloning repository
+   * Used when direct GitHub API access fails
+   *
+   * @param source - Skill source (e.g., "anthropics/skills")
+   * @param skillId - Skill identifier (internal name from frontmatter)
+   * @returns Skill content as string
+   */
+  private async getSkillContentByCloning(source: string, skillId: string): Promise<string> {
     const tempRoot = path.join(os.tmpdir(), `skillsMN-preview-${uuidv4()}`);
 
     try {

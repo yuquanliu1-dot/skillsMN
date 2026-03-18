@@ -1,7 +1,8 @@
 /**
  * CreateSkillDialog Component
  *
- * Dialog for creating new skills with name input and directory selection
+ * Dialog for creating new skills with name input
+ * All skills are saved to the centralized application directory
  */
 
 import React, { useState, useCallback } from 'react';
@@ -9,9 +10,8 @@ import React, { useState, useCallback } from 'react';
 interface CreateSkillDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateSkill: (name: string, directory: 'project' | 'global') => Promise<void>;
-  onOpenAICreation: (directory: 'project' | 'global') => void;
-  defaultDirectory: 'project' | 'global';
+  onCreateSkill: (name: string) => Promise<void>;
+  onOpenAICreation: () => void;
 }
 
 export default function CreateSkillDialog({
@@ -19,10 +19,8 @@ export default function CreateSkillDialog({
   onClose,
   onCreateSkill,
   onOpenAICreation,
-  defaultDirectory,
 }: CreateSkillDialogProps): JSX.Element | null {
   const [name, setName] = useState('');
-  const [directory, setDirectory] = useState<'project' | 'global'>(defaultDirectory);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -32,11 +30,10 @@ export default function CreateSkillDialog({
   React.useEffect(() => {
     if (isOpen) {
       setName('');
-      setDirectory(defaultDirectory);
       setError(null);
       setIsCreating(false);
     }
-  }, [isOpen, defaultDirectory]);
+  }, [isOpen]);
 
   /**
    * Handle form submission
@@ -66,7 +63,7 @@ export default function CreateSkillDialog({
       setError(null);
 
       try {
-        await onCreateSkill(trimmedName, directory);
+        await onCreateSkill(trimmedName);
         onClose();
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create skill';
@@ -76,7 +73,7 @@ export default function CreateSkillDialog({
         setIsCreating(false);
       }
     },
-    [name, directory, onCreateSkill, onClose]
+    [name, onCreateSkill, onClose]
   );
 
   /**
@@ -112,13 +109,13 @@ export default function CreateSkillDialog({
         }
       }}
     >
-      <div className="bg-white border border-slate-300 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+      <div data-testid="create-skill-dialog" className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+            <div className="flex-shrink-0 w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-blue-600"
+                className="w-6 h-6 text-blue-600 dark:text-blue-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -132,12 +129,12 @@ export default function CreateSkillDialog({
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-slate-900">Create New Skill</h2>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Create New Skill</h2>
           </div>
           <button
             onClick={onClose}
             disabled={isCreating}
-            className="text-slate-600 hover:text-slate-800 transition-colors disabled:opacity-50 cursor-pointer"
+            className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors disabled:opacity-50 cursor-pointer"
             aria-label="Close dialog"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,11 +154,12 @@ export default function CreateSkillDialog({
           <div className="mb-4">
             <label
               htmlFor="skill-name"
-              className="block text-sm font-medium text-slate-700 mb-2"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"
             >
               Skill Name
             </label>
             <input
+              data-testid="skill-name-input"
               type="text"
               id="skill-name"
               value={name}
@@ -170,38 +168,18 @@ export default function CreateSkillDialog({
                 setError(null);
               }}
               placeholder="My New Skill"
-              className="input w-full"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={isCreating}
               autoFocus
             />
           </div>
 
-          {/* Directory Selection */}
-          <div className="mb-4">
-            <label
-              htmlFor="directory"
-              className="block text-sm font-medium text-slate-700 mb-2"
-            >
-              Save Location
-            </label>
-            <select
-              id="directory"
-              value={directory}
-              onChange={(e) => setDirectory(e.target.value as 'project' | 'global')}
-              className="select w-full"
-              disabled={isCreating}
-            >
-              <option value="project">Project Directory</option>
-              <option value="global">Global Directory</option>
-            </select>
-          </div>
-
           {/* Error Message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md">
               <div className="flex items-start gap-2">
                 <svg
-                  className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"
+                  className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -213,16 +191,16 @@ export default function CreateSkillDialog({
                     d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <p className="text-sm text-red-600">{error}</p>
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
               </div>
             </div>
           )}
 
           {/* Info */}
-          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-md">
             <div className="flex items-start gap-2">
               <svg
-                className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5"
+                className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -234,13 +212,10 @@ export default function CreateSkillDialog({
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <p className="text-sm text-blue-700">
-                A new directory will be created with a{' '}
-                <code className="px-1 py-0.5 bg-slate-200 rounded text-blue-800">
-                  skill.md
-                </code>{' '}
-                template file.
-              </p>
+              <div className="text-sm text-blue-700 dark:text-blue-300">
+                <p>A new directory will be created with a <code className="px-1 py-0.5 bg-slate-200 dark:bg-slate-600 rounded text-blue-800 dark:text-blue-300">skill.md</code> template file.</p>
+                <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Skill will be saved to your centralized skills library.</p>
+              </div>
             </div>
           </div>
 
@@ -250,15 +225,15 @@ export default function CreateSkillDialog({
               type="button"
               onClick={onClose}
               disabled={isCreating}
-              className="btn btn-secondary"
+              className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="button"
-              onClick={() => onOpenAICreation(directory)}
+              onClick={onOpenAICreation}
               disabled={isCreating}
-              className="btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg flex items-center gap-2 transition-all disabled:opacity-50"
             >
               <svg
                 className="w-5 h-5"
@@ -276,9 +251,10 @@ export default function CreateSkillDialog({
               AI Create
             </button>
             <button
+              data-testid="confirm-create-button"
               type="submit"
               disabled={!name.trim() || isCreating}
-              className="btn btn-primary"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {isCreating ? (
                 <>

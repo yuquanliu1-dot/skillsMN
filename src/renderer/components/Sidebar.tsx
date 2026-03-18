@@ -92,7 +92,7 @@ export default function Sidebar({
   ];
 
   return (
-    <aside className="w-16 bg-white border-r border-gray-200 flex flex-col shadow-sm">
+    <aside className="w-16 bg-white border-r border-gray-200 flex flex-col shadow-sm" data-testid="sidebar">
       {/* Logo */}
       <div className="p-4 border-b border-gray-100 flex justify-center">
         <div
@@ -122,6 +122,7 @@ export default function Sidebar({
                   : 'text-gray-500 hover:text-blue-600 hover:bg-gray-50'
               }
             `}
+            data-testid={`nav-${item.id}`}
           >
             {item.icon}
             {/* Tooltip */}
