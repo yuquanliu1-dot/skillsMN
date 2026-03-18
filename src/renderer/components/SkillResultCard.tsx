@@ -8,7 +8,6 @@ import React, { useState, useEffect } from 'react';
 import { SearchSkillResult } from '../../shared/types';
 import { checkSkillInstalled, installFromRegistry, onInstallProgress } from '../services/registryClient';
 import { InstallDialog } from './InstallDialog';
-import { ExternalLinkIcon } from './icons/ExternalLinkIcon';
 
 interface SkillResultCardProps {
   skill: SearchSkillResult;
@@ -45,7 +44,8 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
     checkInstalled();
   }, [skill.skillId, targetDirectory]);
 
-  const handleInstallClick = () => {
+  const handleInstallClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click when clicking install button
     setInstallError('');
     setShowDialog(true);
   };
@@ -109,20 +109,18 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
 
   return (
     <>
-      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 hover:shadow-md transition-all border border-transparent hover:border-primary/20" data-testid="skill-card">
+      <div
+        className="bg-white dark:bg-slate-800 rounded-lg p-4 hover:shadow-lg transition-all border border-transparent hover:border-primary/30 cursor-pointer active:scale-[0.99]"
+        onClick={handleSkillNameClick}
+        data-testid="skill-card"
+      >
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            {/* Clickable skill name with external link icon */}
+            {/* Skill name */}
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleSkillNameClick}
-                className="text-sm font-semibold text-slate-900 dark:text-white hover:text-primary dark:hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-1.5 group"
-                aria-label={`View ${skill.name} details on skills.sh (opens in new tab)`}
-                data-testid="skill-name"
-              >
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 {skill.name}
-                <ExternalLinkIcon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 group-hover:text-primary dark:group-hover:text-primary transition-colors" />
-              </button>
+              </h3>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {skill.source}

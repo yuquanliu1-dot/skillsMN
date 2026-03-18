@@ -53,11 +53,12 @@ export const ipcClient = {
     return response.data!;
   },
 
-  async createSkill(name: string, directory: SkillSource): Promise<Skill> {
+  async createSkill(name: string): Promise<Skill> {
     if (!isElectron()) {
       throw new Error('Cannot create skill in browser mode');
     }
-    const response = await window.electronAPI.createSkill(name, directory);
+    // Skills are always created in the centralized application directory
+    const response = await window.electronAPI.createSkill(name);
     if (!response.success) {
       throw new Error(response.error?.message || 'Unknown error');
     }

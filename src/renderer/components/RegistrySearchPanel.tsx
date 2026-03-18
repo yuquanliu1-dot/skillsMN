@@ -4,11 +4,13 @@
  * Full search interface for skills.sh registry with results display
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRegistrySearch } from '../hooks/useRegistrySearch';
 import { SearchIcon } from './icons/SearchIcon';
 import { SearchResultsList } from './SearchResultsList';
 import type { Configuration, SearchSkillResult } from '../../shared/types';
+
+type SortBy = 'name' | 'installs';
 
 interface RegistrySearchPanelProps {
   config: Configuration | null;
@@ -21,15 +23,42 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
   onInstallComplete,
   onSkillClick
 }) => {
+  console.log('🔍 RegistrySearchPanel render, onSkillClick exists:', !!onSkillClick);
+
   const { query, results, isLoading, error, setQuery } = useRegistrySearch();
   const [hasSearched, setHasSearched] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>('name');
 
   // Determine target directory for installation
-  const targetDirectory = config?.projectDirectory || '';
+  // Always install to the centralized application directory
+  const targetDirectory = config?.applicationSkillsDirectory || '';
 
   const handleQueryChange = (value: string) => {
     setQuery(value);
     setHasSearched(value.trim().length > 0);
+  };
+
+  // Sort results
+  const sortedResults = useMemo(() => {
+    if (!results || results.length === 0) return results;
+
+    const sorted = [...results];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'installs':
+          return b.installs - a.installs;
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [results, sortBy]);
+
+  const handleSortChange = (newSort: SortBy) => {
+    setSortBy(newSort);
   };
 
   return (
@@ -38,27 +67,63 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
       <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">
-            Discover Skills
+            Search on skills.sh
           </h2>
           <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Search for skills (e.g., data analysis, code review)..."
               value={query}
               onChange={(e) => handleQueryChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               aria-label="Search skills"
+              data-testid="search-input"
             />
+            <svg
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
             {isLoading && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                 <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
               </div>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Search across thousands of public skills from skills.sh registry
-          </p>
+
+          {/* Sort and Results Count */}
+          {hasSearched && !isLoading && !error && sortedResults && sortedResults.length > 0 && (
+            <div className="flex items-center justify-between mt-3">
+              <p className="text-xs text-gray-500">
+                {sortedResults.length} result{sortedResults.length !== 1 ? 's' : ''} found
+              </p>
+              <div className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                <select
+                  id="sort-by-registry"
+                  value={sortBy}
+                  onChange={(e) => handleSortChange(e.target.value as SortBy)}
+                  className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
+                  aria-label="Sort by"
+                  title="Sort results"
+                >
+                  <option value="name">Name</option>
+                  <option value="installs">Installs</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -141,18 +206,13 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
           )}
 
           {/* Results List */}
-          {hasSearched && !isLoading && !error && results.length > 0 && (
-            <>
-              <div className="mb-3 text-sm text-gray-600">
-                Found {results.length} skill{results.length !== 1 ? 's' : ''}
-              </div>
-              <SearchResultsList
-                results={results}
-                targetDirectory={targetDirectory}
-                onInstallComplete={onInstallComplete}
-                onSkillClick={onSkillClick}
-              />
-            </>
+          {hasSearched && !isLoading && !error && sortedResults && sortedResults.length > 0 && (
+            <SearchResultsList
+              results={sortedResults}
+              targetDirectory={targetDirectory}
+              onInstallComplete={onInstallComplete}
+              onSkillClick={onSkillClick}
+            />
           )}
         </div>
       </div>

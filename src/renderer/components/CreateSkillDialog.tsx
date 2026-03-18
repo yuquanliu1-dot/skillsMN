@@ -11,14 +11,12 @@ interface CreateSkillDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateSkill: (name: string) => Promise<void>;
-  onOpenAICreation: () => void;
 }
 
 export default function CreateSkillDialog({
   isOpen,
   onClose,
   onCreateSkill,
-  onOpenAICreation,
 }: CreateSkillDialogProps): JSX.Element | null {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -228,27 +226,6 @@ export default function CreateSkillDialog({
               className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
             >
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onOpenAICreation}
-              disabled={isCreating}
-              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg flex items-center gap-2 transition-all disabled:opacity-50"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z"
-                />
-              </svg>
-              AI Create
             </button>
             <button
               data-testid="confirm-create-button"

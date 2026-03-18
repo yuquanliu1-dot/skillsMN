@@ -27,7 +27,7 @@ export default function Sidebar({
   const navItems = [
     {
       id: 'skills' as const,
-      label: 'Skills',
+      label: 'Local Skills',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {/* Yellow folder icon for local skills */}
@@ -44,7 +44,7 @@ export default function Sidebar({
     },
     {
       id: 'discover' as const,
-      label: 'Discover',
+      label: 'Search on skills.sh',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {/* Blue cloud with search icon for internet/discover skills */}
@@ -63,7 +63,7 @@ export default function Sidebar({
           />
         </svg>
       ),
-      description: 'Find public skills on GitHub',
+      description: 'Find public skills on skills.sh',
       disabled: !config?.projectDirectories || config.projectDirectories.length === 0,
     },
     {
