@@ -8,17 +8,20 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import { ipcClient } from '../services/ipcClient';
+import type { Configuration } from '../../shared/types';
 
 interface AISkillCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSkillCreated: () => void;
+  config: Configuration | null;
 }
 
 export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
   isOpen,
   onClose,
   onSkillCreated,
+  config,
 }) => {
   const [prompt, setPrompt] = useState('');
 
@@ -64,8 +67,18 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
     }
 
     // Skills are always saved to the centralized application directory
-    await generate(prompt, 'new');
-  }, [prompt, generate]);
+    const targetDirectory = config?.applicationSkillsDirectory;
+
+    if (!targetDirectory) {
+      console.error('No application skills directory configured');
+      return;
+    }
+
+    // Pass the target directory to AI so it knows where to create the skill
+    await generate(prompt, 'new', {
+      targetPath: targetDirectory,
+    });
+  }, [prompt, generate, config]);
 
   /**
    * Parse skill name from YAML frontmatter
@@ -291,47 +304,38 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                 <button
                   onClick={handleGenerate}
                   disabled={!prompt.trim()}
-                  className="flex-1 btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  title="Generate skill with AI"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  Generate
                 </button>
               )}
 
               {isStreaming && (
                 <button
                   onClick={stop}
-                  className="flex-1 btn bg-red-500 hover:bg-red-600 text-white"
+                  className="flex-1 btn bg-red-500 hover:bg-red-600 text-white flex items-center justify-center"
+                  title="Stop generation"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <rect x="6" y="6" width="12" height="12" rx="2" strokeWidth="2" />
                   </svg>
-                  Stop
                 </button>
               )}
 
               {!isIdle && !isStreaming && (
-                <>
-                  <button
-                    onClick={retry}
-                    className="flex-1 btn bg-amber-500 hover:bg-amber-600 text-white"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Retry
-                  </button>
-                  {isComplete && (
-                    <div className="flex-1 flex items-center justify-center gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg px-4 py-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="font-medium">Skill created successfully!</span>
-                    </div>
-                  )}
-                </>
+                <button
+                  onClick={handleGenerate}
+                  disabled={!prompt.trim()}
+                  className="flex-1 btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  title="Generate again"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </button>
               )}
             </div>
           </div>

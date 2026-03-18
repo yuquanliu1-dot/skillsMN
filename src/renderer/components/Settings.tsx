@@ -469,6 +469,13 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
         setEditDisplayName('');
         setEditPAT('');
         await loadPrivateRepos();
+
+        // Dispatch custom event to notify PrivateRepoList to refresh
+        if (editPAT.trim()) {
+          window.dispatchEvent(new CustomEvent('private-repo-updated', {
+            detail: { repoId, patUpdated: true }
+          }));
+        }
       } else {
         setError(response.error?.message || 'Failed to update repository');
       }

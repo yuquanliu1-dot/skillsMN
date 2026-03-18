@@ -162,8 +162,8 @@ export default function App(): JSX.Element {
           }
         }
 
-        // Check if setup is needed
-        if (!config.projectDirectory) {
+        // Check if setup is needed (using projectDirectories array)
+        if (!config.projectDirectories || config.projectDirectories.length === 0) {
           setShowSetup(true);
           dispatch({ type: 'SET_LOADING', payload: false });
           return;
@@ -231,10 +231,10 @@ export default function App(): JSX.Element {
    * Load skills when config is available
    */
   useEffect(() => {
-    if (state.config?.projectDirectory) {
+    if (state.config?.projectDirectories && state.config.projectDirectories.length > 0) {
       loadSkills();
     }
-  }, [state.config?.projectDirectory]);
+  }, [state.config?.projectDirectories]);
 
   /**
    * Global keyboard shortcuts
@@ -244,7 +244,7 @@ export default function App(): JSX.Element {
       // Ctrl+N: Create new skill
       if ((event.ctrlKey || event.metaKey) && event.key === 'n' && !event.shiftKey) {
         event.preventDefault();
-        if (!showSetup && state.config?.projectDirectory) {
+        if (!showSetup && state.config?.projectDirectories && state.config.projectDirectories.length > 0) {
           setShowCreateDialog(true);
         }
       }
@@ -259,7 +259,7 @@ export default function App(): JSX.Element {
       // Ctrl+R: Refresh skill list
       if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
         event.preventDefault();
-        if (!showSetup && state.config?.projectDirectory) {
+        if (!showSetup && state.config?.projectDirectories && state.config.projectDirectories.length > 0) {
           loadSkills();
           showToast('Skills refreshed', 'success');
         }
@@ -280,7 +280,7 @@ export default function App(): JSX.Element {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showSetup, state.config?.projectDirectory, selectedSkillPath, state.skills]);
+  }, [showSetup, state.config?.projectDirectories, selectedSkillPath, state.skills]);
 
   /**
    * Load skills from file system
@@ -542,6 +542,17 @@ export default function App(): JSX.Element {
    */
   const handleDeleteSkill = async (skill: Skill): Promise<void> => {
     try {
+      // Close the editor if the skill being deleted is currently open
+      if (editingSkill && editingSkill.path === skill.path) {
+        console.log('Closing editor for skill being deleted:', skill.name);
+        setEditingSkill(null);
+      }
+
+      // Clear selection if the deleted skill was selected
+      if (selectedSkillPath === skill.path) {
+        setSelectedSkillPath(null);
+      }
+
       const response = await window.electronAPI.deleteSkill(skill.path);
       if (!response.success) {
         throw new Error(response.error?.message || 'Failed to delete skill');
@@ -972,6 +983,7 @@ export default function App(): JSX.Element {
           loadSkills();
           showToast('Skill created successfully with AI!', 'success');
         }}
+        config={state.config}
       />
 
       {/* Delete Confirmation Dialog */}

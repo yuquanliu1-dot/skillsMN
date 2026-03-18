@@ -336,3 +336,4 @@ describe('SkillDiscovery', () => {
       expect(result).toBe('/tmp/symlink-repo/linked-skill');
     });
   });
+});

@@ -363,16 +363,22 @@ Markdown content with instructions, examples, and guidance.`;
         ? `\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user's requirements. Use the skill-creator skill for guidance.
 
 IMPORTANT: A skill is a DIRECTORY containing a skill.md file. Follow these steps:
-1. Use the Bash tool to create a directory at: ${targetPath}
-   The directory name should be based on the skill name (use kebab-case, e.g., "my-skill-name")
-2. Use the Write tool to create the skill.md file inside that directory: ${targetPath}/skill.md
-3. The skill.md file must contain YAML frontmatter and Markdown content
 
-Example structure:
+1. First, determine the skill name from the user's requirements (convert to kebab-case, e.g., "My Skill" → "my-skill-name")
+2. Use the Bash tool to create a directory at: ${targetPath}/<skill-name>
+   Example: If skill name is "ls", create directory at ${targetPath}/ls
+3. Use the Write tool to create the skill.md file: ${targetPath}/<skill-name>/skill.md
+   Example: ${targetPath}/ls/skill.md
+
+The targetPath (${targetPath}) is the PARENT directory where all skills are stored.
+You must create a subdirectory with the skill name, then create skill.md inside it.
+
+Directory structure:
    ${targetPath}/
-   └── skill.md (contains YAML frontmatter + Markdown content)
+   └── <skill-name>/
+       └── skill.md (contains YAML frontmatter + Markdown content)
 
-You must create BOTH the directory AND the skill.md file.`
+IMPORTANT: The Write tool file_path should be the FULL path including the skill name subdirectory.`
         : '\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user\'s requirements. Use the skill-creator skill for guidance.',
 
       modify: '\n\nYou are MODIFYING an existing skill. Improve, expand, or refine the content while preserving its core purpose. Use the Write tool to save changes to the skill.md file. Refer to skill-creator for best practices.',

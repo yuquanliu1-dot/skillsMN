@@ -289,6 +289,8 @@ export interface AIGenerationRequest {
     content?: string;
     cursorPosition?: number;
     selectedText?: string;
+    /** Target path for skill creation (parent directory where skill directory should be created) */
+    targetPath?: string;
   };
   /** Request timestamp */
   timestamp?: Date;

@@ -55,6 +55,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
   const [error, setError] = useState<string | null>(null);
   const [isAuthError, setIsAuthError] = useState(false);
   const [visibleCount, setVisibleCount] = useState(50); // Pagination for large lists
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to force refresh
 
   // Sort skills
   const sortedSkills = useMemo(() => {
@@ -81,6 +82,42 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
   useEffect(() => {
     loadRepositories();
   }, []);
+
+  /**
+   * Listen for private repo updates from Settings
+   */
+  useEffect(() => {
+    const handlePrivateRepoUpdate = (event: CustomEvent<{ repoId: string; patUpdated: boolean }>) => {
+      console.log('[PrivateRepoList] Received private-repo-updated event:', event.detail);
+
+      // If PAT was updated, trigger refresh
+      if (event.detail.patUpdated) {
+        // If this repo is currently selected, reload immediately
+        if (event.detail.repoId === selectedRepoId) {
+          console.log('[PrivateRepoList] Reloading skills for updated repo:', event.detail.repoId);
+          loadSkills(event.detail.repoId);
+        } else {
+          // Otherwise, trigger a refresh trigger to reload repos
+          setRefreshTrigger(prev => prev + 1);
+        }
+      }
+    };
+
+    window.addEventListener('private-repo-updated', handlePrivateRepoUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('private-repo-updated', handlePrivateRepoUpdate as EventListener);
+    };
+  }, [selectedRepoId]);
+
+  /**
+   * Reload skills when refresh trigger changes
+   */
+  useEffect(() => {
+    if (refreshTrigger > 0 && selectedRepoId) {
+      loadSkills(selectedRepoId);
+    }
+  }, [refreshTrigger]);
 
   /**
    * Reset visible count when skills are loaded
