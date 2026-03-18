@@ -699,7 +699,7 @@ export class SkillService {
       const baseDir =
         targetDirectory === 'project'
           ? config.projectDirectory
-          : path.join(process.env.USERPROFILE || os.homedir(), '.skillsMN', 'skills');
+          : path.join(os.homedir(), '.skillsMN', 'skills');
 
       if (!baseDir) {
         throw new Error(`Target directory not configured for ${targetDirectory}`);

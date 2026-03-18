@@ -5,6 +5,7 @@
  */
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { logger } from '../utils/Logger';
 import { SkillDirectory, SkillSource } from '../../shared/types';
@@ -36,11 +37,7 @@ export class SkillDirectoryModel {
    * Get global skills directory path (~/.claude/skills)
    */
   static getGlobalDirectory(): string {
-    const homeDir = process.env.HOME || process.env.USERPROFILE;
-    if (!homeDir) {
-      throw new Error('Could not determine home directory');
-    }
-    return path.join(homeDir, CLAUDE_DIR_NAME, SKILLS_DIR_NAME);
+    return path.join(os.homedir(), CLAUDE_DIR_NAME, SKILLS_DIR_NAME);
   }
 
   /**
