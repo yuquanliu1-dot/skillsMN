@@ -7,10 +7,21 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { SkillDiscovery } from '../../../src/main/utils/skillDiscovery';
 import type { SkillSource } from '../../../src/shared/types';
-// Mock fs
-jest.mock('fs');
+
+// Mock fs with promises
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  promises: {
+    readdir: jest.fn(),
+    writeFile: jest.fn(),
+  },
+  existsSync: jest.fn(),
+}));
 jest.mock('path');
+
+describe('SkillDiscovery', () => {
   let skillDiscovery: SkillDiscovery;
+
   beforeEach(() => {
     jest.clearAllMocks();
     skillDiscovery = new SkillDiscovery();

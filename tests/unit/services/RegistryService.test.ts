@@ -6,15 +6,19 @@
 
 import { RegistryService } from '../../../src/main/services/RegistryService';
 import { REGISTRY_API_BASE_URL, REGISTRY_SEARCH_ENDPOINT, REGISTRY_SEARCH_LIMIT } from '../../../src/shared/constants';
+import fetch from 'node-fetch';
 
-// Mock fetch
-global.fetch = jest.fn();
+// Mock node-fetch
+jest.mock('node-fetch', () => jest.fn());
+
+const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
 
 describe('RegistryService', () => {
   let registryService: RegistryService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetch.mockClear();
     registryService = new RegistryService();
   });
 
@@ -35,10 +39,10 @@ describe('RegistryService', () => {
         query: 'data analysis'
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
-      });
+      } as any);
 
       const results = await registryService.searchSkills(query);
 
@@ -53,7 +57,7 @@ describe('RegistryService', () => {
       const query = 'data analysis & visualization';
       const mockResponse = { skills: [], total: 0, query };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
@@ -61,7 +65,7 @@ describe('RegistryService', () => {
       await registryService.searchSkills(query);
 
       const expectedUrl = `${REGISTRY_API_BASE_URL}${REGISTRY_SEARCH_ENDPOINT}?q=${encodeURIComponent(query)}&limit=${REGISTRY_SEARCH_LIMIT}`;
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expectedUrl,
         expect.objectContaining({
           method: 'GET',
@@ -77,7 +81,7 @@ describe('RegistryService', () => {
       const customLimit = 50;
       const mockResponse = { skills: [], total: 0, query };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
@@ -85,7 +89,7 @@ describe('RegistryService', () => {
       await registryService.searchSkills(query, customLimit);
 
       const expectedUrl = expect.stringContaining(`limit=${customLimit}`);
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expectedUrl,
         expect.any(Object)
       );
@@ -95,7 +99,7 @@ describe('RegistryService', () => {
       const query = '  data analysis  ';
       const mockResponse = { skills: [], total: 0, query: 'data analysis' };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
@@ -103,20 +107,20 @@ describe('RegistryService', () => {
       await registryService.searchSkills(query);
 
       const expectedUrl = expect.stringContaining(`q=${encodeURIComponent('data analysis')}`);
-      expect(global.fetch).toHaveBeenCalledWith(expectedUrl, expect.any(Object));
+      expect(mockFetch).toHaveBeenCalledWith(expectedUrl, expect.any(Object));
     });
 
     it('should set correct request headers', async () => {
       const mockResponse = { skills: [], total: 0, query: 'test' };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
 
       await registryService.searchSkills('test');
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           method: 'GET',
@@ -132,7 +136,7 @@ describe('RegistryService', () => {
       const query = 'nonexistent skill';
       const mockResponse = { skills: [], total: 0, query };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
@@ -145,14 +149,14 @@ describe('RegistryService', () => {
 
     it('should handle network errors', async () => {
       const query = 'test';
-      (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       await expect(registryService.searchSkills(query)).rejects.toThrow('Network error');
     });
 
     it('should handle HTTP 400 errors', async () => {
       const query = 'test';
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({
@@ -166,7 +170,7 @@ describe('RegistryService', () => {
 
     it('should handle HTTP 429 rate limit errors', async () => {
       const query = 'test';
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 429,
         headers: {
@@ -183,7 +187,7 @@ describe('RegistryService', () => {
 
     it('should handle HTTP 500 server errors', async () => {
       const query = 'test';
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => ({
@@ -221,7 +225,7 @@ describe('RegistryService', () => {
         ]
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => invalidResponse
       });
@@ -245,7 +249,7 @@ describe('RegistryService', () => {
         ]
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
@@ -268,7 +272,7 @@ describe('RegistryService', () => {
         ]
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
@@ -300,7 +304,7 @@ describe('RegistryService', () => {
         query
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });

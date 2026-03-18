@@ -18,6 +18,12 @@ jest.mock('../../../src/main/utils/Logger');
 jest.mock('../../../src/main/utils/ErrorHandler');
 jest.mock('../../../src/main/models/Skill');
 jest.mock('../../../src/main/models/SkillDirectory');
+jest.mock('electron', () => ({
+  app: {
+    getAppPath: jest.fn(() => '/test/app'),
+    getPath: jest.fn((name: string) => `/test/${name}`)
+  }
+}));
 
 describe('SkillService', () => {
   let skillService: SkillService;

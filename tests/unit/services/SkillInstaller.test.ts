@@ -14,7 +14,17 @@ import { createRegistrySource } from '../../../src/main/models/SkillSource';
 import type { InstallFromRegistryRequest, InstallProgressEvent } from '../../../src/shared/types';
 
 // Mock dependencies
-jest.mock('fs');
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  promises: {
+    rm: jest.fn(),
+    readdir: jest.fn(),
+    writeFile: jest.fn(),
+    mkdir: jest.fn(),
+    cp: jest.fn(),
+  },
+  existsSync: jest.fn(),
+}));
 jest.mock('path');
 jest.mock('os');
 jest.mock('../../../src/main/utils/gitOperations');

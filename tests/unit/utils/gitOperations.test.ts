@@ -4,18 +4,18 @@
  * Tests for shallow git cloning, error detection, and commit hash extraction
  */
 
-import { promisify } from 'util';
 import { GitOperations, ERROR_MESSAGES, GitErrorCode } from '../../../src/main/utils/gitOperations';
 
-// Mock child_process exec function
-const mockExecAsync = jest.fn();
+// Mock modules before importing anything else
 jest.mock('child_process', () => ({
   exec: jest.fn()
 }));
 
-// Mock promisify to return our mock function
+// Create a hoisted mock function
+const mockExecAsync = jest.hoisted(() => jest.fn());
+
 jest.mock('util', () => ({
-  promisify: jest.fn(() => mockExecAsync)
+  promisify: () => mockExecAsync
 }));
 
 describe('GitOperations', () => {
