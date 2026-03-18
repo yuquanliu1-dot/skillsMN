@@ -97,6 +97,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SELECT_DIRECTORY);
   },
 
+  checkClaudeInstall: (): Promise<IPCResponse<{ installed: boolean; version?: string }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_CHECK_INSTALL);
+  },
+
   // ============================================================================
   // File System Watching
   // ============================================================================

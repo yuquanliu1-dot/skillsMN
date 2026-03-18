@@ -129,6 +129,7 @@ export const IPC_CHANNELS = {
   CONFIG_SAVE: 'config:save',
   CONFIG_TEST_AI: 'config:test-ai',
   DIALOG_SELECT_DIRECTORY: 'dialog:select-directory',
+  CLAUDE_CHECK_INSTALL: 'claude:check-install',
 
   // File system watching
   FS_WATCH_START: 'fs:watch-start',

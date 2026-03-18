@@ -5,11 +5,15 @@
  */
 
 import { ipcMain, dialog } from 'electron';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { logger } from '../utils/Logger';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { ConfigService } from '../services/ConfigService';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { IPCResponse, IPCError, Configuration } from '../../shared/types';
+
+const execAsync = promisify(exec);
 
 let configService: ConfigService | null = null;
 
@@ -91,6 +95,33 @@ export function registerConfigHandlers(): void {
       } catch (error) {
         logger.error('Failed to open directory dialog', 'ConfigHandlers', error);
         return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for claude:check-install - Check if Claude CLI is installed
+  ipcMain.handle(
+    IPC_CHANNELS.CLAUDE_CHECK_INSTALL,
+    async (): Promise<IPCResponse<{ installed: boolean; version?: string }>> => {
+      try {
+        logger.debug('Checking Claude CLI installation', 'ConfigHandlers');
+
+        // Try to run claude --version to check if installed
+        const { stdout } = await execAsync('claude --version', {
+          timeout: 5000,
+          env: { ...process.env, LANG: 'en_US.UTF-8' }
+        });
+
+        // Parse version from output (e.g., "claude version 1.0.0" or just "1.0.0")
+        const versionMatch = stdout.match(/(\d+\.\d+\.\d+)/);
+        const version = versionMatch ? versionMatch[1] : stdout.trim();
+
+        logger.info('Claude CLI found', 'ConfigHandlers', { version });
+        return { success: true, data: { installed: true, version } };
+      } catch (error) {
+        // Claude not found or command failed
+        logger.debug('Claude CLI not found', 'ConfigHandlers');
+        return { success: true, data: { installed: false } };
       }
     }
   );

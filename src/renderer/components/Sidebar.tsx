@@ -4,7 +4,7 @@
  * Modern narrow sidebar with icon-based navigation for minimalist three-column layout
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Configuration } from '../../shared/types';
 
 export type ViewType = 'skills' | 'discover' | 'private-repos';
@@ -23,6 +23,21 @@ export default function Sidebar({
   config,
 }: SidebarProps): JSX.Element {
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
+  const [claudeInstalled, setClaudeInstalled] = useState<boolean | null>(null); // null = checking
+
+  // Check Claude CLI installation status
+  useEffect(() => {
+    const checkClaudeInstall = async () => {
+      try {
+        const result = await window.electronAPI.checkClaudeInstall();
+        setClaudeInstalled(result.data?.installed ?? false);
+      } catch {
+        setClaudeInstalled(false);
+      }
+    };
+
+    checkClaudeInstall();
+  }, []);
 
   const navItems = [
     {
@@ -166,19 +181,41 @@ export default function Sidebar({
           )}
         </button>
 
-        {/* Status Indicator */}
-        <div className="w-full aspect-square rounded-xl flex items-center justify-center">
-          <div
-            className={`w-3 h-3 rounded-full ${
-              config?.projectDirectories && config.projectDirectories.length > 0 ? 'bg-emerald-500' : 'bg-gray-300'
-            }`}
-            title={
-              config?.projectDirectories && config.projectDirectories.length > 0
-                ? `${config.projectDirectories.length} project director${config.projectDirectories.length === 1 ? 'y' : 'ies'} configured`
-                : 'No project directories configured'
-            }
-          />
-        </div>
+        {/* Claude Status Indicator */}
+        <button
+          onMouseEnter={() => setShowTooltip('claude-status')}
+          onMouseLeave={() => setShowTooltip(null)}
+          className="w-full aspect-square rounded-xl flex items-center justify-center relative hover:bg-gray-50 transition-colors"
+        >
+          {/* Claude Icon */}
+          <svg
+            className="w-5 h-5"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            style={{ color: claudeInstalled === null ? '#9CA3AF' : (claudeInstalled ? '#D97706' : '#6B7280') }}
+          >
+            {/* Claude-style abstract brain/AI icon */}
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+            <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+
+          {/* Red dot indicator for not installed */}
+          {claudeInstalled === false && (
+            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white" />
+          )}
+
+          {/* Tooltip */}
+          {showTooltip === 'claude-status' && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded whitespace-nowrap z-50 shadow-lg animate-fade-in">
+              {claudeInstalled === null
+                ? 'Checking Claude...'
+                : claudeInstalled
+                  ? 'Claude CLI installed'
+                  : 'Claude CLI not installed'}
+            </div>
+          )}
+        </button>
       </div>
     </aside>
   );
