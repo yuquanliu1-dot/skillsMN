@@ -25,15 +25,16 @@ test.describe('Skill Editor @P0', () => {
       }
     });
 
-    page = await electronApp.firstWindow();
+    page = await electronApp.firstWindow({ timeout: 60000 });
     await page.waitForLoadState('domcontentloaded');
+
+    // Wait for app to be ready with longer timeout
+    await page.waitForSelector('[data-testid="sidebar"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="main-content"]', { timeout: 30000 });
 
     skillsPage = new SkillsPage(electronApp, page);
     editorPage = new EditorPage(electronApp, page);
     fixtureManager = new TestFixtureManager(electronApp, page);
-
-    // Wait for app to be ready
-    await waitForAppReady(page);
 
     // Create a test skill using skillsPage which has better waiting logic
     testSkillName = generateUniqueSkillName('editor-test');

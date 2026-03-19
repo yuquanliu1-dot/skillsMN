@@ -22,12 +22,13 @@ test.describe('Navigation @P0', () => {
       }
     });
 
-    page = await electronApp.firstWindow();
+    page = await electronApp.firstWindow({ timeout: 60000 });
     await page.waitForLoadState('domcontentloaded');
     appPage = new AppPage(electronApp, page);
 
-    // Wait for app to be ready
-    await appPage.waitForAppReady();
+    // Wait for app to be ready with longer timeout
+    await page.waitForSelector('[data-testid="sidebar"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="main-content"]', { timeout: 30000 });
   });
 
   test.afterAll(async () => {
