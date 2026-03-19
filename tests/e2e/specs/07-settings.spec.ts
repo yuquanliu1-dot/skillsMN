@@ -89,6 +89,10 @@ test.describe('Settings @P1', () => {
   test.describe('Editor Settings', () => {
     test.beforeEach(async () => {
       await settingsPage.open();
+      // Wait for settings to be visible
+      await page.waitForSelector('[data-testid="settings-modal"]', { timeout: 5000 });
+      // Switch to Skill View tab where editor settings are located
+      await settingsPage.switchToSkillViewTab();
     });
 
     test.afterEach(async () => {
@@ -96,11 +100,13 @@ test.describe('Settings @P1', () => {
     });
 
     test('should display editor settings section', async () => {
-      expect(await page.isVisible('text=/editor|font/i')).toBeTruthy();
+      expect(await page.isVisible('text=/Skill Editor/i')).toBeTruthy();
     });
 
     test('should have font size setting', async () => {
-      const fontSizeInput = await page.$('[data-testid="editor-font-size"], #editor-font-size, select');
+      // Wait for the element to be visible
+      await page.waitForSelector('[data-testid="editor-font-size"]', { timeout: 5000 });
+      const fontSizeInput = await page.$('[data-testid="editor-font-size"]');
       expect(fontSizeInput).toBeTruthy();
     });
 
@@ -110,18 +116,20 @@ test.describe('Settings @P1', () => {
     });
 
     test('should have minimap toggle', async () => {
-      // Look for minimap toggle/checkbox
-      const minimapToggle = await page.$('[data-testid="show-minimap-toggle"], input[type="checkbox"]');
+      await page.waitForSelector('[data-testid="show-minimap-toggle"]', { timeout: 5000 });
+      const minimapToggle = await page.$('[data-testid="show-minimap-toggle"]');
       expect(minimapToggle).toBeTruthy();
     });
 
     test('should have tab size setting', async () => {
-      const tabSizeInput = await page.$('[data-testid="tab-size"], #tab-size, input[type="number"]');
+      await page.waitForSelector('[data-testid="tab-size"]', { timeout: 5000 });
+      const tabSizeInput = await page.$('[data-testid="tab-size"]');
       expect(tabSizeInput).toBeTruthy();
     });
 
     test('should have word wrap toggle', async () => {
-      const wordWrapToggle = await page.$('[data-testid="word-wrap-toggle"], input[type="checkbox"]');
+      await page.waitForSelector('[data-testid="word-wrap-toggle"]', { timeout: 5000 });
+      const wordWrapToggle = await page.$('[data-testid="word-wrap-toggle"]');
       expect(wordWrapToggle).toBeTruthy();
     });
   });
@@ -143,6 +151,9 @@ test.describe('Settings @P1', () => {
   test.describe('AI Configuration', () => {
     test.beforeEach(async () => {
       await settingsPage.open();
+      await page.waitForSelector('[data-testid="settings-modal"]', { timeout: 5000 });
+      // Switch to AI tab
+      await settingsPage.switchToAITab();
     });
 
     test.afterEach(async () => {
@@ -154,18 +165,21 @@ test.describe('Settings @P1', () => {
     });
 
     test('should have API key input', async () => {
-      const apiKeyInput = await page.$('[data-testid="ai-api-key"], #ai-api-key, input[type="password"]');
+      const apiKeyInput = await page.$('[data-testid="ai-api-key"]');
       expect(apiKeyInput).toBeTruthy();
     });
 
     test('should have test connection button', async () => {
-      expect(await page.isVisible('[data-testid="test-connection-button"], button:has-text("Test")')).toBeTruthy();
+      expect(await page.isVisible('[data-testid="test-connection-button"]')).toBeTruthy();
     });
   });
 
   test.describe('Private Repositories', () => {
     test.beforeEach(async () => {
       await settingsPage.open();
+      await page.waitForSelector('[data-testid="settings-modal"]', { timeout: 5000 });
+      // Switch to Private Repos tab
+      await settingsPage.switchToPrivateReposTab();
     });
 
     test.afterEach(async () => {
@@ -173,7 +187,8 @@ test.describe('Settings @P1', () => {
     });
 
     test('should display private repos section', async () => {
-      expect(await page.isVisible('text=/private.*repo|github|gitlab/i')).toBeTruthy();
+      // Check for "Add Repository" button which is always visible
+      expect(await page.isVisible('button:has-text("Add Repository")')).toBeTruthy();
     });
 
     test('should have add GitHub repo button', async () => {
@@ -195,6 +210,9 @@ test.describe('Settings @P1', () => {
   test.describe('Save Settings', () => {
     test.beforeEach(async () => {
       await settingsPage.open();
+      await page.waitForSelector('[data-testid="settings-modal"]', { timeout: 5000 });
+      // Switch to Skill View tab where editor settings are located
+      await settingsPage.switchToSkillViewTab();
     });
 
     test.afterEach(async () => {
@@ -204,7 +222,8 @@ test.describe('Settings @P1', () => {
     });
 
     test('should have save button', async () => {
-      expect(await page.isVisible('button:has-text("Save")')).toBeTruthy();
+      // The Skill View tab has a "Save Settings" button at the bottom
+      expect(await page.isVisible('button:has-text("Save Settings"):visible')).toBeTruthy();
     });
 
     test('should save settings when clicking save', async () => {
@@ -222,10 +241,15 @@ test.describe('Settings @P1', () => {
       const newSize = currentFontSize === 14 ? 16 : 14;
       await settingsPage.setEditorFontSize(newSize);
       await settingsPage.save();
-      await settingsPage.close();
+
+      // Wait for modal to close after save
+      await page.waitForSelector('[data-testid="settings-modal"]', { state: 'hidden', timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(500);
 
       // Reopen and verify
       await settingsPage.open();
+      await page.waitForSelector('[data-testid="settings-modal"]', { timeout: 10000 });
+      await settingsPage.switchToSkillViewTab();
       const savedFontSize = await settingsPage.getEditorFontSize();
       expect(savedFontSize).toBe(newSize);
     });
@@ -257,6 +281,9 @@ test.describe('Settings @P1', () => {
   test.describe('Cancel Changes', () => {
     test('should discard changes when closing without save', async () => {
       await settingsPage.open();
+      await page.waitForSelector('[data-testid="settings-modal"]', { timeout: 5000 });
+      // Switch to Skill View tab where editor settings are located
+      await settingsPage.switchToSkillViewTab();
 
       const currentFontSize = await settingsPage.getEditorFontSize();
       const newSize = currentFontSize === 14 ? 18 : 14;
@@ -268,6 +295,8 @@ test.describe('Settings @P1', () => {
 
       // Reopen and verify original value
       await settingsPage.open();
+      await page.waitForSelector('[data-testid="settings-modal"]', { timeout: 5000 });
+      await settingsPage.switchToSkillViewTab();
       const savedFontSize = await settingsPage.getEditorFontSize();
       expect(savedFontSize).toBe(currentFontSize);
     });

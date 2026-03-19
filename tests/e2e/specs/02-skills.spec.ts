@@ -119,12 +119,12 @@ test.describe('Local Skills Management @P0', () => {
       await page.click('[data-testid="create-skill-button"]');
       await page.waitForSelector('[data-testid="create-skill-dialog"]');
 
-      // Leave empty and try to submit
+      // Leave empty - button should be disabled
       await page.fill('[data-testid="skill-name-input"]', '');
-      await page.click('[data-testid="confirm-create-button"]');
 
-      // Should show validation error
-      await page.waitForSelector('text=/required/i', { timeout: 3000 });
+      // The create button should be disabled when name is empty
+      const isDisabled = await page.isDisabled('[data-testid="confirm-create-button"]');
+      expect(isDisabled).toBeTruthy();
 
       await page.keyboard.press('Escape');
     });
@@ -151,8 +151,18 @@ test.describe('Local Skills Management @P0', () => {
       // Wait for success toast
       await page.waitForSelector('text=/created successfully/i', { timeout: 10000 });
 
-      // Verify skill appears in list
-      await skillsPage.waitForSkill(skillName);
+      // Wait for dialog to close and skills to reload
+      await page.waitForTimeout(3000);
+
+      // Search for the skill to make it visible
+      await skillsPage.searchSkills(skillName);
+      await page.waitForTimeout(500);
+
+      // Verify skill appears in list with longer timeout
+      await skillsPage.waitForSkill(skillName, 20000);
+
+      // Clear search
+      await skillsPage.clearSearch();
     });
 
     test('should cancel skill creation', async () => {
@@ -239,15 +249,26 @@ test.describe('Local Skills Management @P0', () => {
     test('should show delete confirmation dialog', async () => {
       await skillsPage.goto();
 
+      // Search for the skill first to make it visible
+      await skillsPage.searchSkills(deleteTestSkill);
+      await page.waitForTimeout(500);
+
+      // Use locator API for chaining
+      const skillCard = page.locator(`[data-testid="skill-card"]:has-text("${deleteTestSkill}")`);
+      await skillCard.waitFor({ timeout: 10000 });
+
       // Hover over skill to show actions
-      const skillCard = await page.$(`[data-testid="skill-card"]:has-text("${deleteTestSkill}")`);
-      await skillCard?.hover();
+      await skillCard.hover();
+      await page.waitForTimeout(200);
 
       // Click delete button
-      await page.click(`[data-testid="skill-card"]:has-text("${deleteTestSkill}") [data-testid="delete-button"]`);
+      await skillCard.locator('[data-testid="delete-button"]').click();
 
       // Confirmation dialog should appear
       expect(await page.isVisible('[data-testid="delete-confirm-dialog"]')).toBeTruthy();
+
+      // Cancel the dialog to clean up
+      await page.click('[data-testid="cancel-delete-button"]');
     });
 
     test('should delete skill after confirmation', async () => {

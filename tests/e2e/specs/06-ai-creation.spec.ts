@@ -102,7 +102,9 @@ test.describe('AI Skill Creation @P1', () => {
     test('should show character count', async () => {
       await page.fill('textarea', 'Test prompt');
 
-      expect(await page.isVisible('[data-testid="ai-char-count"], text=/\\d+\\/2000/')).toBeTruthy();
+      // Check for character count using locator
+      const hasCount = await page.locator('text=/\\d+\\/2000/').count() > 0;
+      expect(hasCount || await page.isVisible('[data-testid="ai-char-count"]')).toBeTruthy();
     });
 
     test('should limit to 2000 characters', async () => {
@@ -142,7 +144,15 @@ test.describe('AI Skill Creation @P1', () => {
     });
 
     test('should show placeholder before generation', async () => {
-      expect(await page.isVisible('[data-testid="ai-preview-window"], text=/Generated content will appear here/i')).toBeTruthy();
+      // Check for preview window or placeholder separately
+      const hasPreviewWindow = await page.isVisible('[data-testid="ai-preview-window"]');
+      if (!hasPreviewWindow) {
+        // Fallback to text pattern
+        const hasPlaceholder = await page.locator('text=/Generated content will appear here/i').count() > 0;
+        expect(hasPreviewWindow || hasPlaceholder).toBeTruthy();
+      } else {
+        expect(true).toBeTruthy();
+      }
     });
   });
 

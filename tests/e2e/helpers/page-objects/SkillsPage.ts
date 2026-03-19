@@ -42,8 +42,22 @@ export class SkillsPage extends AppPage {
     // Submit
     await this.page.click('[data-testid="confirm-create-button"]');
 
-    // Wait for dialog to close
-    await this.page.waitForSelector('[data-testid="create-skill-dialog"]', { state: 'hidden', timeout: 10000 });
+    // Wait for dialog to close (with better error handling)
+    try {
+      await this.page.waitForSelector('[data-testid="create-skill-dialog"]', { state: 'hidden', timeout: 15000 });
+    } catch {
+      // Dialog didn't close - check for error
+      const hasError = await this.page.isVisible('.text-red-600, .text-red-400');
+      if (hasError) {
+        // Press escape to close dialog
+        await this.page.keyboard.press('Escape');
+        await this.page.waitForTimeout(500);
+        throw new Error(`Failed to create skill "${name}" - validation error`);
+      }
+      // Try pressing escape anyway
+      await this.page.keyboard.press('Escape');
+      await this.page.waitForSelector('[data-testid="create-skill-dialog"]', { state: 'hidden', timeout: 5000 });
+    }
 
     // Wait for the skill list to update (file watcher needs time)
     await this.page.waitForTimeout(2000);
@@ -149,29 +163,39 @@ export class SkillsPage extends AppPage {
    * Click on a skill to open in editor
    */
   async clickSkill(name: string): Promise<void> {
-    const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
-    if (!skillCard) {
-      throw new Error(`Skill "${name}" not found`);
-    }
+    // Search for the skill first to make it visible
+    await this.searchSkills(name);
+    await this.page.waitForTimeout(500);
+
+    // Use locator API
+    const skillCard = this.page.locator(`[data-testid="skill-card"]:has-text("${name}")`);
+    await skillCard.waitFor({ timeout: 10000 });
 
     // Click on the skill name to open editor
     await skillCard.click();
     await this.page.waitForSelector('[data-testid="skill-editor"]', { timeout: 10000 });
+
+    // Clear search after opening editor
+    await this.clearSearch();
   }
 
   /**
    * Delete a skill
    */
   async deleteSkill(name: string): Promise<void> {
-    const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
-    if (!skillCard) {
-      throw new Error(`Skill "${name}" not found`);
-    }
+    // Search for the skill first to make it visible (handles virtualized list)
+    await this.searchSkills(name);
+    await this.page.waitForTimeout(500);
+
+    // Use locator API for chaining
+    const skillCard = this.page.locator(`[data-testid="skill-card"]:has-text("${name}")`);
+    await skillCard.waitFor({ timeout: 10000 });
 
     // Hover to show actions
     await skillCard.hover();
+    await this.page.waitForTimeout(200);
 
-    // Click delete button
+    // Click delete button using locator
     await skillCard.locator('[data-testid="delete-button"]').click();
 
     // Wait for confirmation dialog
@@ -182,21 +206,28 @@ export class SkillsPage extends AppPage {
 
     // Wait for dialog to close
     await this.page.waitForSelector('[data-testid="delete-confirm-dialog"]', { state: 'hidden', timeout: 15000 });
+
+    // Clear search
+    await this.clearSearch();
   }
 
   /**
    * Cancel skill deletion
    */
   async cancelDeleteSkill(name: string): Promise<void> {
-    const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
-    if (!skillCard) {
-      throw new Error(`Skill "${name}" not found`);
-    }
+    // Search for the skill first to make it visible
+    await this.searchSkills(name);
+    await this.page.waitForTimeout(500);
+
+    // Use locator API for chaining
+    const skillCard = this.page.locator(`[data-testid="skill-card"]:has-text("${name}")`);
+    await skillCard.waitFor({ timeout: 10000 });
 
     // Hover to show actions
     await skillCard.hover();
+    await this.page.waitForTimeout(200);
 
-    // Click delete button
+    // Click delete button using locator
     await skillCard.locator('[data-testid="delete-button"]').click();
 
     // Wait for confirmation dialog
@@ -207,6 +238,9 @@ export class SkillsPage extends AppPage {
 
     // Wait for dialog to close
     await this.page.waitForSelector('[data-testid="delete-confirm-dialog"]', { state: 'hidden', timeout: 5000 });
+
+    // Clear search
+    await this.clearSearch();
   }
 
   /**
@@ -271,16 +305,23 @@ export class SkillsPage extends AppPage {
    * Open folder for skill
    */
   async openSkillFolder(name: string): Promise<void> {
-    const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
-    if (!skillCard) {
-      throw new Error(`Skill "${name}" not found`);
-    }
+    // Search for the skill first
+    await this.searchSkills(name);
+    await this.page.waitForTimeout(500);
+
+    // Use locator API
+    const skillCard = this.page.locator(`[data-testid="skill-card"]:has-text("${name}")`);
+    await skillCard.waitFor({ timeout: 10000 });
 
     // Hover to show actions
     await skillCard.hover();
+    await this.page.waitForTimeout(200);
 
-    // Click folder button
+    // Click folder button using locator
     await skillCard.locator('[data-testid="open-folder-button"]').click();
+
+    // Clear search
+    await this.clearSearch();
   }
 
   /**

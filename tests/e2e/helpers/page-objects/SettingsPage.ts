@@ -109,7 +109,9 @@ export class SettingsPage extends AppPage {
    * Set editor font size
    */
   async setEditorFontSize(size: number): Promise<void> {
-    await this.page.fill('#editor-font-size', size.toString());
+    const selector = '[data-testid="editor-font-size"]';
+    await this.page.waitForSelector(selector, { timeout: 5000 });
+    await this.page.selectOption(selector, size.toString());
     await this.page.waitForTimeout(300);
   }
 
@@ -117,7 +119,9 @@ export class SettingsPage extends AppPage {
    * Get editor font size
    */
   async getEditorFontSize(): Promise<number> {
-    const value = await this.page.$eval('#editor-font-size', (el: any) => el.value);
+    const selector = '[data-testid="editor-font-size"]';
+    await this.page.waitForSelector(selector, { timeout: 5000 });
+    const value = await this.page.$eval(selector, (el: any) => el.value);
     return parseInt(value, 10);
   }
 
@@ -159,7 +163,9 @@ export class SettingsPage extends AppPage {
    * Set tab size
    */
   async setTabSize(size: number): Promise<void> {
-    await this.page.fill('#tab-size', size.toString());
+    const selector = '[data-testid="tab-size"]';
+    await this.page.waitForSelector(selector, { timeout: 5000 });
+    await this.page.fill(selector, size.toString());
     await this.page.waitForTimeout(300);
   }
 
@@ -167,7 +173,9 @@ export class SettingsPage extends AppPage {
    * Get tab size
    */
   async getTabSize(): Promise<number> {
-    const value = await this.page.$eval('#tab-size', (el: any) => el.value);
+    const selector = '[data-testid="tab-size"]';
+    await this.page.waitForSelector(selector, { timeout: 5000 });
+    const value = await this.page.$eval(selector, (el: any) => el.value);
     return parseInt(value, 10);
   }
 
@@ -191,10 +199,39 @@ export class SettingsPage extends AppPage {
   }
 
   /**
+   * Switch to AI tab
+   */
+  async switchToAITab(): Promise<void> {
+    // Click the "AI Configuration" tab within the settings modal
+    await this.page.click('[data-testid="settings-modal"] button:has-text("AI Configuration")');
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Switch to Private Repos tab
+   */
+  async switchToPrivateReposTab(): Promise<void> {
+    // Click the "Private Repositories" tab within the settings modal
+    await this.page.click('[data-testid="settings-modal"] button:has-text("Private Repositories")');
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Switch to Skill View tab
+   */
+  async switchToSkillViewTab(): Promise<void> {
+    // Click the "Skill View" tab within the settings modal
+    await this.page.click('[data-testid="settings-modal"] button:has-text("Skill View")');
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
    * Set AI API key
    */
   async setAIApiKey(key: string): Promise<void> {
-    await this.page.fill('#ai-api-key', key);
+    const selector = '[data-testid="ai-api-key"]';
+    await this.page.waitForSelector(selector, { timeout: 5000 });
+    await this.page.fill(selector, key);
     await this.page.waitForTimeout(300);
   }
 
@@ -202,7 +239,9 @@ export class SettingsPage extends AppPage {
    * Get AI API key (masked)
    */
   async getAIApiKey(): Promise<string> {
-    return await this.page.$eval('#ai-api-key', (el: any) => el.value);
+    const selector = '[data-testid="ai-api-key"]';
+    await this.page.waitForSelector(selector, { timeout: 5000 });
+    return await this.page.$eval(selector, (el: any) => el.value);
   }
 
   /**
@@ -297,7 +336,8 @@ export class SettingsPage extends AppPage {
    * Save settings
    */
   async save(): Promise<void> {
-    await this.page.click('button:has-text("Save")');
+    // Find the visible Save Settings button within the settings modal
+    await this.page.click('[data-testid="settings-modal"] >> button:has-text("Save Settings"):visible');
     await this.page.waitForTimeout(500);
   }
 

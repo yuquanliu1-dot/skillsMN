@@ -97,22 +97,23 @@ export class TestFixtureManager {
    */
   async deleteSkill(name: string): Promise<boolean> {
     try {
-      // Find the skill card
-      const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
-      if (!skillCard) {
-        return false;
+      // Search for the skill first to make it visible
+      const searchInput = await this.page.$('[data-testid="skill-search-input"], [data-testid="skills-list"] input[type="text"]');
+      if (searchInput) {
+        await searchInput.fill(name);
+        await this.page.waitForTimeout(500);
       }
+
+      // Use locator API
+      const skillCard = this.page.locator(`[data-testid="skill-card"]:has-text("${name}")`);
+      await skillCard.waitFor({ timeout: 10000 });
 
       // Hover to show actions
       await skillCard.hover();
       await this.page.waitForTimeout(200);
 
-      // Click delete button
-      const deleteButton = await skillCard.$('[data-testid="delete-button"]');
-      if (!deleteButton) {
-        return false;
-      }
-      await deleteButton.click();
+      // Click delete button using locator
+      await skillCard.locator('[data-testid="delete-button"]').click();
 
       // Wait for confirmation dialog
       await this.page.waitForSelector('[data-testid="delete-confirm-dialog"]', { timeout: 5000 });
@@ -137,14 +138,40 @@ export class TestFixtureManager {
    * Clean up all created skills
    */
   async cleanup(): Promise<void> {
+    // Close any open modals first
+    try {
+      await this.page.keyboard.press('Escape');
+      await this.page.waitForTimeout(300);
+    } catch {
+      // Ignore errors
+    }
+
     // Navigate to skills view first
-    await this.page.click('[data-testid="nav-skills"]');
-    await this.page.waitForTimeout(500);
+    try {
+      const navButton = this.page.locator('[data-testid="nav-skills"]');
+      const isVisible = await navButton.isVisible({ timeout: 2000 }).catch(() => false);
+      if (isVisible) {
+        // Check if any modal is blocking
+        const modalVisible = await this.page.isVisible('[data-testid="settings-modal"], [data-testid="create-skill-dialog"], [data-testid="delete-confirm-dialog"]').catch(() => false);
+        if (modalVisible) {
+          await this.page.keyboard.press('Escape');
+          await this.page.waitForTimeout(300);
+        }
+        await navButton.click({ force: true });
+        await this.page.waitForTimeout(500);
+      }
+    } catch {
+      // Ignore navigation errors
+    }
 
     // Delete all tracked skills
     for (const name of [...this.createdSkills]) {
-      await this.deleteSkill(name);
-      await this.page.waitForTimeout(200);
+      try {
+        await this.deleteSkill(name);
+        await this.page.waitForTimeout(200);
+      } catch {
+        // Ignore deletion errors during cleanup
+      }
     }
 
     this.createdSkills = [];
@@ -155,6 +182,15 @@ export class TestFixtureManager {
    */
   getCreatedSkills(): string[] {
     return [...this.createdSkills];
+  }
+
+  /**
+   * Track an existing skill for cleanup
+   */
+  trackSkill(name: string): void {
+    if (!this.createdSkills.includes(name)) {
+      this.createdSkills.push(name);
+    }
   }
 }
 
