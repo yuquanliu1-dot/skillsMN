@@ -154,6 +154,7 @@ export default function Sidebar({
       <div className="p-2 border-t border-gray-100 space-y-1">
         {/* Settings Button */}
         <button
+          data-testid="settings-button"
           onClick={onSettingsClick}
           onMouseEnter={() => setShowTooltip('settings')}
           onMouseLeave={() => setShowTooltip(null)}

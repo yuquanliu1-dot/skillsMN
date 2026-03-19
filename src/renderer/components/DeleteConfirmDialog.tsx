@@ -210,6 +210,7 @@ export default function DeleteConfirmDialog({
         {/* Actions */}
         <div className="flex justify-end gap-3">
           <button
+            data-testid="cancel-delete-button"
             onClick={onClose}
             disabled={isDeleting}
             className="btn btn-secondary"

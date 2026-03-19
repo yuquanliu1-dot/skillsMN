@@ -1,0 +1,324 @@
+/**
+ * SkillsPage - Page Object Model for Local Skills Management
+ *
+ * Handles interactions with the skills list, creation, editing, and deletion
+ */
+
+import { Page, ElectronApplication, expect } from '@playwright/test';
+import { AppPage } from './AppPage';
+
+export interface SkillInfo {
+  name: string;
+  path: string;
+  description?: string;
+  sourceType?: string;
+}
+
+export class SkillsPage extends AppPage {
+  constructor(app: ElectronApplication, page: Page) {
+    super(app, page);
+  }
+
+  /**
+   * Navigate to Skills view
+   */
+  async goto(): Promise<void> {
+    await this.navigateTo('skills');
+  }
+
+  /**
+   * Create a new skill
+   */
+  async createSkill(name: string): Promise<void> {
+    // Click create button
+    await this.page.click('[data-testid="create-skill-button"]');
+
+    // Wait for dialog
+    await this.page.waitForSelector('[data-testid="create-skill-dialog"]', { timeout: 5000 });
+
+    // Fill in skill name
+    await this.page.fill('[data-testid="skill-name-input"]', name);
+
+    // Submit
+    await this.page.click('[data-testid="confirm-create-button"]');
+
+    // Wait for dialog to close
+    await this.page.waitForSelector('[data-testid="create-skill-dialog"]', { state: 'hidden', timeout: 10000 });
+
+    // Wait for the skill list to update (file watcher needs time)
+    await this.page.waitForTimeout(2000);
+
+    // Try to refresh the skills list by pressing Ctrl+R
+    await this.page.keyboard.press('Control+r');
+    await this.page.waitForTimeout(1000);
+
+    // Search for the skill to make it visible (handles virtualized list)
+    await this.searchSkills(name);
+    await this.page.waitForTimeout(500);
+
+    // Now wait for skill to appear in the filtered list
+    await this.waitForSkill(name, 15000);
+
+    // Clear search to show all skills
+    await this.clearSearch();
+  }
+
+  /**
+   * Create a new skill using keyboard shortcut
+   */
+  async createSkillWithShortcut(name: string): Promise<void> {
+    await this.page.keyboard.press('Control+n');
+
+    // Wait for dialog
+    await this.page.waitForSelector('[data-testid="create-skill-dialog"]', { timeout: 5000 });
+
+    // Fill in skill name
+    await this.page.fill('[data-testid="skill-name-input"]', name);
+
+    // Submit
+    await this.page.click('[data-testid="confirm-create-button"]');
+
+    // Wait for dialog to close
+    await this.page.waitForSelector('[data-testid="create-skill-dialog"]', { state: 'hidden', timeout: 10000 });
+  }
+
+  /**
+   * Cancel skill creation
+   */
+  async cancelCreateSkill(): Promise<void> {
+    await this.page.click('[data-testid="create-skill-dialog"] button:has-text("Cancel")');
+    await this.page.waitForSelector('[data-testid="create-skill-dialog"]', { state: 'hidden', timeout: 5000 });
+  }
+
+  /**
+   * Open AI skill creation dialog
+   */
+  async openAICreationDialog(): Promise<void> {
+    await this.page.click('[data-testid="ai-create-skill-button"]');
+    // Wait for AI dialog - it has a gradient header
+    await this.page.waitForSelector('text=AI Skill Creator', { timeout: 5000 });
+  }
+
+  /**
+   * Get all skill cards
+   */
+  async getSkillCards(): Promise<string[]> {
+    const cards = await this.page.$$('[data-testid="skill-card"]');
+    const names: string[] = [];
+
+    for (const card of cards) {
+      const nameElement = await card.$('[data-testid="skill-name"]');
+      if (nameElement) {
+        const name = await nameElement.textContent();
+        if (name) names.push(name);
+      }
+    }
+
+    return names;
+  }
+
+  /**
+   * Get skill count
+   */
+  async getSkillCount(): Promise<number> {
+    const cards = await this.page.$$('[data-testid="skill-card"]');
+    return cards.length;
+  }
+
+  /**
+   * Check if skill exists (with scroll for virtualized list)
+   */
+  async skillExists(name: string): Promise<boolean> {
+    // First try direct search
+    const skill = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
+    if (skill) return true;
+
+    // Try searching for it
+    await this.searchSkills(name);
+    await this.page.waitForTimeout(500);
+
+    const found = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
+
+    // Clear search
+    await this.clearSearch();
+
+    return found !== null;
+  }
+
+  /**
+   * Click on a skill to open in editor
+   */
+  async clickSkill(name: string): Promise<void> {
+    const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
+    if (!skillCard) {
+      throw new Error(`Skill "${name}" not found`);
+    }
+
+    // Click on the skill name to open editor
+    await skillCard.click();
+    await this.page.waitForSelector('[data-testid="skill-editor"]', { timeout: 10000 });
+  }
+
+  /**
+   * Delete a skill
+   */
+  async deleteSkill(name: string): Promise<void> {
+    const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
+    if (!skillCard) {
+      throw new Error(`Skill "${name}" not found`);
+    }
+
+    // Hover to show actions
+    await skillCard.hover();
+
+    // Click delete button
+    await skillCard.locator('[data-testid="delete-button"]').click();
+
+    // Wait for confirmation dialog
+    await this.page.waitForSelector('[data-testid="delete-confirm-dialog"]', { timeout: 5000 });
+
+    // Confirm deletion
+    await this.page.click('[data-testid="confirm-delete-button"]');
+
+    // Wait for dialog to close
+    await this.page.waitForSelector('[data-testid="delete-confirm-dialog"]', { state: 'hidden', timeout: 15000 });
+  }
+
+  /**
+   * Cancel skill deletion
+   */
+  async cancelDeleteSkill(name: string): Promise<void> {
+    const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
+    if (!skillCard) {
+      throw new Error(`Skill "${name}" not found`);
+    }
+
+    // Hover to show actions
+    await skillCard.hover();
+
+    // Click delete button
+    await skillCard.locator('[data-testid="delete-button"]').click();
+
+    // Wait for confirmation dialog
+    await this.page.waitForSelector('[data-testid="delete-confirm-dialog"]', { timeout: 5000 });
+
+    // Cancel deletion
+    await this.page.click('[data-testid="cancel-delete-button"]');
+
+    // Wait for dialog to close
+    await this.page.waitForSelector('[data-testid="delete-confirm-dialog"]', { state: 'hidden', timeout: 5000 });
+  }
+
+  /**
+   * Search for skills
+   */
+  async searchSkills(query: string): Promise<void> {
+    // Find the search input in skills list
+    const searchInput = await this.page.$('[data-testid="skill-search-input"], [data-testid="skills-list"] input[type="text"]');
+    if (searchInput) {
+      await searchInput.fill(query);
+      await this.page.waitForTimeout(500); // Wait for filtering
+    }
+  }
+
+  /**
+   * Clear search
+   */
+  async clearSearch(): Promise<void> {
+    const searchInput = await this.page.$('[data-testid="skill-search-input"], [data-testid="skills-list"] input[type="text"]');
+    if (searchInput) {
+      await searchInput.fill('');
+      await this.page.waitForTimeout(300);
+    }
+  }
+
+  /**
+   * Sort skills by
+   */
+  async sortSkills(sortBy: 'name' | 'modified'): Promise<void> {
+    await this.page.selectOption('#sort-by', sortBy);
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Filter skills by source
+   */
+  async filterSkills(filter: 'all' | 'local' | 'registry' | 'private-repo'): Promise<void> {
+    await this.page.selectOption('#filter-source', filter);
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Get displayed skill count text
+   */
+  async getSkillCountText(): Promise<string> {
+    const countElement = await this.page.$('[data-testid="skills-list"] .text-xs.text-gray-500');
+    return await countElement?.textContent() || '';
+  }
+
+  /**
+   * Check if skill has update indicator
+   */
+  async skillHasUpdate(name: string): Promise<boolean> {
+    const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
+    if (!skillCard) return false;
+
+    const updateIndicator = await skillCard.$('[data-testid="update-indicator"]');
+    return updateIndicator !== null;
+  }
+
+  /**
+   * Open folder for skill
+   */
+  async openSkillFolder(name: string): Promise<void> {
+    const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
+    if (!skillCard) {
+      throw new Error(`Skill "${name}" not found`);
+    }
+
+    // Hover to show actions
+    await skillCard.hover();
+
+    // Click folder button
+    await skillCard.locator('[data-testid="open-folder-button"]').click();
+  }
+
+  /**
+   * Get skill source badge text
+   */
+  async getSkillSourceBadge(name: string): Promise<string | null> {
+    const skillCard = await this.page.$(`[data-testid="skill-card"]:has-text("${name}")`);
+    if (!skillCard) return null;
+
+    const badge = await skillCard.$('.badge');
+    return await badge?.textContent() || null;
+  }
+
+  /**
+   * Check if create button is visible
+   */
+  async isCreateButtonVisible(): Promise<boolean> {
+    return await this.page.isVisible('[data-testid="create-skill-button"]');
+  }
+
+  /**
+   * Check if AI create button is visible
+   */
+  async isAICreateButtonVisible(): Promise<boolean> {
+    return await this.page.isVisible('[data-testid="ai-create-skill-button"]');
+  }
+
+  /**
+   * Wait for skill to appear in list
+   */
+  async waitForSkill(name: string, timeout = 10000): Promise<void> {
+    await this.page.waitForSelector(`[data-testid="skill-card"]:has-text("${name}")`, { timeout });
+  }
+
+  /**
+   * Wait for skill to be removed from list
+   */
+  async waitForSkillRemoval(name: string, timeout = 10000): Promise<void> {
+    await this.page.waitForSelector(`[data-testid="skill-card"]:has-text("${name}")`, { state: 'detached', timeout });
+  }
+}

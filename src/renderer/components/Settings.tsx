@@ -509,6 +509,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
 
   return (
     <div
+      data-testid="settings-modal"
       className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isSaving) {
@@ -545,6 +546,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
             <h2 className="text-xl font-semibold text-slate-900">Settings</h2>
           </div>
           <button
+            data-testid="close-settings-button"
             onClick={onClose}
             disabled={isSaving}
             className="text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
@@ -740,6 +742,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
           <div className="mb-4">
             <label className="flex items-center gap-2.5 cursor-pointer">
               <input
+                data-testid="auto-refresh-toggle"
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
@@ -875,6 +878,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       Font Size
                     </label>
                     <select
+                      data-testid="editor-font-size"
                       value={skillEditorConfig.fontSize}
                       onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, fontSize: parseInt(e.target.value) })}
                       className="select w-full"
@@ -916,6 +920,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       Tab Size
                     </label>
                     <input
+                      data-testid="tab-size"
                       type="number"
                       value={skillEditorConfig.tabSize}
                       onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, tabSize: parseInt(e.target.value) })}
@@ -1006,6 +1011,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 <div className="space-y-2.5">
                   <label className="flex items-center gap-2.5 cursor-pointer">
                     <input
+                      data-testid="show-minimap-toggle"
                       type="checkbox"
                       checked={skillEditorConfig.showMinimap}
                       onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, showMinimap: e.target.checked })}
@@ -1017,6 +1023,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
 
                   <label className="flex items-center gap-2.5 cursor-pointer">
                     <input
+                      data-testid="word-wrap-toggle"
                       type="checkbox"
                       checked={skillEditorConfig.wordWrap}
                       onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, wordWrap: e.target.checked })}
@@ -1488,6 +1495,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       API Key
                     </label>
                     <input
+                      data-testid="ai-api-key"
                       type="password"
                       value={aiConfig.apiKey}
                       onChange={(e) => setAiConfig({ ...aiConfig, apiKey: e.target.value })}
@@ -1673,6 +1681,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 {/* Actions */}
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                   <button
+                    data-testid="test-connection-button"
                     type="button"
                     onClick={handleTestAIConnection}
                     disabled={isTestingAI || !aiConfig.apiKey}

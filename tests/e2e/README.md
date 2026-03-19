@@ -1,6 +1,43 @@
-# End-to-End Testing with Playwright
+# skillsMN E2E Tests
 
-This directory contains automated end-to-End (E2E) tests for the Skills Manager Electron application using Playwright.
+This directory contains comprehensive end-to-end tests for the skillsMN Electron application using Playwright.
+
+## Test Structure
+
+```
+tests/e2e/
+├── helpers/
+│   ├── page-objects/     # Page Object Model classes
+│   │   ├── AppPage.ts    # Base application interactions
+│   │   ├── SkillsPage.ts # Skills list management
+│   │   ├── EditorPage.ts # Monaco editor interactions
+│   │   ├── DiscoverPage.ts # Registry search
+│   │   ├── PrivateReposPage.ts # Private repository browsing
+│   │   └── SettingsPage.ts # Settings management
+│   ├── fixtures/         # Test data and fixtures
+│   │   ├── skills.ts     # Sample skill data
+│   │   ├── config.ts     # Sample configuration data
+│   │   └── api-responses.ts # Mock API responses
+│   ├── mocks/            # API mocking utilities
+│   │   ├── registry-api.ts
+│   │   ├── github-api.ts
+│   │   └── ai-api.ts
+│   ├── index.ts          # Main exports
+│   └── test-helpers.ts   # Legacy helper (backward compatible)
+├── specs/                # Test specifications
+│   ├── 00-setup.spec.ts      # Setup and configuration (P0)
+│   ├── 01-navigation.spec.ts # Navigation tests (P0)
+│   ├── 02-skills.spec.ts     # Local skills management (P0)
+│   ├── 03-editor.spec.ts     # Skill editor (P0)
+│   ├── 04-discover.spec.ts   # Registry search (P0)
+│   ├── 05-private-repos.spec.ts # Private repositories (P1)
+│   ├── 06-ai-creation.spec.ts # AI skill creation (P1)
+│   ├── 07-settings.spec.ts   # Settings (P1)
+│   └── 08-error-handling.spec.ts # Error handling (P2)
+├── app.spec.ts           # Legacy app tests
+├── registry.spec.ts      # Legacy registry tests
+└── README.md             # This file
+```
 
 ## Prerequisites
 
@@ -8,173 +45,216 @@ This directory contains automated end-to-End (E2E) tests for the Skills Manager 
 - npm dependencies installed
 - Application built (`npm run build`)
 
-## Installation
-
-Playwright is already installed as a dev dependency:
-
-```bash
-npm install
-```
-
 ## Running Tests
 
-### Run all E2E tests
+### All Tests
 ```bash
 npm run test:e2e
 ```
 
-### Run tests with UI mode (Interactive)
+### By Priority
 ```bash
+# P0 - Critical path tests (must pass for release)
+npm run test:e2e:p0
+
+# P1 - Important functionality
+npm run test:e2e:p1
+
+# P2 - Edge cases and error handling
+npm run test:e2e:p2
+```
+
+### By Feature
+```bash
+# Smoke tests (quick validation)
+npm run test:e2e:smoke
+
+# Skills and editor tests
+npm run test:e2e:skills
+
+# Registry discovery
+npm run test:e2e:discover
+
+# Private repositories
+npm run test:e2e:private
+
+# AI skill creation
+npm run test:e2e:ai
+
+# Settings
+npm run test:e2e:settings
+
+# Error handling
+npm run test:e2e:errors
+```
+
+### Development Mode
+```bash
+# UI mode (interactive test runner)
 npm run test:e2e:ui
-```
 
-### Run tests in debug mode
-```bash
+# Debug mode (headed with devtools)
 npm run test:e2e:debug
+
+# View HTML report
+npm run test:e2e:report
 ```
 
-### Run specific test file
+### Run Specific Tests
 ```bash
-npx playwright test tests/e2e/app.spec.ts
+# Run specific test file
+npx playwright test tests/e2e/specs/02-skills.spec.ts
+
+# Run specific test by name
+npx playwright test -g "should create new skill"
 ```
 
-### Run specific test
-```bash
-npx playwright test -g "should search for skills"
+## Test Priorities
+
+### P0: Critical Path (~35 tests)
+- Application launch and setup
+- Navigation between views
+- Skill creation, editing, deletion
+- Editor functionality
+- Registry search and installation
+
+### P1: Important Functionality (~40 tests)
+- Private repository management
+- AI skill generation
+- Settings configuration
+- Advanced editor features
+
+### P2: Edge Cases (~25 tests)
+- Error handling
+- Performance edge cases
+- Network failures
+- File system errors
+
+## Writing Tests
+
+### Using Page Objects
+
+```typescript
+import { test, expect, _electron as electron } from '@playwright/test';
+import { SkillsPage, generateUniqueSkillName } from '../helpers';
+
+test.describe('My Feature @P0', () => {
+  let skillsPage: SkillsPage;
+
+  test.beforeEach(async () => {
+    // Setup electron app and page
+    skillsPage = new SkillsPage(electronApp, page);
+    await skillsPage.goto();
+  });
+
+  test('should create skill', async () => {
+    const skillName = generateUniqueSkillName('test');
+    await skillsPage.createSkill(skillName);
+    expect(await skillsPage.skillExists(skillName)).toBeTruthy();
+  });
+});
 ```
 
-## Test Structure
+### Using API Mocks
 
-```
-tests/e2e/
-├── helpers/
-│   └── test-helpers.ts      # Test utilities and helpers
-├── app.spec.ts               # Application launch and basic tests
-├── registry.spec.ts          # Registry search and installation tests
-└── README.md                 # This file
-```
+```typescript
+import { mockRegistrySearch, mockRegistryInstall } from '../helpers';
 
-## Test Coverage
+test.beforeEach(async ({ page }) => {
+  await mockRegistrySearch(page, { emptyResults: true });
+  await mockRegistryInstall(page);
+});
 
-### Application Tests (`app.spec.ts`)
-- ✅ Application launch and window visibility
-- ✅ UI component loading
-- ✅ Navigation between views
-- ✅ Skill management (create, preview, edit, delete)
-
-### Registry Tests (`registry.spec.ts`)
-- ✅ Skill search functionality
-- ✅ Search results display
-- ✅ Skill installation from registry
-- ✅ Installation progress and error handling
-- ✅ Skill preview functionality
-
-## Adding `data-testid` Attributes
-
-To make tests more reliable, add `data-testid` attributes to your components:
-
-### Example in React Component
-
-```tsx
-// Before
-<button onClick={handleInstall}>Install</button>
-
-// After
-<button
-  data-testid="install-button"
-  onClick={handleInstall}
->
-  Install
-</button>
+test('should handle empty results', async () => {
+  await discoverPage.search('test');
+  expect(await discoverPage.hasNoResults()).toBeTruthy();
+});
 ```
 
-### Recommended Test IDs
+## Recommended Test IDs
 
-Add these `data-testid` attributes to your components:
+Add these `data-testid` attributes to components for reliable testing:
 
-#### Navigation
+### Navigation
 - `data-testid="sidebar"` - Main sidebar container
 - `data-testid="nav-skills"` - Skills navigation button
 - `data-testid="nav-discover"` - Discover navigation button
 - `data-testid="nav-private-repos"` - Private Repos navigation button
 
-#### Skills View
+### Skills View
 - `data-testid="skills-list"` - Skills list container
 - `data-testid="skill-card"` - Individual skill card
 - `data-testid="skill-name"` - Skill name element
 - `data-testid="create-skill-button"` - Create new skill button
+- `data-testid="ai-create-skill-button"` - AI create button
 - `data-testid="delete-button"` - Delete skill button
 
-#### Discover View
+### Editor
+- `data-testid="skill-editor"` - Editor container
+- `data-testid="skill-preview"` - Preview container
+
+### Discover View
 - `data-testid="search-input"` - Search input field
 - `data-testid="loading-indicator"` - Loading spinner
 - `data-testid="install-button"` - Install skill button
-- `data-testid="install-dialog"` - Installation confirmation dialog
-- `data-testid="confirm-install-button"` - Confirm installation button
 
-#### Preview Panel
-- `data-testid="skill-preview"` - Skill preview container
-- `data-testid="skill-preview-content"` - Preview content area
-- `data-testid="close-preview-button"` - Close preview button
-- `data-testid="skill-editor"` - Monaco editor container
-
-#### Dialogs
+### Dialogs
 - `data-testid="create-skill-dialog"` - Create skill dialog
 - `data-testid="skill-name-input"` - Skill name input
 - `data-testid="confirm-create-button"` - Confirm create button
 - `data-testid="delete-confirm-dialog"` - Delete confirmation dialog
 - `data-testid="confirm-delete-button"` - Confirm delete button
+- `data-testid="settings-modal"` - Settings modal
 
-## Test Helpers
+## Page Objects API
 
-### SkillManagerHelper
-
-Main helper class for common operations:
-
+### AppPage (Base)
 ```typescript
-const helper = new SkillManagerHelper(app, page);
-
-// Navigation
-await helper.navigateToSkills();
-await helper.navigateToDiscover();
-await helper.navigateToPrivateRepos();
-
-// Search
-await helper.searchSkill('claude');
-
-// Installation
-await helper.installSkill('claude-api');
-const isInstalled = await helper.isSkillInstalled('claude-api');
-
-// Preview
-await helper.previewSkill('claude-api');
-await helper.closePreview();
-
-// Utilities
-await helper.waitForToast('Installation completed');
-const count = await helper.getInstalledSkillCount();
+await appPage.navigateTo('skills' | 'discover' | 'private-repos');
+await appPage.openSettings();
+await appPage.closeSettings();
+await appPage.waitForToast(message);
+await appPage.waitForAppReady();
 ```
 
-## Mocking External APIs
-
-For tests that shouldn't hit real APIs:
-
+### SkillsPage
 ```typescript
-test('should handle API errors', async ({ page }) => {
-  // Mock GitHub API
-  await page.route('**/api.github.com/**', route => {
-    route.fulfill({
-      status: 500,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: 'Server Error' })
-    });
-  });
-
-  // Test error handling
-  await helper.searchSkill('test');
-  // Verify error message is shown
-});
+await skillsPage.goto();
+await skillsPage.createSkill(name);
+await skillsPage.clickSkill(name);
+await skillsPage.deleteSkill(name);
+await skillsPage.searchSkills(query);
+await skillsPage.sortSkills('name' | 'modified');
+await skillsPage.filterSkills('all' | 'local' | 'registry' | 'private-repo');
 ```
+
+### EditorPage
+```typescript
+await editorPage.waitForEditor();
+await editorPage.getContent();
+await editorPage.setContent(content);
+await editorPage.save();
+await editorPage.close();
+await editorPage.toggleSymlink();
+```
+
+### DiscoverPage
+```typescript
+await discoverPage.goto();
+await discoverPage.search(query);
+await discoverPage.waitForResults();
+await discoverPage.installSkill(name);
+await discoverPage.closePreview();
+```
+
+## Best Practices
+
+1. **Use Page Objects**: Encapsulate UI interactions in page object classes
+2. **Generate Unique Names**: Use `generateUniqueSkillName()` for test isolation
+3. **Wait Strategically**: Use Playwright's auto-waiting instead of arbitrary timeouts
+4. **Clean Up**: Delete test skills after tests to avoid pollution
+5. **Mock External APIs**: Use mock utilities for consistent test results
+6. **Tag by Priority**: Use `@P0`, `@P1`, `@P2` tags for test classification
 
 ## Debugging Tests
 
@@ -190,16 +270,11 @@ test('debug test', async ({ page }) => {
   page.on('console', msg => {
     console.log(`[Browser ${msg.type()}] ${msg.text()}`);
   });
-
-  // Your test code
 });
 ```
 
 ### Screenshots on Failure
-Screenshots are automatically captured on test failure and saved to:
-```
-tests/screenshots/
-```
+Screenshots are automatically captured on test failure and saved to `tests/screenshots/`
 
 ### Trace Viewer
 ```bash
@@ -208,9 +283,8 @@ npx playwright show-trace trace.zip
 
 ## CI/CD Integration
 
-### GitHub Actions Example
-
 ```yaml
+# Example GitHub Actions workflow
 name: E2E Tests
 
 on: [push, pull_request]
@@ -218,7 +292,6 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: windows-latest
-
     steps:
       - uses: actions/checkout@v3
 
@@ -233,11 +306,8 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-
-      - name: Run E2E tests
-        run: npm run test:e2e
+      - name: Run P0 E2E tests
+        run: npm run test:e2e:p0
 
       - name: Upload test results
         if: always()
@@ -247,107 +317,37 @@ jobs:
           path: playwright-report/
 ```
 
-## Best Practices
+## Test Coverage Goals
 
-### 1. Use Stable Selectors
-```typescript
-// ✅ Good - data-testid
-await page.click('[data-testid="install-button"]');
-
-// ❌ Bad - fragile text selector
-await page.click('button:has-text("Install")');
-```
-
-### 2. Wait for Elements
-```typescript
-// ✅ Good - explicit wait
-await page.waitForSelector('[data-testid="skill-card"]', {
-  timeout: 10000,
-  state: 'visible'
-});
-
-// ❌ Bad - no wait
-await page.click('[data-testid="skill-card"]');
-```
-
-### 3. Handle Async Operations
-```typescript
-// ✅ Good - wait for operation to complete
-await page.click('[data-testid="install-button"]');
-await page.waitForSelector('text=Installation completed', {
-  timeout: 30000
-});
-
-// ❌ Bad - assume immediate completion
-await page.click('[data-testid="install-button"]');
-```
-
-### 4. Use Page Object Model
-```typescript
-// tests/pages/DiscoverPage.ts
-export class DiscoverPage {
-  constructor(private page: Page) {}
-
-  async search(query: string) {
-    await this.page.fill('[data-testid="search-input"]', query);
-  }
-
-  async installSkill(name: string) {
-    // Implementation
-  }
-}
-
-// Use in tests
-const discoverPage = new DiscoverPage(page);
-await discoverPage.search('claude');
-```
+- P0 tests: 100% pass rate required for release
+- P1 tests: 95% pass rate acceptable
+- P2 tests: 80% pass rate acceptable
 
 ## Troubleshooting
 
 ### Tests Timeout
-If tests timeout, increase timeout in config:
-```typescript
-// playwright.config.ts
-export default defineConfig({
-  timeout: 60000, // 60 seconds
-});
-```
+- Increase timeout in playwright.config.ts
+- Check for missing await statements
+- Verify app is launching correctly
 
 ### Element Not Found
-```typescript
-// Add explicit waits
-await page.waitForSelector('[data-testid="skill-card"]', {
-  timeout: 10000
-});
-```
+- Check data-testid attributes in components
+- Use `page.waitForSelector()` before interactions
+- Verify element is visible with `isVisible()`
 
-### Electron App Not Starting
-```typescript
-// Check app launch logs
-console.log(await electronApp.evaluate(() => process.argv));
-```
-
-## Test Reports
-
-After running tests, view the HTML report:
-```bash
-npx playwright show-report
-```
-
-Report is generated at `playwright-report/index.html`
-
-## Additional Resources
-
-- [Playwright Documentation](https://playwright.dev/)
-- [Electron Testing Guide](https://www.electronjs.org/docs/latest/tutorial/automated-testing)
-- [Playwright Electron](https://playwright.dev/docs/api/class-electronapplication)
+### Electron App Issues
+- Ensure build is up to date: `npm run build`
+- Check console for errors
+- Use `test:e2e:debug` for headed mode
 
 ## Contributing
 
-When adding new features, please:
-1. Add corresponding E2E tests
-2. Add `data-testid` attributes to new components
-3. Update this README if needed
+When adding new features:
+1. Add corresponding Page Object methods
+2. Create test fixtures for new data types
+3. Add API mocks if needed
+4. Write tests with appropriate priority tags
+5. Update this README if adding new test categories
 
 ## License
 

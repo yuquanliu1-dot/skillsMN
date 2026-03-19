@@ -152,6 +152,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
 
   return (
     <div
+      data-testid="ai-creation-dialog"
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isStreaming) {
@@ -220,7 +221,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
             </div>
 
             {/* Unified Preview Window */}
-            <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden flex flex-col">
+            <div data-testid="ai-preview-window" className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden flex flex-col">
               {/* Scrollable Content Area */}
               <div className="flex-1 overflow-y-auto p-4">
                 {error ? (
@@ -286,6 +287,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
             {/* Input */}
             <div className="relative">
               <textarea
+                data-testid="ai-prompt-input"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isStreaming}
@@ -293,7 +295,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                 className="w-full h-20 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
                 maxLength={2000}
               />
-              <div className="absolute bottom-2 right-2 text-xs text-slate-400 dark:text-slate-500">
+              <div data-testid="ai-char-count" className="absolute bottom-2 right-2 text-xs text-slate-400 dark:text-slate-500">
                 {prompt.length}/2000
               </div>
             </div>
@@ -302,6 +304,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
             <div className="flex gap-2">
               {isIdle && (
                 <button
+                  data-testid="ai-generate-button"
                   onClick={handleGenerate}
                   disabled={!prompt.trim()}
                   className="flex-1 btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"

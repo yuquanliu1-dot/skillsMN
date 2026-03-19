@@ -694,7 +694,7 @@ export default function SkillEditor({
   return (
     <div data-testid="skill-editor" className={containerClasses}>
       {/* Header */}
-      <div className={`border-b ${borderColor} px-4 py-3 flex items-center justify-between ${headerBg}`}>
+      <div data-testid="editor-header" className={`border-b ${borderColor} px-4 py-3 flex items-center justify-between ${headerBg}`}>
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0 w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
             <svg
@@ -730,7 +730,7 @@ export default function SkillEditor({
                 </span>
               )}
               {hasUnsavedChanges && (
-                <span className="text-yellow-600 flex items-center gap-1">
+                <span data-testid="save-indicator" className="text-yellow-600 flex items-center gap-1">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
@@ -871,6 +871,7 @@ export default function SkillEditor({
               Link to Claude Code:
             </span>
             <button
+              data-testid="symlink-toggle"
               onClick={async () => {
                 try {
                   const newConfig = {
@@ -964,7 +965,7 @@ export default function SkillEditor({
               </select>
             )}
 
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <div data-testid="symlink-status" className="flex items-center space-x-2 text-sm text-gray-600">
               {symlinkEnabled ? (
                 <>
                   <svg className="h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
@@ -998,7 +999,7 @@ export default function SkillEditor({
 
       {/* Monaco Editor */}
       {!isLoading && (
-        <div className="flex-1">
+        <div data-testid="editor-content" className="flex-1">
           <Editor
             height="100%"
             defaultLanguage="markdown"

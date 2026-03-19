@@ -235,3 +235,6 @@ author: Test Author
 This is a test skill for automated testing.
 `
 };
+
+// Re-export from new helpers index for backward compatibility
+export * from './index';
