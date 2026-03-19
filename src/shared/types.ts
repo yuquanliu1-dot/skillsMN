@@ -90,6 +90,62 @@ export interface SymlinksDatabase {
 }
 
 // ============================================================================
+// Multi-Target Symlink Types (Agent Tools)
+// ============================================================================
+
+/**
+ * Represents an AI agent tool that can receive skill symlinks
+ */
+export interface AgentTool {
+  /** Unique identifier for the tool */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Config directory path (e.g., ~/.cursor) */
+  configDir: string;
+  /** Skills subdirectory path (e.g., ~/.cursor/skills) */
+  skillsDir: string;
+}
+
+/**
+ * Configuration for a single symlink target
+ */
+export interface SymlinkTargetConfig {
+  /** Tool identifier */
+  toolId: string;
+  /** Target directory for the symlink */
+  targetDirectory: string;
+  /** Whether this target is enabled */
+  enabled: boolean;
+  /** When this target was created */
+  createdAt: string;
+  /** When this target was last modified */
+  lastModified: string;
+}
+
+/**
+ * Multi-target symlink configuration for a skill
+ */
+export interface MultiTargetSymlinkConfig {
+  /** Target configurations keyed by tool ID */
+  targets: Record<string, SymlinkTargetConfig>;
+  /** When this configuration was created */
+  createdAt: string;
+  /** When this configuration was last modified */
+  lastModified: string;
+}
+
+/**
+ * Database v2 for multi-target symlinks
+ */
+export interface SymlinksDatabaseV2 {
+  /** Database version (2 for multi-target) */
+  version: 2;
+  /** Multi-target symlink configurations keyed by skill name */
+  symlinks: Record<string, MultiTargetSymlinkConfig>;
+}
+
+// ============================================================================
 // Migration Types
 // ============================================================================
 

@@ -29,6 +29,7 @@ import type {
   MigrationProgress,
   MigrationResult,
   VersionComparison,
+  AgentTool,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
@@ -367,6 +368,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   getClaudeDirectories: (): Promise<IPCResponse<string[]>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.SYMLINK_GET_CLAUDE_DIRS);
+  },
+
+  getInstalledTools: (): Promise<IPCResponse<AgentTool[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SYMLINK_GET_INSTALLED_TOOLS);
+  },
+
+  updateSymlinkTarget: (params: {
+    skillName: string;
+    skillPath: string;
+    toolId: string;
+    enabled: boolean;
+  }): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SYMLINK_UPDATE_TARGET, params);
+  },
+
+  getMultiSymlinkStatus: (skillName: string): Promise<IPCResponse<Record<string, boolean>>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SYMLINK_GET_MULTI_STATUS, { skillName });
   },
 
   // ============================================================================

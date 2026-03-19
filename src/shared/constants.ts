@@ -185,6 +185,9 @@ export const IPC_CHANNELS = {
   SYMLINK_UPDATE: 'symlink:update',
   SYMLINK_GET_STATUS: 'symlink:get-status',
   SYMLINK_GET_CLAUDE_DIRS: 'symlink:get-claude-dirs',
+  SYMLINK_GET_INSTALLED_TOOLS: 'symlink:get-installed-tools',
+  SYMLINK_UPDATE_TARGET: 'symlink:update-target',
+  SYMLINK_GET_MULTI_STATUS: 'symlink:get-multi-status',
 
   // Migration operations
   MIGRATION_CHECK_NEEDED: 'migration:check-needed',

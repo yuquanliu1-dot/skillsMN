@@ -48,6 +48,7 @@ global.window.electronAPI = {
   // Configuration Operations
   loadConfig: jest.fn(),
   saveConfig: jest.fn(),
+  checkClaudeInstall: jest.fn(),
 
   // File System Watching
   startWatching: jest.fn(),
@@ -103,6 +104,9 @@ global.window.electronAPI = {
   updateSymlink: jest.fn(),
   getSymlinkStatus: jest.fn(),
   getClaudeDirectories: jest.fn(),
+  getInstalledTools: jest.fn(),
+  updateSymlinkTarget: jest.fn(),
+  getMultiSymlinkStatus: jest.fn(),
 
   // Migration Operations
   checkMigrationNeeded: jest.fn(),

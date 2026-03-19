@@ -23,6 +23,7 @@ import type {
   CuratedSource,
   SearchResult,
   InstallProgress,
+  AgentTool,
 } from '../../shared/types';
 
 export interface ElectronAPI {
@@ -175,6 +176,16 @@ export interface ElectronAPI {
   }) => Promise<IPCResponse<void>>;
   getSymlinkStatus: (skillName: string) => Promise<IPCResponse<import('../../shared/types').SkillSymlinkConfig | null>>;
   getClaudeDirectories: () => Promise<IPCResponse<string[]>>;
+
+  // Multi-Target Symlink Operations
+  getInstalledTools: () => Promise<IPCResponse<AgentTool[]>>;
+  updateSymlinkTarget: (params: {
+    skillName: string;
+    skillPath: string;
+    toolId: string;
+    enabled: boolean;
+  }) => Promise<IPCResponse<void>>;
+  getMultiSymlinkStatus: (skillName: string) => Promise<IPCResponse<Record<string, boolean>>>;
 
   // Migration Operations (Feature - Skill Storage Architecture Refactoring)
   checkMigrationNeeded: () => Promise<IPCResponse<boolean>>;

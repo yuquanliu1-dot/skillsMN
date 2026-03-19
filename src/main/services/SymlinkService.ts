@@ -3,6 +3,7 @@
  *
  * Manages skill symlinks from application directory to Claude Code directories
  * Handles cross-platform symlink creation with Windows junction support
+ * Supports multi-target symlinks to multiple AI agent tools
  */
 
 import fs from 'fs';
@@ -10,7 +11,15 @@ import path from 'path';
 import os from 'os';
 import { app } from 'electron';
 import { logger } from '../utils/Logger';
-import { SymlinksDatabase, SkillSymlinkConfig } from '../../shared/types';
+import {
+  SymlinksDatabase,
+  SkillSymlinkConfig,
+  AgentTool,
+  SymlinkTargetConfig,
+  MultiTargetSymlinkConfig,
+  SymlinksDatabaseV2,
+} from '../../shared/types';
+import { AGENT_TOOLS, getToolById } from '../../shared/agentTools';
 
 export class SymlinkService {
   private readonly SYMLINKS_DB_FILE = '.symlinks.json';
@@ -349,25 +358,325 @@ export class SymlinkService {
   }
 
   /**
-   * Get list of allowed Claude directories for symlinks
-   * Returns global and all project directories
+   * Get list of allowed directories for symlinks
+   * Returns global directory and all configured project directories
+   * Note: Directories are used directly as skill storage locations (no .claude subdirectory required)
    * @param projectDirectories - Configured project directories
-   * @returns Array of Claude directory paths
+   * @returns Array of directory paths for symlinks
    */
   getClaudeDirectories(projectDirectories: string[]): string[] {
     const dirs: string[] = [];
 
-    // Add global directory
+    // Add global directory (still uses .claude/skills for backward compatibility)
     const globalDir = path.join(os.homedir(), '.claude', 'skills');
     dirs.push(globalDir);
 
-    // Add project directories
+    // Add project directories directly (no .claude/skills subdirectory)
+    // These are used as-is for skill storage
     for (const projectDir of projectDirectories) {
-      const projectSkillsDir = path.join(projectDir, '.claude', 'skills');
-      dirs.push(projectSkillsDir);
+      dirs.push(projectDir);
     }
 
     logger.debug('Claude directories for symlinks', 'SymlinkService', { dirs });
     return dirs;
+  }
+
+  // ============================================================================
+  // Multi-Target Symlink Methods
+  // ============================================================================
+
+  /**
+   * Detect which AI agent tools are installed on the system
+   * Checks if the config directory exists for each tool
+   * @returns Array of installed AgentTool objects
+   */
+  async detectInstalledTools(): Promise<AgentTool[]> {
+    const installedTools: AgentTool[] = [];
+
+    for (const tool of AGENT_TOOLS) {
+      const configDir = this.expandTilde(tool.configDir);
+      try {
+        const exists = await fs.promises.access(configDir, fs.constants.F_OK)
+          .then(() => true)
+          .catch(() => false);
+
+        if (exists) {
+          installedTools.push(tool);
+          logger.debug(`Detected installed tool: ${tool.name}`, 'SymlinkService', {
+            toolId: tool.id,
+            configDir,
+          });
+        }
+      } catch (error) {
+        logger.debug(`Error checking tool installation: ${tool.name}`, 'SymlinkService', {
+          toolId: tool.id,
+          error,
+        });
+      }
+    }
+
+    logger.info('Detected installed agent tools', 'SymlinkService', {
+      count: installedTools.length,
+      tools: installedTools.map((t) => t.name),
+    });
+
+    return installedTools;
+  }
+
+  /**
+   * Get all installed tools
+   * Convenience method that wraps detectInstalledTools
+   * @returns Array of installed AgentTool objects
+   */
+  async getInstalledTools(): Promise<AgentTool[]> {
+    return this.detectInstalledTools();
+  }
+
+  /**
+   * Load v2 multi-target symlinks database
+   * Handles migration from v1 to v2 format
+   * @param appSkillsDir - Application skills directory path
+   * @returns Multi-target symlinks database
+   */
+  async loadDatabaseV2(appSkillsDir: string): Promise<SymlinksDatabaseV2> {
+    const dbPath = this.getSymlinksDatabasePath(appSkillsDir);
+
+    try {
+      if (await fs.promises.access(dbPath, fs.constants.R_OK).then(() => true).catch(() => false)) {
+        const content = await fs.promises.readFile(dbPath, 'utf-8');
+        const db = JSON.parse(content);
+
+        // Check if it's already v2 format
+        if (db.version === 2) {
+          logger.debug('Loaded v2 symlinks database', 'SymlinkService', {
+            symlinkCount: Object.keys(db.symlinks).length,
+          });
+          return db as SymlinksDatabaseV2;
+        }
+
+        // Migrate from v1 to v2
+        if (db.version === 1) {
+          logger.info('Migrating symlinks database from v1 to v2', 'SymlinkService');
+          return this.migrateDatabaseV1toV2(db as SymlinksDatabase);
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to load v2 symlinks database, creating new one', 'SymlinkService', {
+        path: dbPath,
+        error,
+      });
+    }
+
+    // Create empty v2 database
+    const emptyDb: SymlinksDatabaseV2 = {
+      version: 2,
+      symlinks: {},
+    };
+
+    return emptyDb;
+  }
+
+  /**
+   * Migrate v1 database to v2 format
+   * @param v1Db - v1 database
+   * @returns v2 database
+   */
+  private migrateDatabaseV1toV2(v1Db: SymlinksDatabase): SymlinksDatabaseV2 {
+    const v2Db: SymlinksDatabaseV2 = {
+      version: 2,
+      symlinks: {},
+    };
+
+    // Migrate each skill's config
+    for (const [skillName, config] of Object.entries(v1Db.symlinks)) {
+      if (config.enabled) {
+        // Try to determine which tool the old config was for
+        // Default to claude-code if it was using .claude/skills
+        const isClaudeCode = config.claudeDirectory.includes('.claude');
+        const toolId = isClaudeCode ? 'claude-code' : 'claude-code';
+
+        v2Db.symlinks[skillName] = {
+          targets: {
+            [toolId]: {
+              toolId,
+              targetDirectory: config.claudeDirectory,
+              enabled: true,
+              createdAt: config.createdAt,
+              lastModified: config.lastModified,
+            },
+          },
+          createdAt: config.createdAt,
+          lastModified: config.lastModified,
+        };
+      }
+    }
+
+    logger.info('Migrated v1 database to v2', 'SymlinkService', {
+      migratedCount: Object.keys(v2Db.symlinks).length,
+    });
+
+    return v2Db;
+  }
+
+  /**
+   * Save v2 multi-target symlinks database
+   * @param appSkillsDir - Application skills directory path
+   * @param db - v2 database to save
+   */
+  async saveDatabaseV2(appSkillsDir: string, db: SymlinksDatabaseV2): Promise<void> {
+    const dbPath = this.getSymlinksDatabasePath(appSkillsDir);
+
+    try {
+      await fs.promises.mkdir(path.dirname(dbPath), { recursive: true });
+      const content = JSON.stringify(db, null, 2);
+      await fs.promises.writeFile(dbPath, content, 'utf-8');
+
+      logger.debug('Saved v2 symlinks database', 'SymlinkService', {
+        path: dbPath,
+        symlinkCount: Object.keys(db.symlinks).length,
+      });
+    } catch (error) {
+      logger.error('Failed to save v2 symlinks database', 'SymlinkService', {
+        path: dbPath,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get multi-target symlink configuration for a skill
+   * @param appSkillsDir - Application skills directory path
+   * @param skillName - Skill directory name
+   * @returns Multi-target configuration or null
+   */
+  async getMultiTargetSymlinkConfig(
+    appSkillsDir: string,
+    skillName: string
+  ): Promise<MultiTargetSymlinkConfig | null> {
+    const db = await this.loadDatabaseV2(appSkillsDir);
+    return db.symlinks[skillName] || null;
+  }
+
+  /**
+   * Update a single target symlink for a skill
+   * @param appSkillsDir - Application skills directory path
+   * @param skillName - Skill directory name
+   * @param skillPath - Full path to skill directory
+   * @param toolId - Target tool ID
+   * @param enabled - Whether to enable or disable this target
+   */
+  async updateSingleTargetSymlink(
+    appSkillsDir: string,
+    skillName: string,
+    skillPath: string,
+    toolId: string,
+    enabled: boolean
+  ): Promise<void> {
+    const tool = getToolById(toolId);
+    if (!tool) {
+      throw new Error(`Unknown tool ID: ${toolId}`);
+    }
+
+    logger.info('Updating single target symlink', 'SymlinkService', {
+      skillName,
+      toolId,
+      toolName: tool.name,
+      enabled,
+    });
+
+    const db = await this.loadDatabaseV2(appSkillsDir);
+    const now = new Date().toISOString();
+
+    // Get or create skill config
+    let skillConfig = db.symlinks[skillName];
+    if (!skillConfig) {
+      skillConfig = {
+        targets: {},
+        createdAt: now,
+        lastModified: now,
+      };
+      db.symlinks[skillName] = skillConfig;
+    }
+
+    // Get or create target config
+    let targetConfig = skillConfig.targets[toolId];
+    if (!targetConfig) {
+      targetConfig = {
+        toolId,
+        targetDirectory: tool.skillsDir,
+        enabled: false,
+        createdAt: now,
+        lastModified: now,
+      };
+      skillConfig.targets[toolId] = targetConfig;
+    }
+
+    // Update enabled state
+    targetConfig.enabled = enabled;
+    targetConfig.lastModified = now;
+    skillConfig.lastModified = now;
+
+    // Create or remove symlink
+    if (enabled) {
+      await this.createSymlink(skillPath, tool.skillsDir);
+    } else {
+      await this.removeSymlink(skillPath, tool.skillsDir);
+    }
+
+    // If all targets are disabled, remove the skill config
+    const hasEnabledTargets = Object.values(skillConfig.targets).some((t) => t.enabled);
+    if (!hasEnabledTargets) {
+      delete db.symlinks[skillName];
+    }
+
+    // Save database
+    await this.saveDatabaseV2(appSkillsDir, db);
+
+    logger.info('Single target symlink updated', 'SymlinkService', {
+      skillName,
+      toolId,
+      enabled,
+    });
+  }
+
+  /**
+   * Get all symlink statuses for a skill across all installed tools
+   * @param appSkillsDir - Application skills directory path
+   * @param skillName - Skill directory name
+   * @returns Map of tool ID to enabled status
+   */
+  async getSkillSymlinkStatus(
+    appSkillsDir: string,
+    skillName: string
+  ): Promise<Record<string, boolean>> {
+    const installedTools = await this.detectInstalledTools();
+    const db = await this.loadDatabaseV2(appSkillsDir);
+    const skillConfig = db.symlinks[skillName];
+
+    const status: Record<string, boolean> = {};
+
+    for (const tool of installedTools) {
+      status[tool.id] = skillConfig?.targets[tool.id]?.enabled ?? false;
+    }
+
+    return status;
+  }
+
+  /**
+   * Count enabled targets for a skill
+   * @param appSkillsDir - Application skills directory path
+   * @param skillName - Skill directory name
+   * @returns Number of enabled targets
+   */
+  async countEnabledTargets(appSkillsDir: string, skillName: string): Promise<number> {
+    const db = await this.loadDatabaseV2(appSkillsDir);
+    const skillConfig = db.symlinks[skillName];
+
+    if (!skillConfig) {
+      return 0;
+    }
+
+    return Object.values(skillConfig.targets).filter((t) => t.enabled).length;
   }
 }

@@ -11,7 +11,13 @@ import { SymlinkService } from '../services/SymlinkService';
 import { SkillService } from '../services/SkillService';
 import { ConfigService } from '../services/ConfigService';
 import { IPC_CHANNELS } from '../../shared/constants';
-import { IPCResponse, IPCError, SkillSymlinkConfig } from '../../shared/types';
+import {
+  IPCResponse,
+  IPCError,
+  SkillSymlinkConfig,
+  AgentTool,
+  MultiTargetSymlinkConfig,
+} from '../../shared/types';
 
 let symlinkService: SymlinkService | null = null;
 let skillService: SkillService | null = null;
@@ -135,6 +141,107 @@ export function registerSymlinkHandlers(
         return { success: true, data: dirs };
       } catch (error) {
         logger.error('Failed to get Claude directories', 'SymlinkHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for symlink:get-installed-tools
+  ipcMain.handle(
+    IPC_CHANNELS.SYMLINK_GET_INSTALLED_TOOLS,
+    async (): Promise<IPCResponse<AgentTool[]>> => {
+      try {
+        logger.debug('Getting installed agent tools', 'SymlinkHandlers');
+
+        const tools = await symlinkService!.getInstalledTools();
+
+        logger.debug('Installed tools retrieved', 'SymlinkHandlers', {
+          toolCount: tools.length,
+          tools: tools.map((t) => t.name),
+        });
+
+        return { success: true, data: tools };
+      } catch (error) {
+        logger.error('Failed to get installed tools', 'SymlinkHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for symlink:update-target
+  ipcMain.handle(
+    IPC_CHANNELS.SYMLINK_UPDATE_TARGET,
+    async (
+      _event,
+      {
+        skillName,
+        skillPath,
+        toolId,
+        enabled,
+      }: {
+        skillName: string;
+        skillPath: string;
+        toolId: string;
+        enabled: boolean;
+      }
+    ): Promise<IPCResponse<void>> => {
+      try {
+        logger.debug('Updating single target symlink', 'SymlinkHandlers', {
+          skillName,
+          toolId,
+          enabled,
+        });
+
+        // Get configuration
+        const appConfig = await configService!.load();
+
+        // Get application directory
+        const appDir = skillService!.getApplicationSkillsDirectory(appConfig);
+
+        // Update single target symlink
+        await symlinkService!.updateSingleTargetSymlink(appDir, skillName, skillPath, toolId, enabled);
+
+        logger.info('Single target symlink updated', 'SymlinkHandlers', {
+          skillName,
+          toolId,
+          enabled,
+        });
+
+        return { success: true };
+      } catch (error) {
+        logger.error('Failed to update single target symlink', 'SymlinkHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for symlink:get-multi-status
+  ipcMain.handle(
+    IPC_CHANNELS.SYMLINK_GET_MULTI_STATUS,
+    async (
+      _event,
+      { skillName }: { skillName: string }
+    ): Promise<IPCResponse<Record<string, boolean>>> => {
+      try {
+        logger.debug('Getting multi-target symlink status', 'SymlinkHandlers', { skillName });
+
+        // Get configuration
+        const appConfig = await configService!.load();
+
+        // Get application directory
+        const appDir = skillService!.getApplicationSkillsDirectory(appConfig);
+
+        // Get status
+        const status = await symlinkService!.getSkillSymlinkStatus(appDir, skillName);
+
+        logger.debug('Multi-target symlink status retrieved', 'SymlinkHandlers', {
+          skillName,
+          status,
+        });
+
+        return { success: true, data: status };
+      } catch (error) {
+        logger.error('Failed to get multi-target symlink status', 'SymlinkHandlers', error);
         return { success: false, error: toIPCError(error) };
       }
     }
