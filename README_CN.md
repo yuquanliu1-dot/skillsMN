@@ -2,9 +2,9 @@
 
 <div align="center">
 
-**Claude Code 技能管理中心**
+**技能管理中心**
 
-*一款全面的桌面应用程序，用于管理、发现和分享 Claude Code 技能*
+*一款全面的桌面应用程序，用于管理、发现和分享技能*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org/)
