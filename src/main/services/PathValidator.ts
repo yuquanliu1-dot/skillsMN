@@ -282,7 +282,7 @@ export class PathValidator {
 
   /**
    * Validate that a symlink target directory is allowed
-   * Checks if target is in allowed Claude directories for symlinks
+   * Checks if target is in allowed Claude directories or configured project directories
    * @param target - Target directory path for symlink
    * @returns True if target is valid for symlink creation
    * @example
@@ -295,18 +295,31 @@ export class PathValidator {
     const isWindows = process.platform === 'win32';
     const normalizedResolved = isWindows ? resolved.toLowerCase() : resolved;
 
-    // Allowed Claude directories for symlinks
+    // Allowed global directory pattern for symlinks
     const globalPattern = isWindows ? '.claude\\skills' : '.claude/skills';
 
-    // Check if target is in a .claude/skills directory
+    // Check if target is in a .claude/skills directory (global)
     if (normalizedResolved.includes(globalPattern.toLowerCase())) {
-      logger.debug(`Symlink target validated: ${resolved}`, 'PathValidator');
+      logger.debug(`Symlink target validated (global): ${resolved}`, 'PathValidator');
       return true;
+    }
+
+    // Check if target is in allowed directories (configured project directories)
+    for (const allowed of this.allowedDirectories) {
+      const normalizedAllowed = isWindows ? allowed.toLowerCase() : allowed;
+
+      // Exact match or is a subdirectory
+      if (normalizedResolved === normalizedAllowed ||
+          normalizedResolved.startsWith(normalizedAllowed + path.sep)) {
+        logger.debug(`Symlink target validated (project): ${resolved}`, 'PathValidator');
+        return true;
+      }
     }
 
     logger.warn(`Invalid symlink target rejected: ${target}`, 'PathValidator', {
       resolved,
       allowedPattern: globalPattern,
+      allowedDirs: Array.from(this.allowedDirectories),
     });
     return false;
   }

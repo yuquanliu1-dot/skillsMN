@@ -41,19 +41,21 @@ export class SkillDirectoryModel {
   }
 
   /**
-   * Get project skills directory path (<project>/.claude/skills)
+   * Get project skills directory path
+   * Note: Now returns the directory directly without appending .claude/skills
+   * The configured directory is used as-is for skill storage
    */
   static getProjectDirectory(projectDir: string): string {
-    return path.join(projectDir, CLAUDE_DIR_NAME, SKILLS_DIR_NAME);
+    return projectDir;
   }
 
   /**
-   * Validate that a directory is a valid Claude project directory
+   * Validate that a directory exists and is accessible
+   * Note: No longer requires .claude subdirectory - any directory can be used for skill storage
    */
   static isValidProjectDirectory(dirPath: string): boolean {
     try {
-      const claudeDir = path.join(dirPath, CLAUDE_DIR_NAME);
-      return fs.existsSync(claudeDir) && fs.statSync(claudeDir).isDirectory();
+      return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory();
     } catch {
       return false;
     }

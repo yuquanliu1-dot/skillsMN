@@ -627,7 +627,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-slate-700">
-                Project Directories
+                Skills Storage Directories
               </label>
               <button
                 type="button"
@@ -641,6 +641,9 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 Add Directory
               </button>
             </div>
+            <p className="text-xs text-slate-500 mb-3">
+              These directories will be used to store and link your skills. Skills can be linked to any configured directory.
+            </p>
 
             {/* Add Directory Form */}
             {showAddDirectoryForm && (
@@ -690,7 +693,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
             {/* Directory List */}
             {projectDirectories.length === 0 ? (
               <p className="text-sm text-slate-500 italic">
-                No project directories configured. Add a directory to get started.
+                No skills directories configured. Add a directory to store and link your skills.
               </p>
             ) : (
               <div className="space-y-2">

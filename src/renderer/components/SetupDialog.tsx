@@ -130,7 +130,8 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
   }, []);
 
   /**
-   * Validate directory is a Claude project
+   * Validate directory exists and is accessible
+   * Note: We no longer require .claude folder - user can select any directory as skills storage
    */
   const validateDirectory = useCallback(async (dir: string): Promise<boolean> => {
     if (!dir) {
@@ -143,18 +144,11 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
 
     try {
       const cleanDir = dir.replace(/[\\/]+$/, '');
-      const testConfig = {
-        projectDirectory: cleanDir,
-        projectDirectories: [cleanDir],
-        defaultInstallDirectory: 'project' as const,
-        editorDefaultMode: 'edit' as const,
-        autoRefresh: true,
-      };
 
-      const skills = await window.electronAPI.listSkills(testConfig);
-
-      if (!skills.success) {
-        setError('Invalid Claude project directory. The directory must contain a .claude folder.');
+      // Basic validation - check if the path looks valid (not just checking existence)
+      // The actual directory will be created/used when skills are stored
+      if (cleanDir.length < 1) {
+        setError('Please enter a valid directory path');
         return false;
       }
 
@@ -447,12 +441,12 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-900">
-                {currentStep === 'project-directory' && 'Project Directory'}
+                {currentStep === 'project-directory' && 'Skills Directory'}
                 {currentStep === 'private-repos' && 'Private Repositories'}
                 {currentStep === 'ai-config' && 'AI Configuration'}
               </h3>
               <p className="text-sm text-slate-500">
-                {currentStep === 'project-directory' && 'Select your Claude project directory'}
+                {currentStep === 'project-directory' && 'Select a directory for skill storage and linking'}
                 {currentStep === 'private-repos' && 'Connect your private skill repositories'}
                 {currentStep === 'ai-config' && 'Configure your AI assistant settings'}
               </p>
@@ -467,7 +461,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
             <div className="animate-fadeIn">
               <div className="mb-6">
                 <label htmlFor="directory" className="block text-sm font-semibold text-slate-800 mb-3">
-                  Claude Project Directory
+                  Skills Storage Directory
                 </label>
                 <div className="flex gap-3">
                   <div className="relative flex-1">
@@ -528,9 +522,9 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                   <div className="flex-1">
                     <p className="text-sm font-medium text-blue-900 mb-1">Quick Tip</p>
                     <p className="text-sm text-blue-700">
-                      Select a directory containing a{' '}
-                      <code className="px-2 py-0.5 bg-blue-100 rounded-md text-blue-800 font-mono text-xs">.claude</code> folder.
-                      This is where your Claude configuration and skills are stored.
+                      Select a directory where your skills will be stored and linked.
+                      This can be any directory - it will be used as your project skill storage location.
+                      You can add multiple directories later from Settings.
                     </p>
                   </div>
                 </div>
