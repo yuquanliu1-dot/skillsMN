@@ -576,25 +576,45 @@ export class SymlinkService {
    * @param appSkillsDir - Application skills directory path
    * @param skillName - Skill directory name
    * @param skillPath - Full path to skill directory
-   * @param toolId - Target tool ID
+   * @param toolId - Target tool ID (e.g., 'claude-code' or 'project-0')
    * @param enabled - Whether to enable or disable this target
+   * @param projectDirectories - Optional project directories for resolving project-* IDs
    */
   async updateSingleTargetSymlink(
     appSkillsDir: string,
     skillName: string,
     skillPath: string,
     toolId: string,
-    enabled: boolean
+    enabled: boolean,
+    projectDirectories?: string[]
   ): Promise<void> {
-    const tool = getToolById(toolId);
-    if (!tool) {
-      throw new Error(`Unknown tool ID: ${toolId}`);
+    // Get target directory and tool name
+    let targetDirectory: string;
+    let toolName: string;
+
+    // Check if this is a project directory ID
+    if (toolId.startsWith('project-')) {
+      const index = parseInt(toolId.replace('project-', ''), 10);
+      if (projectDirectories && projectDirectories[index]) {
+        targetDirectory = projectDirectories[index];
+        toolName = path.basename(targetDirectory);
+      } else {
+        throw new Error(`Project directory not found for ID: ${toolId}`);
+      }
+    } else {
+      // Look up AI agent tool
+      const tool = getToolById(toolId);
+      if (!tool) {
+        throw new Error(`Unknown tool ID: ${toolId}`);
+      }
+      targetDirectory = tool.skillsDir;
+      toolName = tool.name;
     }
 
     logger.info('Updating single target symlink', 'SymlinkService', {
       skillName,
       toolId,
-      toolName: tool.name,
+      toolName,
       enabled,
     });
 
@@ -617,7 +637,7 @@ export class SymlinkService {
     if (!targetConfig) {
       targetConfig = {
         toolId,
-        targetDirectory: tool.skillsDir,
+        targetDirectory,
         enabled: false,
         createdAt: now,
         lastModified: now,
@@ -632,9 +652,9 @@ export class SymlinkService {
 
     // Create or remove symlink
     if (enabled) {
-      await this.createSymlink(skillPath, tool.skillsDir);
+      await this.createSymlink(skillPath, targetDirectory);
     } else {
-      await this.removeSymlink(skillPath, tool.skillsDir);
+      await this.removeSymlink(skillPath, targetDirectory);
     }
 
     // If all targets are disabled, remove the skill config
@@ -654,14 +674,16 @@ export class SymlinkService {
   }
 
   /**
-   * Get all symlink statuses for a skill across all installed tools
+   * Get all symlink statuses for a skill across all installed tools and project directories
    * @param appSkillsDir - Application skills directory path
    * @param skillName - Skill directory name
+   * @param projectDirectories - Optional project directories to include in status
    * @returns Map of tool ID to enabled status
    */
   async getSkillSymlinkStatus(
     appSkillsDir: string,
-    skillName: string
+    skillName: string,
+    projectDirectories?: string[]
   ): Promise<Record<string, boolean>> {
     const installedTools = await this.detectInstalledTools();
     const db = await this.loadDatabaseV2(appSkillsDir);
@@ -669,6 +691,15 @@ export class SymlinkService {
 
     const status: Record<string, boolean> = {};
 
+    // Add project directories first
+    if (projectDirectories) {
+      for (let i = 0; i < projectDirectories.length; i++) {
+        const toolId = `project-${i}`;
+        status[toolId] = skillConfig?.targets[toolId]?.enabled ?? false;
+      }
+    }
+
+    // Add AI agent tools
     for (const tool of installedTools) {
       status[tool.id] = skillConfig?.targets[tool.id]?.enabled ?? false;
     }

@@ -821,6 +821,11 @@ export default function App(): JSX.Element {
                   onSave={handleSaveSkill}
                   isInline={true}
                   config={state.config?.skillEditor}
+                  appConfig={state.config}
+                  onSkillCreated={() => {
+                    loadSkills();
+                    showToast('Skill created successfully!', 'success');
+                  }}
                   onUploadSkill={handleUploadSkill}
                   onCommitChanges={handleCommitChanges}
                 />

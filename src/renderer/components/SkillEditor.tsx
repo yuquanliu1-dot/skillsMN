@@ -8,8 +8,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Editor, { OnMount, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor';
-import type { Skill, AIGenerationMode, SkillEditorConfig } from '../../shared/types';
+import type { Skill, AIGenerationMode, SkillEditorConfig, Configuration } from '../../shared/types';
 import { AIAssistantPopover } from './AIAssistantPopover';
+import { AISkillSidebar } from './AISkillSidebar';
 import { ipcClient } from '../services/ipcClient';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import SymlinkPanel from './SymlinkPanel';
@@ -25,6 +26,8 @@ interface SkillEditorProps {
   content?: string;
   readOnly?: boolean;
   config?: SkillEditorConfig;
+  appConfig?: Configuration | null;
+  onSkillCreated?: () => void;
   onUploadSkill?: (skill: Skill) => void;
   onCommitChanges?: (skill: Skill) => void;
 }
@@ -47,6 +50,8 @@ export default function SkillEditor({
     tabSize: 2,
     wordWrap: true,
   },
+  appConfig,
+  onSkillCreated,
   onUploadSkill,
   onCommitChanges,
 }: SkillEditorProps): JSX.Element {
@@ -64,6 +69,7 @@ export default function SkillEditor({
   const [isAIInsertPopoverOpen, setIsAIInsertPopoverOpen] = useState<boolean>(false);
   const [insertPosition, setInsertPosition] = useState<{ line: number; column: number } | null>(null);
   const [insertPopoverPosition, setInsertPopoverPosition] = useState<{ x: number; y: number } | undefined>();
+  const [isAISidebarOpen, setIsAISidebarOpen] = useState<boolean>(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -717,6 +723,20 @@ export default function SkillEditor({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* AI Assistant button */}
+          {!readOnly && (
+            <button
+              onClick={() => setIsAISidebarOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white transition-colors"
+              title="Open AI Assistant sidebar for conversational skill editing"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z" />
+              </svg>
+              AI Assistant
+            </button>
+          )}
+
           {/* Read-only indicator */}
           {readOnly && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-blue-50 text-blue-700 border border-blue-200">
@@ -946,6 +966,19 @@ export default function SkillEditor({
           position={insertPopoverPosition}
         />
       )}
+
+      {/* AI Skill Sidebar */}
+      <AISkillSidebar
+        isOpen={isAISidebarOpen}
+        onClose={() => setIsAISidebarOpen(false)}
+        onSkillCreated={() => {
+          onSkillCreated?.();
+          setIsAISidebarOpen(false);
+        }}
+        config={appConfig}
+        currentSkillContent={content}
+        currentSkillName={skill.name}
+      />
     </div>
   );
 }

@@ -202,8 +202,15 @@ export function registerSymlinkHandlers(
         // Get application directory
         const appDir = skillService!.getApplicationSkillsDirectory(appConfig);
 
-        // Update single target symlink
-        await symlinkService!.updateSingleTargetSymlink(appDir, skillName, skillPath, toolId, enabled);
+        // Update single target symlink (pass project directories for project-* IDs)
+        await symlinkService!.updateSingleTargetSymlink(
+          appDir,
+          skillName,
+          skillPath,
+          toolId,
+          enabled,
+          appConfig.projectDirectories
+        );
 
         logger.info('Single target symlink updated', 'SymlinkHandlers', {
           skillName,
@@ -235,8 +242,12 @@ export function registerSymlinkHandlers(
         // Get application directory
         const appDir = skillService!.getApplicationSkillsDirectory(appConfig);
 
-        // Get status
-        const status = await symlinkService!.getSkillSymlinkStatus(appDir, skillName);
+        // Get status (pass project directories for project-* IDs)
+        const status = await symlinkService!.getSkillSymlinkStatus(
+          appDir,
+          skillName,
+          appConfig.projectDirectories
+        );
 
         logger.debug('Multi-target symlink status retrieved', 'SymlinkHandlers', {
           skillName,
