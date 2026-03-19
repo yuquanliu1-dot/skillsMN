@@ -151,9 +151,13 @@ export function registerSymlinkHandlers(
     IPC_CHANNELS.SYMLINK_GET_INSTALLED_TOOLS,
     async (): Promise<IPCResponse<AgentTool[]>> => {
       try {
-        logger.debug('Getting installed agent tools', 'SymlinkHandlers');
+        logger.debug('Getting installed agent tools and project directories', 'SymlinkHandlers');
 
-        const tools = await symlinkService!.getInstalledTools();
+        // Get configuration to access project directories
+        const appConfig = await configService!.load();
+
+        // Get installed tools including project directories
+        const tools = await symlinkService!.getInstalledTools(appConfig.projectDirectories);
 
         logger.debug('Installed tools retrieved', 'SymlinkHandlers', {
           toolCount: tools.length,

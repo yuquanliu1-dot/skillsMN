@@ -1,8 +1,9 @@
 /**
  * SymlinkPanel Component
  *
- * A dropdown panel for managing symlinks to multiple AI agent tools.
- * Supports enabling/disabling links to each tool independently.
+ * A dropdown panel for managing symlinks to multiple AI agent tools and project directories.
+ * Supports enabling/disabling links to each target independently.
+ * Project directories are shown first (higher priority).
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -41,7 +42,7 @@ export default function SymlinkPanel({
       try {
         setIsLoading(true);
 
-        // Load installed tools
+        // Load installed tools (includes project directories first)
         const toolsResponse = await window.electronAPI.getInstalledTools();
         if (!toolsResponse.success || !toolsResponse.data) {
           throw new Error(toolsResponse.error?.message || 'Failed to load installed tools');
@@ -123,6 +124,85 @@ export default function SymlinkPanel({
     return path.replace('~/', '~/');
   };
 
+  /**
+   * Render a single target row
+   */
+  const renderTarget = (tool: AgentTool) => {
+    const isEnabled = symlinkStatus[tool.id] ?? false;
+    const isUpdating = updatingTool === tool.id;
+    const isProject = tool.type === 'project';
+
+    return (
+      <div
+        key={tool.id}
+        className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          {/* Toggle switch */}
+          <button
+            data-testid={`symlink-toggle-${tool.id}`}
+            onClick={() => handleToggle(tool.id, !isEnabled)}
+            disabled={readOnly || isUpdating}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full
+              transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+              disabled:opacity-50 disabled:cursor-not-allowed ${
+              isEnabled ? 'bg-blue-600' : 'bg-gray-300'
+            }`}
+            role="switch"
+            aria-checked={isEnabled}
+            aria-label={`Link to ${tool.name}`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full
+                bg-white transition-transform shadow ${
+                  isEnabled ? 'translate-x-5' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+
+          {/* Icon and name */}
+          <div className="flex items-center gap-2">
+            {/* Folder icon for project, tool icon for AI agents */}
+            {isProject ? (
+              <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v2H2V6z" />
+                <path fillRule="evenodd" d="M2 10v6a2 2 0 002 2h12a2 2 0 002-2v-6H2zm0 0v6a2 2 0 002 2h12a2 2 0 002-2v-6H2z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            )}
+            <div>
+              <div className="text-sm font-medium text-gray-900">{tool.name}</div>
+              <div className="text-xs text-gray-500">{formatPath(tool.skillsDir)}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Status indicator */}
+        <div className="flex items-center gap-2">
+          {isUpdating && (
+            <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full" />
+          )}
+          {isEnabled && !isUpdating && (
+            <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Separate project directories and AI tools
+  const projectDirs = installedTools.filter((t) => t.type === 'project');
+  const aiTools = installedTools.filter((t) => t.type !== 'project');
+
   return (
     <div className="border-b border-gray-200 bg-gray-50">
       {/* Header bar */}
@@ -142,7 +222,7 @@ export default function SymlinkPanel({
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            <span>Link to AI Tools:</span>
+            <span>Link to:</span>
             <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
               {enabledCount} active
             </span>
@@ -182,78 +262,48 @@ export default function SymlinkPanel({
           {isLoading ? (
             <div className="px-4 py-6 text-center text-sm text-gray-500">
               <div className="animate-spin inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full mr-2" />
-              Loading installed tools...
+              Loading targets...
             </div>
           ) : installedTools.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-gray-500">
-              No AI agent tools detected. Install a tool like Claude Code, Cursor, or Cline to enable linking.
+              No link targets available. Configure project directories in Settings or install AI agent tools.
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {installedTools.map((tool) => {
-                const isEnabled = symlinkStatus[tool.id] ?? false;
-                const isUpdating = updatingTool === tool.id;
-
-                return (
-                  <div
-                    key={tool.id}
-                    className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* Toggle switch */}
-                      <button
-                        data-testid={`symlink-toggle-${tool.id}`}
-                        onClick={() => handleToggle(tool.id, !isEnabled)}
-                        disabled={readOnly || isUpdating}
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full
-                          transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                          disabled:opacity-50 disabled:cursor-not-allowed ${
-                          isEnabled ? 'bg-blue-600' : 'bg-gray-300'
-                        }`}
-                        role="switch"
-                        aria-checked={isEnabled}
-                        aria-label={`Link to ${tool.name}`}
-                      >
-                        <span
-                          className={`inline-block h-3.5 w-3.5 transform rounded-full
-                            bg-white transition-transform shadow ${
-                            isEnabled ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-
-                      {/* Tool name */}
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{tool.name}</div>
-                        <div className="text-xs text-gray-500">{formatPath(tool.skillsDir)}</div>
-                      </div>
-                    </div>
-
-                    {/* Status indicator */}
-                    <div className="flex items-center gap-2">
-                      {isUpdating && (
-                        <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full" />
-                      )}
-                      {isEnabled && !isUpdating && (
-                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      )}
-                    </div>
+            <>
+              {/* Project directories section */}
+              {projectDirs.length > 0 && (
+                <div className="border-b border-gray-100">
+                  <div className="px-4 py-2 bg-amber-50 border-b border-amber-100">
+                    <span className="text-xs font-medium text-amber-700">
+                      📁 Project Directories (High Priority)
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="divide-y divide-gray-100">
+                    {projectDirs.map(renderTarget)}
+                  </div>
+                </div>
+              )}
+
+              {/* AI Tools section */}
+              {aiTools.length > 0 && (
+                <div>
+                  <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
+                    <span className="text-xs font-medium text-blue-700">
+                      🤖 AI Agent Tools
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {aiTools.map(renderTarget)}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Help text */}
-          <div className="px-4 py-2 bg-blue-50 border-t border-blue-100">
-            <p className="text-xs text-blue-600">
-              Enable linking to make this skill available in the selected AI tools. The skill will be symlinked to each tool's skills directory.
+          <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              Project directories have higher priority. Skills linked to project directories will be used directly by the project. AI tool links make skills available in each tool's skills directory.
             </p>
           </div>
         </div>

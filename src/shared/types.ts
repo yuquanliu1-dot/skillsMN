@@ -105,6 +105,8 @@ export interface AgentTool {
   configDir: string;
   /** Skills subdirectory path (e.g., ~/.cursor/skills) */
   skillsDir: string;
+  /** Type of target: 'project' for project directories, 'tool' for AI agent tools */
+  type?: 'project' | 'tool';
 }
 
 /**

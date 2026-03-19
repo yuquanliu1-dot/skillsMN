@@ -358,27 +358,24 @@ export class SymlinkService {
   }
 
   /**
-   * Get list of allowed directories for symlinks
-   * Returns global directory and all configured project directories
-   * Note: Directories are used directly as skill storage locations (no .claude subdirectory required)
+   * Get all link targets (both project directories and AI tools)
    * @param projectDirectories - Configured project directories
-   * @returns Array of directory paths for symlinks
+   * @returns Combined array of link targets
    */
-  getClaudeDirectories(projectDirectories: string[]): string[] {
-    const dirs: string[] = [];
+  getAllLinkTargets(projectDirectories: string[]): Array<{ id: string; name: string; path: string; isProject: boolean }> {
+    const targets: Array<{ id: string; name: string; path: string; isProject: boolean }> = [];
 
-    // Add global directory (still uses .claude/skills for backward compatibility)
-    const globalDir = path.join(os.homedir(), '.claude', 'skills');
-    dirs.push(globalDir);
-
-    // Add project directories directly (no .claude/skills subdirectory)
-    // These are used as-is for skill storage
+    // Add project directories first (higher priority)
     for (const projectDir of projectDirectories) {
-      dirs.push(projectDir);
+      targets.push({
+        id: `project:${projectDir}`,
+        name: path.basename(projectDir),
+        path: projectDir,
+        isProject: true,
+      });
     }
 
-    logger.debug('Claude directories for symlinks', 'SymlinkService', { dirs });
-    return dirs;
+    return targets;
   }
 
   // ============================================================================
@@ -424,12 +421,28 @@ export class SymlinkService {
   }
 
   /**
-   * Get all installed tools
-   * Convenience method that wraps detectInstalledTools
-   * @returns Array of installed AgentTool objects
+   * Get all installed tools and project directories
+   * @param projectDirectories - Configured project directories
+   * @returns Array of installed AgentTool objects (including project directories)
    */
-  async getInstalledTools(): Promise<AgentTool[]> {
-    return this.detectInstalledTools();
+  async getInstalledTools(projectDirectories?: string[]): Promise<AgentTool[]> {
+    const tools = await this.detectInstalledTools();
+
+    // Add project directories as "tools" if provided
+    if (projectDirectories && projectDirectories.length > 0) {
+      const projectTools: AgentTool[] = projectDirectories.map((dir, index) => ({
+        id: `project-${index}`,
+        name: path.basename(dir),
+        configDir: dir,
+        skillsDir: dir,
+        type: 'project' as const,
+      }));
+
+      // Project directories first (higher priority)
+      return [...projectTools, ...tools];
+    }
+
+    return tools;
   }
 
   /**
