@@ -2,9 +2,9 @@
 
 <div align="center">
 
-**Claude Code Skill Management Center**
+**Skill Management Center**
 
-*A comprehensive desktop application for managing, discovering, and sharing Claude Code skills*
+*A comprehensive desktop application for managing, discovering, and sharing skills*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org/)
