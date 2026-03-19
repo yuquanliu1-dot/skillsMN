@@ -18,7 +18,7 @@
 
 ## 🎯 Features
 
-skillsMN is an Electron-based desktop application that provides a unified interface for Claude Code users to:
+skillsMN is an Electron-based desktop application that provides a unified interface for users to:
 
 - 📁 **Manage Local Skills** - Create, edit, delete, and organize skills in project and global directories
 - 🤖 **AI-Assisted Generation** - Generate or modify skills using natural language with real-time streaming
