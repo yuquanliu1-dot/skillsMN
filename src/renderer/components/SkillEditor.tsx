@@ -159,6 +159,26 @@ export default function SkillEditor({
   }, [skill.path, skill.lastModified]);
 
   /**
+   * Reload skill content from disk
+   * Used when AI modifies the file externally
+   */
+  const reloadSkillContent = useCallback(async () => {
+    try {
+      console.log('[SkillEditor] Reloading skill content after AI modification');
+      const response = await window.electronAPI.getSkill(skill.path);
+      if (response.success && response.data) {
+        setContent(response.data.content);
+        setLoadedLastModified(new Date(response.data.metadata.lastModified).getTime());
+        setHasUnsavedChanges(false);
+        setExternalChangeDetected(false);
+        console.log('[SkillEditor] Skill content reloaded successfully');
+      }
+    } catch (err) {
+      console.error('[SkillEditor] Failed to reload skill:', err);
+    }
+  }, [skill.path]);
+
+  /**
    * Handle editor mount
    */
   const handleEditorDidMount: OnMount = (editor) => {
@@ -973,6 +993,7 @@ export default function SkillEditor({
         onClose={() => setIsAISidebarOpen(false)}
         onSkillCreated={() => {
           onSkillCreated?.();
+          reloadSkillContent();
           // Don't auto-close sidebar to support multi-turn conversations
         }}
         config={appConfig}

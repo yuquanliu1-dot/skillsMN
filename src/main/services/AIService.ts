@@ -150,11 +150,16 @@ export class AIService {
     const abortController = new AbortController();
     activeStreams.set(requestId, abortController);
 
+    // Store original environment variables to restore later
+    let originalApiKey: string | undefined = process.env.ANTHROPIC_API_KEY;
+    let originalBaseUrl: string | undefined = process.env.ANTHROPIC_BASE_URL;
+
     try {
       logger.info('Starting AI generation with Claude Agent SDK', 'AIService', {
         mode: request.mode,
         requestId,
-        targetPath: request?.skillContext?.targetPath
+        targetPath: request?.skillContext?.targetPath,
+        hasBaseUrl: !!currentConfig?.baseUrl
       });
 
       // Build the user prompt
@@ -171,21 +176,43 @@ export class AIService {
 
       logger.debug('AI generation working directory', 'AIService', { workingDirectory });
 
-      // Use Claude Agent SDK query with permission to execute tools
-      const stream = query({
+      // CRITICAL: Set environment variables directly on process.env BEFORE calling SDK
+      // The SDK spawns a child process that needs these variables to be available
+
+      // Set API key
+      if (currentConfig?.apiKey) {
+        process.env.ANTHROPIC_API_KEY = currentConfig.apiKey;
+      }
+
+      // Set custom base URL if configured
+      if (currentConfig?.baseUrl) {
+        process.env.ANTHROPIC_BASE_URL = currentConfig.baseUrl;
+        logger.info('Setting custom base URL in process.env', 'AIService', { baseUrl: currentConfig.baseUrl });
+      }
+
+      // Log query parameters for debugging
+      logger.info('SDK query parameters', 'AIService', {
+        model: currentConfig?.model || 'claude-sonnet-4-6-20250514',
+        cwd: workingDirectory,
+        hasApiKey: !!process.env.ANTHROPIC_API_KEY,
+        hasBaseUrl: !!process.env.ANTHROPIC_BASE_URL,
+        baseUrlValue: process.env.ANTHROPIC_BASE_URL,
+      });
+
+      // Build query options
+      // Note: permissionMode is NOT included as it's not compatible with some custom API providers (e.g., 智谱AI)
+      const queryOptions: any = {
         prompt: userPrompt,
         options: {
           systemPrompt,
-          // Use configured model
           model: currentConfig?.model || 'claude-sonnet-4-6-20250514',
-          // Set working directory
           cwd: workingDirectory,
-          // Allow file operations without prompting - use 'acceptAll' for full tool execution
-          permissionMode: 'acceptAll',
-          // Auto-allow all necessary tools
           allowedTools: ['Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill', 'NotebookEdit', 'TaskOutput'],
         },
-      });
+      };
+
+      // Use Claude Agent SDK query
+      const stream = query(queryOptions);
 
       let fullText = '';
 
@@ -257,6 +284,20 @@ export class AIService {
               });
             }
             break;
+
+          case 'result':
+            // Handle result messages - check for errors
+            if (item.subtype && item.subtype.startsWith('error')) {
+              const errorMsg = item.errors?.join('; ') || item.subtype;
+              logger.error('Agent result error', 'AIService', {
+                subtype: item.subtype,
+                errors: item.errors,
+                stop_reason: item.stop_reason
+              });
+              yield { type: 'error', text: fullText, isComplete: false, error: errorMsg };
+              return;
+            }
+            break;
         }
       }
 
@@ -268,10 +309,55 @@ export class AIService {
 
       yield { type: 'complete', text: '', isComplete: true };
     } catch (error) {
-      logger.error('AI generation failed', 'AIService', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      // Capture detailed error information
+      const errorDetails: any = {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      };
+
+      // Check for cause property (ES2022+)
+      if (error instanceof Error && 'cause' in error) {
+        errorDetails.cause = (error as any).cause;
+      }
+
+      // Check for stderr/stdout if available
+      if (error instanceof Error && (error as any).stderr) {
+        errorDetails.stderr = (error as any).stderr;
+      }
+      if (error instanceof Error && (error as any).stdout) {
+        errorDetails.stdout = (error as any).stdout;
+      }
+
+      logger.error('AI generation failed', 'AIService', errorDetails);
+
+      // Build error message with actual details
+      let errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // If we have stderr, include it in the error message for debugging
+      if (errorDetails.stderr) {
+        errorMessage = `${errorMessage}\n\nCLI Error: ${errorDetails.stderr}`;
+      }
+
+      // For exit code errors, provide context but keep the original message
+      if (errorMessage.includes('exited with code')) {
+        errorMessage = `Claude CLI error: ${errorMessage}\n\nConfig: baseUrl=${currentConfig?.baseUrl || 'default'}, model=${currentConfig?.model || 'default'}`;
+      }
+
       yield { type: 'error', text: '', isComplete: false, error: errorMessage };
     } finally {
+      // Restore original environment variables
+      if (originalApiKey !== undefined) {
+        process.env.ANTHROPIC_API_KEY = originalApiKey;
+      } else {
+        delete process.env.ANTHROPIC_API_KEY;
+      }
+      if (originalBaseUrl !== undefined) {
+        process.env.ANTHROPIC_BASE_URL = originalBaseUrl;
+      } else {
+        delete process.env.ANTHROPIC_BASE_URL;
+      }
+
       activeStreams.delete(requestId);
     }
   }
@@ -299,6 +385,10 @@ export class AIService {
    * @returns Object with success status, optional error message, and latency in milliseconds
    */
   static async testConnection(): Promise<{ success: boolean; error?: string; latency?: number }> {
+    // Store original environment variables to restore later
+    const originalApiKey = process.env.ANTHROPIC_API_KEY;
+    const originalBaseUrl = process.env.ANTHROPIC_BASE_URL;
+
     try {
       logger.info('Testing AI connection with Claude Agent SDK', 'AIService');
 
@@ -306,6 +396,16 @@ export class AIService {
 
       // Load SDK
       const { query } = await loadSDK();
+
+      // Set environment variables directly on process.env
+      if (currentConfig?.apiKey) {
+        process.env.ANTHROPIC_API_KEY = currentConfig.apiKey;
+      }
+
+      if (currentConfig?.baseUrl) {
+        process.env.ANTHROPIC_BASE_URL = currentConfig.baseUrl;
+        logger.info('Test connection using custom base URL', 'AIService', { baseUrl: currentConfig.baseUrl });
+      }
 
       // Use a simple query to test the connection
       const stream = query({
@@ -331,6 +431,18 @@ export class AIService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('AI connection test failed', 'AIService', error);
       return { success: false, error: errorMessage };
+    } finally {
+      // Restore original environment variables
+      if (originalApiKey !== undefined) {
+        process.env.ANTHROPIC_API_KEY = originalApiKey;
+      } else {
+        delete process.env.ANTHROPIC_API_KEY;
+      }
+      if (originalBaseUrl !== undefined) {
+        process.env.ANTHROPIC_BASE_URL = originalBaseUrl;
+      } else {
+        delete process.env.ANTHROPIC_BASE_URL;
+      }
     }
   }
 

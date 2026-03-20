@@ -361,62 +361,73 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                   : 'bg-white border border-slate-200 text-slate-800 shadow-sm'
               }`}
             >
-              {/* Tool calls for assistant messages */}
+              {/* Tool calls - compact inline display */}
               {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && (
-                <div className="mb-3 space-y-1">
+                <div className="flex flex-wrap gap-1 mb-2">
                   {message.toolCalls.map((tool, index) => {
                     const toolKey = `${message.id}-${index}`;
                     const isExpanded = expandedTools.has(toolKey);
                     return (
-                      <div
+                      <button
                         key={index}
-                        className="bg-slate-100 border border-slate-200 rounded-md text-xs overflow-hidden"
+                        onClick={() => toggleToolExpansion(toolKey)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-xs transition-colors"
+                        title={isExpanded ? 'Click to collapse' : 'Click to expand'}
                       >
-                        <button
-                          onClick={() => toggleToolExpansion(toolKey)}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-slate-200 transition-colors text-left"
+                        <svg
+                          className="w-3 h-3 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          <svg
-                            className={`w-3 h-3 text-slate-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                          <svg
-                            className="w-3.5 h-3.5 text-blue-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                          </svg>
-                          <span className="font-medium text-slate-700">{tool.name}</span>
-                          {tool.input?.file_path && (
-                            <span className="text-slate-500 truncate ml-1">
-                              {tool.input.file_path.split('/').pop()}
-                            </span>
-                          )}
-                        </button>
-                        {isExpanded && tool.input && (
-                          <div className="px-2 pb-2 border-t border-slate-200 bg-slate-50">
-                            <pre className="text-[10px] text-slate-600 mt-1.5 whitespace-pre-wrap break-words font-mono">
-                              {typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input, null, 2)}
-                            </pre>
-                          </div>
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        <span className="font-medium text-slate-700">{tool.name}</span>
+                        {tool.input?.file_path && (
+                          <span className="text-slate-500 truncate max-w-[80px]">
+                            {tool.input.file_path.split('/').pop()}
+                          </span>
                         )}
+                        <svg
+                          className={`w-2.5 h-2.5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Expanded tool details */}
+              {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && expandedTools.size > 0 && (
+                <div className="mb-2 space-y-1">
+                  {message.toolCalls.map((tool, index) => {
+                    const toolKey = `${message.id}-${index}`;
+                    const isExpanded = expandedTools.has(toolKey);
+                    if (!isExpanded || !tool.input) return null;
+                    return (
+                      <div
+                        key={`detail-${index}`}
+                        className="bg-slate-50 border border-slate-200 rounded p-2 text-xs"
+                      >
+                        <pre className="text-slate-600 whitespace-pre-wrap break-words font-mono text-[10px]">
+                          {typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input, null, 2)}
+                        </pre>
                       </div>
                     );
                   })}

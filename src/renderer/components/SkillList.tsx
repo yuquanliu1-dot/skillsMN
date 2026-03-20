@@ -16,7 +16,6 @@ interface SkillListProps {
   onSkillClick?: (skill: Skill) => void;
   onSkillSelect?: (skill: Skill) => void;
   onCreateSkill?: () => void;
-  onOpenAICreation?: () => void;
   onDeleteSkill?: (skill: Skill) => void;
   onOpenFolder?: (skill: Skill) => void;
   selectedSkillPath?: string | null;
@@ -30,7 +29,6 @@ export default function SkillList({
   onSkillClick,
   onSkillSelect,
   onCreateSkill,
-  onOpenAICreation,
   onDeleteSkill,
   onOpenFolder,
   selectedSkillPath,
@@ -201,26 +199,6 @@ export default function SkillList({
             </button>
           )}
 
-          {/* AI Create Button */}
-          {onOpenAICreation && (
-            <button
-              data-testid="ai-create-skill-button"
-              onClick={onOpenAICreation}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all"
-              aria-label="Create skill with AI"
-              title="AI Create"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z"
-                />
-              </svg>
-              <span>AI</span>
-            </button>
-          )}
         </div>
 
         {/* Bottom row: Filters + Sort (with icons) */}

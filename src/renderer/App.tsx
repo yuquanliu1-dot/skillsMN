@@ -20,7 +20,6 @@ import ToastContainer, { ToastMessage } from './components/ToastContainer';
 import PrivateRepoList from './components/PrivateRepoList';
 import Sidebar, { ViewType } from './components/Sidebar';
 import { RegistrySearchPanel } from './components/RegistrySearchPanel';
-import { AISkillCreationDialog } from './components/AISkillCreationDialog';
 import MigrationDialog from './components/MigrationDialog';
 
 type MainTab = 'local' | 'private-repos';
@@ -121,7 +120,6 @@ export default function App(): JSX.Element {
   const loadSkillsRef = useRef<() => Promise<void>>(async () => {});
   // Ref to prevent concurrent loadSkills calls
   const isLoadingSkillsRef = useRef(false);
-  const [showAICreationDialog, setShowAICreationDialog] = useState(false);
   const [viewingPrivateSkill, setViewingPrivateSkill] = useState<{
     skill: PrivateSkill;
     repo: PrivateRepo;
@@ -779,7 +777,6 @@ export default function App(): JSX.Element {
                 onSkillClick={(skill) => setEditingSkill(skill)}
                 onSkillSelect={(skill) => setSelectedSkillPath(skill.path)}
                 onCreateSkill={() => setShowCreateDialog(true)}
-                onOpenAICreation={() => setShowAICreationDialog(true)}
                 onDeleteSkill={(skill) => setDeletingSkill(skill)}
                 onOpenFolder={handleOpenFolder}
                 selectedSkillPath={selectedSkillPath}
@@ -979,17 +976,6 @@ export default function App(): JSX.Element {
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onCreateSkill={handleCreateSkill}
-      />
-
-      {/* AI Skill Creation Dialog */}
-      <AISkillCreationDialog
-        isOpen={showAICreationDialog}
-        onClose={() => setShowAICreationDialog(false)}
-        onSkillCreated={() => {
-          loadSkills();
-          showToast('Skill created successfully with AI!', 'success');
-        }}
-        config={state.config}
       />
 
       {/* Delete Confirmation Dialog */}
