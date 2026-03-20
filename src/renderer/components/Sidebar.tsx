@@ -186,14 +186,18 @@ export default function Sidebar({
         <button
           onMouseEnter={() => setShowTooltip('claude-status')}
           onMouseLeave={() => setShowTooltip(null)}
-          className="w-full aspect-square rounded-xl flex items-center justify-center relative hover:bg-gray-50 transition-colors"
+          className={`w-full aspect-square rounded-xl flex items-center justify-center relative transition-colors ${
+            claudeInstalled === false
+              ? 'bg-red-50 hover:bg-red-100'
+              : 'hover:bg-gray-50'
+          }`}
         >
           {/* Claude Icon */}
           <svg
-            className="w-5 h-5"
+            className={`w-5 h-5 ${claudeInstalled === false ? 'animate-pulse' : ''}`}
             viewBox="0 0 24 24"
             fill="currentColor"
-            style={{ color: claudeInstalled === null ? '#9CA3AF' : (claudeInstalled ? '#D97706' : '#6B7280') }}
+            style={{ color: claudeInstalled === null ? '#9CA3AF' : (claudeInstalled ? '#D97706' : '#EF4444') }}
           >
             {/* Claude-style abstract brain/AI icon */}
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
@@ -201,19 +205,40 @@ export default function Sidebar({
             <circle cx="12" cy="12" r="2"/>
           </svg>
 
-          {/* Red dot indicator for not installed */}
+          {/* Warning indicator for not installed */}
           {claudeInstalled === false && (
-            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white" />
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center ring-2 ring-white">
+              <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </span>
           )}
 
           {/* Tooltip */}
           {showTooltip === 'claude-status' && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded whitespace-nowrap z-50 shadow-lg animate-fade-in">
-              {claudeInstalled === null
-                ? 'Checking Claude...'
-                : claudeInstalled
-                  ? 'Claude CLI installed'
-                  : 'Claude CLI not installed'}
+            <div className={`absolute left-full ml-2 px-3 py-2 text-xs rounded z-50 shadow-lg animate-fade-in ${
+              claudeInstalled === false
+                ? 'bg-red-600 text-white whitespace-normal w-48'
+                : 'bg-slate-800 text-white whitespace-nowrap'
+            }`}>
+              {claudeInstalled === null ? (
+                'Checking Claude CLI...'
+              ) : claudeInstalled ? (
+                <>
+                  <span className="font-medium">Claude CLI installed</span>
+                  <span className="block text-slate-300 mt-0.5">AI features available</span>
+                </>
+              ) : (
+                <>
+                  <span className="font-medium">Claude CLI not installed</span>
+                  <span className="block text-red-200 mt-1 text-[11px] leading-relaxed">
+                    AI-assisted skill generation and editing features will be unavailable.
+                  </span>
+                  <span className="block text-red-200 mt-1 text-[11px]">
+                    Install with: <code className="bg-red-700/50 px-1 rounded">npm install -g @anthropic-ai/claude-code</code>
+                  </span>
+                </>
+              )}
             </div>
           )}
         </button>
