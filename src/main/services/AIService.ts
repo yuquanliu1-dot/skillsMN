@@ -151,7 +151,11 @@ export class AIService {
     activeStreams.set(requestId, abortController);
 
     try {
-      logger.info('Starting AI generation with Claude Agent SDK', 'AIService', { mode: request.mode, requestId });
+      logger.info('Starting AI generation with Claude Agent SDK', 'AIService', {
+        mode: request.mode,
+        requestId,
+        targetPath: request?.skillContext?.targetPath
+      });
 
       // Build the user prompt
       const userPrompt = AIService.buildUserPrompt(request);
@@ -162,10 +166,10 @@ export class AIService {
       // Load SDK and use query
       const { query } = await loadSDK();
 
-      // Determine working directory (project root)
-      const workingDirectory = request?.skillContext?.targetPath
-        ? require('path').dirname(request.skillContext.targetPath)
-        : process.cwd();
+      // Set working directory to the target skills directory
+      const workingDirectory = request?.skillContext?.targetPath || process.cwd();
+
+      logger.debug('AI generation working directory', 'AIService', { workingDirectory });
 
       // Use Claude Agent SDK query with permission to execute tools
       const stream = query({
@@ -336,6 +340,8 @@ export class AIService {
    * @private
    */
   private static buildSystemPrompt(mode: AIGenerationRequest['mode'], request?: AIGenerationRequest): string {
+    const targetPath = request?.skillContext?.targetPath;
+
     const basePrompt = `You are an expert skill creator for Claude Code. You have access to the skill-creator skill which provides comprehensive guidelines for creating effective skills.
 
 When generating skill content:
@@ -347,6 +353,10 @@ When generating skill content:
 - You CAN use the Write tool to directly create skill files
 - You CAN use Bash and other tools as needed
 - Use the Skill tool to access skill-creator guidance
+
+${targetPath ? `CRITICAL: You MUST save all skill files to the target directory: ${targetPath}
+DO NOT save to ~/.local/share/claude-cli/skills/ or any other default location.
+ALWAYS use the path: ${targetPath}/<skill-name>/skill.md` : ''}
 
 Skills follow this format:
 ---
@@ -361,35 +371,32 @@ tags: [tag1, tag2, tag3]
 
 Markdown content with instructions, examples, and guidance.`;
 
-    const targetPath = request?.skillContext?.targetPath;
     const modeInstructions = {
       new: targetPath
         ? `\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user's requirements. Use the skill-creator skill for guidance.
 
-IMPORTANT: A skill is a DIRECTORY containing a skill.md file. Follow these steps:
+CRITICAL PATH REQUIREMENT:
+The skill MUST be saved to: ${targetPath}/<skill-name>/skill.md
 
-1. First, determine the skill name from the user's requirements (convert to kebab-case, e.g., "My Skill" → "my-skill-name")
-2. Use the Bash tool to create a directory at: ${targetPath}/<skill-name>
-   Example: If skill name is "ls", create directory at ${targetPath}/ls
-3. Use the Write tool to create the skill.md file: ${targetPath}/<skill-name>/skill.md
-   Example: ${targetPath}/ls/skill.md
+Steps:
+1. Determine the skill name from the user's requirements (convert to kebab-case, e.g., "Directory Viewer" → "directory-viewer")
+2. Use the Bash tool to create the directory: mkdir -p "${targetPath}/<skill-name>"
+3. Use the Write tool with the EXACT path: ${targetPath}/<skill-name>/skill.md
 
-The targetPath (${targetPath}) is the PARENT directory where all skills are stored.
-You must create a subdirectory with the skill name, then create skill.md inside it.
+Example: If skill name is "directory-viewer", the Write tool file_path MUST be:
+${targetPath}/directory-viewer/skill.md
 
-Directory structure:
-   ${targetPath}/
-   └── <skill-name>/
-       └── skill.md (contains YAML frontmatter + Markdown content)
-
-IMPORTANT: The Write tool file_path should be the FULL path including the skill name subdirectory.`
+DO NOT use any other path. DO NOT save to ~/.claude/skills/ or ~/.local/share/claude-cli/skills/`
         : '\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user\'s requirements. Use the skill-creator skill for guidance.',
 
-      modify: '\n\nYou are MODIFYING an existing skill. Improve, expand, or refine the content while preserving its core purpose. Use the Write tool to save changes to the skill.md file. Refer to skill-creator for best practices.',
+      modify: targetPath
+        ? `\n\nYou are MODIFYING an existing skill. The skill is located at: ${targetPath}/${request?.skillContext?.name || 'unknown'}/skill.md
+Save changes to this exact path. Refer to skill-creator for best practices.`
+        : '\n\nYou are MODIFYING an existing skill. Improve, expand, or refine the content while preserving its core purpose. Refer to skill-creator for best practices.',
 
-      insert: '\n\nYou are INSERTING new content into an existing skill at a specified position. Generate content that fits naturally. Use the Write tool to save changes to the skill.md file. Follow skill-creator guidelines.',
+      insert: '\n\nYou are INSERTING new content into an existing skill at a specified position. Generate content that fits naturally. Follow skill-creator guidelines.',
 
-      replace: '\n\nYou are REPLACING a selected portion of an existing skill. Generate replacement content that maintains context and flow. Use the Write tool to save changes to the skill.md file. Use skill-creator as reference.'
+      replace: '\n\nYou are REPLACING a selected portion of an existing skill. Generate replacement content that maintains context and flow. Use skill-creator as reference.'
     };
 
     return basePrompt + (modeInstructions[mode] || '');
