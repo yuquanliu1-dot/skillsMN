@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- SKM Letters - China Red #DE2910 -->
+  <text x="256" y="340"
+        font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="200"
+        font-weight="800"
+        fill="#DE2910"
+        text-anchor="middle"
+        letter-spacing="-4">
+    SKM
+  </text>
+
+  <!-- AI Star - larger, more to the right -->
+  <polygon
+    points="460,120 471,158 512,158 480,186 491,224 460,196 429,224 440,186 408,158 449,158"
+    fill="#DE2910"
+  />
+</svg>

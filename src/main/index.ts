@@ -36,6 +36,11 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 async function createWindow(): Promise<void> {
   logger.info('Creating main window', 'Main');
 
+  // Get icon path based on platform
+  const iconPath = isDev
+    ? path.join(__dirname, '../../resources/icons/icon.png')
+    : path.join(process.resourcesPath, 'icons/icon.png');
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -49,6 +54,7 @@ async function createWindow(): Promise<void> {
       sandbox: false, // Disable sandbox for preload script to work
     },
     title: 'skillsMN',
+    icon: iconPath,
     show: false, // Show when ready to prevent visual flash
     center: true, // Center the window on screen
   });

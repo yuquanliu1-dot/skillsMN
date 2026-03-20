@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>skillsMN App Icon Preview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      padding: 40px;
+      color: white;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+      font-weight: 300;
+      letter-spacing: 2px;
+    }
+    .preview-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 40px;
+      margin-bottom: 60px;
+    }
+    .preview-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .preview-item span {
+      font-size: 14px;
+      color: #888;
+    }
+    .icon-container {
+      background: rgba(255,255,255,0.05);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .size-16 { width: 16px; height: 16px; }
+    .size-32 { width: 32px; height: 32px; }
+    .size-48 { width: 48px; height: 48px; }
+    .size-64 { width: 64px; height: 64px; }
+    .size-128 { width: 128px; height: 128px; }
+    .size-256 { width: 256px; height: 256px; }
+    .size-512 { width: 512px; height: 512px; }
+
+    .design-section {
+      background: rgba(255,255,255,0.03);
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 40px;
+    }
+    .design-section h2 {
+      margin-bottom: 20px;
+      font-weight: 400;
+      color: #DE2910;
+    }
+    .design-section p {
+      line-height: 1.8;
+      color: #aaa;
+      max-width: 800px;
+    }
+    .color-palette {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .color-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .color-swatch {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+    }
+    .color-item span {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .export-section {
+      text-align: center;
+      padding: 40px;
+    }
+    .export-btn {
+      background: linear-gradient(135deg, #DE2910, #FF6B35);
+      color: white;
+      border: none;
+      padding: 16px 40px;
+      font-size: 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin: 0 10px;
+    }
+    .export-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(222, 41, 16, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <h1>skillsMN App Icon</h1>
+
+  <div class="preview-grid">
+    <div class="preview-item">
+      <div class="icon-container">
+        <svg class="size-16" viewBox="0 0 512 512">
+          <circle cx="256" cy="256" r="240" fill="url(#mainGradient)"/>
+          <rect x="180" y="190" width="180" height="140" rx="16" fill="white"/>
+          <polygon points="320,55 330,85 365,85 338,108 348,145 320,122 292,145 302,108 275,85 310,85" fill="#FFD700"/>
+        </svg>
+      </div>
+      <span>16x16</span>
+    </div>
+    <div class="preview-item">
+      <div class="icon-container">
+        <svg class="size-32" viewBox="0 0 512 512">
+          <defs>
+            <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#DE2910"/>
+              <stop offset="100%" style="stop-color:#FF6B35"/>
+            </linearGradient>
+          </defs>
+          <circle cx="256" cy="256" r="240" fill="url(#mainGradient)"/>
+          <rect x="180" y="190" width="180" height="140" rx="16" fill="white"/>
+          <polygon points="320,55 330,85 365,85 338,108 348,145 320,122 292,145 302,108 275,85 310,85" fill="#FFD700"/>
+        </svg>
+      </div>
+      <span>32x32</span>
+    </div>
+    <div class="preview-item">
+      <div class="icon-container">
+        <svg class="size-48" viewBox="0 0 512 512">
+          <defs>
+            <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#DE2910"/>
+              <stop offset="100%" style="stop-color:#FF6B35"/>
+            </linearGradient>
+          </defs>
+          <circle cx="256" cy="256" r="240" fill="url(#mainGradient)"/>
+          <rect x="180" y="190" width="180" height="140" rx="16" fill="white"/>
+          <polygon points="320,55 330,85 365,85 338,108 348,145 320,122 292,145 302,108 275,85 310,85" fill="#FFD700"/>
+        </svg>
+      </div>
+      <span>48x48 (Taskbar)</span>
+    </div>
+    <div class="preview-item">
+      <div class="icon-container">
+        <svg class="size-64" viewBox="0 0 512 512">
+          <defs>
+            <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#DE2910"/>
+              <stop offset="100%" style="stop-color:#FF6B35"/>
+            </linearGradient>
+          </defs>
+          <circle cx="256" cy="256" r="240" fill="url(#mainGradient)"/>
+          <rect x="180" y="190" width="180" height="140" rx="16" fill="white"/>
+          <polygon points="320,55 330,85 365,85 338,108 348,145 320,122 292,145 302,108 275,85 310,85" fill="#FFD700"/>
+        </svg>
+      </div>
+      <span>64x64</span>
+    </div>
+    <div class="preview-item">
+      <div class="icon-container">
+        <svg class="size-128" viewBox="0 0 512 512">
+          <defs>
+            <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#DE2910"/>
+              <stop offset="100%" style="stop-color:#FF6B35"/>
+            </linearGradient>
+          </defs>
+          <circle cx="256" cy="256" r="240" fill="url(#mainGradient)"/>
+          <rect x="180" y="190" width="180" height="140" rx="16" fill="white"/>
+          <rect x="200" y="215" width="100" height="8" rx="4" fill="#E5E7EB"/>
+          <rect x="200" y="235" width="140" height="6" rx="3" fill="#E5E7EB"/>
+          <rect x="200" y="251" width="120" height="6" rx="3" fill="#E5E7EB"/>
+          <polygon points="320,55 330,85 365,85 338,108 348,145 320,122 292,145 302,108 275,85 310,85" fill="#FFD700"/>
+        </svg>
+      </div>
+      <span>128x128</span>
+    </div>
+    <div class="preview-item">
+      <div class="icon-container">
+        <svg class="size-256" viewBox="0 0 512 512">
+          <defs>
+            <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#DE2910"/>
+              <stop offset="100%" style="stop-color:#FF6B35"/>
+            </linearGradient>
+          </defs>
+          <circle cx="256" cy="256" r="240" fill="url(#mainGradient)"/>
+          <rect x="140" y="150" width="180" height="140" rx="16" fill="rgba(255,255,255,0.25)" transform="rotate(-8 230 220)"/>
+          <rect x="160" y="170" width="180" height="140" rx="16" fill="rgba(255,255,255,0.35)" transform="rotate(-4 250 240)"/>
+          <rect x="180" y="190" width="180" height="140" rx="16" fill="white"/>
+          <rect x="200" y="215" width="100" height="8" rx="4" fill="#E5E7EB"/>
+          <rect x="200" y="235" width="140" height="6" rx="3" fill="#E5E7EB"/>
+          <rect x="200" y="251" width="120" height="6" rx="3" fill="#E5E7EB"/>
+          <rect x="200" y="267" width="80" height="6" rx="3" fill="#E5E7EB"/>
+          <polygon points="320,55 330,85 365,85 338,108 348,145 320,122 292,145 302,108 275,85 310,85" fill="#FFD700"/>
+          <circle cx="380" cy="160" r="6" fill="#FFD700"/>
+          <circle cx="400" cy="200" r="4" fill="#FFA500"/>
+        </svg>
+      </div>
+      <span>256x256</span>
+    </div>
+    <div class="preview-item">
+      <div class="icon-container" style="background: transparent;">
+        <svg class="size-512" viewBox="0 0 512 512">
+          <defs>
+            <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#DE2910"/>
+              <stop offset="100%" style="stop-color:#FF6B35"/>
+            </linearGradient>
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.15"/>
+            </filter>
+          </defs>
+          <circle cx="256" cy="256" r="240" fill="url(#mainGradient)" filter="url(#shadow)"/>
+          <circle cx="256" cy="256" r="200" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+          <rect x="140" y="150" width="180" height="140" rx="16" fill="rgba(255,255,255,0.25)" transform="rotate(-8 230 220)"/>
+          <rect x="160" y="170" width="180" height="140" rx="16" fill="rgba(255,255,255,0.35)" transform="rotate(-4 250 240)"/>
+          <rect x="180" y="190" width="180" height="140" rx="16" fill="white"/>
+          <rect x="200" y="215" width="100" height="8" rx="4" fill="#E5E7EB"/>
+          <rect x="200" y="235" width="140" height="6" rx="3" fill="#E5E7EB"/>
+          <rect x="200" y="251" width="120" height="6" rx="3" fill="#E5E7EB"/>
+          <rect x="200" y="267" width="80" height="6" rx="3" fill="#E5E7EB"/>
+          <g transform="translate(290, 220)">
+            <rect x="0" y="0" width="50" height="50" rx="8" fill="#DE2910" opacity="0.1"/>
+            <text x="25" y="35" font-family="monospace" font-size="28" fill="#DE2910" text-anchor="middle">&lt;/&gt;</text>
+          </g>
+          <g transform="translate(320, 100)">
+            <polygon points="0,-45 10,-15 45,-15 18,8 28,45 0,22 -28,45 -18,8 -45,-15 -10,-15" fill="#FFD700"/>
+            <circle cx="0" cy="0" r="15" fill="rgba(255,255,255,0.6)"/>
+          </g>
+          <circle cx="380" cy="160" r="6" fill="#FFD700"/>
+          <circle cx="400" cy="200" r="4" fill="#FFA500"/>
+          <circle cx="120" cy="380" r="5" fill="#FFD700"/>
+          <circle cx="100" cy="340" r="3" fill="#FFA500"/>
+        </svg>
+      </div>
+      <span>512x512 (App Store)</span>
+    </div>
+  </div>
+
+  <div class="design-section">
+    <h2>Design Concept</h2>
+    <p>
+      The icon represents <strong>skillsMN</strong> - a skill management center for Claude Code.
+      The stacked cards symbolize organized skill management, while the golden star represents
+      the AI-assisted generation feature. The red-orange gradient reflects the brand identity
+      and creates visual energy.
+    </p>
+    <div class="color-palette">
+      <div class="color-item">
+        <div class="color-swatch" style="background: #DE2910;"></div>
+        <span>#DE2910</span>
+        <span>Brand Red</span>
+      </div>
+      <div class="color-item">
+        <div class="color-swatch" style="background: #FF6B35;"></div>
+        <span>#FF6B35</span>
+        <span>Accent Orange</span>
+      </div>
+      <div class="color-item">
+        <div class="color-swatch" style="background: #FFD700;"></div>
+        <span>#FFD700</span>
+        <span>AI Spark Gold</span>
+      </div>
+      <div class="color-item">
+        <div class="color-swatch" style="background: white;"></div>
+        <span>#FFFFFF</span>
+        <span>Cards White</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="export-section">
+    <h2 style="margin-bottom: 20px; font-weight: 400;">Export for Platforms</h2>
+    <p style="color: #888; margin-bottom: 30px;">
+      Open the SVG file in a design tool (Figma, Inkscape) or use online converters to generate:
+    </p>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
+      <div style="background: rgba(255,255,255,0.05); padding: 20px 30px; border-radius: 12px;">
+        <strong style="color: #4FC3F7;">Windows</strong>
+        <p style="color: #666; font-size: 13px; margin-top: 8px;">.ico (256x256)</p>
+      </div>
+      <div style="background: rgba(255,255,255,0.05); padding: 20px 30px; border-radius: 12px;">
+        <strong style="color: #4FC3F7;">macOS</strong>
+        <p style="color: #666; font-size: 13px; margin-top: 8px;">.icns (512x512)</p>
+      </div>
+      <div style="background: rgba(255,255,255,0.05); padding: 20px 30px; border-radius: 12px;">
+        <strong style="color: #4FC3F7;">Linux</strong>
+        <p style="color: #666; font-size: 13px; margin-top: 8px;">.png (512x512)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden canvas for export -->
+  <canvas id="exportCanvas" style="display: none;"></canvas>
+
+  <script>
+    // Export functions
+    function exportPNG(size) {
+      const canvas = document.getElementById('exportCanvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      const svg = document.querySelector('.size-512');
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const img = new Image();
+
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, size, size);
+        const link = document.createElement('a');
+        link.download = `icon-${size}x${size}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      };
+
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    }
+  </script>
+</body>
+</html>
