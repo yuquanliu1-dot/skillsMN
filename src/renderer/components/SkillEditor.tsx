@@ -993,8 +993,8 @@ export default function SkillEditor({
         onClose={() => setIsAISidebarOpen(false)}
         onSkillCreated={() => {
           onSkillCreated?.();
-          reloadSkillContent();
-          // Don't auto-close sidebar to support multi-turn conversations
+          // Don't reload here - let the external change detection handle it
+          // The useEffect at line 649-681 will auto-reload when file actually changes
         }}
         config={appConfig}
         currentSkillContent={content}
