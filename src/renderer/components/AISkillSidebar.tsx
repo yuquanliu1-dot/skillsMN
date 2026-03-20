@@ -47,8 +47,24 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
+  const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  /**
+   * Toggle tool call expansion
+   */
+  const toggleToolExpansion = useCallback((toolKey: string) => {
+    setExpandedTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(toolKey)) {
+        next.delete(toolKey);
+      } else {
+        next.add(toolKey);
+      }
+      return next;
+    });
+  }, []);
 
   const {
     status,
@@ -347,41 +363,63 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             >
               {/* Tool calls for assistant messages */}
               {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && (
-                <div className="mb-3 space-y-2">
-                  {message.toolCalls.map((tool, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm"
-                    >
-                      <svg
-                        className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5 animate-pulse"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                <div className="mb-3 space-y-1">
+                  {message.toolCalls.map((tool, index) => {
+                    const toolKey = `${message.id}-${index}`;
+                    const isExpanded = expandedTools.has(toolKey);
+                    return (
+                      <div
+                        key={index}
+                        className="bg-slate-100 border border-slate-200 rounded-md text-xs overflow-hidden"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-blue-900">{tool.name}</div>
-                        {tool.input && (
-                          <pre className="text-xs text-blue-700 mt-1 whitespace-pre-wrap break-words">
-                            {typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input, null, 2)}
-                          </pre>
+                        <button
+                          onClick={() => toggleToolExpansion(toolKey)}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-slate-200 transition-colors text-left"
+                        >
+                          <svg
+                            className={`w-3 h-3 text-slate-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          <svg
+                            className="w-3.5 h-3.5 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                          </svg>
+                          <span className="font-medium text-slate-700">{tool.name}</span>
+                          {tool.input?.file_path && (
+                            <span className="text-slate-500 truncate ml-1">
+                              {tool.input.file_path.split('/').pop()}
+                            </span>
+                          )}
+                        </button>
+                        {isExpanded && tool.input && (
+                          <div className="px-2 pb-2 border-t border-slate-200 bg-slate-50">
+                            <pre className="text-[10px] text-slate-600 mt-1.5 whitespace-pre-wrap break-words font-mono">
+                              {typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input, null, 2)}
+                            </pre>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
