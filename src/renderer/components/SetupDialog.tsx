@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AIConfiguration, PrivateRepo } from '../../shared/types';
 
 interface SetupDialogProps {
@@ -17,6 +18,8 @@ interface SetupDialogProps {
 type SetupStep = 'project-directory' | 'private-repos' | 'ai-config';
 
 export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Element {
+  const { t } = useTranslation();
+
   // Step state
   const [currentStep, setCurrentStep] = useState<SetupStep>('project-directory');
 
@@ -380,9 +383,9 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
               </div>
               <div>
                 <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
-                  Welcome to skillsMN
+                  {t('setup.welcome')}
                 </h2>
-                <p className="text-sm text-slate-500 mt-0.5">Let's get you set up in just a few steps</p>
+                <p className="text-sm text-slate-500 mt-0.5">{t('setup.setupDescription')}</p>
               </div>
             </div>
 
@@ -441,14 +444,14 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-900">
-                {currentStep === 'project-directory' && 'Skills Directory'}
-                {currentStep === 'private-repos' && 'Private Repositories'}
-                {currentStep === 'ai-config' && 'AI Configuration'}
+                {currentStep === 'project-directory' && t('setup.skillsDirectory')}
+                {currentStep === 'private-repos' && t('setup.privateRepos')}
+                {currentStep === 'ai-config' && t('setup.aiConfiguration')}
               </h3>
               <p className="text-sm text-slate-500">
-                {currentStep === 'project-directory' && 'Select a directory for skill storage and linking'}
-                {currentStep === 'private-repos' && 'Connect your private skill repositories'}
-                {currentStep === 'ai-config' && 'Configure your AI assistant settings'}
+                {currentStep === 'project-directory' && t('setup.skillsDirectoryDescription')}
+                {currentStep === 'private-repos' && t('setup.privateReposDescription')}
+                {currentStep === 'ai-config' && t('setup.aiConfigDescription')}
               </p>
             </div>
           </div>
@@ -469,7 +472,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-green-900 mb-1">Selected Directory</p>
+                      <p className="text-sm font-semibold text-green-900 mb-1">{t('setup.selectedDirectory')}</p>
                       <p className="text-sm text-green-700 font-mono truncate" title={directory}>
                         {directory}
                       </p>
@@ -480,7 +483,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                       className="px-4 py-2 bg-white hover:bg-green-50 border-2 border-green-200 rounded-lg text-sm font-medium text-green-700 transition-all"
                       disabled={isValidating || isCompleting}
                     >
-                      Change
+                      {t('setup.change')}
                     </button>
                   </div>
                 </div>
@@ -499,10 +502,10 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                     </div>
                     <div>
                       <p className="text-base font-semibold text-slate-900 mb-1">
-                        Click to Select Skills Directory
+                        {t('setup.clickToSelectDirectory')}
                       </p>
                       <p className="text-sm text-slate-500">
-                        Choose a folder where your skills will be stored
+                        {t('setup.chooseFolderDescription')}
                       </p>
                     </div>
                   </div>

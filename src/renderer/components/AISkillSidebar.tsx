@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import type { Configuration } from '../../shared/types';
 
@@ -92,6 +93,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   currentSkillContent,
   currentSkillName,
 }) => {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
@@ -356,8 +358,8 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">AI Assistant</h2>
-            <p className="text-xs text-white/80">Conversational skill creation</p>
+            <h2 className="text-lg font-bold text-white">{t('aiSidebar.title')}</h2>
+            <p className="text-xs text-white/80">{t('aiSidebar.subtitle')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -365,7 +367,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             <button
               onClick={handleClearConversation}
               className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors"
-              title="Clear conversation"
+              title={t('aiSidebar.clearConversation')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -380,7 +382,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors"
-            title="Close sidebar"
+            title={t('aiSidebar.closeSidebar')}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -401,7 +403,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                 d="M9 12h6m-6 4h6m2 5H7l2-4h10l2 4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"
               />
             </svg>
-            <span className="font-medium">Editing: {currentSkillName}</span>
+            <span className="font-medium">{t('aiSidebar.editing', { name: currentSkillName })}</span>
           </div>
         </div>
       )}
@@ -418,8 +420,8 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                 d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
               />
             </svg>
-            <p className="text-xs">Start a conversation to create or modify skills</p>
-            <p className="text-[10px] mt-1 text-slate-300">AI will help you write skill.md files</p>
+            <p className="text-xs">{t('aiSidebar.startConversation')}</p>
+            <p className="text-[10px] mt-1 text-slate-300">{t('aiSidebar.aiHelp')}</p>
           </div>
         )}
 
@@ -443,7 +445,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                         key={index}
                         onClick={() => toggleToolExpansion(toolKey)}
                         className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-xs transition-colors"
-                        title={isExpanded ? 'Click to collapse' : 'Click to expand'}
+                        title={isExpanded ? t('aiSidebar.clickToCollapse') : t('aiSidebar.clickToExpand')}
                       >
                         <svg
                           className="w-3 h-3 text-blue-600"
@@ -507,7 +509,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
               {/* Message content */}
               <div className="text-xs whitespace-pre-wrap break-words font-mono leading-relaxed">
-                {message.content || (message.isStreaming && <span className="animate-pulse">Thinking...</span>)}
+                {message.content || (message.isStreaming && <span className="animate-pulse">{t('aiSidebar.thinking')}</span>)}
                 {message.isStreaming && message.content && (
                   <span className="inline-block w-1.5 h-3 bg-purple-600 animate-pulse ml-0.5">|</span>
                 )}
@@ -519,7 +521,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         {/* Error display */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
-            <div className="font-medium mb-0.5">Error</div>
+            <div className="font-medium mb-0.5">{t('aiSidebar.error')}</div>
             <div>{error}</div>
           </div>
         )}
@@ -538,7 +540,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            <span>Prompts</span>
+            <span>{t('aiSidebar.prompts')}</span>
             <svg
               className={`w-3 h-3 transition-transform ${showPromptMenu ? 'rotate-180' : ''}`}
               fill="none"
@@ -580,7 +582,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isStreaming}
-            placeholder="Describe what you want to create or modify..."
+            placeholder={t('aiSidebar.inputPlaceholder')}
             className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed text-xs bg-white text-slate-900 placeholder-slate-400"
             rows={3}
             maxLength={2000}
@@ -591,7 +593,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         {/* Action buttons */}
         <div className="flex items-center justify-between mt-2">
           <div className="text-[10px] text-slate-400">
-            <kbd className="px-1 py-0.5 bg-slate-100 rounded text-[10px]">Enter</kbd> to send
+            <kbd className="px-1 py-0.5 bg-slate-100 rounded text-[10px]">Enter</kbd> {t('aiSidebar.toSend')}
           </div>
           <div className="flex gap-2">
             {isStreaming ? (
@@ -602,7 +604,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <rect x="6" y="6" width="12" height="12" rx="2" strokeWidth="2" />
                 </svg>
-                Stop
+                {t('aiSidebar.stop')}
               </button>
             ) : (
               <button
@@ -613,7 +615,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
-                Send
+                {t('aiSidebar.send')}
               </button>
             )}
           </div>

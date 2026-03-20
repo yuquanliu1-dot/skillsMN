@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FixedSizeList as List } from 'react-window';
 import type { Skill, FilterSource, SortBy, VersionComparison } from '../../shared/types';
 import { SKILL_LIST_ITEM_HEIGHT } from '../../shared/constants';
@@ -36,6 +37,7 @@ export default function SkillList({
   onSkillUpdate,
   onSkillUpload,
 }: SkillListProps): JSX.Element {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
@@ -157,11 +159,11 @@ export default function SkillList({
             <input
               data-testid="skill-search-input"
               type="text"
-              placeholder="Search skills..."
+              placeholder={t('skills.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              aria-label="Search skills"
+              aria-label={t('common.search')}
             />
             <svg
               className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
@@ -185,8 +187,8 @@ export default function SkillList({
               data-testid="create-skill-button"
               onClick={onCreateSkill}
               className="flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              aria-label="Create new skill"
-              title="New Skill"
+              aria-label={t('skills.createSkill')}
+              title={t('skills.newSkill')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -205,7 +207,7 @@ export default function SkillList({
         <div className="flex items-center gap-2 flex-wrap">
           {/* Skill count */}
           <span className="text-xs text-gray-500">
-            {filteredAndSortedSkills.length}/{skills.length} skills
+            {t('skills.skillsCount', { count: filteredAndSortedSkills.length })}
           </span>
 
           <div className="flex items-center gap-1 ml-auto">
@@ -219,13 +221,13 @@ export default function SkillList({
                 value={filterSource}
                 onChange={(e) => handleFilterChange(e.target.value as FilterSource)}
                 className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
-                aria-label="Filter by source"
-                title="Filter skills"
+                aria-label={t('skills.filter')}
+                title={t('skills.filter')}
               >
-                <option value="all">All</option>
-                <option value="local">Local</option>
-                <option value="registry">Registry</option>
-                <option value="private-repo">Private</option>
+                <option value="all">{t('skills.all')}</option>
+                <option value="local">{t('skills.local')}</option>
+                <option value="registry">{t('skills.registry')}</option>
+                <option value="private-repo">{t('skills.private')}</option>
               </select>
             </div>
 
@@ -239,11 +241,11 @@ export default function SkillList({
                 value={sortBy}
                 onChange={(e) => handleSortChange(e.target.value as SortBy)}
                 className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
-                aria-label="Sort by"
-                title="Sort skills"
+                aria-label={t('skills.sort')}
+                title={t('skills.sort')}
               >
-                <option value="name">Name</option>
-                <option value="modified">Date</option>
+                <option value="name">{t('skills.name')}</option>
+                <option value="modified">{t('skills.date')}</option>
               </select>
             </div>
           </div>
@@ -266,8 +268,8 @@ export default function SkillList({
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500">
               {skills.length === 0
-                ? 'No skills found. Create your first skill to get started.'
-                : 'No skills match your search criteria.'}
+                ? t('skills.noSkills')
+                : t('skills.noMatchingSkills')}
             </div>
           </div>
         )}

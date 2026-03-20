@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XMarkIcon } from './icons/XMarkIcon';
 import { ExclamationTriangleIcon } from './icons/ExclamationTriangleIcon';
 import { ArrowPathIcon } from './icons/ArrowPathIcon';
@@ -86,6 +87,7 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
   installProgress,
   installError,
 }) => {
+  const { t } = useTranslation();
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -156,7 +158,7 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
               id="dialog-title"
               className="text-lg font-semibold text-slate-900 dark:text-white"
             >
-              Install Skill
+              {t('install.title')}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {skillName}
@@ -166,7 +168,7 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
             ref={cancelButtonRef}
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary rounded"
-            aria-label="Close dialog"
+            aria-label={t('common.close')}
             disabled={isInstalling}
           >
             <XMarkIcon className="w-6 h-6" />
@@ -177,15 +179,14 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
         <div className="p-6 space-y-4">
           {/* Skill Info */}
           <div className="bg-slate-50 dark:bg-slate-900/50 rounded-md p-3">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Source</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('install.source')}</p>
             <p className="text-sm font-mono text-slate-900 dark:text-white">{source}</p>
           </div>
 
           {/* Installation Info */}
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-md p-3">
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              This skill will be installed to the application's skill directory.
-              You can configure symlink settings after installation.
+              {t('install.installToAppDirectory')} {t('install.configureSymlinkAfter')}
             </p>
           </div>
 
@@ -205,7 +206,7 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
               <div className="flex items-start gap-3">
                 <ExclamationTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-red-800 dark:text-red-200">Installation Failed</p>
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200">{t('install.installationFailed')}</p>
                   <p className="text-sm text-red-600 dark:text-red-400 mt-1">{installError}</p>
                 </div>
               </div>
@@ -220,14 +221,14 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
             disabled={isInstalling}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleInstall}
             disabled={isInstalling}
             className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-600 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary"
           >
-            {isInstalling ? 'Installing...' : 'Install'}
+            {isInstalling ? t('install.installing') : t('install.install')}
           </button>
         </div>
       </div>

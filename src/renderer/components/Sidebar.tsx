@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Configuration } from '../../shared/types';
 
 export type ViewType = 'skills' | 'discover' | 'private-repos';
@@ -22,6 +23,7 @@ export default function Sidebar({
   onSettingsClick,
   config,
 }: SidebarProps): JSX.Element {
+  const { t } = useTranslation();
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
   const [claudeInstalled, setClaudeInstalled] = useState<boolean | null>(null); // null = checking
 
@@ -42,7 +44,7 @@ export default function Sidebar({
   const navItems = [
     {
       id: 'skills' as const,
-      label: 'Local Skills',
+      label: t('sidebar.localSkills'),
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {/* Yellow folder icon for local skills */}
@@ -54,12 +56,12 @@ export default function Sidebar({
           />
         </svg>
       ),
-      description: 'Local Skills',
+      description: t('sidebar.localSkillsDescription'),
       disabled: !config?.projectDirectories || config.projectDirectories.length === 0,
     },
     {
       id: 'discover' as const,
-      label: 'Search on Internet',
+      label: t('sidebar.searchOnInternet'),
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {/* Blue cloud with search icon for internet/discover skills */}
@@ -78,12 +80,12 @@ export default function Sidebar({
           />
         </svg>
       ),
-      description: 'Find public skills on skills.sh',
+      description: t('sidebar.discoverDescription'),
       disabled: !config?.projectDirectories || config.projectDirectories.length === 0,
     },
     {
       id: 'private-repos' as const,
-      label: 'Private Repos',
+      label: t('sidebar.privateRepos'),
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {/* Folder with lock icon for private repositories */}
@@ -101,7 +103,7 @@ export default function Sidebar({
           />
         </svg>
       ),
-      description: 'Manage private repositories',
+      description: t('sidebar.privateReposDescription'),
       disabled: !config?.projectDirectories || config.projectDirectories.length === 0,
     },
   ];
@@ -177,7 +179,7 @@ export default function Sidebar({
           {/* Tooltip */}
           {showTooltip === 'settings' && (
             <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded whitespace-nowrap z-50 shadow-lg animate-fade-in">
-              Settings
+              {t('sidebar.settings')}
             </div>
           )}
         </button>
@@ -222,23 +224,23 @@ export default function Sidebar({
                 : 'bg-slate-800 text-white whitespace-nowrap'
             }`}>
               {claudeInstalled === null ? (
-                'Checking Claude CLI...'
+                t('claudeStatus.checking')
               ) : claudeInstalled ? (
                 <>
-                  <span className="font-medium">Claude CLI installed</span>
-                  <span className="block text-slate-300 mt-0.5">AI features available</span>
+                  <span className="font-medium">{t('claudeStatus.installed')}</span>
+                  <span className="block text-slate-300 mt-0.5">{t('claudeStatus.aiFeaturesAvailable')}</span>
                 </>
               ) : (
                 <>
-                  <span className="font-medium block">Claude CLI not installed</span>
+                  <span className="font-medium block">{t('claudeStatus.notInstalled')}</span>
                   <span className="block text-red-200 mt-1 text-[11px] leading-relaxed">
-                    AI-assisted skill generation and editing features will be unavailable.
+                    {t('claudeStatus.aiFeaturesUnavailable')}
                   </span>
                   <span className="block text-red-200 mt-1.5 text-[11px]">
-                    Install with:
+                    {t('claudeStatus.installWith')}
                   </span>
                   <code className="block bg-red-700/50 px-2 py-1 rounded mt-1 text-[10px] break-all">
-                    npm install -g @anthropic-ai/claude-code
+                    {t('claudeStatus.installCommand')}
                   </code>
                 </>
               )}

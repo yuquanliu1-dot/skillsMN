@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Editor, { OnMount, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor';
@@ -55,6 +56,7 @@ export default function SkillEditor({
   onUploadSkill,
   onCommitChanges,
 }: SkillEditorProps): JSX.Element {
+  const { t } = useTranslation();
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -142,7 +144,7 @@ export default function SkillEditor({
 
         const message = err instanceof Error ? err.message : 'Failed to load skill content';
         console.error('[SkillEditor] Load error:', err);
-        setError(`Failed to load skill: ${message}`);
+        setError(t('editor.failedToLoad', { error: message }));
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -369,10 +371,10 @@ export default function SkillEditor({
 
       // Check for external modification error
       if (err?.code === 'EXTERNAL_MODIFICATION') {
-        setError('File has been modified externally. Please reload or overwrite.');
+        setError(t('editor.fileModifiedExternally'));
         // TODO: Show external change dialog (T083)
       } else {
-        setError(message);
+        setError(t('editor.failedToSave'));
       }
 
       setAutoSaveStatus('idle');
@@ -714,7 +716,7 @@ export default function SkillEditor({
             <div className="flex items-center gap-2 text-sm text-gray-500">
               {/* Source badge based on sourceMetadata.type */}
               {skill.sourceMetadata?.type === 'local' && (
-                <span className="badge badge-local">Local</span>
+                <span className="badge badge-local">{t('skillCard.local')}</span>
               )}
               {skill.sourceMetadata?.type === 'registry' && (
                 <span className="badge badge-registry" title={`From ${skill.sourceMetadata.source}`}>
@@ -723,7 +725,7 @@ export default function SkillEditor({
               )}
               {skill.sourceMetadata?.type === 'private-repo' && (
                 <span className="badge badge-private" title={`From ${skill.sourceMetadata.repoPath}`}>
-                  Private
+                  {t('skillCard.private')}
                 </span>
               )}
               {hasUnsavedChanges && (
@@ -735,7 +737,7 @@ export default function SkillEditor({
                       clipRule="evenodd"
                     />
                   </svg>
-                  {autoSaveStatus === 'pending' ? 'Auto-saving in 2s...' : autoSaveStatus === 'saving' ? 'Auto-saving...' : 'Unsaved'}
+                  {autoSaveStatus === 'pending' ? t('editor.autoSavingIn', { seconds: 2 }) : autoSaveStatus === 'saving' ? t('editor.autoSaving') : t('editor.unsaved')}
                 </span>
               )}
             </div>
@@ -753,7 +755,7 @@ export default function SkillEditor({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z" />
               </svg>
-              AI Assistant
+              {t('editor.aiAssistant')}
             </button>
           )}
 
@@ -764,7 +766,7 @@ export default function SkillEditor({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              Preview Mode
+              {t('editor.previewMode')}
             </span>
           )}
 
@@ -773,12 +775,12 @@ export default function SkillEditor({
             <button
               onClick={() => onUploadSkill(skill)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
-              title="Upload this skill to a private repository"
+              title={t('skillCard.uploadToPrivateRepo')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
-              Upload
+              {t('editor.upload')}
             </button>
           )}
 
@@ -787,12 +789,12 @@ export default function SkillEditor({
             <button
               onClick={() => onCommitChanges(skill)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-              title="Commit your changes to the repository"
+              title={t('commit.description')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              Commit Changes
+              {t('editor.commitChanges')}
             </button>
           )}
         </div>
@@ -839,7 +841,7 @@ export default function SkillEditor({
                 />
               </svg>
               <p className="text-sm text-yellow-700">
-                This file has been modified externally. You have unsaved changes.
+                {t('editor.externalChangeDetected')}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -860,13 +862,13 @@ export default function SkillEditor({
                 }}
                 className="px-3 py-1.5 text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded transition-colors cursor-pointer"
               >
-                Reload
+                {t('editor.reload')}
               </button>
               <button
                 onClick={() => setExternalChangeDetected(false)}
                 className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors cursor-pointer"
               >
-                Keep Changes
+                {t('editor.keepChanges')}
               </button>
             </div>
           </div>
@@ -888,7 +890,7 @@ export default function SkillEditor({
         <div className="flex-1 flex items-center justify-center bg-white">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <div className="text-gray-600">Loading skill content...</div>
+            <div className="text-gray-600">{t('editor.loadingContent')}</div>
           </div>
         </div>
       )}
@@ -930,7 +932,7 @@ export default function SkillEditor({
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
             <span>+</span>
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">S</kbd>
-            <span>Save</span>
+            <span>{t('editor.save')}</span>
           </span>
           <span className="flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
@@ -938,7 +940,7 @@ export default function SkillEditor({
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Alt</kbd>
             <span>+</span>
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">R</kbd>
-            <span>AI Rewrite</span>
+            <span>{t('editor.aiRewrite')}</span>
           </span>
           <span className="flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
@@ -946,11 +948,11 @@ export default function SkillEditor({
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Alt</kbd>
             <span>+</span>
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">I</kbd>
-            <span>AI Insert</span>
+            <span>{t('editor.aiInsert')}</span>
           </span>
         </div>
         <div>
-          Modified: {new Date(skill.lastModified).toLocaleString()}
+          {t('editor.modified')}: {new Date(skill.lastModified).toLocaleString()}
         </div>
       </div>
 

@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Skill, VersionComparison } from '../../shared/types';
 
 interface SkillCardProps {
@@ -31,6 +32,7 @@ export default function SkillCard({
   onUpdate,
   onUpload,
 }: SkillCardProps): JSX.Element {
+  const { t } = useTranslation();
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [createBackup, setCreateBackup] = useState(true);
@@ -159,17 +161,17 @@ export default function SkillCard({
               {/* Source Type Badge */}
               {skill.sourceMetadata?.type === 'local' && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0" title="Created locally">
-                  Local
+                  {t('skillCard.local')}
                 </span>
               )}
               {skill.sourceMetadata?.type === 'registry' && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 flex-shrink-0 border-0" title={`From ${skill.sourceMetadata.source}`}>
-                  Registry
+                  {t('skillCard.registry')}
                 </span>
               )}
               {skill.sourceMetadata?.type === 'private-repo' && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex-shrink-0 border-0" title={`From ${skill.sourceMetadata.repoPath}`}>
-                  Private
+                  {t('skillCard.private')}
                 </span>
               )}
 
@@ -183,14 +185,14 @@ export default function SkillCard({
               {/* Update Badge */}
               {hasUpdate && updateProgress !== 'success' && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex-shrink-0 border-0 animate-pulse">
-                  Update
+                  {t('skillCard.update')}
                 </span>
               )}
 
               {/* Upload Badge (for private repo skills with newer local version) */}
               {canUpload && uploadProgress !== 'success' && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex-shrink-0 border-0 animate-pulse">
-                  Upload
+                  {t('skillCard.upload')}
                 </span>
               )}
 
@@ -212,7 +214,7 @@ export default function SkillCard({
                 disabled={updateProgress === 'updating'}
                 className="btn text-xs px-3 py-1 bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700 disabled:opacity-50"
               >
-                {updateProgress === 'updating' ? '...' : 'Update'}
+                {updateProgress === 'updating' ? '...' : t('skillCard.update')}
               </button>
             )}
 
@@ -223,7 +225,7 @@ export default function SkillCard({
                 disabled={uploadProgress === 'uploading'}
                 className="btn text-xs px-3 py-1 bg-purple-600 dark:bg-purple-600 text-white hover:bg-purple-700 dark:hover:bg-purple-700 disabled:opacity-50"
               >
-                {uploadProgress === 'uploading' ? '...' : 'Upload'}
+                {uploadProgress === 'uploading' ? '...' : t('skillCard.upload')}
               </button>
             )}
 
@@ -232,7 +234,7 @@ export default function SkillCard({
               <button
                 onClick={handleOpenFolder}
                 className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                aria-label="Open folder"
+                aria-label={t('skillCard.openFolder')}
               >
                 <svg className="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -246,7 +248,7 @@ export default function SkillCard({
                 data-testid="delete-button"
                 onClick={handleDelete}
                 className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                aria-label="Delete"
+                aria-label={t('skillCard.delete')}
               >
                 <svg className="w-4 h-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -325,11 +327,11 @@ export default function SkillCard({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-xl">
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Update Skill</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('skillCard.updateSkill')}</h3>
               <button
                 onClick={() => setShowUpdateDialog(false)}
                 className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                aria-label="Close dialog"
+                aria-label={t('common.close')}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -344,19 +346,19 @@ export default function SkillCard({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <div className="flex-1">
-                    <p className="font-medium">This will replace the current skill</p>
-                    <p className="text-xs mt-1">Any local modifications will be overwritten.</p>
+                    <p className="font-medium">{t('skillCard.updateWarning')}</p>
+                    <p className="text-xs mt-1">{t('skillCard.localModificationsOverwritten')}</p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Skill Name</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('skills.skillName')}</label>
                 <div className="text-slate-900 dark:text-slate-100">{skill.name}</div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Install Location</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('skills.location')}</label>
                 <div className="text-slate-900 dark:text-slate-100 text-sm font-mono">{skill.path}</div>
               </div>
 
@@ -368,9 +370,9 @@ export default function SkillCard({
                   className="w-4 h-4 text-blue-600 mt-0.5"
                 />
                 <div className="flex-1">
-                  <div className="text-slate-900 dark:text-slate-100 font-medium">Create backup before update</div>
+                  <div className="text-slate-900 dark:text-slate-100 font-medium">{t('skillCard.createBackup')}</div>
                   <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                    Saves a copy with a timestamp suffix
+                    {t('skillCard.backupDescription')}
                   </div>
                 </div>
               </label>
@@ -381,13 +383,13 @@ export default function SkillCard({
                 onClick={() => setShowUpdateDialog(false)}
                 className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleConfirmUpdate}
                 className="px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors"
               >
-                Update Skill
+                {t('skillCard.updateSkill')}
               </button>
             </div>
           </div>
@@ -399,11 +401,11 @@ export default function SkillCard({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-xl">
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Upload Skill</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('skillCard.uploadSkill')}</h3>
               <button
                 onClick={() => setShowUploadDialog(false)}
                 className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                aria-label="Close dialog"
+                aria-label={t('common.close')}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -418,21 +420,21 @@ export default function SkillCard({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <div className="flex-1">
-                    <p className="font-medium">Upload to private repository</p>
+                    <p className="font-medium">{t('skillCard.uploadToPrivateRepo')}</p>
                     <p className="text-xs mt-1">
-                      Local version ({skill.version || 'unknown'}) is newer than remote version ({versionStatus?.remoteVersion || 'unknown'}).
+                      {t('skillCard.localVersionNewer', { local: skill.version || 'unknown', remote: versionStatus?.remoteVersion || 'unknown' })}
                     </p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Skill Name</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('skills.skillName')}</label>
                 <div className="text-slate-900 dark:text-slate-100">{skill.name}</div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Version</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('skillCard.version')}</label>
                 <div className="text-slate-900 dark:text-slate-100">
                   Local: {skill.version || 'unknown'} → Remote: {versionStatus?.remoteVersion || 'unknown'}
                 </div>
@@ -440,7 +442,7 @@ export default function SkillCard({
 
               {skill.sourceMetadata?.type === 'private-repo' && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Target Repository</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('skillCard.targetRepository')}</label>
                   <div className="text-slate-900 dark:text-slate-100 text-sm font-mono">
                     {skill.sourceMetadata.repoPath}/{skill.sourceMetadata.skillPath}
                   </div>
@@ -459,14 +461,14 @@ export default function SkillCard({
                 onClick={() => setShowUploadDialog(false)}
                 className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleConfirmUpload}
                 disabled={uploadProgress === 'uploading'}
                 className="px-4 py-2 bg-purple-600 dark:bg-purple-600 text-white rounded hover:bg-purple-700 dark:hover:bg-purple-700 transition-colors disabled:opacity-50"
               >
-                {uploadProgress === 'uploading' ? 'Uploading...' : 'Upload Skill'}
+                {uploadProgress === 'uploading' ? t('common.uploading') : t('skillCard.uploadSkill')}
               </button>
             </div>
           </div>

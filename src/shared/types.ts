@@ -213,6 +213,11 @@ export interface SkillEditorConfig {
 }
 
 /**
+ * Supported language codes
+ */
+export type LanguageCode = 'en' | 'zh-CN';
+
+/**
  * Base configuration (project settings, editor preferences)
  */
 export interface BaseConfiguration {
@@ -232,6 +237,8 @@ export interface BaseConfiguration {
   migrationCompleted?: boolean;
   /** Whether user has been asked about migration preference */
   migrationPreferenceAsked?: boolean;
+  /** UI language preference */
+  language?: LanguageCode;
 }
 
 /**

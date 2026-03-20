@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PrivateRepo, PrivateSkill } from '../../shared/types';
 import PrivateSkillCard from './PrivateSkillCard';
 
@@ -44,6 +45,7 @@ function logPerformance(operation: string, startTime: number, targetMs: number =
 }
 
 export default function PrivateRepoList({ onInstallSkill, onSkillClick }: PrivateRepoListProps): JSX.Element {
+  const { t } = useTranslation();
   const [repositories, setRepositories] = useState<PrivateRepo[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
   const [skills, setSkills] = useState<PrivateSkill[]>([]);
@@ -272,9 +274,9 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
             d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-slate-300">No repositories configured</h3>
+        <h3 className="mt-2 text-sm font-medium text-slate-300">{t('privateRepos.noRepositories')}</h3>
         <p className="mt-1 text-sm text-slate-500">
-          Add a private repository in Settings to get started.
+          {t('privateRepos.addInSettings')}
         </p>
       </div>
     );
@@ -286,7 +288,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
       <div className="border-b border-gray-200 p-4 space-y-3 flex-shrink-0 bg-white">
         {/* Title */}
         <h2 className="text-lg font-semibold text-gray-900">
-          Private Repositories
+          {t('privateRepos.title')}
         </h2>
 
         {/* Top row: Search + Refresh button */}
@@ -295,7 +297,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Search skills..."
+              placeholder={t('privateRepos.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -347,7 +349,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
           {/* Repository selector */}
           <div className="flex items-center gap-2 flex-1">
             <label htmlFor="repo-select" className="text-sm text-gray-700 whitespace-nowrap">
-              Repository:
+              {t('privateRepos.repository')}
             </label>
             <select
               id="repo-select"
@@ -370,7 +372,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
           {selectedRepoId && skills.length > 0 && (
             <>
               <span className="text-xs text-gray-500">
-                {skills.length} skills
+                {t('privateRepos.skillsCount', { count: skills.length })}
               </span>
 
               <div className="flex items-center gap-1 ml-auto">
@@ -469,7 +471,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Skills</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('privateRepos.errorLoadingSkills')}</h3>
             <p className="text-sm text-gray-600 text-center max-w-md mb-4">{error}</p>
             {isAuthError && (
               <p className="text-xs text-red-600 text-center mb-4">
@@ -509,12 +511,12 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {searchQuery ? 'No skills found' : 'No skills available'}
+              {searchQuery ? t('privateRepos.noSkillsFound') : t('privateRepos.noSkillsAvailable')}
             </h3>
             <p className="text-sm text-gray-600 text-center max-w-md">
               {searchQuery
-                ? `No results for "${searchQuery}". Try a different search term.`
-                : 'This repository does not contain any skill directories'}
+                ? t('discover.noResultsFor', { query: searchQuery })
+                : t('privateRepos.noSkillsInRepo')}
             </p>
           </div>
         ) : (
@@ -540,7 +542,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
                   className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                   aria-label={`Load more skills (${sortedSkills.length - visibleCount} remaining)`}
                 >
-                  Load More ({sortedSkills.length - visibleCount} remaining)
+                  {t('privateRepos.loadMore', { count: sortedSkills.length - visibleCount })}
                 </button>
               </div>
             )}
@@ -548,7 +550,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
             {/* Skills Count Indicator */}
             {sortedSkills.length > 50 && (
               <div className="mt-2 text-center text-xs text-gray-500">
-                Showing {Math.min(visibleCount, sortedSkills.length)} of {sortedSkills.length} skills
+                {t('privateRepos.showingOf', { visible: Math.min(visibleCount, sortedSkills.length), total: sortedSkills.length })}
               </div>
             )}
           </>

@@ -6,6 +6,37 @@
   "author": "skillsMN Team",
   "license": "MIT",
   "private": true,
+  "build": {
+    "appId": "com.skillsmn.app",
+    "productName": "SkillsMN",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "nodeGypRebuild": false,
+    "npmRebuild": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SkillsMN"
+    }
+  },
   "scripts": {
     "start": "electron .",
     "dev": "concurrently -k \"cross-env BROWSER=none npm run dev:renderer\" \"npm run dev:main\" \"cross-env NODE_ENV=development electron .\"",
@@ -50,13 +81,15 @@
     "@monaco-editor/react": "^4.6.0",
     "@parcel/watcher": "^2.5.6",
     "chokidar": "^3.6.0",
-    "electron": "^28.0.0",
     "electron-store": "^8.0.0",
     "gray-matter": "^4.0.3",
+    "i18next": "^25.8.20",
+    "i18next-browser-languagedetector": "^8.2.1",
     "monaco-editor": "^0.55.1",
     "node-fetch": "^2.7.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-i18next": "^16.5.8",
     "react-window": "^1.8.11",
     "trash": "^6.1.1",
     "uuid": "^9.0.1"
@@ -78,6 +111,8 @@
     "autoprefixer": "^10.4.16",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
+    "electron": "^28.0.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",

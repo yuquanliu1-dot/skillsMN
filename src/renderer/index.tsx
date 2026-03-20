@@ -8,6 +8,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles/index.css';
+import './i18n'; // Initialize i18n before the app loads
 
 console.log('[Renderer] Starting renderer process...');
 console.log('[Renderer] Document ready state:', document.readyState);

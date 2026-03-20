@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Skill } from '../../shared/types';
 
 interface DeleteConfirmDialogProps {
@@ -20,6 +21,7 @@ export default function DeleteConfirmDialog({
   onClose,
   onConfirm,
 }: DeleteConfirmDialogProps): JSX.Element | null {
+  const { t } = useTranslation();
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -128,10 +130,10 @@ export default function DeleteConfirmDialog({
                 id="delete-dialog-title"
                 className="text-lg font-semibold text-slate-900 dark:text-white"
               >
-                Delete Skill
+                {t('delete.title')}
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                This action cannot be undone easily
+                {t('delete.cannotBeUndone')}
               </p>
             </div>
           </div>
@@ -157,7 +159,7 @@ export default function DeleteConfirmDialog({
         <div className="p-6 space-y-4">
           {/* Skill name */}
           <p className="text-slate-600 dark:text-slate-300">
-            Are you sure you want to delete{' '}
+            {t('delete.confirmDelete')}{' '}
             <span className="font-semibold text-slate-900 dark:text-white">{skill.name}</span>?
           </p>
 
@@ -179,10 +181,10 @@ export default function DeleteConfirmDialog({
               </svg>
               <div className="text-sm">
                 <p className="font-medium text-amber-800 dark:text-amber-200">
-                  Moved to Recycle Bin
+                  {t('delete.movedToRecycleBin')}
                 </p>
                 <p className="text-amber-700 dark:text-amber-300 mt-1">
-                  The skill will be moved to your system recycle bin. You can restore it from there if needed.
+                  {t('delete.recycleBinDescription')}
                 </p>
               </div>
             </div>
@@ -192,9 +194,9 @@ export default function DeleteConfirmDialog({
           <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 space-y-3">
             {/* Source badge */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Source:</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">{t('delete.source')}</span>
               {skill.sourceMetadata?.type === 'local' && (
-                <span className="badge badge-local">Local</span>
+                <span className="badge badge-local">{t('skillCard.local')}</span>
               )}
               {skill.sourceMetadata?.type === 'registry' && (
                 <span
@@ -209,7 +211,7 @@ export default function DeleteConfirmDialog({
                   className="badge badge-private"
                   title={`From ${skill.sourceMetadata.repoPath}`}
                 >
-                  Private
+                  {t('skillCard.private')}
                 </span>
               )}
             </div>
@@ -226,8 +228,7 @@ export default function DeleteConfirmDialog({
                   />
                 </svg>
                 <span>
-                  <strong>{skill.resourceCount}</strong>{' '}
-                  {skill.resourceCount === 1 ? 'resource' : 'resources'} will be deleted
+                  {t('delete.resourcesWillBeDeleted', { count: skill.resourceCount })}
                 </span>
               </div>
             )}
@@ -252,7 +253,7 @@ export default function DeleteConfirmDialog({
                 </svg>
                 <div>
                   <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                    Deletion Failed
+                    {t('delete.deletionFailed')}
                   </p>
                   <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
                 </div>
@@ -269,7 +270,7 @@ export default function DeleteConfirmDialog({
             disabled={isDeleting}
             className="btn btn-secondary"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             data-testid="confirm-delete-button"
@@ -298,7 +299,7 @@ export default function DeleteConfirmDialog({
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                Deleting...
+                {t('common.deleting')}
               </>
             ) : (
               <>
@@ -310,7 +311,7 @@ export default function DeleteConfirmDialog({
                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                   />
                 </svg>
-                Delete
+                {t('common.delete')}
               </>
             )}
           </button>

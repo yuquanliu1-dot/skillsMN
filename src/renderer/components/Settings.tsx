@@ -5,7 +5,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Configuration, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig } from '../../shared/types';
+import { changeLanguage, availableLanguages, getCurrentLanguage } from '../i18n';
+import type { LanguageCode } from '../../shared/types';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -15,6 +18,7 @@ interface SettingsProps {
 }
 
 export default function Settings({ isOpen, onClose, config, onSave }: SettingsProps): JSX.Element | null {
+  const { t } = useTranslation();
   console.log('[Settings] Component rendering', { isOpen, activeTab: undefined });
 
   const [editorDefaultMode, setEditorDefaultMode] = useState<EditorMode>('edit');
@@ -22,6 +26,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [currentLanguage, setCurrentLanguage] = useState<LanguageCode>('en');
 
   // Project Directories State
   const [projectDirectories, setProjectDirectories] = useState<string[]>([]);
@@ -79,6 +84,9 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
       if (config.skillEditor) {
         setSkillEditorConfig(config.skillEditor);
       }
+
+      // Load current language
+      setCurrentLanguage(getCurrentLanguage());
 
       setError(null);
       setSuccess(null);
@@ -179,6 +187,24 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
       const message = err instanceof Error ? err.message : 'Failed to remove directory';
       setError(message);
       console.error('Remove directory error:', err);
+    }
+  };
+
+  /**
+   * Handle language change
+   */
+  const handleLanguageChange = async (languageCode: LanguageCode) => {
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await changeLanguage(languageCode);
+      setCurrentLanguage(languageCode);
+      setSuccess(t('settings.languageChanged'));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to change language';
+      setError(message);
+      console.error('Language change error:', err);
     }
   };
 
@@ -532,14 +558,14 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-slate-900">Settings</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t('settings.title')}</h2>
           </div>
           <button
             data-testid="close-settings-button"
             onClick={onClose}
             disabled={isSaving}
             className="text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
-            aria-label="Close dialog"
+            aria-label={t('common.close')}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -566,7 +592,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   : 'text-slate-600 hover:text-slate-800'
               }`}
             >
-              General
+              {t('settings.general')}
             </button>
             <button
               onClick={() => {
@@ -579,7 +605,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   : 'text-slate-600 hover:text-slate-800'
               }`}
             >
-              Skill View
+              {t('settings.skillView')}
             </button>
             <button
               onClick={() => {
@@ -592,7 +618,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   : 'text-slate-600 hover:text-slate-800'
               }`}
             >
-              Private Repositories
+              {t('settings.privateRepositories')}
             </button>
             <button
               onClick={() => {
@@ -605,7 +631,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   : 'text-slate-600 hover:text-slate-800'
               }`}
             >
-              AI Configuration
+              {t('settings.aiConfiguration')}
             </button>
           </div>
         </div>
@@ -616,7 +642,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-slate-700">
-                Skills Storage Directories
+                {t('settings.directories')}
               </label>
               <button
                 type="button"
@@ -630,20 +656,20 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Adding...
+                    {t('settings.adding')}
                   </>
                 ) : (
                   <>
                     <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Add Directory
+                    {t('settings.addDirectory')}
                   </>
                 )}
               </button>
             </div>
             <p className="text-xs text-slate-500 mb-3">
-              These directories will be used to store and link your skills. Skills can be linked to any configured directory.
+              {t('settings.directoriesDescription')}
             </p>
 
             {/* Tip for project skills directory */}
@@ -652,14 +678,14 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>
-                <strong>Tip:</strong> For project-level skills, the directory name is typically <code className="bg-blue-100 px-1 rounded font-mono">skills</code> (e.g., <code className="bg-blue-100 px-1 rounded font-mono">/path/to/project/skills</code>)
+                <strong>{t('settings.quickTip')}</strong> {t('settings.tipProjectSkills')} <code className="bg-blue-100 px-1 rounded font-mono">skills</code> (e.g., <code className="bg-blue-100 px-1 rounded font-mono">/path/to/project/skills</code>)
               </span>
             </div>
 
             {/* Directory List */}
             {projectDirectories.length === 0 ? (
               <p className="text-sm text-slate-500 italic">
-                No skills directories configured. Add a directory to store and link your skills.
+                {t('settings.noDirectories')}
               </p>
             ) : (
               <div className="space-y-2">
@@ -693,7 +719,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
               htmlFor="editor-default-mode"
               className="block text-sm font-medium text-slate-700 mb-1.5"
             >
-              Editor Default Mode
+              {t('settings.editorDefaultMode')}
             </label>
             <select
               id="editor-default-mode"
@@ -702,8 +728,8 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
               className="select w-full"
               disabled={isSaving}
             >
-              <option value="edit">Edit Mode</option>
-              <option value="preview">Preview Mode</option>
+              <option value="edit">{t('settings.editMode')}</option>
+              <option value="preview">{t('settings.previewMode')}</option>
             </select>
           </div>
 
@@ -718,50 +744,77 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
                 disabled={isSaving}
               />
-              <span className="text-sm text-slate-700">Auto-refresh skill list on file changes</span>
+              <span className="text-sm text-slate-700">{t('settings.autoRefresh')}</span>
             </label>
+          </div>
+
+          {/* Language Selection */}
+          <div className="mb-4">
+            <label
+              htmlFor="language-select"
+              className="block text-sm font-medium text-slate-700 mb-1.5"
+            >
+              {t('settings.language')}
+            </label>
+            <p className="text-xs text-slate-500 mb-2">
+              {t('settings.languageDescription')}
+            </p>
+            <select
+              id="language-select"
+              data-testid="language-select"
+              value={currentLanguage}
+              onChange={(e) => handleLanguageChange(e.target.value as LanguageCode)}
+              className="select w-full"
+              disabled={isSaving}
+            >
+              {availableLanguages.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.nativeName}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Keyboard Shortcuts */}
           <div className="pt-4 border-t border-slate-200">
-            <h3 className="text-sm font-medium text-slate-700 mb-2.5">Keyboard Shortcuts</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-2.5">{t('settings.keyboardShortcuts')}</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
               {/* General Shortcuts */}
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">Create new skill</span>
+                <span className="text-slate-600">{t('settings.createNewSkill')}</span>
                 <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+N</kbd>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">Refresh skill list</span>
+                <span className="text-slate-600">{t('settings.refreshSkillList')}</span>
                 <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+R</kbd>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">Save skill</span>
+                <span className="text-slate-600">{t('settings.saveSkill')}</span>
                 <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+S</kbd>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">Close editor</span>
+                <span className="text-slate-600">{t('settings.closeEditor')}</span>
                 <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+W</kbd>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">Delete skill</span>
+                <span className="text-slate-600">{t('settings.deleteSkill')}</span>
                 <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Delete</kbd>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">Close dialog</span>
+                <span className="text-slate-600">{t('settings.closeDialog')}</span>
                 <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Esc</kbd>
               </div>
 
               {/* AI Shortcuts */}
               <div className="col-span-2 pt-2 mt-2 border-t border-slate-100">
-                <div className="text-xs font-medium text-slate-500 mb-2">AI Shortcuts (in editor)</div>
+                <div className="text-xs font-medium text-slate-500 mb-2">{t('settings.aiShortcuts')}</div>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">AI Rewrite</span>
+                <span className="text-slate-600">{t('settings.aiRewrite')}</span>
                 <kbd className="px-2 py-0.5 bg-purple-50 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+R</kbd>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">AI Insert</span>
+                <span className="text-slate-600">{t('settings.aiInsert')}</span>
                 <kbd className="px-2 py-0.5 bg-purple-50 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+I</kbd>
               </div>
             </div>
@@ -819,14 +872,14 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
               disabled={isSaving}
               className="btn btn-secondary"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={isSaving}
               className="btn btn-primary"
             >
-              {isSaving ? 'Saving...' : 'Save Settings'}
+              {isSaving ? t('common.saving') : t('settings.settingsSaved')}
             </button>
           </div>
         </form>
@@ -837,14 +890,14 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
             {/* Skill Editor Configuration */}
             <div>
               <h3 className="text-sm font-medium text-slate-700 mb-3 border-b border-slate-200 pb-2">
-                Skill Editor
+                {t('settings.skillEditor')}
               </h3>
               <div className="space-y-3">
                 {/* Font Size and Theme - Side by side */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Font Size
+                      {t('settings.fontSize')}
                     </label>
                     <select
                       data-testid="editor-font-size"
@@ -868,7 +921,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Theme
+                      {t('settings.theme')}
                     </label>
                     <select
                       value={skillEditorConfig.theme}
@@ -876,8 +929,8 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       className="select w-full"
                       disabled={isSaving}
                     >
-                      <option value="light">Light</option>
-                      <option value="dark">Dark</option>
+                      <option value="light">{t('settings.light')}</option>
+                      <option value="dark">{t('settings.dark')}</option>
                     </select>
                   </div>
                 </div>
@@ -886,7 +939,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Tab Size
+                      {t('settings.tabSize')}
                     </label>
                     <input
                       data-testid="tab-size"
@@ -903,7 +956,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Line Numbers
+                      {t('settings.lineNumbers')}
                     </label>
                     <select
                       value={skillEditorConfig.lineNumbers}
@@ -911,9 +964,9 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       className="select w-full"
                       disabled={isSaving}
                     >
-                      <option value="on">On</option>
-                      <option value="off">Off</option>
-                      <option value="relative">Relative</option>
+                      <option value="on">{t('settings.on')}</option>
+                      <option value="off">{t('settings.off')}</option>
+                      <option value="relative">{t('settings.relative')}</option>
                     </select>
                   </div>
                 </div>
@@ -921,7 +974,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 {/* Font Family */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Font Family
+                    {t('settings.fontFamily')}
                   </label>
                   <select
                     value={skillEditorConfig.fontFamily}
@@ -939,7 +992,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     <option value="'Courier New', monospace">Courier New (Universal)</option>
                   </select>
                   <p className="text-xs text-slate-500 mt-1">
-                    Select a monospace font for code editing
+                    {t('settings.selectMonospaceFont')}
                   </p>
                 </div>
 
@@ -953,13 +1006,13 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
                       disabled={isSaving}
                     />
-                    <span className="text-sm text-slate-700">Enable auto-save</span>
+                    <span className="text-sm text-slate-700">{t('settings.enableAutoSave')}</span>
                   </label>
 
                   {skillEditorConfig.autoSaveEnabled && (
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Auto-save Delay (ms)
+                        {t('settings.autoSaveDelay')}
                       </label>
                       <input
                         type="number"
@@ -987,7 +1040,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
                       disabled={isSaving}
                     />
-                    <span className="text-sm text-slate-700">Show minimap</span>
+                    <span className="text-sm text-slate-700">{t('settings.showMinimap')}</span>
                   </label>
 
                   <label className="flex items-center gap-2.5 cursor-pointer">
@@ -999,7 +1052,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
                       disabled={isSaving}
                     />
-                    <span className="text-sm text-slate-700">Enable word wrap</span>
+                    <span className="text-sm text-slate-700">{t('settings.enableWordWrap')}</span>
                   </label>
                 </div>
               </div>
@@ -1057,7 +1110,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 disabled={isSaving}
                 className="btn btn-secondary"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -1069,7 +1122,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     await onSave({
                       skillEditor: skillEditorConfig,
                     });
-                    setSuccess('Skill editor settings saved successfully');
+                    setSuccess(t('settings.skillEditorSettingsSaved'));
                     setTimeout(() => {
                       onClose();
                     }, 1000);
@@ -1084,7 +1137,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 disabled={isSaving}
                 className="btn btn-primary"
               >
-                {isSaving ? 'Saving...' : 'Save Settings'}
+                {isSaving ? t('common.saving') : t('settings.settingsSaved')}
               </button>
             </div>
           </div>
@@ -1103,20 +1156,20 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                 <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add Repository
+                {t('settings.addRepository')}
               </button>
             </div>
 
             {/* Add Repository Form */}
             {showAddRepoForm && (
               <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <h3 className="text-sm font-medium text-slate-700 mb-3">Add Private Repository</h3>
+                <h3 className="text-sm font-medium text-slate-700 mb-3">{t('settings.addPrivateRepository')}</h3>
                 <form onSubmit={handleAddRepo}>
                   <div className="space-y-3">
                     {/* Provider Selection */}
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Provider
+                        {t('settings.provider')}
                       </label>
                       <select
                         value={newRepoProvider}
@@ -1133,18 +1186,18 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     {newRepoProvider === 'gitlab' && (
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                          GitLab Instance URL (optional)
+                          {t('settings.gitlabInstanceUrl')}
                         </label>
                         <input
                           type="text"
                           value={newRepoInstanceUrl}
                           onChange={(e) => setNewRepoInstanceUrl(e.target.value)}
-                          placeholder="https://gitlab.company.com (leave empty for GitLab.com)"
+                          placeholder={t('settings.gitlabInstanceUrlPlaceholder')}
                           className="input w-full text-sm"
                           disabled={isAddingRepo}
                         />
                         <p className="text-xs text-slate-500 mt-1">
-                          Leave empty for GitLab.com, or enter your self-hosted GitLab URL
+                          {t('settings.gitlabInstanceUrlHint')}
                         </p>
                       </div>
                     )}
@@ -1152,7 +1205,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     {/* Repository URL */}
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Repository URL
+                        {t('settings.repositoryUrl')}
                       </label>
                       <input
                         type="text"
@@ -1180,7 +1233,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       {/* Personal Access Token */}
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                          Personal Access Token
+                          {t('settings.personalAccessToken')}
                         </label>
                         <input
                           type="password"
@@ -1193,15 +1246,15 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                         />
                         <p className="text-xs text-slate-500 mt-1">
                           {newRepoProvider === 'github'
-                            ? 'GitHub PAT with "repo" scope'
-                            : 'GitLab PAT with "read_api" scope'}
+                            ? t('settings.githubPatScope')
+                            : t('settings.gitlabPatScope')}
                         </p>
                       </div>
 
                       {/* Display Name */}
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                          Display Name
+                          {t('settings.displayNameOptional')}
                         </label>
                         <input
                           type="text"
@@ -1226,14 +1279,14 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       className="btn btn-secondary btn-sm"
                       disabled={isAddingRepo}
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                     <button
                       type="submit"
                       className="btn btn-primary btn-sm"
                       disabled={isAddingRepo || !newRepoUrl || !newRepoPAT}
                     >
-                      {isAddingRepo ? 'Adding...' : 'Add'}
+                      {isAddingRepo ? t('common.adding') : t('common.create')}
                     </button>
                   </div>
                 </form>
@@ -1304,7 +1357,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
                   />
                 </svg>
-                <p className="mt-2 text-sm text-slate-600">No repositories configured</p>
+                <p className="mt-2 text-sm text-slate-600">{t('settings.noRepositories')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -1316,11 +1369,11 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     {editingRepoId === repo.id ? (
                       // Edit Form
                       <div className="space-y-2.5">
-                        <h4 className="text-sm font-medium text-slate-900">Edit Repository</h4>
+                        <h4 className="text-sm font-medium text-slate-900">{t('settings.editRepository')}</h4>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="block text-xs font-medium text-slate-700 mb-1">
-                              Display Name
+                              {t('settings.displayName')}
                             </label>
                             <input
                               type="text"
@@ -1333,13 +1386,13 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-slate-700 mb-1">
-                              New PAT
+                              {t('settings.newPat')}
                             </label>
                             <input
                               type="password"
                               value={editPAT}
                               onChange={(e) => setEditPAT(e.target.value)}
-                              placeholder="Leave empty to keep"
+                              placeholder={t('settings.leaveEmptyToKeep')}
                               className="input w-full text-sm"
                               disabled={isUpdatingRepo}
                             />
@@ -1351,14 +1404,14 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                             disabled={isUpdatingRepo}
                             className="btn btn-primary btn-sm"
                           >
-                            {isUpdatingRepo ? 'Saving...' : 'Save'}
+                            {isUpdatingRepo ? t('common.saving') : t('common.save')}
                           </button>
                           <button
                             onClick={handleCancelEdit}
                             disabled={isUpdatingRepo}
                             className="btn btn-secondary btn-sm"
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </button>
                         </div>
                       </div>
@@ -1411,27 +1464,27 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                             onClick={() => handleTestRepo(repo.id)}
                             disabled={testingRepoId === repo.id}
                             className="btn btn-secondary btn-sm"
-                            title="Test connection"
+                            title={t('settings.testConnection')}
                           >
                             {testingRepoId === repo.id ? (
                               <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-slate-600"></div>
                             ) : (
-                              'Test'
+                              t('settings.testConnection')
                             )}
                           </button>
                           <button
                             onClick={() => handleStartEditRepo(repo)}
                             className="btn btn-secondary btn-sm"
-                            title="Edit repository"
+                            title={t('settings.editRepository')}
                           >
-                            Edit
+                            {t('common.edit')}
                           </button>
                           <button
                             onClick={() => handleRemoveRepo(repo.id)}
                             className="btn btn-secondary btn-sm text-red-600 hover:text-red-700"
-                            title="Remove repository"
+                            title={t('settings.removeRepository')}
                           >
-                            Remove
+                            {t('settings.removeRepository')}
                           </button>
                         </div>
                       </div>
@@ -1456,12 +1509,12 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
               <div className="space-y-4">
                 {/* API Configuration Group */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">API Configuration</h3>
+                  <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">{t('settings.apiConfiguration')}</h3>
 
                   {/* API Key - Full width */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      API Key
+                      {t('settings.apiKey')}
                     </label>
                     <input
                       data-testid="ai-api-key"
@@ -1478,7 +1531,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Base URL
+                        {t('settings.baseUrl')}
                       </label>
                       <input
                         type="text"
@@ -1491,7 +1544,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Model
+                        {t('settings.model')}
                       </label>
                       <input
                         type="text"
@@ -1507,13 +1560,13 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
 
                 {/* Request Settings Group */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">Request Settings</h3>
+                  <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">{t('settings.requestSettings')}</h3>
 
                   {/* Timeout and Retries - Side by side */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Timeout (ms)
+                        {t('settings.timeout')}
                       </label>
                       <input
                         type="number"
@@ -1529,7 +1582,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Max Retries
+                        {t('settings.maxRetries')}
                       </label>
                       <input
                         type="number"
@@ -1554,7 +1607,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                         className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
                         disabled={isSavingAI}
                       />
-                      <span className="text-sm text-slate-700">Enable streaming responses</span>
+                      <span className="text-sm text-slate-700">{t('settings.enableStreamingResponses')}</span>
                     </label>
                   </div>
                 </div>
@@ -1594,7 +1647,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                       <div className="text-sm">
                         {aiTestResult.success ? (
                           <p className="text-green-400">
-                            Connection successful ({aiTestResult.latency}ms)
+                            {t('settings.connectionTestSuccessful', { latency: aiTestResult.latency })}
                           </p>
                         ) : (
                           <p className="text-red-400">{aiTestResult.error}</p>
@@ -1656,7 +1709,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     disabled={isTestingAI || !aiConfig.apiKey}
                     className="btn btn-secondary"
                   >
-                    {isTestingAI ? 'Testing...' : 'Test Connection'}
+                    {isTestingAI ? t('settings.testingConnection') : t('settings.testConnectionButton')}
                   </button>
                   <button
                     type="button"
@@ -1664,7 +1717,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     disabled={isSavingAI || !aiConfig.apiKey}
                     className="btn btn-primary"
                   >
-                    {isSavingAI ? 'Saving...' : 'Save Configuration'}
+                    {isSavingAI ? t('common.saving') : t('settings.saveConfiguration')}
                   </button>
                 </div>
               </div>
@@ -1683,9 +1736,9 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                     d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-slate-700">AI not configured</h3>
+                <h3 className="mt-2 text-sm font-medium text-slate-700">{t('settings.aiNotConfigured')}</h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Configure your AI settings to enable AI-powered skill generation.
+                  {t('settings.aiConfigureDescription')}
                 </p>
               </div>
             )}

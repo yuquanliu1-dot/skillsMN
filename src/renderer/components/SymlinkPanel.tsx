@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AgentTool } from '../../shared/types';
 
 interface SymlinkPanelProps {
@@ -215,6 +216,7 @@ export default function SymlinkPanel({
   readOnly = false,
   onError,
 }: SymlinkPanelProps): JSX.Element {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [installedTools, setInstalledTools] = useState<AgentTool[]>([]);
   const [symlinkStatus, setSymlinkStatus] = useState<Record<string, boolean>>({});
@@ -415,7 +417,7 @@ export default function SymlinkPanel({
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            <span>Link to:</span>
+            <span>{t('symlink.linkedTo')}</span>
             <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
               {enabledCount} active
             </span>
@@ -431,7 +433,7 @@ export default function SymlinkPanel({
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-green-700">Linked</span>
+                <span className="text-green-700">{t('symlink.linked')}</span>
               </>
             ) : (
               <>
@@ -442,7 +444,7 @@ export default function SymlinkPanel({
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-gray-500">Not linked</span>
+                <span className="text-gray-500">{t('symlink.notLinked')}</span>
               </>
             )}
           </div>
@@ -455,11 +457,11 @@ export default function SymlinkPanel({
           {isLoading ? (
             <div className="py-6 text-center text-sm text-gray-500">
               <div className="animate-spin inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full mr-2" />
-              Loading targets...
+              {t('symlink.loadingTargets')}
             </div>
           ) : installedTools.length === 0 ? (
             <div className="py-6 text-center text-sm text-gray-500">
-              No link targets available. Configure project directories in Settings or install AI agent tools.
+              {t('symlink.noTargetsAvailable')}
             </div>
           ) : (
             <div className="space-y-4">
@@ -504,7 +506,7 @@ export default function SymlinkPanel({
           {/* Help text */}
           <div className="mt-4 pt-3 border-t border-gray-100">
             <p className="text-xs text-gray-500">
-              Click a card to toggle the link. Project directories have higher priority than AI tool links.
+              {t('symlink.helpText')}
             </p>
           </div>
         </div>

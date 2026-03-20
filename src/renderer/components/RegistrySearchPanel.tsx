@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRegistrySearch } from '../hooks/useRegistrySearch';
 import { SearchIcon } from './icons/SearchIcon';
 import { SearchResultsList } from './SearchResultsList';
@@ -23,6 +24,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
   onInstallComplete,
   onSkillClick
 }) => {
+  const { t } = useTranslation();
   console.log('🔍 RegistrySearchPanel render, onSkillClick exists:', !!onSkillClick);
 
   const { query, results, isLoading, error, setQuery } = useRegistrySearch();
@@ -67,12 +69,12 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
       <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">
-            Search on skills.sh
+            {t('discover.title')}
           </h2>
           <div className="relative">
             <input
               type="text"
-              placeholder="Search for skills (e.g., data analysis, code review)..."
+              placeholder={t('discover.searchPlaceholder')}
               value={query}
               onChange={(e) => handleQueryChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -104,7 +106,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
           {hasSearched && !isLoading && !error && sortedResults && sortedResults.length > 0 && (
             <div className="flex items-center justify-between mt-3">
               <p className="text-xs text-gray-500">
-                {sortedResults.length} result{sortedResults.length !== 1 ? 's' : ''} found
+                {t('discover.resultsCount', { count: sortedResults.length })}
               </p>
               <div className="flex items-center gap-1">
                 <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,7 +137,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
-                <span className="text-sm text-gray-600">Searching...</span>
+                <span className="text-sm text-gray-600">{t('discover.searching')}</span>
               </div>
             </div>
           )}
@@ -153,14 +155,14 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Search Error</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('discover.searchError')}</h3>
               <p className="text-sm text-gray-600 text-center max-w-md mb-4">{error}</p>
               <button
                 onClick={() => handleQueryChange(query)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                aria-label="Retry search"
+                aria-label={t('discover.retry')}
               >
-                Retry
+                {t('discover.retry')}
               </button>
             </div>
           )}
@@ -178,9 +180,9 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Search for Skills</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('discover.searchForSkills')}</h3>
               <p className="text-sm text-gray-600 text-center max-w-md">
-                Enter a search term to discover skills from the skills.sh registry
+                {t('discover.searchDescription')}
               </p>
             </div>
           )}
@@ -198,9 +200,9 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Skills Found</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('discover.noSkillsFound')}</h3>
               <p className="text-sm text-gray-600 text-center max-w-md">
-                No results for "{query}". Try a different search term.
+                {t('discover.noResultsFor', { query })}
               </p>
             </div>
           )}
