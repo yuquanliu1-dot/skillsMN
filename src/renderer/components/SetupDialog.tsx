@@ -459,45 +459,55 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
           {/* Step 1: Project Directory */}
           {currentStep === 'project-directory' && (
             <div className="animate-fadeIn">
-              <div className="mb-6">
-                <label htmlFor="directory" className="block text-sm font-semibold text-slate-800 mb-3">
-                  Skills Storage Directory
-                </label>
-                <div className="flex gap-3">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      id="directory"
-                      value={directory}
-                      onChange={(e) => {
-                        setDirectory(e.target.value);
-                        setError(null);
-                      }}
-                      placeholder="/path/to/your/project"
-                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 text-slate-900 placeholder-slate-400"
+              {/* Directory selection card */}
+              {directory ? (
+                <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-green-900 mb-1">Selected Directory</p>
+                      <p className="text-sm text-green-700 font-mono truncate" title={directory}>
+                        {directory}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleBrowse}
+                      className="px-4 py-2 bg-white hover:bg-green-50 border-2 border-green-200 rounded-lg text-sm font-medium text-green-700 transition-all"
                       disabled={isValidating || isCompleting}
-                    />
-                    {directory && !isValidating && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
+                    >
+                      Change
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleBrowse}
-                    className="px-6 py-3 bg-gradient-to-r from-slate-100 to-slate-50 hover:from-slate-200 hover:to-slate-100 border-2 border-slate-200 rounded-xl font-medium text-slate-700 transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    disabled={isValidating || isCompleting}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                    </svg>
-                    Browse
-                  </button>
                 </div>
-              </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleBrowse}
+                  className="w-full mb-6 p-8 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-2 border-dashed border-blue-300 rounded-xl transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isValidating || isCompleting}
+                >
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
+                      <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-slate-900 mb-1">
+                        Click to Select Skills Directory
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        Choose a folder where your skills will be stored
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              )}
 
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl animate-shake">
@@ -522,8 +532,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                   <div className="flex-1">
                     <p className="text-sm font-medium text-blue-900 mb-1">Quick Tip</p>
                     <p className="text-sm text-blue-700">
-                      Select a directory where your skills will be stored and linked.
-                      This can be any directory - it will be used as your project skill storage location.
+                      For project-level skills, the directory name is typically <code className="bg-blue-100 px-1.5 py-0.5 rounded font-mono text-xs">skills</code>.
                       You can add multiple directories later from Settings.
                     </p>
                   </div>
