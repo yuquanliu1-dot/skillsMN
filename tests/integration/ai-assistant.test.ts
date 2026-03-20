@@ -5,7 +5,6 @@
  */
 
 import { AIService } from '../../src/main/services/AIService';
-import { AIConfigService } from '../../src/main/services/AIConfigService';
 import type { AIGenerationRequest, AIConfiguration } from '../../src/shared/types';
 
 // Mock Anthropic SDK

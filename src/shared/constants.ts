@@ -15,11 +15,14 @@ export const CLAUDE_DIR_NAME = '.claude';
 /** Skills subdirectory name */
 export const SKILLS_DIR_NAME = 'skills';
 
-/** Configuration file name */
+/** Unified configuration file name (stored in app directory) */
 export const CONFIG_FILE_NAME = 'config.json';
 
-/** Private repositories configuration file name */
+/** @deprecated Use CONFIG_FILE_NAME - unified config now includes all settings */
 export const PRIVATE_REPOS_FILE_NAME = 'private-repos.json';
+
+/** Current configuration version */
+export const CONFIG_VERSION = 1;
 
 // ============================================================================
 // Default Values
@@ -36,7 +39,6 @@ export const DEFAULT_AUTO_REFRESH = true;
 
 /** Configuration defaults */
 export const DEFAULT_CONFIG = {
-  projectDirectory: null,
   projectDirectories: [],
   defaultInstallDirectory: DEFAULT_INSTALL_DIRECTORY,
   editorDefaultMode: DEFAULT_EDITOR_MODE,

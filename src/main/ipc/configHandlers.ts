@@ -11,7 +11,7 @@ import { logger } from '../utils/Logger';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { ConfigService } from '../services/ConfigService';
 import { IPC_CHANNELS } from '../../shared/constants';
-import { IPCResponse, IPCError, Configuration } from '../../shared/types';
+import { IPCResponse, IPCError, AppConfiguration, BaseConfiguration } from '../../shared/types';
 
 const execAsync = promisify(exec);
 
@@ -42,7 +42,7 @@ export function registerConfigHandlers(): void {
   // Handler for config:load
   ipcMain.handle(
     IPC_CHANNELS.CONFIG_LOAD,
-    async (): Promise<IPCResponse<Configuration>> => {
+    async (): Promise<IPCResponse<AppConfiguration>> => {
       try {
         logger.debug('Loading configuration', 'ConfigHandlers');
         const config = await configService!.load();
@@ -59,8 +59,8 @@ export function registerConfigHandlers(): void {
     IPC_CHANNELS.CONFIG_SAVE,
     async (
       _event,
-      { config }: { config: Partial<Configuration> }
-    ): Promise<IPCResponse<Configuration>> => {
+      { config }: { config: Partial<BaseConfiguration> }
+    ): Promise<IPCResponse<AppConfiguration>> => {
       try {
         logger.debug('Saving configuration', 'ConfigHandlers', config);
         const updated = await configService!.save(config);

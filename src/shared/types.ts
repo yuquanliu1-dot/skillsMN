@@ -212,9 +212,10 @@ export interface SkillEditorConfig {
   wordWrap: boolean;
 }
 
-export interface Configuration {
-  /** @deprecated Use projectDirectories instead */
-  projectDirectory?: string | null;
+/**
+ * Base configuration (project settings, editor preferences)
+ */
+export interface BaseConfiguration {
   /** Array of configured project directories */
   projectDirectories: string[];
   /** Default location for new skills */
@@ -231,6 +232,54 @@ export interface Configuration {
   migrationCompleted?: boolean;
   /** Whether user has been asked about migration preference */
   migrationPreferenceAsked?: boolean;
+}
+
+/**
+ * @deprecated Use AppConfiguration instead
+ */
+export type Configuration = BaseConfiguration;
+
+/**
+ * AI configuration settings
+ */
+export interface AIConfigSection {
+  /** AI service provider */
+  provider: AIProvider;
+  /** API key (encrypted in storage) */
+  apiKey: string;
+  /** Selected AI model */
+  model: AIModel;
+  /** Whether to stream responses */
+  streamingEnabled: boolean;
+  /** Generation timeout in ms */
+  timeout: number;
+  /** Max retry attempts */
+  maxRetries: number;
+  /** Custom API base URL (optional) */
+  baseUrl?: string;
+}
+
+/**
+ * Private repository configuration section
+ */
+export interface PrivateRepoConfigSection {
+  /** Configuration version */
+  version: number;
+  /** List of private repositories */
+  repositories: PrivateRepo[];
+}
+
+/**
+ * Unified application configuration
+ * Combines base config, AI config, and private repos into a single file
+ */
+export interface AppConfiguration extends BaseConfiguration {
+  /** Configuration file version for future migrations */
+  version: number;
+  /** AI configuration settings */
+  ai: AIConfigSection;
+  /** Private repository settings */
+  privateRepos: PrivateRepoConfigSection;
 }
 
 // ============================================================================
@@ -390,22 +439,10 @@ export type AIProvider = 'anthropic';
 
 export type AIModel = string; // Allow any model name for flexibility
 
-export interface AIConfiguration {
-  /** AI service provider */
-  provider: AIProvider;
-  /** API key (encrypted in storage) */
-  apiKey: string;
-  /** Selected AI model */
-  model: AIModel;
-  /** Whether to stream responses */
-  streamingEnabled: boolean;
-  /** Generation timeout in ms */
-  timeout: number;
-  /** Max retry attempts */
-  maxRetries: number;
-  /** Custom API base URL (optional) */
-  baseUrl?: string;
-}
+/**
+ * @deprecated Use AIConfigSection instead
+ */
+export type AIConfiguration = AIConfigSection;
 
 // ============================================================================
 // GitHub Search Types (Feature 004)

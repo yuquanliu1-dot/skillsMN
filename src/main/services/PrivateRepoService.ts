@@ -2,67 +2,50 @@
  * Private Repository Service
  *
  * Manages private repository configuration and skill synchronization
+ * Uses unified ConfigService for configuration storage
  */
 
-import { app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { safeStorage } from 'electron';
 import { logger } from '../utils/Logger';
 import { PrivateRepoModel } from '../models/PrivateRepo';
-import { GitHubService } from './GitHubService';
-import { GitLabService } from './GitLabService';
 import { getGitProvider } from './GitProvider';
 import { SkillService } from './SkillService';
-import { SymlinkService } from './SymlinkService';
-import { PathValidator } from './PathValidator';
 import { createPrivateRepoSource } from '../models/SkillSource';
-import type { PrivateRepo, PrivateRepoConfig, PrivateSkill, Configuration } from '../../shared/types';
-import { PRIVATE_REPOS_FILE_NAME, SOURCE_METADATA_FILE } from '../../shared/constants';
+import { getConfigService } from '../ipc/configHandlers';
+import type { PrivateRepo, PrivateRepoConfigSection, PrivateSkill, Configuration } from '../../shared/types';
+import { SOURCE_METADATA_FILE } from '../../shared/constants';
 
 export class PrivateRepoService {
-  private static configPath: string | null = null;
-  private static config: PrivateRepoConfig | null = null;
+  private static config: PrivateRepoConfigSection | null = null;
 
   /**
    * Initialize the private repository service
-   * Sets up configuration file path and loads existing configuration
-   * Must be called before using other service methods
+   * Loads configuration from unified ConfigService
    * @example
    * await PrivateRepoService.initialize();
    */
   static async initialize(): Promise<void> {
-    const userDataPath = app.getPath('userData');
-    this.configPath = path.join(userDataPath, PRIVATE_REPOS_FILE_NAME);
     await this.loadConfig();
-    logger.info('PrivateRepoService initialized', 'PrivateRepoService', {
-      configPath: this.configPath,
-    });
+    logger.info('PrivateRepoService initialized', 'PrivateRepoService');
   }
 
   /**
-   * Load configuration from disk
+   * Load configuration from ConfigService
    */
   private static async loadConfig(): Promise<void> {
     try {
-      if (!this.configPath) {
-        throw new Error('Service not initialized');
+      const configService = getConfigService();
+      if (!configService) {
+        throw new Error('ConfigService not initialized');
       }
 
-      const exists = await fs.pathExists(this.configPath);
-      if (!exists) {
-        this.config = PrivateRepoModel.createDefaultConfig();
-        await this.saveConfig();
-        logger.info('Created default private repos config', 'PrivateRepoService');
-        return;
-      }
-
-      const data = await fs.readFile(this.configPath, 'utf-8');
-      const parsed = JSON.parse(data);
+      this.config = await configService.loadPrivateRepos();
 
       // Convert date strings back to Date objects
-      if (parsed.repositories && Array.isArray(parsed.repositories)) {
-        parsed.repositories = parsed.repositories.map((repo: any) => ({
+      if (this.config.repositories && Array.isArray(this.config.repositories)) {
+        this.config.repositories = this.config.repositories.map((repo: any) => ({
           ...repo,
           addedAt: repo.addedAt ? new Date(repo.addedAt) : new Date(),
           createdAt: repo.createdAt ? new Date(repo.createdAt) : new Date(),
@@ -71,15 +54,7 @@ export class PrivateRepoService {
         }));
       }
 
-      if (!PrivateRepoModel.validateConfig(parsed)) {
-        logger.warn('Invalid config format, creating new config', 'PrivateRepoService');
-        this.config = PrivateRepoModel.createDefaultConfig();
-        await this.saveConfig();
-        return;
-      }
-
-      this.config = parsed;
-      logger.info('Loaded private repos config', 'PrivateRepoService', {
+      logger.info('Loaded private repos config from ConfigService', 'PrivateRepoService', {
         repoCount: this.config.repositories.length,
       });
     } catch (error) {
@@ -89,17 +64,17 @@ export class PrivateRepoService {
   }
 
   /**
-   * Save configuration to disk
+   * Save configuration via ConfigService
    */
   private static async saveConfig(): Promise<void> {
     try {
-      if (!this.configPath || !this.config) {
-        throw new Error('Service not initialized');
+      const configService = getConfigService();
+      if (!configService || !this.config) {
+        throw new Error('ConfigService not initialized');
       }
 
-      await fs.ensureDir(path.dirname(this.configPath));
-      await fs.writeFile(this.configPath, JSON.stringify(this.config, null, 2), 'utf-8');
-      logger.debug('Saved private repos config', 'PrivateRepoService');
+      await configService.savePrivateRepos(this.config);
+      logger.debug('Saved private repos config via ConfigService', 'PrivateRepoService');
     } catch (error) {
       logger.error('Failed to save config', 'PrivateRepoService', error);
       throw error;

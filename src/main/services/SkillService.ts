@@ -824,7 +824,7 @@ export class SkillService {
       const config = await this.getConfig();
       const baseDir =
         targetDirectory === 'project'
-          ? config.projectDirectory
+          ? (config.projectDirectories[0] || path.join(os.homedir(), '.skillsMN', 'skills'))
           : path.join(os.homedir(), '.skillsMN', 'skills');
 
       if (!baseDir) {

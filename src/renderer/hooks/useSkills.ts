@@ -10,13 +10,13 @@ import type { Skill } from '../../shared/types';
 /**
  * Hook for loading and managing the skill list
  */
-export function useSkills(projectDirectory: string | null) {
+export function useSkills(projectDirectories: string[]) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadSkills = useCallback(async () => {
-    if (!projectDirectory) {
+    if (!projectDirectories || projectDirectories.length === 0) {
       setSkills([]);
       return;
     }
@@ -26,7 +26,7 @@ export function useSkills(projectDirectory: string | null) {
 
     try {
       const response = await window.electronAPI.listSkills(
-        { projectDirectory } as any
+        { projectDirectories } as any
       );
 
       if (response.success && response.data) {
@@ -39,7 +39,7 @@ export function useSkills(projectDirectory: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [projectDirectory]);
+  }, [projectDirectories]);
 
   useEffect(() => {
     loadSkills();

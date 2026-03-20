@@ -723,4 +723,32 @@ export class SymlinkService {
 
     return Object.values(skillConfig.targets).filter((t) => t.enabled).length;
   }
+
+  /**
+   * Get Claude directories from project directories
+   * Returns the list of configured project directories that can be used for symlinks
+   * @param projectDirectories - List of project directories from config
+   * @returns List of valid Claude directories
+   */
+  getClaudeDirectories(projectDirectories: string[] | undefined): string[] {
+    if (!projectDirectories || projectDirectories.length === 0) {
+      return [];
+    }
+
+    // Filter to only existing directories
+    const validDirs = projectDirectories.filter((dir) => {
+      try {
+        return fs.existsSync(dir);
+      } catch {
+        return false;
+      }
+    });
+
+    logger.debug('Claude directories retrieved', 'SymlinkService', {
+      total: projectDirectories.length,
+      valid: validDirs.length,
+    });
+
+    return validDirs;
+  }
 }

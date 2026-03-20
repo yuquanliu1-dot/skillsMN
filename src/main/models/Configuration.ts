@@ -5,7 +5,7 @@
  */
 
 import {
-  Configuration,
+  BaseConfiguration,
   InstallDirectory,
   EditorMode,
   SkillEditorConfig,
@@ -36,9 +36,8 @@ export class ConfigurationModel {
   /**
    * Create default configuration
    */
-  static createDefault(): Configuration {
+  static createDefault(): BaseConfiguration {
     return {
-      projectDirectory: null,
       projectDirectories: [],
       defaultInstallDirectory: DEFAULT_INSTALL_DIRECTORY,
       editorDefaultMode: DEFAULT_EDITOR_MODE,
@@ -50,12 +49,7 @@ export class ConfigurationModel {
   /**
    * Validate configuration
    */
-  static validate(config: Partial<Configuration>): Configuration {
-    // Migrate projectDirectory to projectDirectories if needed
-    if (config.projectDirectory && !config.projectDirectories) {
-      config.projectDirectories = [config.projectDirectory];
-    }
-
+  static validate(config: Partial<BaseConfiguration>): BaseConfiguration {
     // Validate projectDirectories array
     if (config.projectDirectories !== undefined) {
       if (!Array.isArray(config.projectDirectories)) {
@@ -69,16 +63,6 @@ export class ConfigurationModel {
 
       // Deduplicate entries
       config.projectDirectories = [...new Set(config.projectDirectories)];
-    }
-
-    // Validate projectDirectory (deprecated but still supported)
-    if (config.projectDirectory !== null && config.projectDirectory !== undefined) {
-      if (typeof config.projectDirectory !== 'string') {
-        throw new Error('Project directory must be a string or null');
-      }
-      // Normalize path separators for cross-platform compatibility
-      config.projectDirectory = path.normalize(config.projectDirectory);
-      // Additional validation can be added here (e.g., check if directory exists)
     }
 
     // Validate defaultInstallDirectory
@@ -114,7 +98,6 @@ export class ConfigurationModel {
 
     // Return validated config with defaults
     return {
-      projectDirectory: config.projectDirectory ?? null,
       projectDirectories: config.projectDirectories ?? [],
       defaultInstallDirectory: config.defaultInstallDirectory ?? DEFAULT_INSTALL_DIRECTORY,
       editorDefaultMode: config.editorDefaultMode ?? DEFAULT_EDITOR_MODE,
@@ -147,11 +130,10 @@ export class ConfigurationModel {
    * Merge partial configuration with existing configuration
    */
   static merge(
-    existing: Configuration,
-    updates: Partial<Configuration>
-  ): Configuration {
+    existing: BaseConfiguration,
+    updates: Partial<BaseConfiguration>
+  ): BaseConfiguration {
     return {
-      projectDirectory: updates.projectDirectory ?? existing.projectDirectory,
       projectDirectories: updates.projectDirectories ?? existing.projectDirectories,
       defaultInstallDirectory:
         updates.defaultInstallDirectory ?? existing.defaultInstallDirectory,
@@ -167,7 +149,7 @@ export class ConfigurationModel {
   /**
    * Check if configuration is complete (has at least one project directory)
    */
-  static isComplete(config: Configuration): boolean {
+  static isComplete(config: BaseConfiguration): boolean {
     return config.projectDirectories.length > 0;
   }
 }

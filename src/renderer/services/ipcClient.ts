@@ -129,7 +129,6 @@ export const ipcClient = {
     if (!isElectron()) {
       console.warn('[IPC Client] Running in browser mode - returning default config');
       return {
-        projectDirectory: null,
         projectDirectories: [],
         defaultInstallDirectory: 'project',
         editorDefaultMode: 'edit',

@@ -9,7 +9,7 @@ import * as path from 'path';
 import { logger } from './utils/Logger';
 import { registerConfigHandlers, getConfigService } from './ipc/configHandlers';
 import { registerSkillHandlers } from './ipc/skillHandlers';
-import { registerAIHandlers, registerAITestHandler, registerAIConfigHandlers } from './ipc/aiHandlers';
+import { registerAllAIHandlers } from './ipc/aiHandlers';
 import { registerGitHubHandlers } from './ipc/gitHubHandlers';
 import { registerPrivateRepoHandlers } from './ipc/privateRepoHandlers';
 import { registerRegistryHandlers } from './ipc/registryHandlers';
@@ -21,7 +21,6 @@ import { SymlinkService } from './services/SymlinkService';
 import { MigrationService } from './services/MigrationService';
 import { SkillService } from './services/SkillService';
 import { SkillDirectoryModel } from './models/SkillDirectory';
-import { AIConfigService } from './services/AIConfigService';
 
 // Global references to prevent garbage collection
 let mainWindow: BrowserWindow | null = null;
@@ -144,9 +143,10 @@ async function initialize(): Promise<void> {
 
     // Initialize path validator with allowed directories
     const globalDir = SkillDirectoryModel.getGlobalDirectory();
-    pathValidator = new PathValidator(config.projectDirectory, globalDir);
+    const firstProjectDir = config.projectDirectories[0] || null;
+    pathValidator = new PathValidator(firstProjectDir, globalDir);
     logger.info('Path validator initialized', 'Main', {
-      projectDir: config.projectDirectory,
+      projectDir: firstProjectDir,
       globalDir,
     });
 
@@ -178,11 +178,8 @@ async function initialize(): Promise<void> {
     registerSkillHandlers(pathValidator, symlinkService);
     logger.info('Skill handlers registered', 'Main');
 
-    // Register AI handlers
-    registerAIHandlers();
-    registerAITestHandler();
-    registerAIConfigHandlers();
-    AIConfigService.initialize();
+    // Register AI handlers (configuration is now unified in ConfigService)
+    registerAllAIHandlers();
     logger.info('AI handlers registered', 'Main');
 
     // Register GitHub handlers

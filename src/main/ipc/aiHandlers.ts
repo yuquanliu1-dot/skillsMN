@@ -7,10 +7,10 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import { logger } from '../utils/Logger';
 import { AIService } from '../services/AIService';
-import { AIConfigService } from '../services/AIConfigService';
 import { IPC_CHANNELS } from '../../shared/constants';
+import { getConfigService } from './configHandlers';
 import type { AIGenerationRequest } from '../models/AIGenerationRequest';
-import type { AIConfiguration } from '../../shared/types';
+import type { AIConfigSection } from '../../shared/types';
 
 /**
  * Register AI IPC handlers
@@ -28,10 +28,15 @@ export function registerAIHandlers(): void {
           throw new Error('Window not found');
         }
 
+        const configService = getConfigService();
+        if (!configService) {
+          throw new Error('Configuration service not initialized');
+        }
+
         // Ensure AI service is initialized
         if (!AIService.isInitialized()) {
           logger.info('AI service not initialized, loading config...', 'AIHandlers');
-          const config = await AIConfigService.loadConfig();
+          const config = await configService.loadAIConfig();
 
           if (!config.apiKey) {
             throw new Error('API key not configured. Please configure your API key in Settings.');
@@ -125,7 +130,12 @@ export function registerAIConfigHandlers(): void {
     try {
       logger.debug('Loading AI configuration', 'AIHandlers');
 
-      const config = await AIConfigService.loadConfig();
+      const configService = getConfigService();
+      if (!configService) {
+        throw new Error('Configuration service not initialized');
+      }
+
+      const config = await configService.loadAIConfig();
 
       return { success: true, data: config };
     } catch (error) {
@@ -138,11 +148,16 @@ export function registerAIConfigHandlers(): void {
   // Handler for ai:config:save
   ipcMain.handle(
     IPC_CHANNELS.AI_CONFIG_SAVE,
-    async (_event, { config }: { config: AIConfiguration }) => {
+    async (_event, { config }: { config: AIConfigSection }) => {
       try {
         logger.debug('Saving AI configuration', 'AIHandlers');
 
-        await AIConfigService.saveConfig(config);
+        const configService = getConfigService();
+        if (!configService) {
+          throw new Error('Configuration service not initialized');
+        }
+
+        await configService.saveAIConfig(config);
 
         // Re-initialize AI service with new config
         await AIService.initialize(config);
@@ -159,12 +174,17 @@ export function registerAIConfigHandlers(): void {
   // Handler for ai:config:test
   ipcMain.handle(
     IPC_CHANNELS.AI_CONFIG_TEST,
-    async (_event, { config }: { config?: AIConfiguration } = {}) => {
+    async (_event, { config }: { config?: AIConfigSection } = {}) => {
       try {
         logger.debug('Testing AI configuration', 'AIHandlers');
 
+        const configService = getConfigService();
+        if (!configService) {
+          throw new Error('Configuration service not initialized');
+        }
+
         // Use provided config or load from storage
-        const testConfig = config || await AIConfigService.loadConfig();
+        const testConfig = config || await configService.loadAIConfig();
 
         // Validate that we have a config with an API key
         if (!testConfig || !testConfig.apiKey) {
@@ -175,7 +195,7 @@ export function registerAIConfigHandlers(): void {
         }
 
         // Store original config for restoration
-        const originalConfig = await AIConfigService.loadConfig().catch(() => null);
+        const originalConfig = await configService.loadAIConfig().catch(() => null);
 
         try {
           await AIService.initialize(testConfig);

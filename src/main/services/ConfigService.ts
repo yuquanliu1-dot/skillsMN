@@ -1,7 +1,8 @@
 /**
  * Configuration Service
  *
- * Manages application configuration persistence
+ * Manages unified application configuration persistence
+ * Stores config in application directory (not userData)
  */
 
 import fs from 'fs';
@@ -9,105 +10,168 @@ import path from 'path';
 import { app } from 'electron';
 import { logger } from '../utils/Logger';
 import { ErrorHandler, ConfigurationError } from '../utils/ErrorHandler';
-import { Configuration, PrivateRepo, PrivateRepoConfig } from '../../shared/types';
+import {
+  AppConfiguration,
+  BaseConfiguration,
+  AIConfigSection,
+  PrivateRepoConfigSection,
+  PrivateRepo,
+  AIProvider,
+} from '../../shared/types';
 import { ConfigurationModel } from '../models/Configuration';
-import { CONFIG_FILE_NAME, PRIVATE_REPOS_FILE_NAME } from '../../shared/constants';
+import { CONFIG_FILE_NAME, CONFIG_VERSION } from '../../shared/constants';
+import { encryptAPIKey, decryptAPIKey } from '../utils/encryptionUtil';
+
+/**
+ * Get default AI configuration
+ */
+function getDefaultAIConfig(): AIConfigSection {
+  return {
+    provider: 'anthropic',
+    apiKey: '',
+    model: 'claude-3-sonnet-20240229',
+    streamingEnabled: true,
+    timeout: 30000,
+    maxRetries: 2,
+  };
+}
+
+/**
+ * Get default private repos configuration
+ */
+function getDefaultPrivateReposConfig(): PrivateRepoConfigSection {
+  return {
+    version: 1,
+    repositories: [],
+  };
+}
+
+/**
+ * Get default unified configuration
+ */
+function createDefaultConfig(): AppConfiguration {
+  const baseConfig = ConfigurationModel.createDefault();
+  return {
+    ...baseConfig,
+    version: CONFIG_VERSION,
+    ai: getDefaultAIConfig(),
+    privateRepos: getDefaultPrivateReposConfig(),
+  };
+}
 
 export class ConfigService {
   private configPath: string;
-  private privateReposPath: string;
-  private config: Configuration | null = null;
-  private privateRepos: PrivateRepoConfig | null = null;
+  private config: AppConfiguration | null = null;
 
   constructor() {
-    // Get user data directory for configuration storage
-    const userDataPath = app.getPath('userData');
-    this.configPath = path.join(userDataPath, CONFIG_FILE_NAME);
-    this.privateReposPath = path.join(userDataPath, PRIVATE_REPOS_FILE_NAME);
+    // Store config in application directory (same as executable)
+    const appPath = app.isPackaged
+      ? path.dirname(app.getPath('exe'))
+      : process.cwd();
+    this.configPath = path.join(appPath, CONFIG_FILE_NAME);
     logger.info(`Configuration path: ${this.configPath}`, 'ConfigService');
+  }
+
+  /**
+   * Get the configuration file path
+   */
+  getConfigPath(): string {
+    return this.configPath;
   }
 
   /**
    * Load configuration from disk
    * Creates default configuration if file doesn't exist
-   * Auto-migrates projectDirectory to projectDirectories if needed
-   * @returns Loaded or default Configuration object
-   * @throws ConfigurationError if file read fails (returns defaults on corruption)
-   * @example
-   * const config = await configService.load();
-   * console.log(config.projectDirectories);
+   * @returns Loaded or default AppConfiguration object
    */
-  async load(): Promise<Configuration> {
+  async load(): Promise<AppConfiguration> {
     try {
       // Check if config file exists
-      if (!fs.existsSync(this.configPath)) {
-        logger.info('No configuration file found, creating default', 'ConfigService');
-        const defaultConfig = ConfigurationModel.createDefault();
-        this.config = defaultConfig; // Set cached config before saving to prevent recursion
-        await fs.promises.writeFile(
-          this.configPath,
-          JSON.stringify(defaultConfig, null, 2),
-          'utf-8'
-        );
-        return defaultConfig;
-      }
+      if (fs.existsSync(this.configPath)) {
+        const content = await fs.promises.readFile(this.configPath, 'utf-8');
+        const rawConfig = JSON.parse(content);
 
-      // Read and parse config file
-      const content = await fs.promises.readFile(this.configPath, 'utf-8');
-      const rawConfig = JSON.parse(content);
+        // Validate and merge with defaults
+        const validatedConfig = this.validateAndMerge(rawConfig);
+        this.config = validatedConfig;
 
-      // Validate and merge with defaults
-      const validatedConfig = ConfigurationModel.validate(rawConfig);
-
-      // Check if we need to migrate old projectDirectory to new projectDirectories
-      const needsMigration = rawConfig.projectDirectory &&
-                             !rawConfig.projectDirectories &&
-                             validatedConfig.projectDirectories.length > 0;
-
-      if (needsMigration) {
-        logger.info('Migrating projectDirectory to projectDirectories', 'ConfigService', {
-          oldDirectory: rawConfig.projectDirectory,
-          newDirectories: validatedConfig.projectDirectories,
+        logger.info('Configuration loaded successfully', 'ConfigService', {
+          projectDirectoryCount: validatedConfig.projectDirectories.length,
         });
 
-        // Save migrated config immediately
-        await fs.promises.writeFile(
-          this.configPath,
-          JSON.stringify(validatedConfig, null, 2),
-          'utf-8'
-        );
+        return validatedConfig;
       }
 
-      this.config = validatedConfig;
+      // Create new default config
+      logger.info('Creating default configuration', 'ConfigService');
+      const defaultConfig = createDefaultConfig();
+      this.config = defaultConfig;
+      await fs.promises.writeFile(
+        this.configPath,
+        JSON.stringify(defaultConfig, null, 2),
+        'utf-8'
+      );
+      return defaultConfig;
 
-      logger.info('Configuration loaded successfully', 'ConfigService', {
-        projectDirectoryCount: validatedConfig.projectDirectories.length,
-      });
-
-      return validatedConfig;
     } catch (error) {
       ErrorHandler.log(error, 'ConfigService.load');
 
       // If config file is corrupted, return defaults
       logger.warn('Configuration file corrupted, returning defaults', 'ConfigService');
-      const defaultConfig = ConfigurationModel.createDefault();
+      const defaultConfig = createDefaultConfig();
       this.config = defaultConfig;
       return defaultConfig;
     }
   }
 
   /**
+   * Validate and merge configuration with defaults
+   */
+  private validateAndMerge(rawConfig: any): AppConfiguration {
+    const defaults = createDefaultConfig();
+
+    // Validate base config using existing model
+    const validatedBase = ConfigurationModel.validate(rawConfig);
+
+    // Validate AI config
+    const aiConfig: AIConfigSection = {
+      provider: rawConfig.ai?.provider || defaults.ai.provider,
+      apiKey: rawConfig.ai?.apiKey || '',
+      model: rawConfig.ai?.model || defaults.ai.model,
+      streamingEnabled: rawConfig.ai?.streamingEnabled ?? defaults.ai.streamingEnabled,
+      timeout: rawConfig.ai?.timeout || defaults.ai.timeout,
+      maxRetries: rawConfig.ai?.maxRetries ?? defaults.ai.maxRetries,
+      baseUrl: rawConfig.ai?.baseUrl,
+    };
+
+    // Decrypt API key if present
+    if (aiConfig.apiKey) {
+      try {
+        aiConfig.apiKey = decryptAPIKey(aiConfig.apiKey);
+      } catch {
+        // Key might not be encrypted, use as-is
+      }
+    }
+
+    // Validate private repos
+    const privateReposConfig: PrivateRepoConfigSection = {
+      version: rawConfig.privateRepos?.version || 1,
+      repositories: rawConfig.privateRepos?.repositories || [],
+    };
+
+    return {
+      ...validatedBase,
+      version: rawConfig.version || CONFIG_VERSION,
+      ai: aiConfig,
+      privateRepos: privateReposConfig,
+    };
+  }
+
+  /**
    * Save configuration to disk
    * Merges updates with existing configuration and validates before saving
-   * @param updates - Partial configuration object with fields to update
-   * @returns Updated and validated Configuration object
-   * @throws ConfigurationError if validation fails or save operation fails
-   * @example
-   * const updated = await configService.save({
-   *   projectDirectory: '/path/to/project'
-   * });
    */
-  async save(updates: Partial<Configuration>): Promise<Configuration> {
+  async save(updates: Partial<BaseConfiguration>): Promise<AppConfiguration> {
     try {
       // Load existing config or create default
       const existing = this.config ?? (await this.load());
@@ -118,18 +182,37 @@ export class ConfigService {
       // Validate merged config
       const validated = ConfigurationModel.validate(merged);
 
-      // Write to disk atomically
-      const content = JSON.stringify(validated, null, 2);
-      await fs.promises.writeFile(this.configPath, content, 'utf-8');
+      // Build new config preserving AI and private repos
+      const newConfig: AppConfiguration = {
+        ...validated,
+        version: this.config?.version || CONFIG_VERSION,
+        ai: this.config?.ai || getDefaultAIConfig(),
+        privateRepos: this.config?.privateRepos || getDefaultPrivateReposConfig(),
+      };
 
-      // Update cached config
-      this.config = validated;
+      // Write to disk (encrypt API key before saving)
+      const configToSave = {
+        ...newConfig,
+        ai: {
+          ...newConfig.ai,
+          apiKey: newConfig.ai.apiKey ? encryptAPIKey(newConfig.ai.apiKey) : '',
+        },
+      };
+
+      await fs.promises.writeFile(
+        this.configPath,
+        JSON.stringify(configToSave, null, 2),
+        'utf-8'
+      );
+
+      // Update cached config (with decrypted key)
+      this.config = newConfig;
 
       logger.info('Configuration saved successfully', 'ConfigService', {
         projectDirectoryCount: validated.projectDirectories.length,
       });
 
-      return validated;
+      return newConfig;
     } catch (error) {
       ErrorHandler.log(error, 'ConfigService.save');
       throw new ConfigurationError(
@@ -141,29 +224,17 @@ export class ConfigService {
 
   /**
    * Get current configuration from cache (synchronous)
-   * Returns null if configuration hasn't been loaded yet
-   * @returns Cached Configuration object or null
-   * @example
-   * const config = configService.getCurrent();
-   * if (config) {
-   *   console.log(config.projectDirectory);
-   * }
    */
-  getCurrent(): Configuration | null {
+  getCurrent(): AppConfiguration | null {
     return this.config;
   }
 
   /**
    * Reset configuration to default values
-   * Overwrites existing configuration with defaults
-   * @returns Default Configuration object
-   * @throws ConfigurationError if save operation fails
-   * @example
-   * const defaultConfig = await configService.reset();
    */
-  async reset(): Promise<Configuration> {
+  async reset(): Promise<AppConfiguration> {
     try {
-      const defaultConfig = ConfigurationModel.createDefault();
+      const defaultConfig = createDefaultConfig();
       await this.save(defaultConfig);
       logger.info('Configuration reset to defaults', 'ConfigService');
       return defaultConfig;
@@ -178,73 +249,126 @@ export class ConfigService {
 
   /**
    * Check if configuration is complete (has project directory set)
-   * @returns True if project directory is configured, false otherwise
-   * @example
-   * if (await configService.isConfigured()) {
-   *   // App is ready to use
-   * } else {
-   *   // Show setup dialog
-   * }
    */
   async isConfigured(): Promise<boolean> {
     const config = await this.load();
     return ConfigurationModel.isComplete(config);
   }
 
+  // ============================================================================
+  // AI Configuration Methods
+  // ============================================================================
+
   /**
-   * Load private repositories configuration from disk
-   * Creates default configuration if file doesn't exist
-   * @returns PrivateRepoConfig object with repositories array
-   * @example
-   * const privateConfig = await configService.loadPrivateRepos();
-   * console.log(`${privateConfig.repositories.length} private repos configured`);
+   * Load AI configuration
    */
-  async loadPrivateRepos(): Promise<PrivateRepoConfig> {
-    try {
-      if (!fs.existsSync(this.privateReposPath)) {
-        logger.info('No private repos file found, creating default', 'ConfigService');
-        const defaultConfig = { version: 1, repositories: [] };
-        await fs.promises.writeFile(
-          this.privateReposPath,
-          JSON.stringify(defaultConfig, null, 2),
-          'utf-8'
-        );
-        return defaultConfig;
-      }
-
-      const content = await fs.promises.readFile(this.privateReposPath, 'utf-8');
-      const config = JSON.parse(content);
-
-      logger.debug('Private repos loaded', 'ConfigService', {
-        repoCount: config.repositories?.length || 0,
-      });
-
-      return config;
-    } catch (error) {
-    ErrorHandler.log(error, 'ConfigService.loadPrivateRepos');
-    return { version: 1, repositories: [] };
+  async loadAIConfig(): Promise<AIConfigSection> {
+    const config = await this.load();
+    return config.ai;
   }
-}
 
   /**
-   * Save private repositories configuration to disk
-   * @param config - PrivateRepoConfig object to save
-   * @throws ConfigurationError if save operation fails
-   * @example
-   * await configService.savePrivateRepos({
-   *   version: 1,
-   *   repositories: [repo1, repo2]
-   * });
+   * Save AI configuration
    */
-  async savePrivateRepos(config: PrivateRepoConfig): Promise<void> {
+  async saveAIConfig(aiConfig: AIConfigSection): Promise<void> {
     try {
-    await fs.promises.writeFile(
-      this.privateReposPath,
-      JSON.stringify(config, null, 2),
-      'utf-8'
-    );
-    this.privateRepos = config;
-    logger.debug('Private repos saved', 'ConfigService');
+      // Validate AI config
+      this.validateAIConfig(aiConfig);
+
+      // Load full config
+      const config = await this.load();
+
+      // Update AI section
+      config.ai = aiConfig;
+
+      // Save (encrypt API key)
+      const configToSave = {
+        ...config,
+        ai: {
+          ...config.ai,
+          apiKey: config.ai.apiKey ? encryptAPIKey(config.ai.apiKey) : '',
+        },
+      };
+
+      await fs.promises.writeFile(
+        this.configPath,
+        JSON.stringify(configToSave, null, 2),
+        'utf-8'
+      );
+
+      // Update cache
+      this.config = config;
+
+      logger.info('AI configuration saved', 'ConfigService');
+    } catch (error) {
+      ErrorHandler.log(error, 'ConfigService.saveAIConfig');
+      throw new ConfigurationError('Failed to save AI configuration', 'ai-config');
+    }
+  }
+
+  /**
+   * Validate AI configuration
+   */
+  private validateAIConfig(config: AIConfigSection): void {
+    const validProviders: AIProvider[] = ['anthropic'];
+    if (!validProviders.includes(config.provider)) {
+      throw new Error(`Invalid AI provider: ${config.provider}`);
+    }
+
+    if (config.apiKey && typeof config.apiKey !== 'string') {
+      throw new Error('API key must be a string');
+    }
+
+    if (!config.model || typeof config.model !== 'string') {
+      throw new Error('Model must be a non-empty string');
+    }
+
+    if (config.timeout < 5000 || config.timeout > 60000) {
+      throw new Error('Timeout must be between 5000ms and 60000ms');
+    }
+
+    if (config.maxRetries < 0 || config.maxRetries > 5) {
+      throw new Error('Max retries must be between 0 and 5');
+    }
+  }
+
+  // ============================================================================
+  // Private Repository Methods
+  // ============================================================================
+
+  /**
+   * Load private repositories configuration
+   */
+  async loadPrivateRepos(): Promise<PrivateRepoConfigSection> {
+    const config = await this.load();
+    return config.privateRepos;
+  }
+
+  /**
+   * Save private repositories configuration
+   */
+  async savePrivateRepos(privateRepos: PrivateRepoConfigSection): Promise<void> {
+    try {
+      const config = await this.load();
+      config.privateRepos = privateRepos;
+
+      // Save (encrypt API key in AI section)
+      const configToSave = {
+        ...config,
+        ai: {
+          ...config.ai,
+          apiKey: config.ai.apiKey ? encryptAPIKey(config.ai.apiKey) : '',
+        },
+      };
+
+      await fs.promises.writeFile(
+        this.configPath,
+        JSON.stringify(configToSave, null, 2),
+        'utf-8'
+      );
+
+      this.config = config;
+      logger.debug('Private repos saved', 'ConfigService');
     } catch (error) {
       ErrorHandler.log(error, 'ConfigService.savePrivateRepos');
       throw new ConfigurationError('Failed to save private repos', 'private-repos');
@@ -253,19 +377,6 @@ export class ConfigService {
 
   /**
    * Add a private repository configuration
-   * Checks for duplicate URLs before adding
-   * @param repo - PrivateRepo object to add
-   * @throws Error if repository with same URL already exists
-   * @example
-   * await configService.addPrivateRepo({
-   *   id: 'repo-1',
-   *   url: 'https://github.com/owner/repo',
-   *   owner: 'owner',
-   *   repo: 'repo',
-   *   patEncrypted: '...',
-   *   createdAt: new Date(),
-   *   updatedAt: new Date()
-   * });
    */
   async addPrivateRepo(repo: PrivateRepo): Promise<void> {
     const config = await this.loadPrivateRepos();
@@ -287,15 +398,6 @@ export class ConfigService {
 
   /**
    * Update a private repository configuration
-   * Merges updates with existing repository and validates for duplicate URLs
-   * @param repoId - ID of repository to update
-   * @param updates - Partial PrivateRepo object with fields to update
-   * @throws Error if repository not found or URL conflicts with another repository
-   * @example
-   * await configService.updatePrivateRepo('repo-1', {
-   *   displayName: 'My Updated Repo',
-   *   defaultBranch: 'develop'
-   * });
    */
   async updatePrivateRepo(
     repoId: string,
@@ -334,10 +436,6 @@ export class ConfigService {
 
   /**
    * Remove a private repository configuration
-   * @param repoId - ID of repository to remove
-   * @throws Error if repository not found
-   * @example
-   * await configService.removePrivateRepo('repo-1');
    */
   async removePrivateRepo(repoId: string): Promise<void> {
     const config = await this.loadPrivateRepos();
@@ -355,13 +453,6 @@ export class ConfigService {
 
   /**
    * Get a specific private repository by ID
-   * @param repoId - ID of repository to retrieve
-   * @returns PrivateRepo object or null if not found
-   * @example
-   * const repo = await configService.getPrivateRepo('repo-1');
-   * if (repo) {
-   *   console.log(repo.url);
-   * }
    */
   async getPrivateRepo(repoId: string): Promise<PrivateRepo | null> {
     const config = await this.loadPrivateRepos();
@@ -370,10 +461,6 @@ export class ConfigService {
 
   /**
    * List all configured private repositories
-   * @returns Array of PrivateRepo objects
-   * @example
-   * const repos = await configService.listPrivateRepos();
-   * repos.forEach(repo => console.log(repo.displayName));
    */
   async listPrivateRepos(): Promise<PrivateRepo[]> {
     const config = await this.loadPrivateRepos();
