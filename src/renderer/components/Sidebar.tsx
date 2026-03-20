@@ -59,7 +59,7 @@ export default function Sidebar({
     },
     {
       id: 'discover' as const,
-      label: 'Search on internet',
+      label: 'Search on Internet',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {/* Blue cloud with search icon for internet/discover skills */}
