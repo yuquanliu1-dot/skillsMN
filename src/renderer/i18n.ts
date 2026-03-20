@@ -42,10 +42,10 @@ i18n
     fallbackLng: defaultLanguage,
     supportedLngs: availableLanguages.map(l => l.code),
 
-    // Detection options
+    // Detection options - only use localStorage, default to English
     detection: {
-      // Order of language detection
-      order: ['localStorage', 'navigator'],
+      // Only check localStorage, don't follow system language
+      order: ['localStorage'],
       // Keys for localStorage
       lookupLocalStorage: 'skillsMN-language',
       // Cache user language in localStorage
