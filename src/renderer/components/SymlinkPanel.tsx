@@ -3,6 +3,7 @@
  *
  * A dropdown panel for managing symlinks to multiple AI agent tools and project directories.
  * Supports enabling/disabling links to each target independently.
+ * Uses a three-column grid layout for better space utilization.
  * Project directories are shown first (higher priority).
  */
 
@@ -18,6 +19,194 @@ interface SymlinkPanelProps {
   readOnly?: boolean;
   /** Callback when an error occurs */
   onError?: (error: string) => void;
+}
+
+/**
+ * Get tool icon by ID - simplified brand-colored icons
+ */
+function getToolIcon(toolId: string, className = "w-5 h-5"): JSX.Element {
+  const icons: Record<string, { color: string; icon: JSX.Element }> = {
+    'claude-code': {
+      color: '#D97706',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+          <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
+          <circle cx="12" cy="12" r="2"/>
+        </svg>
+      ),
+    },
+    'cursor': {
+      color: '#000000',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      ),
+    },
+    'cline': {
+      color: '#FF6B35',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+      ),
+    },
+    'windsurf': {
+      color: '#0EA5E9',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/>
+        </svg>
+      ),
+    },
+    'gemini': {
+      color: '#4285F4',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+        </svg>
+      ),
+    },
+    'aider': {
+      color: '#8B5CF6',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      ),
+    },
+    'copilot': {
+      color: '#000000',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+        </svg>
+      ),
+    },
+    'continue': {
+      color: '#10B981',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+      ),
+    },
+    'amazon-q': {
+      color: '#FF9900',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+        </svg>
+      ),
+    },
+    'codium': {
+      color: '#6366F1',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+          <text x="12" y="16" textAnchor="middle" fontSize="10" fontWeight="bold">Co</text>
+        </svg>
+      ),
+    },
+    'tabnine': {
+      color: '#6B7280',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z"/>
+        </svg>
+      ),
+    },
+    'codeium': {
+      color: '#09B6A2',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z"/>
+        </svg>
+      ),
+    },
+    'sourcegraph-cody': {
+      color: '#A855F7',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+      ),
+    },
+    'replit-ai': {
+      color: '#F26207',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      ),
+    },
+    'code-whisperer': {
+      color: '#FF9900',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9.5 2c-1.38 0-2.5 1.12-2.5 2.5V11H5c-1.1 0-2 .9-2 2v6.5C3 21.43 4.57 23 6.5 23s3.5-1.57 3.5-3.5V13h7v6.5c0 1.93 1.57 3.5 3.5 3.5s3.5-1.57 3.5-3.5V13c0-1.1-.9-2-2-2h-2V4.5c0-1.38-1.12-2.5-2.5-2.5h-6z"/>
+        </svg>
+      ),
+    },
+    'blackbox-ai': {
+      color: '#000000',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M8 12h8M12 8v8" stroke="white" strokeWidth="2"/>
+        </svg>
+      ),
+    },
+    'pearai': {
+      color: '#22C55E',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2c-4 0-7 3-7 7 0 2.38 1.19 4.47 3 5.74V17c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2v-2.26c1.81-1.27 3-3.36 3-5.74 0-4-3-7-7-7z"/>
+        </svg>
+      ),
+    },
+    'aicode': {
+      color: '#3B82F6',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+        </svg>
+      ),
+    },
+    'twinny': {
+      color: '#EC4899',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="8" cy="12" r="4"/>
+          <circle cx="16" cy="12" r="4"/>
+        </svg>
+      ),
+    },
+    'bito': {
+      color: '#6366F1',
+      icon: (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z"/>
+        </svg>
+      ),
+    },
+  };
+
+  const tool = icons[toolId];
+  if (tool) {
+    return <span style={{ color: tool.color }}>{tool.icon}</span>;
+  }
+
+  // Default icon for unknown tools
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#6B7280' }}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  );
 }
 
 export default function SymlinkPanel({
@@ -118,16 +307,9 @@ export default function SymlinkPanel({
   );
 
   /**
-   * Format skills directory path for display
+   * Render a single target card for grid layout
    */
-  const formatPath = (path: string): string => {
-    return path.replace('~/', '~/');
-  };
-
-  /**
-   * Render a single target row
-   */
-  const renderTarget = (tool: AgentTool) => {
+  const renderTargetCard = (tool: AgentTool) => {
     const isEnabled = symlinkStatus[tool.id] ?? false;
     const isUpdating = updatingTool === tool.id;
     const isProject = tool.type === 'project';
@@ -135,17 +317,63 @@ export default function SymlinkPanel({
     return (
       <div
         key={tool.id}
-        className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        className={`relative p-3 rounded-lg border transition-all cursor-pointer ${
+          isEnabled
+            ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
+            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+        }`}
+        onClick={() => handleToggle(tool.id, !isEnabled)}
       >
-        <div className="flex items-center gap-3">
+        {/* Loading indicator */}
+        {isUpdating && (
+          <div className="absolute inset-0 bg-white/60 rounded-lg flex items-center justify-center z-10">
+            <div className="animate-spin w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full" />
+          </div>
+        )}
+
+        <div className="flex items-center gap-2.5">
+          {/* Icon */}
+          <div className="flex-shrink-0">
+            {isProject ? (
+              <svg className="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v2H2V6z" />
+                <path fillRule="evenodd" d="M2 10v6a2 2 0 002 2h12a2 2 0 002-2v-6H2z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              getToolIcon(tool.id)
+            )}
+          </div>
+
+          {/* Name and status */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-medium truncate ${
+                isEnabled ? 'text-blue-900' : 'text-gray-900'
+              }`}>
+                {tool.name}
+              </span>
+              {isEnabled && (
+                <svg className="w-4 h-4 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 truncate mt-0.5" title={tool.skillsDir}>
+              {tool.skillsDir.replace('~/', '~/')}
+            </div>
+          </div>
+
           {/* Toggle switch */}
           <button
             data-testid={`symlink-toggle-${tool.id}`}
-            onClick={() => handleToggle(tool.id, !isEnabled)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggle(tool.id, !isEnabled);
+            }}
             disabled={readOnly || isUpdating}
             className={`relative inline-flex h-5 w-9 items-center rounded-full
               transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-              disabled:opacity-50 disabled:cursor-not-allowed ${
+              disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ${
               isEnabled ? 'bg-blue-600' : 'bg-gray-300'
             }`}
             role="switch"
@@ -159,41 +387,6 @@ export default function SymlinkPanel({
               }`}
             />
           </button>
-
-          {/* Icon and name */}
-          <div className="flex items-center gap-2">
-            {/* Folder icon for project, tool icon for AI agents */}
-            {isProject ? (
-              <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v2H2V6z" />
-                <path fillRule="evenodd" d="M2 10v6a2 2 0 002 2h12a2 2 0 002-2v-6H2zm0 0v6a2 2 0 002 2h12a2 2 0 002-2v-6H2z" clipRule="evenodd" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            )}
-            <div>
-              <div className="text-sm font-medium text-gray-900">{tool.name}</div>
-              <div className="text-xs text-gray-500">{formatPath(tool.skillsDir)}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Status indicator */}
-        <div className="flex items-center gap-2">
-          {isUpdating && (
-            <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full" />
-          )}
-          {isEnabled && !isUpdating && (
-            <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-          )}
         </div>
       </div>
     );
@@ -256,34 +449,35 @@ export default function SymlinkPanel({
         </div>
       </div>
 
-      {/* Expanded panel */}
+      {/* Expanded panel - three column grid layout */}
       {isExpanded && (
-        <div className="border-t border-gray-200 bg-white">
+        <div className="border-t border-gray-200 bg-white p-4">
           {isLoading ? (
-            <div className="px-4 py-6 text-center text-sm text-gray-500">
+            <div className="py-6 text-center text-sm text-gray-500">
               <div className="animate-spin inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full mr-2" />
               Loading targets...
             </div>
           ) : installedTools.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-gray-500">
+            <div className="py-6 text-center text-sm text-gray-500">
               No link targets available. Configure project directories in Settings or install AI agent tools.
             </div>
           ) : (
-            <>
+            <div className="space-y-4">
               {/* Project directories section */}
               {projectDirs.length > 0 && (
-                <div className="border-b border-gray-100">
-                  <div className="px-4 py-2 bg-amber-50 border-b border-amber-100">
-                    <span className="text-xs font-medium text-amber-700 flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v2H2V6z" />
-                        <path fillRule="evenodd" d="M2 10v6a2 2 0 002 2h12a2 2 0 002-2v-6H2z" clipRule="evenodd" />
-                      </svg>
-                      Project Directories (High Priority)
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v2H2V6z" />
+                      <path fillRule="evenodd" d="M2 10v6a2 2 0 002 2h12a2 2 0 002-2v-6H2z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                      Project Directories
                     </span>
+                    <span className="text-xs text-amber-600">High Priority</span>
                   </div>
-                  <div className="divide-y divide-gray-100">
-                    {projectDirs.map(renderTarget)}
+                  <div className="grid grid-cols-3 gap-2">
+                    {projectDirs.map(renderTargetCard)}
                   </div>
                 </div>
               )}
@@ -291,26 +485,26 @@ export default function SymlinkPanel({
               {/* AI Tools section */}
               {aiTools.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
-                    <span className="text-xs font-medium text-blue-700 flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
                       AI Agent Tools
                     </span>
                   </div>
-                  <div className="divide-y divide-gray-100">
-                    {aiTools.map(renderTarget)}
+                  <div className="grid grid-cols-3 gap-2">
+                    {aiTools.map(renderTargetCard)}
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
 
           {/* Help text */}
-          <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+          <div className="mt-4 pt-3 border-t border-gray-100">
             <p className="text-xs text-gray-500">
-              Project directories have higher priority. Skills linked to project directories will be used directly by the project. AI tool links make skills available in each tool's skills directory.
+              Click a card to toggle the link. Project directories have higher priority than AI tool links.
             </p>
           </div>
         </div>

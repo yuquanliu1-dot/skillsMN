@@ -59,7 +59,7 @@ export default function Sidebar({
     },
     {
       id: 'discover' as const,
-      label: 'Search on skills.sh',
+      label: 'Search on internet',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {/* Blue cloud with search icon for internet/discover skills */}
@@ -218,7 +218,7 @@ export default function Sidebar({
           {showTooltip === 'claude-status' && (
             <div className={`absolute left-full ml-2 px-3 py-2 text-xs rounded z-50 shadow-lg animate-fade-in ${
               claudeInstalled === false
-                ? 'bg-red-600 text-white whitespace-normal w-48'
+                ? 'bg-red-600 text-white whitespace-normal w-64 bottom-0'
                 : 'bg-slate-800 text-white whitespace-nowrap'
             }`}>
               {claudeInstalled === null ? (
@@ -230,13 +230,16 @@ export default function Sidebar({
                 </>
               ) : (
                 <>
-                  <span className="font-medium">Claude CLI not installed</span>
+                  <span className="font-medium block">Claude CLI not installed</span>
                   <span className="block text-red-200 mt-1 text-[11px] leading-relaxed">
                     AI-assisted skill generation and editing features will be unavailable.
                   </span>
-                  <span className="block text-red-200 mt-1 text-[11px]">
-                    Install with: <code className="bg-red-700/50 px-1 rounded">npm install -g @anthropic-ai/claude-code</code>
+                  <span className="block text-red-200 mt-1.5 text-[11px]">
+                    Install with:
                   </span>
+                  <code className="block bg-red-700/50 px-2 py-1 rounded mt-1 text-[10px] break-all">
+                    npm install -g @anthropic-ai/claude-code
+                  </code>
                 </>
               )}
             </div>

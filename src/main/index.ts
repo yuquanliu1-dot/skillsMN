@@ -36,9 +36,9 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 async function createWindow(): Promise<void> {
   logger.info('Creating main window', 'Main');
 
-  // Get icon path based on platform
+  // Get icon path based on environment
   const iconPath = isDev
-    ? path.join(__dirname, '../../resources/icons/icon.png')
+    ? path.join(__dirname, '../../../resources/icons/icon.png')
     : path.join(process.resourcesPath, 'icons/icon.png');
 
   mainWindow = new BrowserWindow({
