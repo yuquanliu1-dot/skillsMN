@@ -274,8 +274,12 @@ export default function SymlinkPanel({
               {projectDirs.length > 0 && (
                 <div className="border-b border-gray-100">
                   <div className="px-4 py-2 bg-amber-50 border-b border-amber-100">
-                    <span className="text-xs font-medium text-amber-700">
-                      📁 Project Directories (High Priority)
+                    <span className="text-xs font-medium text-amber-700 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v2H2V6z" />
+                        <path fillRule="evenodd" d="M2 10v6a2 2 0 002 2h12a2 2 0 002-2v-6H2z" clipRule="evenodd" />
+                      </svg>
+                      Project Directories (High Priority)
                     </span>
                   </div>
                   <div className="divide-y divide-gray-100">
@@ -288,8 +292,11 @@ export default function SymlinkPanel({
               {aiTools.length > 0 && (
                 <div>
                   <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
-                    <span className="text-xs font-medium text-blue-700">
-                      🤖 AI Agent Tools
+                    <span className="text-xs font-medium text-blue-700 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      AI Agent Tools
                     </span>
                   </div>
                   <div className="divide-y divide-gray-100">

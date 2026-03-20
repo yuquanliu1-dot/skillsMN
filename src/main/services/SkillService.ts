@@ -344,11 +344,12 @@ export class SkillService {
   /**
    * Delete a skill by moving to system recycle bin
    * Safe deletion that allows recovery from trash
+   * Performs deletion asynchronously in background for faster UI response
    * @param skillPath - Absolute path to skill directory
-   * @throws Error if path validation fails or deletion fails
+   * @throws Error if path validation fails
    * @example
    * await skillService.deleteSkill('/path/to/skill');
-   * console.log('Skill moved to recycle bin');
+   * console.log('Skill deletion started');
    */
   async deleteSkill(skillPath: string): Promise<void> {
     logger.info(`Deleting skill: ${skillPath}`, 'SkillService');
@@ -356,10 +357,14 @@ export class SkillService {
     // Validate path
     const validatedPath = this.pathValidator.validate(skillPath);
 
-    // Move to recycle bin
-    await trash(validatedPath);
+    // Move to recycle bin asynchronously (don't wait for completion)
+    trash(validatedPath).then(() => {
+      logger.info(`Skill moved to recycle bin: ${skillPath}`, 'SkillService');
+    }).catch((error) => {
+      logger.error(`Failed to move skill to recycle bin: ${skillPath}`, 'SkillService', { error });
+    });
 
-    logger.info(`Skill moved to recycle bin: ${skillPath}`, 'SkillService');
+    // Return immediately for faster UI response
   }
 
   /**
