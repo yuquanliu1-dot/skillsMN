@@ -973,7 +973,7 @@ export default function SkillEditor({
         onClose={() => setIsAISidebarOpen(false)}
         onSkillCreated={() => {
           onSkillCreated?.();
-          setIsAISidebarOpen(false);
+          // Don't auto-close sidebar to support multi-turn conversations
         }}
         config={appConfig}
         currentSkillContent={content}

@@ -176,10 +176,10 @@ export class AIService {
           model: currentConfig?.model || 'claude-sonnet-4-6-20250514',
           // Set working directory
           cwd: workingDirectory,
-          // Allow file operations without prompting
-          permissionMode: 'acceptEdits',
-          // Auto-allow Write and Bash tools
-          allowedTools: ['Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill'],
+          // Allow file operations without prompting - use 'acceptAll' for full tool execution
+          permissionMode: 'acceptAll',
+          // Auto-allow all necessary tools
+          allowedTools: ['Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill', 'NotebookEdit', 'TaskOutput'],
         },
       });
 
@@ -227,7 +227,11 @@ export class AIService {
             for (const piece of item.message.content) {
               // Type guard: check if piece is an object with 'type' property
               if (typeof piece === 'object' && piece !== null && 'type' in piece && piece.type === 'tool_result') {
-                const toolResult = piece as { type: 'tool_result'; content: any[] };
+                const toolResult = piece as { type: 'tool_result'; content: any[]; tool_use_id?: string };
+                logger.debug('Tool execution result', 'AIService', {
+                  tool_use_id: toolResult.tool_use_id,
+                  contentLength: toolResult.content?.length
+                });
                 for (const inner of toolResult.content) {
                   // Type guard: check if it's an object with 'type' property
                   if (typeof inner === 'object' && inner !== null && 'type' in inner && inner.type === 'text') {
