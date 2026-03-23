@@ -43,9 +43,10 @@ export class SkillService {
       return config.applicationSkillsDirectory;
     }
 
-    // Default to skills subdirectory in app installation directory
-    const appPath = app.getAppPath();
-    return path.join(appPath, 'skills');
+    // In packaged apps, use userData directory (writable location for app data)
+    // In development, use the app root directory
+    const basePath = app.isPackaged ? app.getPath('userData') : app.getAppPath();
+    return path.join(basePath, 'skills');
   }
 
   /**
