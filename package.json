@@ -15,11 +15,19 @@
     "files": [
       "dist/**/*",
       "node_modules/**/*",
-      "package.json"
+      "package.json",
+      "resources/icons/icon.ico"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/icons/icon.ico",
+        "to": "icon.ico"
+      }
     ],
     "nodeGypRebuild": false,
     "npmRebuild": false,
     "win": {
+      "icon": "resources/icons/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -120,6 +128,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "png-to-ico": "^3.0.1",
     "postcss": "^8.4.33",
     "prettier": "^3.2.0",
     "rimraf": "^5.0.5",
