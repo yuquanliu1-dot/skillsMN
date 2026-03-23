@@ -239,6 +239,8 @@ export interface BaseConfiguration {
   migrationPreferenceAsked?: boolean;
   /** UI language preference */
   language?: LanguageCode;
+  /** Whether the initial setup wizard has been completed */
+  setupCompleted?: boolean;
 }
 
 /**
@@ -397,7 +399,7 @@ export interface UIState {
 // AI Types
 // ============================================================================
 
-export type AIGenerationMode = 'new' | 'modify' | 'insert' | 'replace';
+export type AIGenerationMode = 'new' | 'modify' | 'insert' | 'replace' | 'evaluate' | 'benchmark' | 'optimize';
 
 export interface AIGenerationRequest {
   /** Unique request identifier for tracking */
@@ -450,6 +452,48 @@ export type AIModel = string; // Allow any model name for flexibility
  * @deprecated Use AIConfigSection instead
  */
 export type AIConfiguration = AIConfigSection;
+
+// ============================================================================
+// AI Conversation History Types
+// ============================================================================
+
+/**
+ * Message in an AI conversation
+ */
+export interface AIConversationMessage {
+  /** Unique message ID */
+  id: string;
+  /** Message role */
+  role: 'user' | 'assistant';
+  /** Message content */
+  content: string;
+  /** Timestamp */
+  timestamp: string; // ISO string for serialization
+  /** Whether message is still streaming */
+  isStreaming?: boolean;
+  /** Tool calls made during this message */
+  toolCalls?: Array<{ name: string; input?: any }>;
+}
+
+/**
+ * AI Conversation session
+ */
+export interface AIConversation {
+  /** Unique conversation ID */
+  id: string;
+  /** Conversation title (auto-generated from first message) */
+  title: string;
+  /** All messages in the conversation */
+  messages: AIConversationMessage[];
+  /** Creation timestamp */
+  createdAt: string; // ISO string for serialization
+  /** Last update timestamp */
+  updatedAt: string; // ISO string for serialization
+  /** Associated skill name (if editing a skill) */
+  skillName?: string;
+  /** Associated skill path (if editing a skill) */
+  skillPath?: string;
+}
 
 // ============================================================================
 // GitHub Search Types (Feature 004)

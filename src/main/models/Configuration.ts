@@ -106,6 +106,7 @@ export class ConfigurationModel {
       applicationSkillsDirectory: config.applicationSkillsDirectory,
       migrationCompleted: config.migrationCompleted,
       migrationPreferenceAsked: config.migrationPreferenceAsked,
+      setupCompleted: config.setupCompleted,
     };
   }
 
@@ -143,13 +144,14 @@ export class ConfigurationModel {
       applicationSkillsDirectory: updates.applicationSkillsDirectory ?? existing.applicationSkillsDirectory,
       migrationCompleted: updates.migrationCompleted ?? existing.migrationCompleted,
       migrationPreferenceAsked: updates.migrationPreferenceAsked ?? existing.migrationPreferenceAsked,
+      setupCompleted: updates.setupCompleted ?? existing.setupCompleted,
     };
   }
 
   /**
-   * Check if configuration is complete (has at least one project directory)
+   * Check if configuration is complete (setup wizard has been completed)
    */
   static isComplete(config: BaseConfiguration): boolean {
-    return config.projectDirectories.length > 0;
+    return config.setupCompleted === true;
   }
 }

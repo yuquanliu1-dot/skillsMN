@@ -160,28 +160,11 @@ export default function App(): JSX.Element {
           }
         }
 
-        // Check if setup is needed (using projectDirectories array)
-        if (!config.projectDirectories || config.projectDirectories.length === 0) {
+        // Check if setup is needed (setupCompleted flag)
+        if (!config.setupCompleted) {
           setShowSetup(true);
           dispatch({ type: 'SET_LOADING', payload: false });
           return;
-        }
-
-        // Verify project directory still exists (T122)
-        try {
-          const response = await window.electronAPI.listSkills(config);
-          if (!response.success) {
-            // Project directory might be missing or inaccessible
-            if (response.error?.message.includes('does not exist') || response.error?.message.includes('not found')) {
-              showToast('Project directory not found. Please reconfigure.', 'error');
-              setShowSetup(true);
-              dispatch({ type: 'SET_LOADING', payload: false });
-              return;
-            }
-          }
-        } catch (err) {
-          console.warn('Failed to verify project directory:', err);
-          // Continue anyway - the directory might become available later
         }
 
         // Start file watcher if autoRefresh is enabled
@@ -395,8 +378,11 @@ export default function App(): JSX.Element {
    */
   const handleSetupComplete = async (): Promise<void> => {
     try {
-      // Load existing config to check migration status
-      const config = await ipcClient.loadConfig();
+      // Save config with setupCompleted flag
+      const config = await ipcClient.saveConfig({
+        setupCompleted: true,
+        migrationPreferenceAsked: true,
+      });
       dispatch({ type: 'SET_CONFIG', payload: config });
       setShowSetup(false);
 
