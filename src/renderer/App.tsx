@@ -393,9 +393,10 @@ export default function App(): JSX.Element {
   /**
    * Handle setup completion
    */
-  const handleSetupComplete = async (projectDirectory: string): Promise<void> => {
+  const handleSetupComplete = async (): Promise<void> => {
     try {
-      const config = await ipcClient.saveConfig({ projectDirectories: [projectDirectory] });
+      // Load existing config to check migration status
+      const config = await ipcClient.loadConfig();
       dispatch({ type: 'SET_CONFIG', payload: config });
       setShowSetup(false);
 
@@ -427,16 +428,32 @@ export default function App(): JSX.Element {
 
       if (result.success && result.data) {
         // Update config to mark migration as completed
-        await window.electronAPI.saveConfig({
+        const config = await ipcClient.saveConfig({
           migrationCompleted: true,
           migrationPreferenceAsked: true,
         });
+        dispatch({ type: 'SET_CONFIG', payload: config });
 
         setShowMigrationDialog(false);
         showToast(`Successfully migrated ${result.data.migratedCount} skills!`, 'success');
 
         // Reload skills
         await loadSkills();
+
+        // Start file watcher if not already running (after setup flow)
+        if (config.autoRefresh !== false) {
+          try {
+            await ipcClient.startWatching();
+            ipcClient.removeFSChangeListener();
+            ipcClient.onFSChange(async (event) => {
+              console.log('File system change detected:', event);
+              await loadSkillsRef.current();
+            });
+            console.log('File system watcher started after migration');
+          } catch (err) {
+            console.warn('File watcher may already be running:', err);
+          }
+        }
       } else {
         throw new Error(result.error?.message || 'Migration failed');
       }
@@ -450,10 +467,49 @@ export default function App(): JSX.Element {
    * Handle migration skip
    */
   const handleMigrationSkip = async (): Promise<void> => {
-    await window.electronAPI.saveConfig({
+    const config = await ipcClient.saveConfig({
       migrationPreferenceAsked: true,
     });
+    dispatch({ type: 'SET_CONFIG', payload: config });
     setShowMigrationDialog(false);
+
+    // Start file watcher if not already running (after setup flow)
+    if (config.autoRefresh !== false) {
+      try {
+        await ipcClient.startWatching();
+        ipcClient.removeFSChangeListener();
+        ipcClient.onFSChange(async (event) => {
+          console.log('File system change detected:', event);
+          await loadSkillsRef.current();
+        });
+        console.log('File system watcher started after migration skip');
+      } catch (err) {
+        console.warn('File watcher may already be running:', err);
+      }
+    }
+  };
+
+  /**
+   * Handle project directory added - check for migration
+   */
+  const handleProjectDirectoryAdded = async (directoryPath: string): Promise<void> => {
+    try {
+      // Check if migration was already asked
+      if (state.config?.migrationPreferenceAsked) {
+        return;
+      }
+
+      // Check if the directory has skills
+      const response = await window.electronAPI.checkDirectoryForSkills(directoryPath);
+      if (response.success && response.data && response.data.length > 0) {
+        // Skills found - show migration dialog
+        setMigrationProjectSkills(response.data);
+        setMigrationGlobalSkills([]);
+        setShowMigrationDialog(true);
+      }
+    } catch (error) {
+      console.error('Failed to check directory for skills:', error);
+    }
   };
 
   /**
@@ -1023,6 +1079,7 @@ export default function App(): JSX.Element {
         onClose={() => setShowSettings(false)}
         config={state.config}
         onSave={handleSaveSettings}
+        onDirectoryAdded={handleProjectDirectoryAdded}
       />
     </AppContext.Provider>
   );

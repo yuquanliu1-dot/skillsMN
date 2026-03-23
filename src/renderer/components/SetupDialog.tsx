@@ -2,9 +2,8 @@
  * Setup Wizard Dialog Component
  *
  * Multi-step setup wizard for first-time configuration
- * Step 1: Project Directory Configuration
- * Step 2: Private Repository Authentication (Optional)
- * Step 3: AI Configuration (Optional)
+ * Step 1: Private Repository Authentication (Optional)
+ * Step 2: AI Configuration (Optional)
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -12,24 +11,22 @@ import { useTranslation } from 'react-i18next';
 import type { AIConfiguration, PrivateRepo } from '../../shared/types';
 
 interface SetupDialogProps {
-  onComplete: (projectDirectory: string) => Promise<void>;
+  onComplete: () => Promise<void>;
 }
 
-type SetupStep = 'project-directory' | 'private-repos' | 'ai-config';
+type SetupStep = 'private-repos' | 'ai-config';
 
 export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Element {
   const { t } = useTranslation();
 
   // Step state
-  const [currentStep, setCurrentStep] = useState<SetupStep>('project-directory');
+  const [currentStep, setCurrentStep] = useState<SetupStep>('private-repos');
 
-  // Step 1: Project Directory
-  const [directory, setDirectory] = useState<string>('');
+  // Error and loading states
   const [error, setError] = useState<string | null>(null);
-  const [isValidating, setIsValidating] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
 
-  // Step 2: Private Repos
+  // Step 1: Private Repos
   const [privateRepos, setPrivateRepos] = useState<PrivateRepo[]>([]);
   const [showAddRepoForm, setShowAddRepoForm] = useState(false);
   const [newRepoUrl, setNewRepoUrl] = useState('');
@@ -41,7 +38,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
   const [testingRepoId, setTestingRepoId] = useState<string | null>(null);
   const [repoTestResults, setRepoTestResults] = useState<Record<string, { success: boolean; error?: string }>>({});
 
-  // Step 3: AI Configuration
+  // Step 2: AI Configuration
   const [aiConfig, setAiConfig] = useState<AIConfiguration | null>(null);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [isSavingAI, setIsSavingAI] = useState(false);
@@ -115,56 +112,6 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
       setIsLoadingAI(false);
     }
   };
-
-  /**
-   * Handle browse for directory
-   */
-  const handleBrowse = useCallback(async () => {
-    try {
-      const response = await window.electronAPI.selectDirectory();
-      if (response.success && response.data && !response.data.canceled && response.data.filePaths.length > 0) {
-        setDirectory(response.data.filePaths[0]);
-        setError(null);
-      }
-    } catch (err) {
-      setError('Failed to open directory browser');
-      console.error('Browse error:', err);
-    }
-  }, []);
-
-  /**
-   * Validate directory exists and is accessible
-   * Note: We no longer require .claude folder - user can select any directory as skills storage
-   */
-  const validateDirectory = useCallback(async (dir: string): Promise<boolean> => {
-    if (!dir) {
-      setError('Please select a directory');
-      return false;
-    }
-
-    setIsValidating(true);
-    setError(null);
-
-    try {
-      const cleanDir = dir.replace(/[\\/]+$/, '');
-
-      // Basic validation - check if the path looks valid (not just checking existence)
-      // The actual directory will be created/used when skills are stored
-      if (cleanDir.length < 1) {
-        setError('Please enter a valid directory path');
-        return false;
-      }
-
-      return true;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to validate directory';
-      setError(message);
-      console.error('Validation error:', err);
-      return false;
-    } finally {
-      setIsValidating(false);
-    }
-  }, []);
 
   /**
    * Handle add private repository
@@ -300,11 +247,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
    * Handle next step
    */
   const handleNext = async () => {
-    if (currentStep === 'project-directory') {
-      const isValid = await validateDirectory(directory);
-      if (!isValid) return;
-      setCurrentStep('private-repos');
-    } else if (currentStep === 'private-repos') {
+    if (currentStep === 'private-repos') {
       setCurrentStep('ai-config');
     } else if (currentStep === 'ai-config') {
       // Save AI config if provided
@@ -314,7 +257,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
       // Complete setup
       setIsCompleting(true);
       try {
-        await onComplete(directory);
+        await onComplete();
       } catch (err) {
         setError('Failed to save configuration');
         console.error('Complete error:', err);
@@ -334,7 +277,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
     } else if (currentStep === 'ai-config') {
       // Complete setup
       setIsCompleting(true);
-      onComplete(directory).catch(err => {
+      onComplete().catch(err => {
         setError('Failed to save configuration');
         console.error('Complete error:', err);
         setIsCompleting(false);
@@ -347,9 +290,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
    */
   const handleBack = () => {
     setError(null);
-    if (currentStep === 'private-repos') {
-      setCurrentStep('project-directory');
-    } else if (currentStep === 'ai-config') {
+    if (currentStep === 'ai-config') {
       setCurrentStep('private-repos');
     }
   };
@@ -359,9 +300,8 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
    */
   const getStepNumber = () => {
     switch (currentStep) {
-      case 'project-directory': return 1;
-      case 'private-repos': return 2;
-      case 'ai-config': return 3;
+      case 'private-repos': return 1;
+      case 'ai-config': return 2;
     }
   };
 
@@ -392,7 +332,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
             {/* Step Indicator */}
             <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl">
               <div className="flex gap-2">
-                {[1, 2, 3].map((step) => (
+                {[1, 2].map((step) => (
                   <div key={step} className="flex items-center gap-2">
                     <div className={`relative w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
                       getStepNumber() === step
@@ -409,7 +349,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                         <span className="text-sm font-semibold">{step}</span>
                       )}
                     </div>
-                    {step < 3 && (
+                    {step < 2 && (
                       <div className={`w-8 h-0.5 rounded-full transition-all duration-300 ${
                         getStepNumber() > step ? 'bg-green-500' : 'bg-slate-200'
                       }`} />
@@ -423,14 +363,8 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
           {/* Step Title */}
           <div className="flex items-center gap-3 mt-4 pl-16">
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              currentStep === 'project-directory' ? 'bg-blue-100' :
               currentStep === 'private-repos' ? 'bg-purple-100' : 'bg-green-100'
             }`}>
-              {currentStep === 'project-directory' && (
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
-              )}
               {currentStep === 'private-repos' && (
                 <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
@@ -444,12 +378,10 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-900">
-                {currentStep === 'project-directory' && t('setup.skillsDirectory')}
                 {currentStep === 'private-repos' && t('setup.privateRepos')}
                 {currentStep === 'ai-config' && t('setup.aiConfiguration')}
               </h3>
               <p className="text-sm text-slate-500">
-                {currentStep === 'project-directory' && t('setup.skillsDirectoryDescription')}
                 {currentStep === 'private-repos' && t('setup.privateReposDescription')}
                 {currentStep === 'ai-config' && t('setup.aiConfigDescription')}
               </p>
@@ -459,92 +391,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-8">
-          {/* Step 1: Project Directory */}
-          {currentStep === 'project-directory' && (
-            <div className="animate-fadeIn">
-              {/* Directory selection card */}
-              {directory ? (
-                <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-green-900 mb-1">{t('setup.selectedDirectory')}</p>
-                      <p className="text-sm text-green-700 font-mono truncate" title={directory}>
-                        {directory}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleBrowse}
-                      className="px-4 py-2 bg-white hover:bg-green-50 border-2 border-green-200 rounded-lg text-sm font-medium text-green-700 transition-all"
-                      disabled={isValidating || isCompleting}
-                    >
-                      {t('setup.change')}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleBrowse}
-                  className="w-full mb-6 p-8 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-2 border-dashed border-blue-300 rounded-xl transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isValidating || isCompleting}
-                >
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
-                      <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold text-slate-900 mb-1">
-                        {t('setup.clickToSelectDirectory')}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {t('setup.chooseFolderDescription')}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              )}
-
-              {error && (
-                <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl animate-shake">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <p className="text-sm text-red-700 font-medium mt-1.5">{error}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-900 mb-1">Quick Tip</p>
-                    <p className="text-sm text-blue-700">
-                      For project-level skills, the directory name is typically <code className="bg-blue-100 px-1.5 py-0.5 rounded font-mono text-xs">skills</code>.
-                      You can add multiple directories later from Settings.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Private Repositories */}
+          {/* Step 1: Private Repositories */}
           {currentStep === 'private-repos' && (
             <div className="animate-fadeIn">
               {/* Add Button */}
@@ -768,7 +615,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
             </div>
           )}
 
-          {/* Step 3: AI Configuration */}
+          {/* Step 2: AI Configuration */}
           {currentStep === 'ai-config' && (
             <div className="animate-fadeIn">
               {isLoadingAI ? (
@@ -971,11 +818,11 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
         <div className="p-6 border-t border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100/50">
           <div className="flex items-center justify-between">
             <div>
-              {currentStep !== 'project-directory' && (
+              {currentStep !== 'private-repos' && (
                 <button
                   onClick={handleBack}
                   className="px-5 py-2.5 bg-white hover:bg-slate-50 border-2 border-slate-200 rounded-lg font-medium text-slate-700 transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  disabled={isValidating || isCompleting}
+                  disabled={isCompleting}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -989,7 +836,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                 <button
                   onClick={handleSkip}
                   className="px-5 py-2.5 bg-white hover:bg-slate-50 border-2 border-slate-200 rounded-lg font-medium text-slate-600 transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isValidating || isCompleting || isAddingRepo || isSavingAI}
+                  disabled={isCompleting || isAddingRepo || isSavingAI}
                 >
                   Skip for Now
                 </button>
@@ -997,13 +844,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
               <button
                 onClick={handleNext}
                 className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-medium text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-w-[140px] justify-center"
-                disabled={
-                  isValidating ||
-                  isCompleting ||
-                  isAddingRepo ||
-                  isSavingAI ||
-                  (currentStep === 'project-directory' && !directory)
-                }
+                disabled={isCompleting || isAddingRepo || isSavingAI}
               >
                 {isCompleting ? (
                   <>
