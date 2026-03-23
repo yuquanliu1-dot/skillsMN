@@ -31,6 +31,7 @@ export interface ElectronAPI {
   listSkills: (config?: Configuration) => Promise<IPCResponse<Skill[]>>;
   getSkill: (path: string) => Promise<IPCResponse<{ metadata: Skill; content: string }>>;
   createSkill: (name: string) => Promise<IPCResponse<Skill>>;
+  copySkill: (sourcePath: string, newName: string) => Promise<IPCResponse<Skill>>;
   updateSkill: (
     path: string,
     content: string,

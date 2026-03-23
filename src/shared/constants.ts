@@ -120,6 +120,7 @@ export const IPC_CHANNELS = {
   SKILL_LIST: 'skill:list',
   SKILL_GET: 'skill:get',
   SKILL_CREATE: 'skill:create',
+  SKILL_COPY: 'skill:copy',
   SKILL_UPDATE: 'skill:update',
   SKILL_DELETE: 'skill:delete',
   SKILL_OPEN_FOLDER: 'skill:open-folder',
@@ -196,6 +197,7 @@ export const IPC_CHANNELS = {
   MIGRATION_DETECT_SKILLS: 'migration:detect-skills',
   MIGRATION_START: 'migration:start',
   MIGRATION_PROGRESS: 'migration:progress',
+  MIGRATION_CHECK_DIRECTORY: 'migration:check-directory',
 } as const;
 
 // ============================================================================

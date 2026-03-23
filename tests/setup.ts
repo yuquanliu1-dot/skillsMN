@@ -36,6 +36,7 @@ global.window.electronAPI = {
   listSkills: jest.fn(),
   getSkill: jest.fn(),
   createSkill: jest.fn(),
+  copySkill: jest.fn(),
   updateSkill: jest.fn(),
   deleteSkill: jest.fn(),
   openFolder: jest.fn(),

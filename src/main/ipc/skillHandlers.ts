@@ -115,6 +115,25 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
     }
   );
 
+  // Handler for skill:copy
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_COPY,
+    async (
+      _event,
+      { sourcePath, newName }: { sourcePath: string; newName: string }
+    ): Promise<IPCResponse<Skill>> => {
+      try {
+        logger.debug(`Copying skill: ${sourcePath} to ${newName}`, 'SkillHandlers');
+        const skill = await skillService!.copySkill(sourcePath, newName);
+        logger.info(`Skill copied: ${newName}`, 'SkillHandlers');
+        return { success: true, data: skill };
+      } catch (error) {
+        logger.error('Failed to copy skill', 'SkillHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
   // Handler for skill:update
   ipcMain.handle(
     IPC_CHANNELS.SKILL_UPDATE,

@@ -10,6 +10,7 @@ import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
 import CreateSkillDialog from './components/CreateSkillDialog';
+import CopySkillDialog from './components/CopySkillDialog';
 import { lazy, Suspense } from 'react';
 const SkillEditor = lazy(() => import('./components/SkillEditor'));
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
@@ -108,6 +109,7 @@ export default function App(): JSX.Element {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
+  const [copyingSkill, setCopyingSkill] = useState<Skill | null>(null);
   const [uploadingSkill, setUploadingSkill] = useState<Skill | null>(null);
   const [committingSkill, setCommittingSkill] = useState<Skill | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -633,6 +635,32 @@ export default function App(): JSX.Element {
   };
 
   /**
+   * Handle copy skill
+   */
+  const handleCopySkill = async (newName: string): Promise<void> => {
+    if (!copyingSkill) return;
+
+    try {
+      const response = await window.electronAPI.copySkill(copyingSkill.path, newName);
+      if (!response.success) {
+        throw new Error(response.error?.message || 'Failed to copy skill');
+      }
+
+      // Refresh skill list
+      await loadSkills();
+
+      // Show success notification
+      showToast(`Skill "${newName}" created from "${copyingSkill.name}"`, 'success');
+
+      console.log('Skill copied successfully:', newName);
+    } catch (error: any) {
+      console.error('Failed to copy skill:', error);
+      showToast(`Failed to copy skill: ${error.message}`, 'error');
+      throw error;
+    }
+  };
+
+  /**
    * Handle save settings
    */
   const handleSaveSettings = async (settings: Partial<Configuration>): Promise<void> => {
@@ -820,6 +848,7 @@ export default function App(): JSX.Element {
                 onSkillSelect={(skill) => setSelectedSkillPath(skill.path)}
                 onCreateSkill={() => setShowCreateDialog(true)}
                 onDeleteSkill={(skill) => setDeletingSkill(skill)}
+                onCopySkill={(skill) => setCopyingSkill(skill)}
                 onOpenFolder={handleOpenFolder}
                 selectedSkillPath={selectedSkillPath}
                 skillUpdates={skillUpdates}
@@ -1027,6 +1056,16 @@ export default function App(): JSX.Element {
         onClose={() => setDeletingSkill(null)}
         onConfirm={handleDeleteSkill}
       />
+
+      {/* Copy Skill Dialog */}
+      {copyingSkill && (
+        <CopySkillDialog
+          skill={copyingSkill}
+          isOpen={copyingSkill !== null}
+          onClose={() => setCopyingSkill(null)}
+          onConfirm={handleCopySkill}
+        />
+      )}
 
       {/* Upload to Private Repository Dialog */}
       {uploadingSkill && (

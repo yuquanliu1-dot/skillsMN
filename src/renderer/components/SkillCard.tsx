@@ -13,6 +13,7 @@ interface SkillCardProps {
   skill: Skill;
   onClick?: (skill: Skill) => void;
   onDelete?: (skill: Skill) => void;
+  onCopy?: (skill: Skill) => void;
   onOpenFolder?: (skill: Skill) => void;
   onSelect?: (skill: Skill) => void;
   isSelected?: boolean;
@@ -25,6 +26,7 @@ export default function SkillCard({
   skill,
   onClick,
   onDelete,
+  onCopy,
   onOpenFolder,
   onSelect,
   isSelected,
@@ -77,6 +79,12 @@ export default function SkillCard({
     e.stopPropagation();
     e.preventDefault();
     onOpenFolder?.(skill);
+  };
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onCopy?.(skill);
   };
 
   const handleUpdateClick = (e: React.MouseEvent) => {
@@ -238,6 +246,19 @@ export default function SkillCard({
               >
                 <svg className="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+              </button>
+            )}
+
+            {/* Copy Button */}
+            {onCopy && (
+              <button
+                onClick={handleCopy}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                aria-label={t('skillCard.copy')}
+              >
+                <svg className="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
               </button>
             )}

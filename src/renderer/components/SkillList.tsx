@@ -18,6 +18,7 @@ interface SkillListProps {
   onSkillSelect?: (skill: Skill) => void;
   onCreateSkill?: () => void;
   onDeleteSkill?: (skill: Skill) => void;
+  onCopySkill?: (skill: Skill) => void;
   onOpenFolder?: (skill: Skill) => void;
   selectedSkillPath?: string | null;
   skillUpdates?: Record<string, VersionComparison>;
@@ -31,6 +32,7 @@ export default function SkillList({
   onSkillSelect,
   onCreateSkill,
   onDeleteSkill,
+  onCopySkill,
   onOpenFolder,
   selectedSkillPath,
   skillUpdates = {},
@@ -131,6 +133,7 @@ export default function SkillList({
               onClick={onSkillClick}
               onSelect={onSkillSelect}
               onDelete={onDeleteSkill}
+              onCopy={onCopySkill}
               onOpenFolder={onOpenFolder}
               isSelected={skill.path === selectedSkillPath}
               versionStatus={versionStatus}
@@ -141,7 +144,7 @@ export default function SkillList({
         </div>
       );
     },
-    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onOpenFolder, selectedSkillPath, skillUpdates, handleSkillUpdate, onSkillUpload]
+    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onCopySkill, onOpenFolder, selectedSkillPath, skillUpdates, handleSkillUpdate, onSkillUpload]
   );
 
   // Update list height on container resize

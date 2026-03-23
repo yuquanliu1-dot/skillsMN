@@ -53,6 +53,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_CREATE, { name, directory: 'application' });
   },
 
+  copySkill: (sourcePath: string, newName: string): Promise<IPCResponse<Skill>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_COPY, { sourcePath, newName });
+  },
+
   updateSkill: (
     path: string,
     content: string,

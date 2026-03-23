@@ -343,6 +343,125 @@ export class SkillService {
   }
 
   /**
+   * Copy a skill to a new directory with a new name
+   * Copies all files and updates SKILL.md frontmatter with new name
+   * @param sourcePath - Absolute path to source skill directory
+   * @param newName - New name for the copied skill (will be converted to kebab-case for directory)
+   * @returns Created Skill object with metadata
+   * @throws Error if source skill doesn't exist, target already exists, or name is invalid
+   * @example
+   * const skill = await skillService.copySkill('/path/to/skill', 'my-skill-copy');
+   * console.log('Copied to:', skill.path);
+   */
+  async copySkill(sourcePath: string, newName: string): Promise<Skill> {
+    logger.info(`Copying skill: ${sourcePath} to ${newName}`, 'SkillService');
+
+    // Validate source path
+    const validatedSourcePath = this.pathValidator.validate(sourcePath);
+
+    // Validate new name - must be valid folder name (kebab-case, no Chinese)
+    const kebabName = this.validateAndConvertToKebabCase(newName);
+
+    // Get application directory for target
+    const config = await this.getConfig();
+    const targetBase = this.getApplicationSkillsDirectory(config);
+    const targetPath = path.join(targetBase, kebabName);
+
+    // Validate target path
+    this.pathValidator.validate(targetPath);
+
+    // Check if source exists
+    if (!fs.existsSync(validatedSourcePath)) {
+      throw new Error(`Source skill not found: ${sourcePath}`);
+    }
+
+    // Check if target already exists
+    if (fs.existsSync(targetPath)) {
+      throw new Error(`Skill already exists: ${newName} at ${targetPath}`);
+    }
+
+    // Get source skill content
+    const sourceSkillFile = path.join(validatedSourcePath, SKILL_FILE_NAME);
+    let skillContent = await fs.promises.readFile(sourceSkillFile, 'utf-8');
+
+    // Update the name in frontmatter
+    skillContent = this.updateFrontmatterName(skillContent, newName);
+
+    // Copy all files from source to target
+    await fsExtra.copy(validatedSourcePath, targetPath, {
+      overwrite: false,
+      errorOnExist: true,
+    });
+
+    // Update SKILL.md with new name in the copied skill
+    const targetSkillFile = path.join(targetPath, SKILL_FILE_NAME);
+    await fs.promises.writeFile(targetSkillFile, skillContent, 'utf-8');
+
+    // Create new source metadata for local skill (remove remote source info)
+    const sourceMetadata = createLocalSource();
+    const metadataPath = path.join(targetPath, SOURCE_METADATA_FILE);
+    await fs.promises.writeFile(metadataPath, JSON.stringify(sourceMetadata, null, 2), 'utf-8');
+
+    // Parse and return copied skill (with cache)
+    const skill = await SkillModel.fromDirectory(targetPath, 'application', this.frontmatterCache);
+
+    logger.info(`Skill copied: ${newName}`, 'SkillService', { sourcePath, targetPath });
+    return skill;
+  }
+
+  /**
+   * Validate name and convert to kebab-case
+   * Ensures name is valid for folder naming (no Chinese characters)
+   * @param name - The name to validate and convert
+   * @returns kebab-case version of the name
+   * @throws Error if name contains Chinese characters or is invalid
+   */
+  private validateAndConvertToKebabCase(name: string): string {
+    // Check for Chinese characters
+    if (/[\u4e00-\u9fa5]/.test(name)) {
+      throw new Error('Skill name cannot contain Chinese characters. Please use English letters, numbers, hyphens, and underscores only.');
+    }
+
+    // Convert to kebab-case
+    const kebabName = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    if (!kebabName || kebabName.length === 0) {
+      throw new Error('Invalid skill name. Name must contain at least one letter or number.');
+    }
+
+    return kebabName;
+  }
+
+  /**
+   * Update the name field in SKILL.md frontmatter
+   * @param content - The SKILL.md content
+   * @param newName - The new name to set
+   * @returns Updated content with new name
+   */
+  private updateFrontmatterName(content: string, newName: string): string {
+    // Check if content starts with frontmatter
+    if (!content.startsWith('---')) {
+      // No frontmatter, prepend one with just the name
+      return `---
+name: ${newName}
+---
+
+${content}`;
+    }
+
+    // Update name in existing frontmatter
+    // Match the name field in frontmatter and replace it
+    return content.replace(
+      /^(---\n(?:.*\n)*?)name:\s*[^\n]+(\n(?:.*\n)*?---)/,
+      `$1name: ${newName}$2`
+    );
+  }
+
+  /**
    * Delete a skill by moving to system recycle bin
    * Safe deletion that allows recovery from trash
    * Performs deletion asynchronously in background for faster UI response
