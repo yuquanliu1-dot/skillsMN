@@ -15,9 +15,10 @@ interface SettingsProps {
   onClose: () => void;
   config: Configuration | null;
   onSave: (config: Partial<Configuration>) => Promise<void>;
+  onDirectoryAdded?: (directoryPath: string) => void;
 }
 
-export default function Settings({ isOpen, onClose, config, onSave }: SettingsProps): JSX.Element | null {
+export default function Settings({ isOpen, onClose, config, onSave, onDirectoryAdded }: SettingsProps): JSX.Element | null {
   const { t } = useTranslation();
   console.log('[Settings] Component rendering', { isOpen, activeTab: undefined });
 
@@ -158,6 +159,11 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
         // Save immediately
         await onSave({ projectDirectories: updatedDirectories });
         setSuccess('Project directory added successfully');
+
+        // Notify parent component about the new directory (for migration check)
+        if (onDirectoryAdded) {
+          onDirectoryAdded(selectedPath);
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to add directory';
@@ -358,6 +364,11 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
         setNewRepoInstanceUrl('');
         setShowAddRepoForm(false);
         await loadPrivateRepos();
+
+        // Dispatch custom event to notify PrivateRepoList to refresh
+        window.dispatchEvent(new CustomEvent('private-repo-updated', {
+          detail: { repoId: response.data.id, patUpdated: false, isNew: true }
+        }));
       } else {
         setError(response.error?.message || 'Failed to add repository');
       }

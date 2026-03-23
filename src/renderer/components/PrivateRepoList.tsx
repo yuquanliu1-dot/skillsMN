@@ -116,8 +116,15 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
    * Listen for private repo updates from Settings
    */
   useEffect(() => {
-    const handlePrivateRepoUpdate = (event: CustomEvent<{ repoId: string; patUpdated: boolean }>) => {
+    const handlePrivateRepoUpdate = (event: CustomEvent<{ repoId: string; patUpdated: boolean; isNew?: boolean }>) => {
       console.log('[PrivateRepoList] Received private-repo-updated event:', event.detail);
+
+      // If a new repo was added, reload the repositories list
+      if (event.detail.isNew) {
+        console.log('[PrivateRepoList] New repo added, reloading repositories');
+        loadRepositories();
+        return;
+      }
 
       // If PAT was updated, trigger refresh
       if (event.detail.patUpdated) {
