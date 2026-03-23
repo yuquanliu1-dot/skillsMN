@@ -67,6 +67,8 @@
     "skillsCount": "{{count}} 个技能",
     "noSkills": "未找到技能。创建您的第一个技能开始使用。",
     "noMatchingSkills": "没有符合搜索条件的技能。",
+    "filterByTag": "按标签筛选",
+    "allTags": "所有标签",
     "newSkill": "新建技能",
     "createSkill": "创建技能",
     "createNewSkill": "创建新技能",
@@ -366,6 +368,7 @@
     "noSkillsAvailable": "没有可用的技能",
     "noSkillsFound": "未找到技能",
     "noSkillsInRepo": "此仓库不包含任何技能目录",
+    "noSkillsForTag": "未找到标签为 \"{{tag}}\" 的技能",
     "authFailed": "认证失败。您的 PAT 可能已过期或被撤销。",
     "goToSettingsToUpdatePat": "前往设置更新您的 PAT。"
   },

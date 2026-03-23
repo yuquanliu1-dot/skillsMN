@@ -50,6 +50,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
   const [skills, setSkills] = useState<PrivateSkill[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterTag, setFilterTag] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
   const [isLoadingRepos, setIsLoadingRepos] = useState(true);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
@@ -59,12 +60,38 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
   const [visibleCount, setVisibleCount] = useState(50); // Pagination for large lists
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to force refresh
 
-  // Sort skills
-  const sortedSkills = useMemo(() => {
+  // Extract all unique tags from skills
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    skills.forEach((skill) => {
+      skill.tags?.forEach((tag) => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [skills]);
+
+  // Filter and sort skills
+  const filteredAndSortedSkills = useMemo(() => {
     if (!skills || skills.length === 0) return skills;
 
-    const sorted = [...skills];
-    sorted.sort((a, b) => {
+    let result = [...skills];
+
+    // Filter by tag
+    if (filterTag !== 'all') {
+      result = result.filter((skill) => skill.tags?.includes(filterTag));
+    }
+
+    // Filter by search query (client-side, only when not filtering by tag)
+    if (searchQuery.trim() && filterTag === 'all') {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (skill) =>
+          skill.name.toLowerCase().includes(query) ||
+          skill.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort
+    result.sort((a, b) => {
       switch (sortBy) {
         case 'name':
           return a.name.localeCompare(b.name);
@@ -75,8 +102,8 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
       }
     });
 
-    return sorted;
-  }, [skills, sortBy]);
+    return result;
+  }, [skills, filterTag, searchQuery, sortBy]);
 
   /**
    * Load repositories on mount
@@ -127,6 +154,13 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
   useEffect(() => {
     setVisibleCount(50);
   }, [skills.length]);
+
+  /**
+   * Reset tag filter when skills change
+   */
+  useEffect(() => {
+    setFilterTag('all');
+  }, [selectedRepoId]);
 
   /**
    * Load skills when repository is selected
@@ -344,7 +378,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
           </button>
         </div>
 
-        {/* Bottom row: Repository selector + Skills count + Sort */}
+        {/* Bottom row: Repository selector + Tag filter + Skills count + Sort */}
         <div className="flex items-center gap-4 flex-wrap">
           {/* Repository selector */}
           <div className="flex items-center gap-2 flex-1">
@@ -368,13 +402,38 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
             </select>
           </div>
 
-          {/* Skills count and Sort */}
+          {/* Skills count, Tag filter and Sort */}
           {selectedRepoId && skills.length > 0 && (
             <>
               <span className="text-xs text-gray-500">
-                {t('privateRepos.skillsCount', { count: skills.length })}
+                {t('privateRepos.skillsCount', { count: filteredAndSortedSkills.length })}
               </span>
 
+              {/* Tag filter */}
+              {allTags.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  <select
+                    id="filter-tag-private"
+                    value={filterTag}
+                    onChange={(e) => setFilterTag(e.target.value)}
+                    className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
+                    aria-label={t('skills.filterByTag')}
+                    title={t('skills.filterByTag')}
+                  >
+                    <option value="all">{t('skills.allTags')}</option>
+                    {allTags.map((tag) => (
+                      <option key={tag} value={tag}>
+                        {tag}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Sort by */}
               <div className="flex items-center gap-1 ml-auto">
                 <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
@@ -498,7 +557,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
               </button>
             )}
           </div>
-        ) : sortedSkills.length === 0 ? (
+        ) : filteredAndSortedSkills.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -511,18 +570,20 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {searchQuery ? t('privateRepos.noSkillsFound') : t('privateRepos.noSkillsAvailable')}
+              {searchQuery || filterTag !== 'all' ? t('privateRepos.noSkillsFound') : t('privateRepos.noSkillsAvailable')}
             </h3>
             <p className="text-sm text-gray-600 text-center max-w-md">
               {searchQuery
                 ? t('discover.noResultsFor', { query: searchQuery })
-                : t('privateRepos.noSkillsInRepo')}
+                : filterTag !== 'all'
+                  ? t('privateRepos.noSkillsForTag', { tag: filterTag })
+                  : t('privateRepos.noSkillsInRepo')}
             </p>
           </div>
         ) : (
           <>
             <ul className="space-y-0">
-              {sortedSkills.slice(0, visibleCount).map((skill) => (
+              {filteredAndSortedSkills.slice(0, visibleCount).map((skill) => (
                 <li key={skill.path}>
                   <PrivateSkillCard
                     skill={skill}
@@ -535,22 +596,22 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
             </ul>
 
             {/* Load More Button for Large Lists */}
-            {sortedSkills.length > visibleCount && (
+            {filteredAndSortedSkills.length > visibleCount && (
               <div className="mt-4 text-center">
                 <button
                   onClick={() => setVisibleCount(prev => prev + 50)}
                   className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  aria-label={`Load more skills (${sortedSkills.length - visibleCount} remaining)`}
+                  aria-label={`Load more skills (${filteredAndSortedSkills.length - visibleCount} remaining)`}
                 >
-                  {t('privateRepos.loadMore', { count: sortedSkills.length - visibleCount })}
+                  {t('privateRepos.loadMore', { count: filteredAndSortedSkills.length - visibleCount })}
                 </button>
               </div>
             )}
 
             {/* Skills Count Indicator */}
-            {sortedSkills.length > 50 && (
+            {filteredAndSortedSkills.length > 50 && (
               <div className="mt-2 text-center text-xs text-gray-500">
-                {t('privateRepos.showingOf', { visible: Math.min(visibleCount, sortedSkills.length), total: sortedSkills.length })}
+                {t('privateRepos.showingOf', { visible: Math.min(visibleCount, filteredAndSortedSkills.length), total: filteredAndSortedSkills.length })}
               </div>
             )}
           </>

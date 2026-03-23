@@ -67,6 +67,8 @@
     "skillsCount": "{{count}} skills",
     "noSkills": "No skills found. Create your first skill to get started.",
     "noMatchingSkills": "No skills match your search criteria.",
+    "filterByTag": "Filter by tag",
+    "allTags": "All tags",
     "newSkill": "New Skill",
     "createSkill": "Create Skill",
     "createNewSkill": "Create New Skill",
@@ -366,6 +368,7 @@
     "noSkillsAvailable": "No skills available",
     "noSkillsFound": "No skills found",
     "noSkillsInRepo": "This repository does not contain any skill directories",
+    "noSkillsForTag": "No skills found with tag \"{{tag}}\"",
     "authFailed": "Authentication failed. Your PAT may have expired or been revoked.",
     "goToSettingsToUpdatePat": "Go to Settings to update your PAT."
   },

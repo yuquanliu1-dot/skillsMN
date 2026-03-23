@@ -40,9 +40,19 @@ export default function SkillList({
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
+  const [filterTag, setFilterTag] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
   const listRef = useRef<HTMLDivElement>(null);
   const [listHeight, setListHeight] = useState(600);
+
+  // Extract all unique tags from skills
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    skills.forEach((skill) => {
+      skill.tags?.forEach((tag) => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [skills]);
 
   // Filter and sort skills
   const filteredAndSortedSkills = useMemo(() => {
@@ -54,6 +64,11 @@ export default function SkillList({
         const sourceType = skill.sourceMetadata?.type || 'local';
         return sourceType === filterSource;
       });
+    }
+
+    // Filter by tag
+    if (filterTag !== 'all') {
+      result = result.filter((skill) => skill.tags?.includes(filterTag));
     }
 
     // Filter by search query
@@ -79,7 +94,7 @@ export default function SkillList({
     });
 
     return result;
-  }, [skills, filterSource, searchQuery, sortBy]);
+  }, [skills, filterSource, filterTag, searchQuery, sortBy]);
 
   const handleFilterChange = useCallback((newFilter: FilterSource) => {
     setFilterSource(newFilter);
@@ -230,6 +245,30 @@ export default function SkillList({
                 <option value="private-repo">{t('skills.private')}</option>
               </select>
             </div>
+
+            {/* Filter by tag */}
+            {allTags.length > 0 && (
+              <div className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                <select
+                  id="filter-tag"
+                  value={filterTag}
+                  onChange={(e) => setFilterTag(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
+                  aria-label={t('skills.filterByTag')}
+                  title={t('skills.filterByTag')}
+                >
+                  <option value="all">{t('skills.allTags')}</option>
+                  {allTags.map((tag) => (
+                    <option key={tag} value={tag}>
+                      {tag}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Sort by */}
             <div className="flex items-center gap-1">
