@@ -1552,7 +1552,7 @@ export default function Settings({ isOpen, onClose, config, onSave }: SettingsPr
                         onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
                         className="input w-full text-sm"
                         disabled={isSavingAI}
-                        placeholder="claude-3-sonnet-20240229"
+                        placeholder=""
                       />
                     </div>
                   </div>
