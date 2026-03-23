@@ -540,67 +540,59 @@ export class AIService {
 
   /**
    * Build system prompt based on generation mode
-   * Note: Claude Agent SDK will automatically load and access skills from .claude/skills/
+   * Designed to work with skill-creator skill for comprehensive skill management
    * @private
    */
   private static buildSystemPrompt(mode: AIGenerationRequest['mode'], request?: AIGenerationRequest): string {
     const targetPath = request?.skillContext?.targetPath;
 
-    const basePrompt = `You are an expert skill creator, optimizer, and evaluator for Claude Code. You have access to the skill-creator skill which provides comprehensive guidelines for creating, improving, and measuring skill performance.
+    const basePrompt = `You are a skill management assistant that works with the skill-creator skill.
 
-## Core Capabilities
+## Your Role
 
-You support the following operations:
+You help users manage Claude Code skills through these capabilities:
 
-### 1. Create New Skills
-- Generate complete, production-ready skills from scratch
-- Follow proper YAML frontmatter format (name, description, version, author, tags)
-- Write comprehensive Markdown content with clear structure
-- Include practical examples and step-by-step instructions
+1. **Create New Skills** - Generate complete, production-ready skills from scratch
+2. **Modify Existing Skills** - Update and enhance existing skill content
+3. **Improve Skills** - Optimize skill structure, clarity, and effectiveness
+4. **Measure Performance** - Analyze skill effectiveness and identify issues
+5. **Run Evals** - Design and execute test cases to validate skill behavior
+6. **Benchmark Skills** - Compare performance across scenarios with variance analysis
+7. **Optimize Descriptions** - Improve triggering accuracy through better descriptions
 
-### 2. Modify & Improve Existing Skills
-- Enhance skill content while preserving core purpose
-- Add missing examples, clarifications, or edge cases
-- Restructure for better readability and organization
-- Fix issues or address user feedback
+## IMPORTANT: Use the Skill Tool
 
-### 3. Measure Skill Performance
-- Analyze skill effectiveness and suggest improvements
-- Identify potential issues in skill design
-- Evaluate skill clarity, completeness, and usability
+Before performing any task, invoke the skill-creator skill for guidance:
+\`\`\`
+Use Skill tool with skill name: "skill-creator"
+\`\`\`
 
-### 4. Run Evaluations (Evals)
-- Design test cases to validate skill behavior
-- Create evaluation scenarios for skill testing
-- Analyze skill responses against expected outcomes
+The skill-creator skill provides comprehensive guidelines for:
+- Skill structure and format best practices
+- Effective description writing for triggering
+- Evaluation and benchmarking methodologies
+- Common patterns and anti-patterns
 
-### 5. Benchmark & Variance Analysis
-- Compare skill performance across different scenarios
-- Identify variance in skill behavior
-- Suggest optimizations for consistency
-
-### 6. Optimize Skill Descriptions
-- Improve description clarity and accuracy
-- Enhance triggering precision for better skill matching
-- Ensure description aligns with skill capabilities
-
-## Tool Usage
-- Use the Skill tool to access skill-creator guidance
-- Use Write tool to create/modify skill files
-- Use Read tool to examine existing skills
-- Use Bash tool for file operations
-- Use Grep/Glob to search skill content
+## Available Tools
+- **Skill** - Access skill-creator and other skills for guidance
+- **Write** - Create or modify skill files (SKILL.md)
+- **Read** - Examine existing skill content
+- **Edit** - Make targeted changes to skill files
+- **Bash** - File system operations (mkdir, etc.)
+- **Grep/Glob** - Search skill content
 
 ${targetPath ? `
 ## Path Requirements
-CRITICAL: Save all skill files to: ${targetPath}
-DO NOT save to ~/.local/share/claude-cli/skills/ or other default locations.
-Use the path: ${targetPath}/<skill-name>/SKILL.md` : ''}
+CRITICAL: All skill files MUST be saved to: ${targetPath}
+- Create directory: ${targetPath}/<skill-name>/
+- Write file: ${targetPath}/<skill-name>/SKILL.md
+- DO NOT use ~/.claude/skills/ or ~/.local/share/claude-cli/skills/` : ''}
 
-## Skill Format
+## Skill File Format
+\`\`\`markdown
 ---
 name: Skill Name
-description: Brief description (optimize for accurate triggering)
+description: Clear description for accurate triggering (what users would say)
 version: 1.0.0
 author: Author Name
 tags: [tag1, tag2, tag3]
@@ -608,50 +600,103 @@ trigger_glob: Optional glob pattern (e.g., "**/*.py")
 trigger_type: Optional file type hint
 ---
 
-# Skill Content
+# Skill Title
 
-Markdown content with instructions, examples, and guidance.`;
+Skill content with instructions, examples, and guidance.
+\`\`\``;
 
-    const modeInstructions = {
+    const modeInstructions: Record<string, string> = {
       new: targetPath
-        ? `\n\n## Current Task: Create New Skill
+        ? `
 
-You are creating a NEW skill from scratch. Use the skill-creator skill for comprehensive guidance.
+## Task: Create New Skill
 
-CRITICAL PATH REQUIREMENT:
-The skill MUST be saved to: ${targetPath}/<skill-name>/SKILL.md
+1. First, invoke the skill-creator skill for creation guidelines
+2. Analyze user requirements to determine skill purpose and scope
+3. Convert skill name to kebab-case (e.g., "Code Reviewer" → "code-reviewer")
+4. Create directory: mkdir -p "${targetPath}/<skill-name>"
+5. Write skill file: ${targetPath}/<skill-name>/SKILL.md
 
-Steps:
-1. Determine the skill name from the user's requirements (convert to kebab-case, e.g., "Directory Viewer" → "directory-viewer")
-2. Use the Bash tool to create the directory: mkdir -p "${targetPath}/<skill-name>"
-3. Use the Write tool with the EXACT path: ${targetPath}/<skill-name>/SKILL.md
+IMPORTANT: The Write tool file_path MUST be exactly:
+${targetPath}/<skill-name>/SKILL.md`
+        : `
 
-Example: If skill name is "directory-viewer", the Write tool file_path MUST be:
-${targetPath}/directory-viewer/SKILL.md
+## Task: Create New Skill
 
-DO NOT use any other path. DO NOT save to ~/.claude/skills/ or ~/.local/share/claude-cli/skills/`
-        : '\n\n## Current Task: Create New Skill\n\nYou are creating a NEW skill from scratch. Use the skill-creator skill for comprehensive guidance.',
+1. First, invoke the skill-creator skill for creation guidelines
+2. Create a complete, production-ready skill based on user requirements`,
 
       modify: targetPath
-        ? `\n\n## Current Task: Modify Existing Skill
+        ? `
 
-You are MODIFYING an existing skill. The skill is located at: ${targetPath}/${request?.skillContext?.name || 'unknown'}/SKILL.md
-Save changes to this exact path. Consider:
-- Improving clarity and completeness
-- Adding missing examples or edge cases
-- Enhancing description for better triggering
-- Following skill-creator best practices`
-        : '\n\n## Current Task: Modify Existing Skill\n\nYou are MODIFYING an existing skill. Consider:\n- Improving clarity and completeness\n- Adding missing examples or edge cases\n- Enhancing description for better triggering\n- Following skill-creator best practices',
+## Task: Modify Existing Skill
 
-      insert: '\n\n## Current Task: Insert Content\n\nYou are INSERTING new content into an existing skill at a specified position. Generate content that:\n- Fits naturally with surrounding content\n- Maintains consistent style and tone\n- Follows skill-creator guidelines',
+Skill location: ${targetPath}/${request?.skillContext?.name || 'unknown'}/SKILL.md
 
-      replace: '\n\n## Current Task: Replace Content\n\nYou are REPLACING a selected portion of an existing skill. Generate replacement content that:\n- Maintains context and flow\n- Improves upon the original\n- Follows skill-creator as reference',
+1. First, invoke the skill-creator skill for best practices
+2. Apply the requested modifications
+3. Save changes to the same path
+4. Ensure improvements align with skill-creator guidelines`
+        : `
 
-      evaluate: '\n\n## Current Task: Evaluate Skill Performance\n\nYou are EVALUATING a skill\'s effectiveness. Consider:\n- Clarity of instructions and examples\n- Completeness of coverage\n- Ease of understanding and following\n- Potential edge cases or ambiguities\n- Description accuracy for triggering',
+## Task: Modify Existing Skill
 
-      benchmark: '\n\n## Current Task: Benchmark Skill\n\nYou are BENCHMARKING a skill\'s performance. Consider:\n- Consistency across different scenarios\n- Variance in responses or behavior\n- Areas for optimization\n- Comparison with best practices',
+1. First, invoke the skill-creator skill for best practices
+2. Apply the requested modifications while preserving core purpose`,
 
-      optimize: '\n\n## Current Task: Optimize Skill Description\n\nYou are OPTIMIZING a skill\'s description for better triggering accuracy. Consider:\n- Key phrases users might use to invoke this skill\n- Clarity and specificity of the description\n- Avoiding false positive triggers\n- Ensuring description matches skill capabilities'
+      insert: `
+
+## Task: Insert Content
+
+1. First, invoke the skill-creator skill for content guidelines
+2. Generate content that fits naturally at the specified position
+3. Maintain consistent style and tone with existing content`,
+
+      replace: `
+
+## Task: Replace Selected Content
+
+1. First, invoke the skill-creator skill for content guidelines
+2. Generate replacement text that improves upon the original
+3. Maintain context and flow with surrounding content`,
+
+      evaluate: `
+
+## Task: Evaluate Skill Performance
+
+1. First, invoke the skill-creator skill for evaluation methodology
+2. Analyze skill effectiveness:
+   - Clarity of instructions and examples
+   - Completeness of coverage
+   - Ease of understanding
+   - Edge cases and ambiguities
+3. Assess description accuracy for triggering
+4. Provide actionable improvement suggestions`,
+
+      benchmark: `
+
+## Task: Benchmark Skill with Variance Analysis
+
+1. First, invoke the skill-creator skill for benchmarking methodology
+2. Analyze performance across different scenarios
+3. Identify variance in behavior:
+   - Consistency issues
+   - Edge case handling
+   - Response quality variance
+4. Compare with best practices
+5. Provide optimization recommendations`,
+
+      optimize: `
+
+## Task: Optimize Skill Description
+
+1. First, invoke the skill-creator skill for description guidelines
+2. Analyze current description:
+   - Trigger phrase coverage
+   - Specificity vs generality
+   - False positive risks
+3. Propose optimized description options
+4. Suggest any frontmatter improvements for better triggering`
     };
 
     return basePrompt + (modeInstructions[mode] || '');
@@ -662,35 +707,36 @@ Save changes to this exact path. Consider:
    * @private
    */
   private static buildUserPrompt(request: AIGenerationRequest): string {
-    const currentContent = request.skillContext?.content;
-    const cursorPosition = request.skillContext?.cursorPosition;
-    const selectedText = request.skillContext?.selectedText;
-    const skillName = request.skillContext?.name;
+    const { mode, prompt, skillContext } = request;
+    const currentContent = skillContext?.content;
+    const cursorPosition = skillContext?.cursorPosition;
+    const selectedText = skillContext?.selectedText;
+    const skillName = skillContext?.name;
 
-    switch (request.mode) {
+    switch (mode) {
       case 'new':
-        return `Create a new skill with the following requirements:\n\n${request.prompt}`;
+        return `Create a new skill with these requirements:\n\n${prompt}`;
 
       case 'modify':
-        return `Modify the following skill content according to these instructions:\n\n${request.prompt}\n\nCurrent content:\n\n${currentContent || ''}`;
+        return `Modify this skill according to the instructions.\n\n## Instructions\n${prompt}\n\n## Current Skill Content\n\n${currentContent || '(empty)'}`;
 
       case 'insert':
-        return `Insert new content at position ${cursorPosition ?? 0} in the following skill content.\n\nInstructions: ${request.prompt}\n\nCurrent content:\n\n${currentContent || ''}`;
+        return `Insert content at position ${cursorPosition ?? 0}.\n\n## Instructions\n${prompt}\n\n## Current Content\n\n${currentContent || '(empty)'}`;
 
       case 'replace':
-        return `Replace the following selected text with new content:\n\nSelected text: "${selectedText || ''}"\n\nInstructions: ${request.prompt}\n\nCurrent content:\n${currentContent || ''}\n\nGenerate ONLY the replacement text, not the entire content.`;
+        return `Replace the selected text with new content.\n\n## Selected Text\n"${selectedText || '(nothing selected)'}"\n\n## Instructions\n${prompt}\n\n## Context (surrounding content)\n${currentContent || '(empty)'}\n\nGenerate ONLY the replacement text.`;
 
       case 'evaluate':
-        return `Evaluate the following skill's performance and effectiveness:\n\nSkill Name: ${skillName || 'Unknown'}\n\nEvaluation Focus: ${request.prompt}\n\nSkill Content:\n\n${currentContent || ''}\n\nProvide a comprehensive evaluation including:\n1. Overall effectiveness score (1-10)\n2. Strengths\n3. Weaknesses\n4. Specific improvement suggestions\n5. Description accuracy assessment`;
+        return `Evaluate this skill's performance.\n\n## Skill Name\n${skillName || 'Unknown'}\n\n## Evaluation Focus\n${prompt || 'General evaluation'}\n\n## Skill Content\n\n${currentContent || '(empty)'}`;
 
       case 'benchmark':
-        return `Benchmark the following skill's performance with variance analysis:\n\nSkill Name: ${skillName || 'Unknown'}\n\nBenchmark Focus: ${request.prompt}\n\nSkill Content:\n\n${currentContent || ''}\n\nProvide benchmark analysis including:\n1. Performance metrics\n2. Consistency assessment\n3. Variance analysis\n4. Comparison with best practices\n5. Optimization recommendations`;
+        return `Benchmark this skill with variance analysis.\n\n## Skill Name\n${skillName || 'Unknown'}\n\n## Benchmark Focus\n${prompt || 'General benchmarking'}\n\n## Skill Content\n\n${currentContent || '(empty)'}`;
 
       case 'optimize':
-        return `Optimize the description of the following skill for better triggering accuracy:\n\nSkill Name: ${skillName || 'Unknown'}\n\nOptimization Focus: ${request.prompt}\n\nCurrent Skill Content:\n\n${currentContent || ''}\n\nProvide:\n1. Current description analysis\n2. Trigger phrase suggestions\n3. Optimized description options\n4. Expected improvement in triggering accuracy\n5. Any frontmatter improvements`;
+        return `Optimize this skill's description for better triggering.\n\n## Skill Name\n${skillName || 'Unknown'}\n\n## Optimization Focus\n${prompt || 'General optimization'}\n\n## Current Skill Content\n\n${currentContent || '(empty)'}`;
 
       default:
-        return request.prompt;
+        return prompt;
     }
   }
 }
