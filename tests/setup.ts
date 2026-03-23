@@ -114,4 +114,11 @@ global.window.electronAPI = {
   startMigration: jest.fn(),
   onMigrationProgress: jest.fn(),
   removeMigrationProgressListener: jest.fn(),
+  checkDirectoryForSkills: jest.fn(),
+
+  // AI Conversation History Operations
+  saveAIConversation: jest.fn(),
+  loadAIConversations: jest.fn(),
+  getAIConversation: jest.fn(),
+  deleteAIConversation: jest.fn(),
 };

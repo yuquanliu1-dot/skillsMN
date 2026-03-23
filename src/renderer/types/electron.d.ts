@@ -199,6 +199,13 @@ export interface ElectronAPI {
   }) => Promise<IPCResponse<import('../../shared/types').MigrationResult>>;
   onMigrationProgress: (callback: (event: any, progress: import('../../shared/types').MigrationProgress) => void) => void;
   removeMigrationProgressListener: () => void;
+  checkDirectoryForSkills: (directoryPath: string) => Promise<IPCResponse<Skill[]>>;
+
+  // AI Conversation History Operations
+  saveAIConversation: (conversation: import('../../shared/types').AIConversation) => Promise<IPCResponse<import('../../shared/types').AIConversation>>;
+  loadAIConversations: () => Promise<IPCResponse<import('../../shared/types').AIConversation[]>>;
+  getAIConversation: (conversationId: string) => Promise<IPCResponse<import('../../shared/types').AIConversation | null>>;
+  deleteAIConversation: (conversationId: string) => Promise<IPCResponse<void>>;
 }
 
 declare global {

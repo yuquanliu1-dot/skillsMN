@@ -416,7 +416,15 @@
       "explain": "解释",
       "fixIssue": "修复问题",
       "addFeature": "添加功能"
-    }
+    },
+
+    "newConversation": "新对话",
+    "history": "历史",
+    "conversationHistory": "对话历史",
+    "noConversations": "暂无对话",
+    "deleteConversation": "删除对话",
+    "yesterday": "昨天",
+    "daysAgo": "{{count}} 天前"
   },
 
   "symlink": {

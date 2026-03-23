@@ -3,24 +3,13 @@
  *
  * A conversational sidebar for AI-powered skill creation with chat history
  * This is a sidebar version of AISkillCreationDialog with multi-turn conversation support
+ * Includes persistent conversation history storage
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAIGeneration } from '../hooks/useAIGeneration';
-import type { Configuration } from '../../shared/types';
-
-/**
- * Chat message type
- */
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  isStreaming?: boolean;
-  toolCalls?: Array<{ name: string; input?: any }>;
-}
+import type { Configuration, AIConversation, AIConversationMessage } from '../../shared/types';
 
 interface AISkillSidebarProps {
   isOpen: boolean;
@@ -32,10 +21,52 @@ interface AISkillSidebarProps {
 }
 
 /**
- * Generate unique ID for messages
+ * Internal message type that uses Date for timestamp
+ * (for display purposes in the component)
  */
-function generateMessageId(): string {
-  return `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+interface InternalMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  isStreaming?: boolean;
+  toolCalls?: Array<{ name: string; input?: any }>;
+}
+
+/**
+ * Convert stored message (with string timestamp) to internal message (with Date timestamp)
+ */
+function toInternalMessage(msg: AIConversationMessage): InternalMessage {
+  return {
+    ...msg,
+    timestamp: new Date(msg.timestamp),
+  };
+}
+
+/**
+ * Convert internal message (with Date timestamp) to stored message (with string timestamp)
+ */
+function toStoredMessage(msg: InternalMessage): AIConversationMessage {
+  return {
+    ...msg,
+    timestamp: msg.timestamp.toISOString(),
+  };
+}
+
+/**
+ * Generate unique ID for messages and conversations
+ */
+function generateId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * Generate a title from the first user message
+ */
+function generateTitle(content: string): string {
+  const maxLen = 40;
+  const title = content.trim().split('\n')[0];
+  return title.length > maxLen ? title.substring(0, maxLen) + '...' : title;
 }
 
 /**
@@ -98,26 +129,158 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   currentSkillName,
 }) => {
   const { t } = useTranslation();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<InternalMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const [showPromptMenu, setShowPromptMenu] = useState(false);
+  const [showHistoryMenu, setShowHistoryMenu] = useState(false);
+
+  // Conversation history state
+  const [conversations, setConversations] = useState<AIConversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const promptMenuRef = useRef<HTMLDivElement>(null);
+  const historyMenuRef = useRef<HTMLDivElement>(null);
+
+  const {
+    status,
+    content,
+    error,
+    toolCalls,
+    isStreaming,
+    isComplete,
+    isIdle,
+    generate,
+    stop,
+    reset,
+  } = useAIGeneration({
+    onComplete: async () => {
+      console.log('AI skill generation complete - file created by Agent SDK');
+      onSkillCreated();
+    },
+    onError: (errorMessage) => {
+      console.error('AI skill generation error:', errorMessage);
+    },
+  });
 
   /**
-   * Handle clicking outside prompt menu to close it
+   * Load conversation history on mount
+   */
+  useEffect(() => {
+    if (isOpen) {
+      loadConversations();
+    }
+  }, [isOpen]);
+
+  /**
+   * Handle clicking outside menus to close them
    */
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (promptMenuRef.current && !promptMenuRef.current.contains(event.target as Node)) {
         setShowPromptMenu(false);
       }
+      if (historyMenuRef.current && !historyMenuRef.current.contains(event.target as Node)) {
+        setShowHistoryMenu(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  /**
+   * Load all conversations from storage
+   */
+  const loadConversations = useCallback(async () => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await window.electronAPI.loadAIConversations();
+      if (response.success && response.data) {
+        setConversations(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  /**
+   * Save current conversation to storage
+   */
+  const saveCurrentConversation = useCallback(async (
+    msgs: InternalMessage[],
+    conversationId: string | null
+  ): Promise<string | null> => {
+    if (msgs.length === 0) return null;
+
+    const now = new Date().toISOString();
+    const firstUserMessage = msgs.find(m => m.role === 'user');
+    const title = firstUserMessage ? generateTitle(firstUserMessage.content) : 'New Conversation';
+
+    const conversation: AIConversation = {
+      id: conversationId || generateId(),
+      title,
+      messages: msgs.map(toStoredMessage),
+      createdAt: conversationId
+        ? (conversations.find(c => c.id === conversationId)?.createdAt || now)
+        : now,
+      updatedAt: now,
+      skillName: currentSkillName,
+      skillPath: undefined,
+    };
+
+    try {
+      const response = await window.electronAPI.saveAIConversation(conversation);
+      if (response.success) {
+        await loadConversations();
+        return conversation.id;
+      }
+    } catch (error) {
+      console.error('Failed to save conversation:', error);
+    }
+    return null;
+  }, [conversations, currentSkillName, loadConversations]);
+
+  /**
+   * Load a specific conversation
+   */
+  const handleLoadConversation = useCallback((conversation: AIConversation) => {
+    setMessages(conversation.messages.map(toInternalMessage));
+    setCurrentConversationId(conversation.id);
+    setShowHistoryMenu(false);
+    reset();
+  }, [reset]);
+
+  /**
+   * Delete a conversation
+   */
+  const handleDeleteConversation = useCallback(async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await window.electronAPI.deleteAIConversation(conversationId);
+      await loadConversations();
+      if (currentConversationId === conversationId) {
+        setMessages([]);
+        setCurrentConversationId(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+    }
+  }, [currentConversationId, loadConversations]);
+
+  /**
+   * Start a new conversation
+   */
+  const handleNewConversation = useCallback(() => {
+    setMessages([]);
+    setCurrentConversationId(null);
+    reset();
+    setShowHistoryMenu(false);
+  }, [reset]);
 
   /**
    * Handle selecting a prompt from the menu
@@ -143,38 +306,6 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
     });
   }, []);
 
-  const {
-    status,
-    content,
-    error,
-    toolCalls,
-    isStreaming,
-    isComplete,
-    isIdle,
-    generate,
-    stop,
-    reset,
-  } = useAIGeneration({
-    onComplete: () => {
-      console.log('AI skill generation complete - file created by Agent SDK');
-      onSkillCreated();
-    },
-    onError: (errorMessage) => {
-      console.error('AI skill generation error:', errorMessage);
-      // Add error as assistant message
-      const errorMessageId = generateMessageId();
-      setMessages((prev) => [
-        ...prev.filter((m) => !m.isStreaming),
-        {
-          id: errorMessageId,
-          role: 'assistant',
-          content: `Error: ${errorMessage}`,
-          timestamp: new Date(),
-        },
-      ]);
-    },
-  });
-
   /**
    * Scroll to bottom when new messages arrive
    */
@@ -192,17 +323,6 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       inputRef.current.focus();
     }
   }, [isOpen]);
-
-  /**
-   * Reset state when sidebar closes
-   */
-  useEffect(() => {
-    if (!isOpen) {
-      setMessages([]);
-      setInputValue('');
-      reset();
-    }
-  }, [isOpen, reset]);
 
   /**
    * Update streaming message with content
@@ -249,13 +369,29 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   }, [isComplete, content, reset]);
 
   /**
+   * Save conversation after streaming is complete
+   */
+  useEffect(() => {
+    if (isComplete && content) {
+      const finalMessages = messages.filter(m => !m.isStreaming);
+      if (finalMessages.length > 0) {
+        saveCurrentConversation(finalMessages, currentConversationId).then(newId => {
+          if (newId && !currentConversationId) {
+            setCurrentConversationId(newId);
+          }
+        });
+      }
+    }
+  }, [isComplete, content, messages, saveCurrentConversation, currentConversationId]);
+
+  /**
    * Handle sending a message
    */
   const handleSend = useCallback(async () => {
     if (!inputValue.trim() || isStreaming) return;
 
-    const userMessage: ChatMessage = {
-      id: generateMessageId(),
+    const userMessage: InternalMessage = {
+      id: generateId(),
       role: 'user',
       content: inputValue.trim(),
       timestamp: new Date(),
@@ -266,7 +402,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
     setInputValue('');
 
     // Add placeholder for streaming assistant message
-    const assistantMessageId = generateMessageId();
+    const assistantMessageId = generateId();
     setMessages((prev) => [
       ...prev,
       {
@@ -337,12 +473,33 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   );
 
   /**
-   * Clear conversation
+   * Clear current conversation
    */
   const handleClearConversation = useCallback(() => {
     setMessages([]);
+    setCurrentConversationId(null);
     reset();
   }, [reset]);
+
+  /**
+   * Format date for display
+   */
+  const formatDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return t('aiSidebar.yesterday');
+    } else if (diffDays < 7) {
+      return t('aiSidebar.daysAgo', { count: diffDays });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -366,7 +523,78 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             <p className="text-xs text-white/80">{t('aiSidebar.subtitle')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {/* New Conversation Button */}
+          <button
+            onClick={handleNewConversation}
+            className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors"
+            title={t('aiSidebar.newConversation')}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
+
+          {/* History Button */}
+          <div className="relative" ref={historyMenuRef}>
+            <button
+              onClick={() => setShowHistoryMenu(!showHistoryMenu)}
+              className={`p-1.5 rounded-lg transition-colors ${
+                showHistoryMenu ? 'text-white bg-white/30' : 'text-white/70 hover:text-white hover:bg-white/20'
+              }`}
+              title={t('aiSidebar.history')}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+
+            {showHistoryMenu && (
+              <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                <div className="p-2 border-b border-slate-100">
+                  <span className="text-xs font-medium text-slate-500">{t('aiSidebar.conversationHistory')}</span>
+                </div>
+
+                {isLoadingHistory ? (
+                  <div className="p-4 text-center text-slate-400 text-xs">{t('common.loading')}</div>
+                ) : conversations.length === 0 ? (
+                  <div className="p-4 text-center text-slate-400 text-xs">{t('aiSidebar.noConversations')}</div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {conversations.map((conv) => (
+                      <div
+                        key={conv.id}
+                        onClick={() => handleLoadConversation(conv)}
+                        className={`p-2 cursor-pointer hover:bg-purple-50 transition-colors ${
+                          currentConversationId === conv.id ? 'bg-purple-50' : ''
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-slate-700 truncate">{conv.title}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {formatDate(conv.updatedAt)}
+                              {conv.skillName && ` · ${conv.skillName}`}
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => handleDeleteConversation(conv.id, e)}
+                            className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                            title={t('aiSidebar.deleteConversation')}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {messages.length > 0 && (
             <button
               onClick={handleClearConversation}

@@ -416,7 +416,15 @@
       "explain": "Explain",
       "fixIssue": "Fix issue",
       "addFeature": "Add feature"
-    }
+    },
+
+    "newConversation": "New Conversation",
+    "history": "History",
+    "conversationHistory": "Conversation History",
+    "noConversations": "No conversations yet",
+    "deleteConversation": "Delete conversation",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}} days ago"
   },
 
   "symlink": {

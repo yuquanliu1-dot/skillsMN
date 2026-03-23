@@ -30,6 +30,7 @@ import type {
   MigrationResult,
   VersionComparison,
   AgentTool,
+  AIConversation,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
@@ -415,6 +416,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   removeMigrationProgressListener: (): void => {
     ipcRenderer.removeAllListeners(IPC_CHANNELS.MIGRATION_PROGRESS);
+  },
+
+  checkDirectoryForSkills: (directoryPath: string): Promise<IPCResponse<Skill[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_CHECK_DIRECTORY, { directoryPath });
+  },
+
+  // ============================================================================
+  // AI Conversation History Operations
+  // ============================================================================
+
+  saveAIConversation: (conversation: AIConversation): Promise<IPCResponse<AIConversation>> => {
+    return ipcRenderer.invoke('ai-conversation:save', conversation);
+  },
+
+  loadAIConversations: (): Promise<IPCResponse<AIConversation[]>> => {
+    return ipcRenderer.invoke('ai-conversation:load-all');
+  },
+
+  getAIConversation: (conversationId: string): Promise<IPCResponse<AIConversation | null>> => {
+    return ipcRenderer.invoke('ai-conversation:get', conversationId);
+  },
+
+  deleteAIConversation: (conversationId: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke('ai-conversation:delete', conversationId);
   },
 });
 
