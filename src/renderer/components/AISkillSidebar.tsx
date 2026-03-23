@@ -39,48 +39,52 @@ function generateMessageId(): string {
 }
 
 /**
- * Recommended prompts for skill development lifecycle
+ * Recommended prompts aligned with skill-creator capabilities:
+ * - Create new skills from scratch
+ * - Modify and improve existing skills
+ * - Run evals to test a skill
+ * - Benchmark skill performance with variance analysis
+ * - Optimize skill description for better triggering accuracy
  */
 const RECOMMENDED_PROMPTS = [
   {
     category: 'Create',
     items: [
       { label: 'New skill', prompt: 'Create a new skill for ' },
-      { label: 'From template', prompt: 'Create a skill based on this template: ' },
-      { label: 'From example', prompt: 'Create a new skill referencing this functionality: ' },
+      { label: 'From description', prompt: 'Create a skill that ' },
     ],
   },
   {
-    category: 'Enhance',
+    category: 'Modify & Improve',
     items: [
-      { label: 'Add triggers', prompt: 'Add more trigger conditions to this skill' },
-      { label: 'Add commands', prompt: 'Add execution commands to implement ' },
-      { label: 'Add error handling', prompt: 'Add error handling logic to this skill' },
-      { label: 'Format output', prompt: 'Improve the output format for better readability' },
-    ],
-  },
-  {
-    category: 'Test & Optimize',
-    items: [
-      { label: 'Test triggers', prompt: 'Help me test if the trigger conditions are complete' },
-      { label: 'Optimize', prompt: 'Optimize the execution performance of this skill' },
-      { label: 'Improve errors', prompt: 'Improve error handling with more edge cases' },
-    ],
-  },
-  {
-    category: 'Document',
-    items: [
-      { label: 'Add examples', prompt: 'Add usage examples to this skill' },
-      { label: 'Improve description', prompt: 'Improve the skill description and functionality explanation' },
-      { label: 'Add tags', prompt: 'Add appropriate tags to this skill' },
-    ],
-  },
-  {
-    category: 'Quick Actions',
-    items: [
-      { label: 'Explain', prompt: 'Explain how this skill works' },
-      { label: 'Fix issue', prompt: 'Fix the issue in this skill: ' },
+      { label: 'Enhance skill', prompt: 'Improve this skill by ' },
       { label: 'Add feature', prompt: 'Add a new feature to this skill: ' },
+      { label: 'Fix issue', prompt: 'Fix the following issue in this skill: ' },
+      { label: 'Refactor', prompt: 'Refactor this skill to ' },
+    ],
+  },
+  {
+    category: 'Evaluate',
+    items: [
+      { label: 'Run evals', prompt: 'Run evaluations to test this skill' },
+      { label: 'Test triggers', prompt: 'Test if the trigger conditions work correctly for ' },
+      { label: 'Edge cases', prompt: 'Test this skill against edge cases: ' },
+    ],
+  },
+  {
+    category: 'Benchmark',
+    items: [
+      { label: 'Performance', prompt: 'Benchmark this skill\'s performance' },
+      { label: 'Variance analysis', prompt: 'Analyze performance variance across different scenarios: ' },
+      { label: 'Compare', prompt: 'Compare this skill\'s performance with ' },
+    ],
+  },
+  {
+    category: 'Optimize Triggering',
+    items: [
+      { label: 'Improve description', prompt: 'Optimize the skill description for better triggering accuracy' },
+      { label: 'Better triggers', prompt: 'Improve the trigger conditions to match more user intents' },
+      { label: 'Reduce false positives', prompt: 'Optimize triggers to reduce false positive matches' },
     ],
   },
 ];
