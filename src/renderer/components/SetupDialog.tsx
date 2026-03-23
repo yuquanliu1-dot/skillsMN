@@ -138,6 +138,11 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
         setNewRepoProvider('github');
         setNewRepoInstanceUrl('');
         setShowAddRepoForm(false);
+
+        // Dispatch event to notify PrivateRepoList to refresh
+        window.dispatchEvent(new CustomEvent('private-repo-updated', {
+          detail: { repoId: response.data.id, patUpdated: false, isNew: true }
+        }));
       } else {
         setError(response.error?.message || 'Failed to add repository');
       }
