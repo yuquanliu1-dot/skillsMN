@@ -4,7 +4,9 @@
  * Handles AI-powered skill generation using Claude Agent SDK
  */
 
-import { safeStorage } from 'electron';
+import { safeStorage, app } from 'electron';
+import * as path from 'path';
+import * as fs from 'fs';
 import { logger } from '../utils/Logger';
 import type { AIGenerationRequest, AIStreamChunk } from '../models/AIGenerationRequest';
 import { validateAIGenerationRequest } from '../models/AIGenerationRequest';
@@ -27,15 +29,48 @@ let currentConfig: AIConfiguration | null = null;
 const activeStreams = new Map<string, AbortController>();
 
 /**
+ * Get the correct path to the Claude Agent SDK
+ * In packaged apps, the SDK is unpacked to app.asar.unpacked
+ */
+function getSDKPath(): string {
+  const sdkPackageName = '@anthropic-ai/claude-agent-sdk';
+
+  // Check if running in packaged mode
+  if (app.isPackaged) {
+    // In packaged mode, use the unpacked version
+    const unpackedPath = path.join(
+      path.dirname(app.getPath('exe')),
+      'resources',
+      'app.asar.unpacked',
+      'node_modules',
+      sdkPackageName,
+      'sdk.mjs'  // Point to the specific ES module file
+    );
+
+    if (fs.existsSync(unpackedPath)) {
+      // Convert to file:// URL for Windows compatibility
+      const fileUrl = 'file:///' + unpackedPath.replace(/\\/g, '/');
+      logger.info('Using unpacked SDK path', 'AIService', { path: unpackedPath, fileUrl });
+      return fileUrl;
+    }
+  }
+
+  // In development or fallback, use normal path
+  return sdkPackageName;
+}
+
+/**
  * Load Claude Agent SDK module dynamically
  * Uses Function constructor to prevent TypeScript from transpiling import() to require()
  */
 async function loadSDK(): Promise<ClaudeAgentSDK> {
   if (!sdkModule) {
+    const sdkPath = getSDKPath();
+
     // Use Function constructor to prevent TypeScript from transpiling to require()
     // This is necessary because @anthropic-ai/claude-agent-sdk is an ES Module
     const dynamicImport = new Function('modulePath', 'return import(modulePath)');
-    const module = await dynamicImport('@anthropic-ai/claude-agent-sdk');
+    const module = await dynamicImport(sdkPath);
 
     sdkModule = {
       query: module.query,
@@ -50,6 +85,36 @@ async function loadSDK(): Promise<ClaudeAgentSDK> {
  * AI Service for skill generation using Claude Agent SDK
  */
 export class AIService {
+  /**
+   * Get executable options for the SDK
+   * In packaged apps, we need to specify the path to the CLI
+   * The SDK will auto-detect Node.js on the system
+   */
+  private static getExecutableOptions(): { executable?: string; pathToClaudeCodeExecutable?: string; executableArgs?: string[] } {
+    if (app.isPackaged) {
+      const cliPath = path.join(
+        path.dirname(app.getPath('exe')),
+        'resources',
+        'app.asar.unpacked',
+        'node_modules',
+        '@anthropic-ai',
+        'claude-agent-sdk',
+        'cli.js'
+      );
+
+      if (fs.existsSync(cliPath)) {
+        logger.info('Using CLI path for packaged app', 'AIService', { cliPath });
+        // Only specify the CLI path, let SDK auto-detect Node.js
+        // executable option should be 'node' string, not a path
+        return {
+          executable: 'node',
+          pathToClaudeCodeExecutable: cliPath,
+        };
+      }
+    }
+    return {};
+  }
+
   /**
    * Encrypt API key using Electron safeStorage for secure storage
    * Falls back to base64 encoding if encryption is not available (not recommended for production)
@@ -206,6 +271,9 @@ export class AIService {
 
       // Build query options
       // Note: permissionMode is NOT included as it's not compatible with some custom API providers (e.g., 智谱AI)
+      const execOptions = AIService.getExecutableOptions();
+      logger.info('Generation executable options', 'AIService', execOptions);
+
       const queryOptions: any = {
         prompt: userPrompt,
         options: {
@@ -213,6 +281,12 @@ export class AIService {
           model: currentConfig.model,
           cwd: workingDirectory,
           allowedTools: ['Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill', 'NotebookEdit', 'TaskOutput'],
+          // Configure executable for packaged app
+          ...execOptions,
+          // Add stderr capture for debugging
+          stderr: (msg: string) => {
+            logger.info('CLI stderr output', 'AIService', { stderr: msg });
+          },
         },
       };
 
@@ -418,10 +492,18 @@ export class AIService {
       }
 
       // Use a simple query to test the connection
+      // Enable debug mode to capture CLI stderr
+      const execOptions = AIService.getExecutableOptions();
+      logger.info('Test connection executable options', 'AIService', execOptions);
+
       const stream = query({
         prompt: 'Say "OK" if you can read this.',
         options: {
           model: currentConfig.model,
+          ...execOptions,
+          stderr: (msg: string) => {
+            logger.info('CLI stderr', 'AIService', { stderr: msg });
+          },
         },
       });
 
@@ -464,29 +546,66 @@ export class AIService {
   private static buildSystemPrompt(mode: AIGenerationRequest['mode'], request?: AIGenerationRequest): string {
     const targetPath = request?.skillContext?.targetPath;
 
-    const basePrompt = `You are an expert skill creator for Claude Code. You have access to the skill-creator skill which provides comprehensive guidelines for creating effective skills.
+    const basePrompt = `You are an expert skill creator, optimizer, and evaluator for Claude Code. You have access to the skill-creator skill which provides comprehensive guidelines for creating, improving, and measuring skill performance.
 
-When generating skill content:
-- Use the skill-creator skill as your guide for best practices
+## Core Capabilities
+
+You support the following operations:
+
+### 1. Create New Skills
+- Generate complete, production-ready skills from scratch
 - Follow proper YAML frontmatter format (name, description, version, author, tags)
 - Write comprehensive Markdown content with clear structure
 - Include practical examples and step-by-step instructions
-- Use proper formatting (headings, lists, code blocks)
-- You CAN use the Write tool to directly create skill files
-- You CAN use Bash and other tools as needed
+
+### 2. Modify & Improve Existing Skills
+- Enhance skill content while preserving core purpose
+- Add missing examples, clarifications, or edge cases
+- Restructure for better readability and organization
+- Fix issues or address user feedback
+
+### 3. Measure Skill Performance
+- Analyze skill effectiveness and suggest improvements
+- Identify potential issues in skill design
+- Evaluate skill clarity, completeness, and usability
+
+### 4. Run Evaluations (Evals)
+- Design test cases to validate skill behavior
+- Create evaluation scenarios for skill testing
+- Analyze skill responses against expected outcomes
+
+### 5. Benchmark & Variance Analysis
+- Compare skill performance across different scenarios
+- Identify variance in skill behavior
+- Suggest optimizations for consistency
+
+### 6. Optimize Skill Descriptions
+- Improve description clarity and accuracy
+- Enhance triggering precision for better skill matching
+- Ensure description aligns with skill capabilities
+
+## Tool Usage
 - Use the Skill tool to access skill-creator guidance
+- Use Write tool to create/modify skill files
+- Use Read tool to examine existing skills
+- Use Bash tool for file operations
+- Use Grep/Glob to search skill content
 
-${targetPath ? `CRITICAL: You MUST save all skill files to the target directory: ${targetPath}
-DO NOT save to ~/.local/share/claude-cli/skills/ or any other default location.
-ALWAYS use the path: ${targetPath}/<skill-name>/SKILL.md` : ''}
+${targetPath ? `
+## Path Requirements
+CRITICAL: Save all skill files to: ${targetPath}
+DO NOT save to ~/.local/share/claude-cli/skills/ or other default locations.
+Use the path: ${targetPath}/<skill-name>/SKILL.md` : ''}
 
-Skills follow this format:
+## Skill Format
 ---
 name: Skill Name
-description: Brief description
+description: Brief description (optimize for accurate triggering)
 version: 1.0.0
 author: Author Name
 tags: [tag1, tag2, tag3]
+trigger_glob: Optional glob pattern (e.g., "**/*.py")
+trigger_type: Optional file type hint
 ---
 
 # Skill Content
@@ -495,7 +614,9 @@ Markdown content with instructions, examples, and guidance.`;
 
     const modeInstructions = {
       new: targetPath
-        ? `\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user's requirements. Use the skill-creator skill for guidance.
+        ? `\n\n## Current Task: Create New Skill
+
+You are creating a NEW skill from scratch. Use the skill-creator skill for comprehensive guidance.
 
 CRITICAL PATH REQUIREMENT:
 The skill MUST be saved to: ${targetPath}/<skill-name>/SKILL.md
@@ -509,16 +630,28 @@ Example: If skill name is "directory-viewer", the Write tool file_path MUST be:
 ${targetPath}/directory-viewer/SKILL.md
 
 DO NOT use any other path. DO NOT save to ~/.claude/skills/ or ~/.local/share/claude-cli/skills/`
-        : '\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user\'s requirements. Use the skill-creator skill for guidance.',
+        : '\n\n## Current Task: Create New Skill\n\nYou are creating a NEW skill from scratch. Use the skill-creator skill for comprehensive guidance.',
 
       modify: targetPath
-        ? `\n\nYou are MODIFYING an existing skill. The skill is located at: ${targetPath}/${request?.skillContext?.name || 'unknown'}/SKILL.md
-Save changes to this exact path. Refer to skill-creator for best practices.`
-        : '\n\nYou are MODIFYING an existing skill. Improve, expand, or refine the content while preserving its core purpose. Refer to skill-creator for best practices.',
+        ? `\n\n## Current Task: Modify Existing Skill
 
-      insert: '\n\nYou are INSERTING new content into an existing skill at a specified position. Generate content that fits naturally. Follow skill-creator guidelines.',
+You are MODIFYING an existing skill. The skill is located at: ${targetPath}/${request?.skillContext?.name || 'unknown'}/SKILL.md
+Save changes to this exact path. Consider:
+- Improving clarity and completeness
+- Adding missing examples or edge cases
+- Enhancing description for better triggering
+- Following skill-creator best practices`
+        : '\n\n## Current Task: Modify Existing Skill\n\nYou are MODIFYING an existing skill. Consider:\n- Improving clarity and completeness\n- Adding missing examples or edge cases\n- Enhancing description for better triggering\n- Following skill-creator best practices',
 
-      replace: '\n\nYou are REPLACING a selected portion of an existing skill. Generate replacement content that maintains context and flow. Use skill-creator as reference.'
+      insert: '\n\n## Current Task: Insert Content\n\nYou are INSERTING new content into an existing skill at a specified position. Generate content that:\n- Fits naturally with surrounding content\n- Maintains consistent style and tone\n- Follows skill-creator guidelines',
+
+      replace: '\n\n## Current Task: Replace Content\n\nYou are REPLACING a selected portion of an existing skill. Generate replacement content that:\n- Maintains context and flow\n- Improves upon the original\n- Follows skill-creator as reference',
+
+      evaluate: '\n\n## Current Task: Evaluate Skill Performance\n\nYou are EVALUATING a skill\'s effectiveness. Consider:\n- Clarity of instructions and examples\n- Completeness of coverage\n- Ease of understanding and following\n- Potential edge cases or ambiguities\n- Description accuracy for triggering',
+
+      benchmark: '\n\n## Current Task: Benchmark Skill\n\nYou are BENCHMARKING a skill\'s performance. Consider:\n- Consistency across different scenarios\n- Variance in responses or behavior\n- Areas for optimization\n- Comparison with best practices',
+
+      optimize: '\n\n## Current Task: Optimize Skill Description\n\nYou are OPTIMIZING a skill\'s description for better triggering accuracy. Consider:\n- Key phrases users might use to invoke this skill\n- Clarity and specificity of the description\n- Avoiding false positive triggers\n- Ensuring description matches skill capabilities'
     };
 
     return basePrompt + (modeInstructions[mode] || '');
@@ -532,6 +665,7 @@ Save changes to this exact path. Refer to skill-creator for best practices.`
     const currentContent = request.skillContext?.content;
     const cursorPosition = request.skillContext?.cursorPosition;
     const selectedText = request.skillContext?.selectedText;
+    const skillName = request.skillContext?.name;
 
     switch (request.mode) {
       case 'new':
@@ -545,6 +679,15 @@ Save changes to this exact path. Refer to skill-creator for best practices.`
 
       case 'replace':
         return `Replace the following selected text with new content:\n\nSelected text: "${selectedText || ''}"\n\nInstructions: ${request.prompt}\n\nCurrent content:\n${currentContent || ''}\n\nGenerate ONLY the replacement text, not the entire content.`;
+
+      case 'evaluate':
+        return `Evaluate the following skill's performance and effectiveness:\n\nSkill Name: ${skillName || 'Unknown'}\n\nEvaluation Focus: ${request.prompt}\n\nSkill Content:\n\n${currentContent || ''}\n\nProvide a comprehensive evaluation including:\n1. Overall effectiveness score (1-10)\n2. Strengths\n3. Weaknesses\n4. Specific improvement suggestions\n5. Description accuracy assessment`;
+
+      case 'benchmark':
+        return `Benchmark the following skill's performance with variance analysis:\n\nSkill Name: ${skillName || 'Unknown'}\n\nBenchmark Focus: ${request.prompt}\n\nSkill Content:\n\n${currentContent || ''}\n\nProvide benchmark analysis including:\n1. Performance metrics\n2. Consistency assessment\n3. Variance analysis\n4. Comparison with best practices\n5. Optimization recommendations`;
+
+      case 'optimize':
+        return `Optimize the description of the following skill for better triggering accuracy:\n\nSkill Name: ${skillName || 'Unknown'}\n\nOptimization Focus: ${request.prompt}\n\nCurrent Skill Content:\n\n${currentContent || ''}\n\nProvide:\n1. Current description analysis\n2. Trigger phrase suggestions\n3. Optimized description options\n4. Expected improvement in triggering accuracy\n5. Any frontmatter improvements`;
 
       default:
         return request.prompt;

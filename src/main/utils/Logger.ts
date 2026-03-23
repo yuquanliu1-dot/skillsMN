@@ -2,7 +2,12 @@
  * Logger Utility
  *
  * Provides structured logging with timestamps and context for the main process
+ * In packaged mode, writes to file to avoid interfering with CLI JSON communication
  */
+
+import { app } from 'electron';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export enum LogLevel {
   DEBUG = 'DEBUG',
@@ -20,6 +25,34 @@ interface LogEntry {
 }
 
 class Logger {
+  private logFilePath: string | null = null;
+  private logStream: fs.WriteStream | null = null;
+  private isPackaged: boolean = false;
+
+  constructor() {
+    // Check if running in packaged mode
+    try {
+      this.isPackaged = app?.isPackaged ?? false;
+    } catch {
+      this.isPackaged = false;
+    }
+
+    if (this.isPackaged) {
+      // In packaged mode, write logs to file
+      try {
+        const logsDir = path.join(app.getPath('userData'), 'logs');
+        if (!fs.existsSync(logsDir)) {
+          fs.mkdirSync(logsDir, { recursive: true });
+        }
+        this.logFilePath = path.join(logsDir, `app-${new Date().toISOString().split('T')[0]}.log`);
+        this.logStream = fs.createWriteStream(this.logFilePath, { flags: 'a' });
+      } catch (error) {
+        // Fallback to console if file logging fails
+        console.error('Failed to initialize file logging:', error);
+      }
+    }
+  }
+
   private formatTimestamp(): string {
     return new Date().toISOString();
   }
@@ -66,18 +99,28 @@ class Logger {
 
     const formatted = this.formatEntry(entry);
 
-    switch (level) {
-      case LogLevel.ERROR:
+    // In packaged mode, write to file only (avoid stdout pollution for CLI)
+    if (this.isPackaged && this.logStream) {
+      this.logStream.write(formatted + '\n');
+      // Also write errors to stderr for visibility
+      if (level === LogLevel.ERROR) {
         console.error(formatted);
-        break;
-      case LogLevel.WARN:
-        console.warn(formatted);
-        break;
-      case LogLevel.DEBUG:
-        console.debug(formatted);
-        break;
-      default:
-        console.log(formatted);
+      }
+    } else {
+      // In development, write to console
+      switch (level) {
+        case LogLevel.ERROR:
+          console.error(formatted);
+          break;
+        case LogLevel.WARN:
+          console.warn(formatted);
+          break;
+        case LogLevel.DEBUG:
+          console.debug(formatted);
+          break;
+        default:
+          console.log(formatted);
+      }
     }
   }
 
@@ -95,6 +138,16 @@ class Logger {
 
   error(message: string, context?: string, data?: unknown): void {
     this.log(LogLevel.ERROR, message, context, data);
+  }
+
+  /**
+   * Close the log stream (call on app quit)
+   */
+  close(): void {
+    if (this.logStream) {
+      this.logStream.end();
+      this.logStream = null;
+    }
   }
 }
 

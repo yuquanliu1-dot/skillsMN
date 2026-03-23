@@ -248,6 +248,7 @@ app.on('activate', async () => {
 
 app.on('before-quit', () => {
   logger.info('Application quitting', 'Main');
+  logger.close();
 });
 
 // Handle uncaught exceptions
