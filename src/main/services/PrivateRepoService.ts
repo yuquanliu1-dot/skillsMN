@@ -877,29 +877,51 @@ export class PrivateRepoService {
         '.skillmn',              // Application specific metadata
       ]);
 
-      // Check if the skill directory exists
-      if (await fs.pathExists(skillPath)) {
-        const entries = await fs.readdir(skillPath, { withFileTypes: true });
+      // Helper function to recursively read all files from a directory
+      const readFilesRecursively = async (
+        dirPath: string,
+        baseDir: string,
+        relativeDir: string = ''
+      ): Promise<void> => {
+        const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
         for (const entry of entries) {
-          if (entry.isFile()) {
-            // Skip excluded files
-            if (EXCLUDED_FILES.has(entry.name)) {
-              logger.debug(`Skipping excluded file: ${entry.name}`, 'PrivateRepoService');
-              continue;
-            }
+          const entryName = entry.name;
+          const fullPath = path.join(dirPath, entryName);
+          const relativePath = relativeDir ? path.join(relativeDir, entryName) : entryName;
 
-            const filePath = path.join(skillPath, entry.name);
-            const content = await fs.readFile(filePath, 'utf-8');
-            files.push({
-              relativePath: entry.name,
-              content,
-            });
-            logger.debug(`Read file for upload: ${entry.name}`, 'PrivateRepoService');
+          // Skip excluded files/directories
+          if (EXCLUDED_FILES.has(entryName)) {
+            logger.debug(`Skipping excluded item: ${entryName}`, 'PrivateRepoService');
+            continue;
+          }
+
+          if (entry.isFile()) {
+            try {
+              // Try to read as UTF-8 text file
+              const content = await fs.readFile(fullPath, 'utf-8');
+              files.push({
+                relativePath: relativePath.replace(/\\/g, '/'), // Normalize path separators for API
+                content,
+              });
+              logger.debug(`Read file for upload: ${relativePath}`, 'PrivateRepoService');
+            } catch (readError) {
+              // Skip binary files that can't be read as UTF-8
+              logger.warn(`Skipping binary or unreadable file: ${relativePath}`, 'PrivateRepoService', { error: readError });
+            }
+          } else if (entry.isDirectory()) {
+            // Recursively read subdirectories
+            logger.debug(`Entering subdirectory: ${relativePath}`, 'PrivateRepoService');
+            await readFilesRecursively(fullPath, baseDir, relativePath);
           }
         }
+      };
 
-        logger.info(`Found ${files.length} files in skill directory`, 'PrivateRepoService', {
+      // Check if the skill directory exists
+      if (await fs.pathExists(skillPath)) {
+        await readFilesRecursively(skillPath, skillPath);
+
+        logger.info(`Found ${files.length} files in skill directory (including subdirectories)`, 'PrivateRepoService', {
           skillPath,
           files: files.map(f => f.relativePath),
         });

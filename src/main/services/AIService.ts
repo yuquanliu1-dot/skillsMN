@@ -478,7 +478,7 @@ When generating skill content:
 
 ${targetPath ? `CRITICAL: You MUST save all skill files to the target directory: ${targetPath}
 DO NOT save to ~/.local/share/claude-cli/skills/ or any other default location.
-ALWAYS use the path: ${targetPath}/<skill-name>/skill.md` : ''}
+ALWAYS use the path: ${targetPath}/<skill-name>/SKILL.md` : ''}
 
 Skills follow this format:
 ---
@@ -498,21 +498,21 @@ Markdown content with instructions, examples, and guidance.`;
         ? `\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user's requirements. Use the skill-creator skill for guidance.
 
 CRITICAL PATH REQUIREMENT:
-The skill MUST be saved to: ${targetPath}/<skill-name>/skill.md
+The skill MUST be saved to: ${targetPath}/<skill-name>/SKILL.md
 
 Steps:
 1. Determine the skill name from the user's requirements (convert to kebab-case, e.g., "Directory Viewer" → "directory-viewer")
 2. Use the Bash tool to create the directory: mkdir -p "${targetPath}/<skill-name>"
-3. Use the Write tool with the EXACT path: ${targetPath}/<skill-name>/skill.md
+3. Use the Write tool with the EXACT path: ${targetPath}/<skill-name>/SKILL.md
 
 Example: If skill name is "directory-viewer", the Write tool file_path MUST be:
-${targetPath}/directory-viewer/skill.md
+${targetPath}/directory-viewer/SKILL.md
 
 DO NOT use any other path. DO NOT save to ~/.claude/skills/ or ~/.local/share/claude-cli/skills/`
         : '\n\nYou are creating a NEW skill from scratch. Generate complete, production-ready skill content based on the user\'s requirements. Use the skill-creator skill for guidance.',
 
       modify: targetPath
-        ? `\n\nYou are MODIFYING an existing skill. The skill is located at: ${targetPath}/${request?.skillContext?.name || 'unknown'}/skill.md
+        ? `\n\nYou are MODIFYING an existing skill. The skill is located at: ${targetPath}/${request?.skillContext?.name || 'unknown'}/SKILL.md
 Save changes to this exact path. Refer to skill-creator for best practices.`
         : '\n\nYou are MODIFYING an existing skill. Improve, expand, or refine the content while preserving its core purpose. Refer to skill-creator for best practices.',
 
