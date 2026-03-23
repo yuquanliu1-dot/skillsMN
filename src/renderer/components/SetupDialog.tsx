@@ -92,7 +92,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
         setAiConfig({
           provider: 'anthropic',
           apiKey: '',
-          model: 'claude-sonnet-4-6',
+          model: '',
           streamingEnabled: true,
           timeout: 120000,
           maxRetries: 3,
@@ -106,7 +106,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
       setAiConfig({
         provider: 'anthropic',
         apiKey: '',
-        model: 'claude-sonnet-4-6',
+        model: '',
         streamingEnabled: true,
         timeout: 120000,
         maxRetries: 3,
@@ -807,16 +807,14 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-semibold text-slate-800 mb-2">Model</label>
-                          <select
+                          <input
+                            type="text"
                             value={aiConfig.model}
                             onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
+                            placeholder="claude-sonnet-4-6"
                             className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all"
                             disabled={isSavingAI}
-                          >
-                            <option value="claude-opus-4-6">Claude Opus 4.6</option>
-                            <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
-                            <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
-                          </select>
+                          />
                         </div>
                         <div>
                           <label className="block text-sm font-semibold text-slate-800 mb-2">Base URL (Optional)</label>
