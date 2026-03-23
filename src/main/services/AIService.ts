@@ -190,9 +190,14 @@ export class AIService {
         logger.info('Setting custom base URL in process.env', 'AIService', { baseUrl: currentConfig.baseUrl });
       }
 
+      // Check if model is configured
+      if (!currentConfig?.model) {
+        throw new Error('AI model is not configured. Please configure the model in Settings.');
+      }
+
       // Log query parameters for debugging
       logger.info('SDK query parameters', 'AIService', {
-        model: currentConfig?.model || 'claude-sonnet-4-6-20250514',
+        model: currentConfig.model,
         cwd: workingDirectory,
         hasApiKey: !!process.env.ANTHROPIC_API_KEY,
         hasBaseUrl: !!process.env.ANTHROPIC_BASE_URL,
@@ -205,7 +210,7 @@ export class AIService {
         prompt: userPrompt,
         options: {
           systemPrompt,
-          model: currentConfig?.model || 'claude-sonnet-4-6-20250514',
+          model: currentConfig.model,
           cwd: workingDirectory,
           allowedTools: ['Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill', 'NotebookEdit', 'TaskOutput'],
         },
@@ -407,11 +412,16 @@ export class AIService {
         logger.info('Test connection using custom base URL', 'AIService', { baseUrl: currentConfig.baseUrl });
       }
 
+      // Check if model is configured
+      if (!currentConfig?.model) {
+        return { success: false, error: 'AI model is not configured. Please configure the model in Settings.' };
+      }
+
       // Use a simple query to test the connection
       const stream = query({
         prompt: 'Say "OK" if you can read this.',
         options: {
-          model: currentConfig?.model || 'claude-sonnet-4-6-20250514',
+          model: currentConfig.model,
         },
       });
 

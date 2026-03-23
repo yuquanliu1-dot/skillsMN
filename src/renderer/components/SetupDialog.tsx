@@ -811,7 +811,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                             type="text"
                             value={aiConfig.model}
                             onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
-                            placeholder="claude-sonnet-4-6"
+                            placeholder=""
                             className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all"
                             disabled={isSavingAI}
                           />
