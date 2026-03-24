@@ -24,6 +24,8 @@ import type {
   SearchResult,
   InstallProgress,
   AgentTool,
+  SkillFileTreeNode,
+  SkillFileContent,
 } from '../../shared/types';
 
 export interface ElectronAPI {
@@ -46,6 +48,8 @@ export interface ElectronAPI {
     skillPath: string,
     createBackup?: boolean
   ) => Promise<IPCResponse<{ newPath: string }>>;
+  getSkillFileTree: (skillPath: string) => Promise<IPCResponse<SkillFileTreeNode>>;
+  readSkillFile: (filePath: string) => Promise<IPCResponse<SkillFileContent>>;
 
   // Dialog Operations
   selectDirectory: () => Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>>;

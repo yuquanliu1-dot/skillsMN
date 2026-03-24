@@ -68,6 +68,44 @@ export interface SkillFrontmatter {
 }
 
 // ============================================================================
+// File Tree Types
+// ============================================================================
+
+/**
+ * File tree node for skill directory structure
+ */
+export interface SkillFileTreeNode {
+  /** File or directory name */
+  name: string;
+  /** Relative path from skill directory root */
+  relativePath: string;
+  /** Absolute path (for file operations) */
+  absolutePath: string;
+  /** Whether this is a file or directory */
+  type: 'file' | 'directory';
+  /** File extension (for files only) */
+  extension?: string;
+  /** Child nodes (for directories) */
+  children?: SkillFileTreeNode[];
+  /** Whether this is the main SKILL.md file */
+  isMainFile?: boolean;
+}
+
+/**
+ * Response for file content reading
+ */
+export interface SkillFileContent {
+  /** File path */
+  path: string;
+  /** File content (text only) */
+  content: string;
+  /** Whether file is binary (cannot be edited) */
+  isBinary: boolean;
+  /** Detected language for Monaco editor */
+  language?: string;
+}
+
+// ============================================================================
 // Symlink Types
 // ============================================================================
 

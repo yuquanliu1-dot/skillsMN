@@ -31,6 +31,8 @@ import type {
   VersionComparison,
   AgentTool,
   AIConversation,
+  SkillFileTreeNode,
+  SkillFileContent,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
@@ -84,6 +86,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     createBackup: boolean = true
   ): Promise<IPCResponse<{ newPath: string }>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_UPDATE_SKILL, { skillPath, createBackup });
+  },
+
+  getSkillFileTree: (skillPath: string): Promise<IPCResponse<SkillFileTreeNode>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_FILE_TREE, { skillPath });
+  },
+
+  readSkillFile: (filePath: string): Promise<IPCResponse<SkillFileContent>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_FILE_READ, { filePath });
   },
 
   // ============================================================================

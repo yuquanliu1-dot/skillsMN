@@ -18,7 +18,7 @@ import {
 import { SkillService } from '../services/SkillService';
 import { PathValidator } from '../services/PathValidator';
 import { IPC_CHANNELS } from '../../shared/constants';
-import { IPCResponse, IPCError, Skill, Configuration } from '../../shared/types';
+import { IPCResponse, IPCError, Skill, Configuration, SkillFileTreeNode, SkillFileContent } from '../../shared/types';
 import { getFileWatcher } from '../index';
 import { getConfigService } from './configHandlers';
 
@@ -237,6 +237,36 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
         }
       } catch (error) {
         logger.error('Failed to update skill', 'SkillHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for skill:file-tree
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_FILE_TREE,
+    async (_event, { skillPath }: { skillPath: string }): Promise<IPCResponse<SkillFileTreeNode>> => {
+      try {
+        logger.debug(`Getting file tree: ${skillPath}`, 'SkillHandlers');
+        const tree = await skillService!.getSkillFileTree(skillPath);
+        return { success: true, data: tree };
+      } catch (error) {
+        logger.error('Failed to get file tree', 'SkillHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for skill:file-read
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_FILE_READ,
+    async (_event, { filePath }: { filePath: string }): Promise<IPCResponse<SkillFileContent>> => {
+      try {
+        logger.debug(`Reading skill file: ${filePath}`, 'SkillHandlers');
+        const result = await skillService!.readSkillFile(filePath);
+        return { success: true, data: result };
+      } catch (error) {
+        logger.error('Failed to read skill file', 'SkillHandlers', error);
         return { success: false, error: toIPCError(error) };
       }
     }

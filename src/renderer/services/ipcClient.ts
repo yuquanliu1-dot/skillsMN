@@ -12,6 +12,8 @@ import type {
   IPCResponse,
   PrivateRepo,
   VersionComparison,
+  SkillFileTreeNode,
+  SkillFileContent,
 } from '../../shared/types';
 
 /**
@@ -115,6 +117,28 @@ export const ipcClient = {
       throw new Error('Cannot update skill in browser mode');
     }
     const response = await window.electronAPI.updateSkillFromSource(skillPath, createBackup);
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Unknown error');
+    }
+    return response.data!;
+  },
+
+  async getSkillFileTree(skillPath: string): Promise<SkillFileTreeNode> {
+    if (!isElectron()) {
+      throw new Error('Cannot get file tree in browser mode');
+    }
+    const response = await window.electronAPI.getSkillFileTree(skillPath);
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Unknown error');
+    }
+    return response.data!;
+  },
+
+  async readSkillFile(filePath: string): Promise<SkillFileContent> {
+    if (!isElectron()) {
+      throw new Error('Cannot read skill file in browser mode');
+    }
+    const response = await window.electronAPI.readSkillFile(filePath);
     if (!response.success) {
       throw new Error(response.error?.message || 'Unknown error');
     }

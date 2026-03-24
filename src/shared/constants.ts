@@ -126,6 +126,8 @@ export const IPC_CHANNELS = {
   SKILL_OPEN_FOLDER: 'skill:open-folder',
   SKILL_CHECK_UPDATES: 'skill:check-updates',
   SKILL_UPDATE_SKILL: 'skill:update-skill',
+  SKILL_FILE_TREE: 'skill:file-tree',
+  SKILL_FILE_READ: 'skill:file-read',
 
   // Configuration operations
   CONFIG_LOAD: 'config:load',

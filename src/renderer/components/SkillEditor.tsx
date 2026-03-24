@@ -9,12 +9,13 @@ import { useTranslation } from 'react-i18next';
 import Editor, { OnMount, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor';
-import type { Skill, AIGenerationMode, SkillEditorConfig, Configuration } from '../../shared/types';
+import type { Skill, AIGenerationMode, SkillEditorConfig, Configuration, SkillFileTreeNode, SkillFileContent } from '../../shared/types';
 import { AIAssistantPopover } from './AIAssistantPopover';
 import { AISkillSidebar } from './AISkillSidebar';
 import { ipcClient } from '../services/ipcClient';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import SymlinkPanel from './SymlinkPanel';
+import { FileTreePanel } from './FileTreePanel';
 
 // Configure Monaco to use local installation instead of CDN
 loader.config({ monaco });
@@ -72,11 +73,102 @@ export default function SkillEditor({
   const [insertPosition, setInsertPosition] = useState<{ line: number; column: number } | null>(null);
   const [insertPopoverPosition, setInsertPopoverPosition] = useState<{ x: number; y: number } | undefined>();
   const [isAISidebarOpen, setIsAISidebarOpen] = useState<boolean>(false);
+  // File tree state
+  const [isFileTreeVisible, setIsFileTreeVisible] = useState<boolean>(true);
+  const [selectedFileNode, setSelectedFileNode] = useState<SkillFileTreeNode | null>(null);
+  const [currentEditingPath, setCurrentEditingPath] = useState<string | null>(null);
+  const [binaryFileError, setBinaryFileError] = useState<string | null>(null);
+  const [currentLanguage, setCurrentLanguage] = useState<string>('markdown');
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // AI generation hook for rewrite
   const { status: aiStatus, content: aiContent, generate, reset: resetAI } = useAIGeneration();
+
+  /**
+   * Handle file selection from file tree
+   */
+  const handleFileSelect = useCallback(async (fileNode: SkillFileTreeNode) => {
+    if (fileNode.type === 'directory') return;
+
+    // Check if there are unsaved changes
+    if (hasUnsavedChanges) {
+      // Prompt user to save before switching
+      const shouldSwitch = window.confirm(t('editor.unsavedChangesWarning'));
+      if (!shouldSwitch) return;
+
+      // Save current changes before switching
+      await onSave(content, loadedLastModified || 0);
+    }
+
+    setIsLoading(true);
+    setBinaryFileError(null);
+    setSelectedFileNode(fileNode);
+
+    try {
+      // Check if this is the main SKILL.md file
+      if (fileNode.isMainFile || fileNode.name === 'SKILL.md') {
+        // Load the main skill file
+        const response = await window.electronAPI.getSkill(skill.path);
+        if (response.success && response.data) {
+          setContent(response.data.content);
+          setCurrentEditingPath(null);
+          setCurrentLanguage('markdown');
+          setLoadedLastModified(new Date(skill.lastModified).getTime());
+        }
+      } else {
+        // Load other file using readSkillFile
+        const response = await ipcClient.readSkillFile(fileNode.absolutePath);
+        if (response.isBinary) {
+          setBinaryFileError(t('editor.binaryFileError', { fileName: fileNode.name }));
+          setIsLoading(false);
+          return;
+        }
+        setContent(response.content);
+        setCurrentEditingPath(fileNode.absolutePath);
+        setCurrentLanguage(response.language || 'plaintext');
+        setLoadedLastModified(Date.now());
+      }
+      setHasUnsavedChanges(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load file');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hasUnsavedChanges, content, loadedLastModified, skill.path, skill.lastModified, onSave, t]);
+
+  /**
+   * Switch back to main SKILL.md file
+   */
+  const switchToMainFile = useCallback(async () => {
+    // Check if there are unsaved changes
+    if (hasUnsavedChanges) {
+      const shouldSwitch = window.confirm(t('editor.unsavedChangesWarning'));
+      if (!shouldSwitch) return;
+
+      // Save current changes before switching
+      await onSave(content, loadedLastModified || 0);
+    }
+
+    setIsLoading(true);
+    setBinaryFileError(null);
+    setSelectedFileNode(null);
+    setCurrentEditingPath(null);
+    setCurrentLanguage('markdown');
+
+    try {
+      const response = await window.electronAPI.getSkill(skill.path);
+      if (response.success && response.data) {
+        setContent(response.data.content);
+        setLoadedLastModified(new Date(skill.lastModified).getTime());
+        setHasUnsavedChanges(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load main file');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hasUnsavedChanges, content, loadedLastModified, skill.path, skill.lastModified, onSave, t]);
 
   /**
    * Load skill content on mount
@@ -769,6 +861,21 @@ export default function SkillEditor({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* File Tree Toggle Button */}
+          <button
+            onClick={() => setIsFileTreeVisible(!isFileTreeVisible)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-lg transition-colors ${
+              isFileTreeVisible
+                ? 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+            }`}
+            title={isFileTreeVisible ? t('editor.hideFileTree') : t('editor.showFileTree')}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+          </button>
+
           {/* AI Assistant button */}
           {!readOnly && (
             <button
@@ -909,45 +1016,99 @@ export default function SkillEditor({
         />
       )}
 
-      {/* Loading state */}
-      {isLoading && (
-        <div className="flex-1 flex items-center justify-center bg-white">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <div className="text-gray-600">{t('editor.loadingContent')}</div>
-          </div>
-        </div>
-      )}
+      {/* Main content area with file tree + editor */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* File Tree Panel */}
+        <FileTreePanel
+          skillPath={skill.path}
+          selectedFile={currentEditingPath || ''}
+          onFileSelect={handleFileSelect}
+          isVisible={isFileTreeVisible}
+          onToggle={() => setIsFileTreeVisible(!isFileTreeVisible)}
+        />
 
-      {/* Monaco Editor */}
-      {!isLoading && (
-        <div data-testid="editor-content" className="flex-1">
-          <Editor
-            height="100%"
-            defaultLanguage="markdown"
-            value={content}
-            onChange={handleContentChange}
-            onMount={handleEditorDidMount}
-            theme={config.theme}
-            options={{
-              fontSize: config.fontSize,
-              fontFamily: config.fontFamily,
-              fontLigatures: true,
-              lineNumbers: config.lineNumbers,
-              minimap: { enabled: config.showMinimap },
-              wordWrap: config.wordWrap ? 'on' : 'off',
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: config.tabSize,
-              insertSpaces: true,
-              renderWhitespace: 'selection',
-              bracketPairColorization: { enabled: true },
-              padding: { top: 16 },
-              readOnly: readOnly,
-            }}
-          />
+        {/* Editor area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Current file indicator if editing non-main file */}
+          {currentEditingPath && !currentEditingPath.endsWith('SKILL.md') && selectedFileNode && (
+            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-700 text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>{t('editor.editingFile')}: <strong>{selectedFileNode.name}</strong></span>
+              <button
+                onClick={switchToMainFile}
+                className="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-xs"
+              >
+                {t('editor.backToMain')}
+              </button>
+            </div>
+          )}
+
+          {/* Binary file error */}
+          {binaryFileError && (
+            <div className="px-4 py-3 bg-yellow-50 dark:bg-yellow-900/30 border-b border-yellow-200 dark:border-yellow-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <p className="text-sm">{binaryFileError}</p>
+                </div>
+                <button
+                  onClick={() => setBinaryFileError(null)}
+                  className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {isLoading && (
+            <div className="flex-1 flex items-center justify-center bg-white dark:bg-slate-800">
+              <div className="flex flex-col items-center gap-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                <div className="text-gray-600 dark:text-gray-400">{t('editor.loadingContent')}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Monaco Editor */}
+          {!isLoading && (
+            <div data-testid="editor-content" className="flex-1">
+              <Editor
+                height="100%"
+                defaultLanguage="markdown"
+                language={currentLanguage}
+                value={content}
+                onChange={handleContentChange}
+                onMount={handleEditorDidMount}
+                theme={config.theme}
+                options={{
+                  fontSize: config.fontSize,
+                  fontFamily: config.fontFamily,
+                  fontLigatures: true,
+                  lineNumbers: config.lineNumbers,
+                  minimap: { enabled: config.showMinimap },
+                  wordWrap: config.wordWrap ? 'on' : 'off',
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  tabSize: config.tabSize,
+                  insertSpaces: true,
+                  renderWhitespace: 'selection',
+                  bracketPairColorization: { enabled: true },
+                  padding: { top: 16 },
+                  readOnly: readOnly,
+                }}
+              />
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Keyboard shortcuts hint */}
       <div className={`border-t ${borderColor} px-4 py-2 ${footerBg} flex items-center justify-between text-xs text-gray-500`}>

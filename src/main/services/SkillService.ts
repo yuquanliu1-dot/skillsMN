@@ -1113,4 +1113,155 @@ installedAt: ${new Date().toISOString()}
     const configService = await this.getConfigService();
     return await configService.load();
   }
+
+  /**
+   * Get file tree for a skill directory
+   * Returns hierarchical structure of files and subdirectories
+   * @param skillPath - Absolute path to skill directory
+   * @returns Root node of file tree
+   */
+  async getSkillFileTree(skillPath: string): Promise<import('../../shared/types').SkillFileTreeNode> {
+    logger.debug(`Getting file tree for skill: ${skillPath}`, 'SkillService');
+
+    // Validate path
+    const validatedPath = this.pathValidator.validate(skillPath);
+
+    // Build tree recursively
+    const buildTree = async (dirPath: string, relativePath: string): Promise<import('../../shared/types').SkillFileTreeNode> => {
+      const name = path.basename(dirPath);
+      const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+
+      // Sort: directories first, then files, both alphabetically
+      entries.sort((a, b) => {
+        if (a.isDirectory() && !b.isDirectory()) return -1;
+        if (!a.isDirectory() && b.isDirectory()) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      const children: import('../../shared/types').SkillFileTreeNode[] = [];
+
+      for (const entry of entries) {
+        // Skip hidden files and directories
+        if (entry.name.startsWith('.')) continue;
+
+        const childPath = path.join(dirPath, entry.name);
+        const childRelativePath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+
+        if (entry.isDirectory()) {
+          const childNode = await buildTree(childPath, childRelativePath);
+          children.push(childNode);
+        } else if (entry.isFile()) {
+          const ext = path.extname(entry.name).toLowerCase();
+          const isMainFile = entry.name === SKILL_FILE_NAME;
+
+          children.push({
+            name: entry.name,
+            relativePath: childRelativePath,
+            absolutePath: childPath,
+            type: 'file',
+            extension: ext || undefined,
+            isMainFile,
+          });
+        }
+      }
+
+      return {
+        name,
+        relativePath,
+        absolutePath: dirPath,
+        type: 'directory',
+        children,
+      };
+    };
+
+    const tree = await buildTree(validatedPath, '');
+    logger.debug(`File tree built for skill: ${skillPath}`, 'SkillService', {
+      childCount: tree.children?.length || 0
+    });
+
+    return tree;
+  }
+
+  /**
+   * Read content of a file within a skill directory
+   * Validates path security and handles binary files gracefully
+   * @param filePath - Absolute path to file
+   * @returns File content and metadata
+   */
+  async readSkillFile(filePath: string): Promise<import('../../shared/types').SkillFileContent> {
+    logger.debug(`Reading skill file: ${filePath}`, 'SkillService');
+
+    // Validate path
+    const validatedPath = this.pathValidator.validate(filePath);
+
+    // Check if file exists
+    if (!fs.existsSync(validatedPath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+
+    // Check if it's a file (not a directory)
+    const stats = await fs.promises.stat(validatedPath);
+    if (!stats.isFile()) {
+      throw new Error(`Path is not a file: ${filePath}`);
+    }
+
+    // Read first 8000 bytes to detect binary
+    const buffer = Buffer.alloc(8000);
+    const fd = await fs.promises.open(validatedPath, 'r');
+    const { bytesRead } = await fd.read(buffer, 0, 8000, 0);
+    await fd.close();
+
+    // Check for binary content (null bytes in first 8000 bytes)
+    const isBinary = bytesRead > 0 && buffer.slice(0, bytesRead).includes(0);
+
+    if (isBinary) {
+      logger.debug(`File is binary: ${filePath}`, 'SkillService');
+      return {
+        path: validatedPath,
+        content: '',
+        isBinary: true,
+        language: undefined,
+      };
+    }
+
+    // Read full content as text
+    const content = await fs.promises.readFile(validatedPath, 'utf-8');
+
+    // Detect language from extension
+    const ext = path.extname(validatedPath).toLowerCase();
+    const languageMap: Record<string, string> = {
+      '.md': 'markdown',
+      '.txt': 'plaintext',
+      '.json': 'json',
+      '.js': 'javascript',
+      '.ts': 'typescript',
+      '.jsx': 'javascript',
+      '.tsx': 'typescript',
+      '.yaml': 'yaml',
+      '.yml': 'yaml',
+      '.xml': 'xml',
+      '.html': 'html',
+      '.css': 'css',
+      '.scss': 'scss',
+      '.py': 'python',
+      '.sh': 'shell',
+      '.bat': 'bat',
+      '.env': 'plaintext',
+      '.mdx': 'markdown',
+    };
+
+    const language = languageMap[ext] || 'plaintext';
+
+    logger.debug(`File read successfully: ${filePath}`, 'SkillService', {
+      contentLength: content.length,
+      language,
+    });
+
+    return {
+      path: validatedPath,
+      content,
+      isBinary: false,
+      language,
+    };
+  }
 }
