@@ -74,7 +74,7 @@ export default function SkillEditor({
   const [insertPopoverPosition, setInsertPopoverPosition] = useState<{ x: number; y: number } | undefined>();
   const [isAISidebarOpen, setIsAISidebarOpen] = useState<boolean>(false);
   // File tree state
-  const [isFileTreeVisible, setIsFileTreeVisible] = useState<boolean>(true);
+  const [isFileTreeVisible, setIsFileTreeVisible] = useState<boolean>(false);
   const [selectedFileNode, setSelectedFileNode] = useState<SkillFileTreeNode | null>(null);
   const [currentEditingPath, setCurrentEditingPath] = useState<string | null>(null);
   const [binaryFileError, setBinaryFileError] = useState<string | null>(null);

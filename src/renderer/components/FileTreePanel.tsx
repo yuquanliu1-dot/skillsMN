@@ -238,8 +238,8 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
           className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded transition-colors"
           title="Show file tree"
         >
-          <svg className="w-5 h-5 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7 7-7" />
+          <svg className="w-5 h-5 text-amber-500 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
           </svg>
         </button>
       </div>
