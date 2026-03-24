@@ -1003,24 +1003,6 @@ export default function SkillEditor({
 
       {/* Main content area with file tree + editor */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Collapsed sidebar strip - visible when file tree is hidden */}
-        {!isFileTreeVisible && (
-          <div className="w-10 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col items-center py-3">
-            <button
-              onClick={() => setIsFileTreeVisible(true)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors group"
-              title={t('editor.showFileTree')}
-            >
-              <svg className="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
-              <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-500 absolute left-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        )}
-
         {/* File Tree Panel */}
         <FileTreePanel
           skillPath={skill.path}
