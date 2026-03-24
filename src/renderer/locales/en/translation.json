@@ -393,7 +393,7 @@
     "subtitle": "Conversational skill creation",
     "editing": "Editing: {{name}}",
     "startConversation": "Start a conversation to create or modify skills",
-    "aiHelp": "AI will help you write skill.md files",
+    "aiHelp": "AI will help you write skill files",
     "thinking": "Thinking...",
     "error": "Error",
     "prompts": "Prompts",

@@ -23,7 +23,7 @@
   "version": 1,
   "ai": {
     "provider": "anthropic",
-    "apiKey": "djEwHH9WaH3FwHNPkUrDImER3GM9KrwvLuLHKO0ZZ3vSM0o36SsHKaS0m8p5mEjI5EBL7+9WyUhXCGF494KS+c014C5CI/ryumq/wUwYiGg=",
+    "apiKey": "djEw8jBHGGhucgu5NaOo2HB6qFLvbsfDlc1ILgXs8Pla8Usw7GGnmcLrx07OGtwpLNhPLVKXPnx0zqDbpmOBrwo7CVzpVn6V+WRZKGpm65g=",
     "model": "glm-5",
     "streamingEnabled": true,
     "timeout": 30000,
@@ -44,7 +44,7 @@
         "description": "",
         "addedAt": "2026-03-18T13:13:18.343Z",
         "createdAt": "2026-03-18T13:13:18.343Z",
-        "updatedAt": "2026-03-24T04:56:13.852Z",
+        "updatedAt": "2026-03-24T05:02:40.692Z",
         "provider": "github"
       }
     ]

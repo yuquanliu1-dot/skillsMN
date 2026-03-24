@@ -393,7 +393,7 @@
     "subtitle": "对话式技能创建",
     "editing": "正在编辑：{{name}}",
     "startConversation": "开始对话以创建或修改技能",
-    "aiHelp": "AI 将帮助您编写 skill.md 文件",
+    "aiHelp": "AI 将帮助您编写 skill 文件",
     "thinking": "思考中...",
     "error": "错误",
     "prompts": "提示",
