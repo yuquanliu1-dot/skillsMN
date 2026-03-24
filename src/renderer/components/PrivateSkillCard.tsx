@@ -127,32 +127,30 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         aria-label={onSkillClick ? `View ${skill.name} details` : undefined}
       >
         {/* Top row: Name + Badges + Actions */}
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1 min-w-0 mr-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate" title={skill.name}>
-                {skill.name}
-              </h4>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate flex-shrink" title={skill.name}>
+              {skill.name}
+            </h4>
 
-              {/* Source Badge */}
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex-shrink-0 border-0">
-                {repo.provider === 'gitlab' ? 'GitLab' : 'GitHub'}
+            {/* Source Badge */}
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex-shrink-0 border-0">
+              {repo.provider === 'gitlab' ? 'GitLab' : 'GitHub'}
+            </span>
+
+            {/* Installed Badge */}
+            {isInstalled && !isCheckingStatus && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0">
+                Installed
               </span>
+            )}
 
-              {/* Installed Badge */}
-              {isInstalled && !isCheckingStatus && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0">
-                  Installed
-                </span>
-              )}
-
-              {/* Success Badge */}
-              {installProgress === 'success' && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0">
-                  ✓
-                </span>
-              )}
-            </div>
+            {/* Success Badge */}
+            {installProgress === 'success' && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0">
+                ✓
+              </span>
+            )}
           </div>
 
           {/* Right: Install Button */}
