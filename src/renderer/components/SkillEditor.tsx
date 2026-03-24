@@ -482,7 +482,31 @@ export default function SkillEditor({
       return;
     }
 
-    // For other modes, insert/replace content in the editor
+    // For evaluate, benchmark, optimize modes - show results in a dialog or append to editor
+    if (mode === 'evaluate' || mode === 'benchmark' || mode === 'optimize') {
+      if (!editorRef.current) return;
+
+      const model = editorRef.current.getModel();
+      if (!model) return;
+
+      // For analysis modes, insert the results at the end of the file
+      const lineCount = model.getLineCount();
+      const lastColumn = model.getLineMaxColumn(lineCount);
+
+      const analysisHeader = `\n\n---\n## AI Analysis (${mode})\n\n`;
+
+      editorRef.current.executeEdits('ai-assist', [
+        {
+          range: new monaco.Range(lineCount, lastColumn, lineCount, lastColumn),
+          text: analysisHeader + generatedContent,
+        },
+      ]);
+
+      setHasUnsavedChanges(true);
+      return;
+    }
+
+    // For other modes (modify, insert, replace), insert/replace content in the editor
     if (!editorRef.current) return;
 
     const selection = editorRef.current.getSelection();

@@ -76,7 +76,10 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
     // Build skill context based on mode
     const skillContext: AIGenerationRequest['skillContext'] = {};
 
-    if (mode === 'modify' || mode === 'insert' || mode === 'replace') {
+    // Modes that require existing skill content
+    const modesRequiringContent = ['modify', 'insert', 'replace', 'evaluate', 'benchmark', 'optimize'];
+
+    if (modesRequiringContent.includes(mode)) {
       skillContext.content = editorContent;
     }
 
@@ -268,6 +271,12 @@ function getPlaceholderForMode(mode: AIGenerationMode): string {
       return 'Describe what content to insert at the cursor...';
     case 'replace':
       return 'Describe how to rewrite the selected text...';
+    case 'evaluate':
+      return 'Describe what aspects of the skill to evaluate...';
+    case 'benchmark':
+      return 'Describe the benchmark scenarios to test...';
+    case 'optimize':
+      return 'Describe triggering optimization goals...';
     default:
       return 'Enter your prompt...';
   }
