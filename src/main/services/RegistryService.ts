@@ -17,8 +17,27 @@ import {
 } from '../../shared/constants';
 import { validateSearchResponse, extractSearchResults } from '../models/SearchSkillsResponse';
 import { SearchSkillResult } from '../models/SearchSkillResult';
-import { gitOperations } from '../utils/gitOperations';
+import { gitOperations, GitErrorCode } from '../utils/gitOperations';
 import { SkillDiscovery } from '../utils/skillDiscovery';
+
+/**
+ * Registry-specific error codes
+ */
+export type RegistryErrorCode =
+  | GitErrorCode
+  | 'SKILL_NOT_FOUND'
+  | 'REGISTRY_UNAVAILABLE'
+  | 'INVALID_RESPONSE';
+
+/**
+ * Result of skill content fetch operation
+ */
+export interface SkillContentResult {
+  success: boolean;
+  content?: string;
+  errorCode?: RegistryErrorCode;
+  errorMessage?: string;
+}
 
 /**
  * Registry Service for skills.sh API integration
@@ -124,9 +143,9 @@ export class RegistryService {
    *
    * @param source - Skill source (e.g., "anthropics/skills")
    * @param skillId - Skill identifier (internal name from frontmatter)
-   * @returns Skill content as string
+   * @returns SkillContentResult with content or error details
    */
-  async getSkillContent(source: string, skillId: string): Promise<string> {
+  async getSkillContent(source: string, skillId: string): Promise<SkillContentResult> {
     console.log(`[RegistryService] Fetching skill content: ${source}/${skillId}`);
 
     // Try different possible paths for the skill
@@ -137,28 +156,35 @@ export class RegistryService {
       `skills/${skillId}/skill.md`
     ];
 
+    // Try both main and master branches
+    const branches = ['main', 'master'];
+
     // Try to fetch from raw GitHub content
-    for (const skillPath of possiblePaths) {
-      try {
-        const rawUrl = `https://raw.githubusercontent.com/${source}/main/${skillPath}`;
-        console.log(`[RegistryService] Trying: ${rawUrl}`);
+    for (const branch of branches) {
+      for (const skillPath of possiblePaths) {
+        try {
+          const rawUrl = `https://raw.githubusercontent.com/${source}/${branch}/${skillPath}`;
+          console.log(`[RegistryService] Trying: ${rawUrl}`);
 
-        const response = await fetch(rawUrl, {
-          method: 'GET',
-          headers: {
-            'User-Agent': 'skillsMN-Desktop/1.0'
-          },
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        });
+          const response = await fetch(rawUrl, {
+            method: 'GET',
+            headers: {
+              'User-Agent': 'skillsMN-Desktop/1.0'
+            },
+            signal: AbortSignal.timeout(10000) // 10 second timeout
+          });
 
-        if (response.ok) {
-          const content = await response.text();
-          console.log(`[RegistryService] Skill content fetched from ${skillPath} (${content.length} chars)`);
-          return content;
+          if (response.ok) {
+            const content = await response.text();
+            console.log(`[RegistryService] Skill content fetched from ${skillPath} (${content.length} chars)`);
+            return { success: true, content };
+          } else {
+            console.log(`[RegistryService] Got status ${response.status} for ${rawUrl}`);
+          }
+        } catch (error: any) {
+          // Log but continue to next path
+          console.log(`[RegistryService] Failed to fetch from ${skillPath} (${branch}): ${error.message}`);
         }
-      } catch (error: any) {
-        // Log but continue to next path
-        console.log(`[RegistryService] Failed to fetch from ${skillPath}: ${error.message}`);
       }
     }
 
@@ -173,14 +199,14 @@ export class RegistryService {
    *
    * @param source - Skill source (e.g., "anthropics/skills")
    * @param skillId - Skill identifier (internal name from frontmatter)
-   * @returns Skill content as string
+   * @returns SkillContentResult with content or error details
    */
-  private async getSkillContentByCloning(source: string, skillId: string): Promise<string> {
+  private async getSkillContentByCloning(source: string, skillId: string): Promise<SkillContentResult> {
     const tempRoot = path.join(os.tmpdir(), `skillsMN-preview-${uuidv4()}`);
 
     try {
       // Clone repository to temp directory
-      console.log(`[RegistryService] Cloning repository to ${tempRoot}`);
+      console.log(`[RegistryService] Cloning repository ${source} to ${tempRoot}`);
       const cloneResult = await gitOperations.shallowClone(
         source,
         tempRoot,
@@ -190,7 +216,12 @@ export class RegistryService {
       );
 
       if (!cloneResult.success) {
-        throw new Error(`Failed to clone repository: ${cloneResult.error}`);
+        console.error(`[RegistryService] Clone failed with error code: ${cloneResult.errorCode}, error: ${cloneResult.error}`);
+        return {
+          success: false,
+          errorCode: cloneResult.errorCode,
+          errorMessage: cloneResult.error || 'Failed to clone repository'
+        };
       }
 
       // Discover skill directory by internal name (from frontmatter)
@@ -203,23 +234,47 @@ export class RegistryService {
       );
 
       if (!skillDir) {
-        throw new Error(`Skill "${skillId}" not found in repository`);
+        console.error(`[RegistryService] Skill "${skillId}" not found in repository ${source}`);
+        return {
+          success: false,
+          errorCode: 'SKILL_NOT_FOUND',
+          errorMessage: `Skill "${skillId}" not found in repository. It may have been renamed or removed.`
+        };
       }
 
-      // Read SKILL.md content
-      const skillMdPath = path.join(skillDir, 'SKILL.md');
-      if (!fs.existsSync(skillMdPath)) {
-        throw new Error(`SKILL.md not found in ${skillDir}`);
+      // Read SKILL.md or skill.md content
+      const skillFileNames = ['SKILL.md', 'skill.md'];
+      let skillMdPath: string | null = null;
+
+      for (const fileName of skillFileNames) {
+        const testPath = path.join(skillDir, fileName);
+        if (fs.existsSync(testPath)) {
+          skillMdPath = testPath;
+          break;
+        }
+      }
+
+      if (!skillMdPath) {
+        console.error(`[RegistryService] SKILL.md not found in ${skillDir}`);
+        return {
+          success: false,
+          errorCode: 'SKILL_NOT_FOUND',
+          errorMessage: `SKILL.md not found in skill directory. The skill may be corrupted or incomplete.`
+        };
       }
 
       const content = await fs.promises.readFile(skillMdPath, 'utf-8');
-      console.log(`[RegistryService] Skill content fetched (${content.length} chars)`);
+      console.log(`[RegistryService] Skill content fetched from ${path.basename(skillMdPath)} (${content.length} chars)`);
 
-      return content;
+      return { success: true, content };
 
     } catch (error: any) {
       console.error('[RegistryService] Failed to fetch skill content:', error);
-      throw error;
+      return {
+        success: false,
+        errorCode: 'CLONE_FAILED',
+        errorMessage: error.message || 'Failed to fetch skill content'
+      };
     } finally {
       // Clean up temp directory
       try {

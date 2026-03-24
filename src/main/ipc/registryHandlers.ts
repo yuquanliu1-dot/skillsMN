@@ -8,11 +8,26 @@ import { ipcMain, BrowserWindow } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { logger } from '../utils/Logger';
-import { RegistryService } from '../services/RegistryService';
+import { RegistryService, RegistryErrorCode } from '../services/RegistryService';
 import { SkillInstaller } from '../services/SkillInstaller';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { validateInstallRequest } from '../models/InstallFromRegistryRequest';
 import type { InstallFromRegistryRequest, InstallProgressEvent, SkillSourceMetadata } from '../../shared/types';
+
+/**
+ * User-friendly error messages for registry errors
+ */
+const REGISTRY_ERROR_MESSAGES: Record<RegistryErrorCode, string> = {
+  GIT_NOT_FOUND: 'Git is required but not installed. Please install Git and restart the application.',
+  REPO_NOT_FOUND: 'This skill repository could not be found. It may have been moved or deleted.',
+  PRIVATE_REPO: 'This skill is in a private repository and cannot be accessed.',
+  NETWORK_ERROR: 'Unable to connect to GitHub. Please check your internet connection.',
+  DISK_SPACE_ERROR: 'Not enough disk space to download this skill.',
+  CLONE_FAILED: 'Failed to download the skill repository. Please try again.',
+  SKILL_NOT_FOUND: 'This skill was not found in the repository. It may have been renamed or removed.',
+  REGISTRY_UNAVAILABLE: 'The skills registry is currently unavailable. Please try again later.',
+  INVALID_RESPONSE: 'Received an invalid response from the registry. Please try again.'
+};
 
 /**
  * Register Registry IPC handlers
@@ -226,17 +241,40 @@ export function registerRegistryHandlers(): void {
           skillId
         });
 
-        const content = await registryService.getSkillContent(source, skillId);
+        const result = await registryService.getSkillContent(source, skillId);
 
-        logger.info('Skill content fetched successfully', 'RegistryHandlers', {
+        if (result.success && result.content) {
+          logger.info('Skill content fetched successfully', 'RegistryHandlers', {
+            source,
+            skillId,
+            contentLength: result.content.length
+          });
+
+          return {
+            success: true,
+            data: result.content
+          };
+        }
+
+        // Handle structured error response
+        const errorCode = result.errorCode || 'CLONE_FAILED';
+        const errorMessage = result.errorMessage ||
+          REGISTRY_ERROR_MESSAGES[errorCode] ||
+          'Failed to fetch skill content';
+
+        logger.error('Failed to fetch skill content', 'RegistryHandlers', {
           source,
           skillId,
-          contentLength: content.length
+          errorCode,
+          errorMessage
         });
 
         return {
-          success: true,
-          data: content
+          success: false,
+          error: {
+            code: errorCode,
+            message: errorMessage
+          }
         };
       } catch (error) {
         logger.error('Failed to fetch skill content', 'RegistryHandlers', error);
