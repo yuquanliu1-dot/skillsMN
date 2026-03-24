@@ -5,10 +5,35 @@
  * Supports both GitLab.com and self-hosted GitLab instances
  */
 
-import fetch from 'node-fetch';
+import fetch, { RequestInit } from 'node-fetch';
+import https from 'https';
 import { logger } from '../utils/Logger';
 import { retryWithBackoff } from '../utils/retry';
 import type { TreeItem, Commit, SkillMetadata } from './GitProvider';
+
+// HTTPS agent that ignores self-signed certificates for self-hosted GitLab instances
+const insecureAgent = new https.Agent({
+  rejectUnauthorized: false,
+});
+
+// Check if URL is a private/self-hosted instance (not gitlab.com)
+const isInsecureInstance = (url: string): boolean => {
+  try {
+    const parsedUrl = new URL(url);
+    // Allow insecure connections for non-gitlab.com instances (self-hosted, internal IPs, etc.)
+    return !parsedUrl.hostname.endsWith('gitlab.com');
+  } catch {
+    return true;
+  }
+};
+
+// Get appropriate fetch options with HTTPS agent if needed
+const getFetchOptions = (url: string, options: RequestInit = {}): RequestInit => {
+  if (url.startsWith('https://') && isInsecureInstance(url)) {
+    return { ...options, agent: insecureAgent };
+  }
+  return options;
+};
 
 /**
  * GitLab API Service
@@ -51,12 +76,12 @@ export class GitLabService {
       const projectId = this.getProjectId(owner, repo);
       const url = `${apiBaseUrl}/projects/${projectId}`;
 
-      const response = await fetch(url, {
+      const response = await fetch(url, getFetchOptions(url, {
         headers: {
           'Private-Token': pat,
           'User-Agent': 'skillsMN-App',
         },
-      });
+      }));
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -114,12 +139,12 @@ export class GitLabService {
       const projectId = this.getProjectId(owner, repo);
       const url = `${apiBaseUrl}/projects/${projectId}/repository/tree?recursive=1&ref=${encodeURIComponent(branch)}`;
 
-      const response = await fetch(url, {
+      const response = await fetch(url, getFetchOptions(url, {
         headers: {
           'Private-Token': pat,
           'User-Agent': 'skillsMN-App',
         },
-      });
+      }));
 
       if (!response.ok) {
         throw new Error(`Failed to fetch repository tree: ${response.status}`);
@@ -225,12 +250,12 @@ export class GitLabService {
     const projectId = this.getProjectId(owner, repo);
     const url = `${apiBaseUrl}/projects/${projectId}/repository/files/${encodeURIComponent(filePath)}?ref=${encodeURIComponent(branch)}`;
 
-    const response = await fetch(url, {
+    const response = await fetch(url, getFetchOptions(url, {
       headers: {
         'Private-Token': pat,
         'User-Agent': 'skillsMN-App',
       },
-    });
+    }));
 
     if (!response.ok) {
       throw new Error(`Failed to fetch file ${filePath}: ${response.status}`);
@@ -257,12 +282,12 @@ export class GitLabService {
       const projectId = this.getProjectId(owner, repo);
       const url = `${apiBaseUrl}/projects/${projectId}/repository/commits?path=${encodeURIComponent(path)}&ref_name=${encodeURIComponent(branch)}&per_page=10`;
 
-      const response = await fetch(url, {
+      const response = await fetch(url, getFetchOptions(url, {
         headers: {
           'Private-Token': pat,
           'User-Agent': 'skillsMN-App',
         },
-      });
+      }));
 
       if (!response.ok) {
         logger.warn(`Failed to fetch commits for ${path}`, 'GitLabService', {
@@ -390,10 +415,10 @@ export class GitLabService {
       return controller;
     };
 
-    // Helper function to fetch with timeout
+    // Helper function to fetch with timeout and SSL support
     const fetchWithTimeout = async (url: string, options: any): Promise<any> => {
       const controller = createTimeoutController();
-      return fetch(url, { ...options, signal: controller.signal });
+      return fetch(url, getFetchOptions(url, { ...options, signal: controller.signal }));
     };
 
     try {
@@ -555,10 +580,10 @@ export class GitLabService {
       return controller;
     };
 
-    // Helper function to fetch with timeout
+    // Helper function to fetch with timeout and SSL support
     const fetchWithTimeout = async (url: string, options: any): Promise<any> => {
       const controller = createTimeoutController();
-      return fetch(url, { ...options, signal: controller.signal });
+      return fetch(url, getFetchOptions(url, { ...options, signal: controller.signal }));
     };
 
     logger.info('GitLab directory upload parameters', 'GitLabService', {

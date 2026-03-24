@@ -153,6 +153,13 @@ export const AGENT_TOOLS: AgentTool[] = [
     skillsDir: '~/.bito/skills',
     type: 'tool',
   },
+  {
+    id: 'workbuddy',
+    name: 'WorkBuddy',
+    configDir: '~/.workbuddy',
+    skillsDir: '~/.workbuddy/skills',
+    type: 'tool',
+  },
 ];
 
 /**
