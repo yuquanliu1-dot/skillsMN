@@ -159,12 +159,11 @@ export default function SkillCard({
         data-testid="skill-card"
       >
         {/* Top row: Name + Badges + Actions */}
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1 min-w-0 mr-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate" title={skill.name} data-testid="skill-name">
-                {skill.name}
-              </h4>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate flex-shrink" title={skill.name} data-testid="skill-name">
+              {skill.name}
+            </h4>
 
               {/* Source Type Badge */}
               {skill.sourceMetadata?.type === 'local' && (
@@ -210,7 +209,6 @@ export default function SkillCard({
                   ✓
                 </span>
               )}
-            </div>
           </div>
 
           {/* Right: Actions */}
