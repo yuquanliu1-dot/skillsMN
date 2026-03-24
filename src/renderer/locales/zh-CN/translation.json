@@ -356,6 +356,7 @@
     "searchPlaceholder": "搜索技能（如：数据分析、代码审查）...",
     "searching": "搜索中...",
     "searchError": "搜索错误",
+    "queryTooShort": "搜索关键词至少需要输入2个字符",
     "retry": "重试",
     "searchForSkills": "搜索技能",
     "searchDescription": "输入搜索词以从 skills.sh 注册表发现技能",

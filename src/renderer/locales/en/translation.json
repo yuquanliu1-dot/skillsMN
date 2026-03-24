@@ -356,6 +356,7 @@
     "searchPlaceholder": "Search for skills (e.g., data analysis, code review)...",
     "searching": "Searching...",
     "searchError": "Search Error",
+    "queryTooShort": "Please enter at least 2 characters to search",
     "retry": "Retry",
     "searchForSkills": "Search for Skills",
     "searchDescription": "Enter a search term to discover skills from the skills.sh registry",

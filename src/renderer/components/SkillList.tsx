@@ -73,13 +73,14 @@ export default function SkillList({
       result = result.filter((skill) => skill.tags?.includes(filterTag));
     }
 
-    // Filter by search query
+    // Filter by search query (matches name, description, and tags)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (skill) =>
           skill.name.toLowerCase().includes(query) ||
-          skill.description?.toLowerCase().includes(query)
+          skill.description?.toLowerCase().includes(query) ||
+          skill.tags?.some(tag => tag.toLowerCase().includes(query))
       );
     }
 
