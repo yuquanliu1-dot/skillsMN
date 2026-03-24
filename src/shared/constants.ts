@@ -101,8 +101,8 @@ export const MAX_SKILL_DESCRIPTION_LENGTH = 500;
 // File Patterns
 // ============================================================================
 
-/** Pattern to match skill files */
-export const SKILL_FILE_PATTERN = /^skill\.md$/;
+/** Pattern to match skill files (case-insensitive) */
+export const SKILL_FILE_PATTERN = /^skill\.md$/i;
 
 /** Pattern to ignore dotfiles */
 export const DOTFILE_PATTERN = /(^|[\/\\])\../;

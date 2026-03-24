@@ -91,7 +91,7 @@ export class SkillDirectoryModel {
         const skillPath = path.join(dirPath, entry.name);
         const skillFile = path.join(skillPath, SKILL_FILE_NAME);
 
-        // Only include directories that contain skill.md
+        // Only include directories that contain SKILL.md
         if (fs.existsSync(skillFile)) {
           skillDirs.push(skillPath);
         }

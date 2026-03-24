@@ -568,7 +568,15 @@ Before any task, invoke the Skill tool with "skill-creator" to get comprehensive
 ${targetPath ? `
 ## Save Location
 All skills must be saved to: ${targetPath}/<skill-name>/SKILL.md
-DO NOT use default locations like ~/.claude/skills/` : ''}
+DO NOT use default locations like ~/.claude/skills/
+
+## CRITICAL: File Naming Convention
+The skill file MUST be named exactly "SKILL.md" (all uppercase: SKILL, .md extension).
+DO NOT use variations like:
+- skill.md (lowercase)
+- Skill.md (mixed case)
+- SKILL.MD (uppercase extension)
+Always use: SKILL.md` : ''}
 
 ## Skill Format
 \`\`\`markdown
