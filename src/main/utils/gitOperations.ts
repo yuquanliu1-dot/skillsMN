@@ -156,6 +156,11 @@ export class GitOperations {
 
     } catch (error: any) {
       const errorMessage = error.message || error.stderr || String(error);
+      const stderr = error.stderr || '';
+      console.error(`[GitOperations] Clone failed for ${source}`);
+      console.error(`[GitOperations] Error message: ${errorMessage}`);
+      console.error(`[GitOperations] Stderr: ${stderr}`);
+
       const parsed = this.parseGitError(errorMessage);
 
       onProgress?.(`Clone failed: ${parsed.message}`);

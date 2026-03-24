@@ -21,6 +21,21 @@ export class PrivateRepoService {
   private static config: PrivateRepoConfigSection | null = null;
 
   /**
+   * Safely decrypt an encrypted PAT with proper error handling
+   * @param patEncrypted - Base64 encoded encrypted PAT
+   * @returns Decrypted PAT string
+   * @throws Error with user-friendly message if decryption fails
+   */
+  private static decryptPAT(patEncrypted: string): string {
+    try {
+      return safeStorage.decryptString(Buffer.from(patEncrypted, 'base64'));
+    } catch (decryptError) {
+      logger.error('Failed to decrypt PAT - credentials may be corrupted or from a different machine', 'PrivateRepoService', decryptError);
+      throw new Error('Credentials could not be decrypted. This may happen if the app was installed on a different machine or the config was modified manually. Please remove and re-add this repository with your PAT.');
+    }
+  }
+
+  /**
    * Initialize the private repository service
    * Loads configuration from unified ConfigService
    * @example
@@ -127,7 +142,7 @@ export class PrivateRepoService {
 
       for (const existingRepo of this.config!.repositories) {
         try {
-          const existingPat = safeStorage.decryptString(Buffer.from(existingRepo.patEncrypted, 'base64'));
+          const existingPat = this.decryptPAT(existingRepo.patEncrypted);
           if (existingPat === pat) {
             throw new Error(`This PAT is already used by repository: ${existingRepo.displayName || existingRepo.url}. Please use a different PAT.`);
           }
@@ -345,8 +360,17 @@ export class PrivateRepoService {
         throw new Error('Repository not found');
       }
 
-      // Decrypt PAT
-      const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
+      // Decrypt PAT with proper error handling
+      let pat: string;
+      try {
+        pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
+      } catch (decryptError) {
+        logger.error('Failed to decrypt PAT - credentials may need to be re-entered', 'PrivateRepoService', decryptError);
+        return {
+          valid: false,
+          error: 'Credentials could not be decrypted. This may happen if the app was installed on a different machine or the config was modified manually. Please remove and re-add this repository with your PAT.',
+        };
+      }
 
       // Get appropriate provider
       const provider = repo.provider || 'github';
@@ -441,7 +465,7 @@ export class PrivateRepoService {
       }
 
       // Decrypt PAT
-      const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
+      const pat = this.decryptPAT(repo.patEncrypted);
 
       // Get appropriate provider
       const provider = repo.provider || 'github';
@@ -571,7 +595,7 @@ export class PrivateRepoService {
       }
 
       // Decrypt PAT
-      const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
+      const pat = this.decryptPAT(repo.patEncrypted);
 
       // Get appropriate provider
       const provider = repo.provider || 'github';
@@ -801,7 +825,7 @@ export class PrivateRepoService {
       }
 
       // Decrypt PAT
-      const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
+      const pat = this.decryptPAT(repo.patEncrypted);
 
       // Get appropriate provider
       const provider = repo.provider || 'github';
@@ -854,7 +878,7 @@ export class PrivateRepoService {
       }
 
       // Decrypt PAT
-      const pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
+      const pat = this.decryptPAT(repo.patEncrypted);
 
       // Get appropriate provider
       const provider = repo.provider || 'github';

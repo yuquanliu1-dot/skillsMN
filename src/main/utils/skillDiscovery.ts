@@ -14,6 +14,7 @@ const writeFileAsync = promisify(fs.writeFile);
 const accessAsync = promisify(fs.access);
 
 const DEFAULT_SKILL_FILE = 'SKILL.md';
+const SKILL_FILE_NAMES = ['SKILL.md', 'skill.md']; // Support both cases
 const DEFAULT_SOURCE_META_FILE = '.source.json';
 const MAX_SEARCH_DEPTH = 3;
 
@@ -70,9 +71,12 @@ export class SkillDiscovery {
         if (entry.isDirectory()) {
           // Case-insensitive match by directory name
           if (entry.name.toLowerCase() === skillName.toLowerCase()) {
-            const skillFilePath = path.join(fullPath, DEFAULT_SKILL_FILE);
-            if (fs.existsSync(skillFilePath)) {
-              return fullPath;
+            // Check for any valid skill file name
+            for (const skillFileName of SKILL_FILE_NAMES) {
+              const skillFilePath = path.join(fullPath, skillFileName);
+              if (fs.existsSync(skillFilePath)) {
+                return fullPath;
+              }
             }
           }
 
@@ -112,9 +116,12 @@ export class SkillDiscovery {
 
         // Check if this entry is a directory
         if (entry.isDirectory()) {
-          const skillFilePath = path.join(fullPath, DEFAULT_SKILL_FILE);
-          if (fs.existsSync(skillFilePath)) {
-            return fullPath;
+          // Check for any valid skill file name
+          for (const skillFileName of SKILL_FILE_NAMES) {
+            const skillFilePath = path.join(fullPath, skillFileName);
+            if (fs.existsSync(skillFilePath)) {
+              return fullPath;
+            }
           }
 
           // Recursively search subdirectories
@@ -155,28 +162,32 @@ export class SkillDiscovery {
 
         // Check if this entry is a directory
         if (entry.isDirectory()) {
-          const skillFilePath = path.join(fullPath, DEFAULT_SKILL_FILE);
+          // Try both SKILL.md and skill.md
+          for (const skillFileName of SKILL_FILE_NAMES) {
+            const skillFilePath = path.join(fullPath, skillFileName);
 
-          // If SKILL.md exists, check its frontmatter name
-          if (fs.existsSync(skillFilePath)) {
-            try {
-              const content = await readFileAsync(skillFilePath, 'utf-8');
-              const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+            // If skill file exists, check its frontmatter name
+            if (fs.existsSync(skillFilePath)) {
+              try {
+                const content = await readFileAsync(skillFilePath, 'utf-8');
+                const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 
-              if (frontmatterMatch) {
-                const frontmatter = frontmatterMatch[1];
-                const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
+                if (frontmatterMatch) {
+                  const frontmatter = frontmatterMatch[1];
+                  const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
 
-                if (nameMatch) {
-                  const internalName = nameMatch[1].trim();
-                  // Case-insensitive match
-                  if (internalName.toLowerCase() === skillName.toLowerCase()) {
-                    return fullPath;
+                  if (nameMatch) {
+                    const internalName = nameMatch[1].trim();
+                    // Case-insensitive match
+                    if (internalName.toLowerCase() === skillName.toLowerCase()) {
+                      console.log(`[SkillDiscovery] Found skill "${skillName}" at ${fullPath} (${skillFileName})`);
+                      return fullPath;
+                    }
                   }
                 }
+              } catch (readError) {
+                console.warn(`[SkillDiscovery] Could not read ${skillFilePath}:`, readError);
               }
-            } catch (readError) {
-              console.warn(`[SkillDiscovery] Could not read ${skillFilePath}:`, readError);
             }
           }
 
@@ -198,20 +209,23 @@ export class SkillDiscovery {
   }
 
   /**
-   * Validate skill structure (directory has SKILL.md)
+   * Validate skill structure (directory has SKILL.md or skill.md)
    *
    * @param skillDir - Path to skill directory
-   * @returns True if directory contains SKILL.md
+   * @returns True if directory contains a valid skill file
    */
   private async validateSkillStructure(skillDir: string): Promise<boolean> {
-    const skillMdPath = path.join(skillDir, DEFAULT_SKILL_FILE);
+    for (const skillFileName of SKILL_FILE_NAMES) {
+      const skillMdPath = path.join(skillDir, skillFileName);
 
-    try {
-      await accessAsync(skillMdPath, fs.constants.R_OK);
-      return true;
-    } catch {
-      return false;
+      try {
+        await accessAsync(skillMdPath, fs.constants.R_OK);
+        return true;
+      } catch {
+        // Try next file name
+      }
     }
+    return false;
   }
 
   /**
