@@ -861,21 +861,6 @@ export default function SkillEditor({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* File Tree Toggle Button */}
-          <button
-            onClick={() => setIsFileTreeVisible(!isFileTreeVisible)}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-lg transition-colors ${
-              isFileTreeVisible
-                ? 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
-            }`}
-            title={isFileTreeVisible ? t('editor.hideFileTree') : t('editor.showFileTree')}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
-          </button>
-
           {/* AI Assistant button */}
           {!readOnly && (
             <button
