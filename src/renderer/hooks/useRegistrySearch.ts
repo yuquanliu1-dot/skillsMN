@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { searchRegistry } from '../services/registryClient';
 import { SearchSkillResult } from '../../shared/types';
 
@@ -17,6 +18,7 @@ export interface UseRegistrySearchResult {
 }
 
 export function useRegistrySearch(debounceMs: number = 400): UseRegistrySearchResult {
+  const { t } = useTranslation();
   const [query, setQuery] = useState<string>('');
   const [results, setResults] = useState<SearchSkillResult[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -31,6 +33,13 @@ export function useRegistrySearch(debounceMs: number = 400): UseRegistrySearchRe
         return;
       }
 
+      // Validate minimum query length before making API call
+      if (searchQuery.trim().length < 2) {
+        setResults([]);
+        setError(t('discover.queryTooShort'));
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
 
@@ -38,13 +47,19 @@ export function useRegistrySearch(debounceMs: number = 400): UseRegistrySearchRe
         const searchResults = await searchRegistry(searchQuery);
         setResults(searchResults);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Search failed');
+        // Check if it's a "query too short" error from the backend
+        const errorMessage = err instanceof Error ? err.message : 'Search failed';
+        if (errorMessage === 'QUERY_TOO_SHORT' || errorMessage.includes('at least 2 characters')) {
+          setError(t('discover.queryTooShort'));
+        } else {
+          setError(errorMessage);
+        }
         setResults([]);
       } finally {
         setIsLoading(false);
       }
     },
-    [debounceMs]
+    [debounceMs, t]
   );
 
   // Debounce effect

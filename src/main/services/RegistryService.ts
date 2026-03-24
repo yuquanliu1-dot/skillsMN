@@ -72,6 +72,20 @@ export class RegistryService {
       // Check response status
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
+
+        // Parse API errors and throw with a specific error code for better error handling
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error && errorJson.error.includes('at least 2 characters')) {
+            throw new Error('QUERY_TOO_SHORT');
+          }
+        } catch (parseError) {
+          // If not JSON, check if it's our specific error code
+          if (parseError instanceof Error && parseError.message === 'QUERY_TOO_SHORT') {
+            throw parseError;
+          }
+        }
+
         throw new Error(`Registry API error: ${response.status} - ${errorText}`);
       }
 
