@@ -111,7 +111,10 @@
     "uploadToPrivateRepo": "上传到私有仓库",
     "localVersionNewer": "本地版本 ({{local}}) 比远程版本 ({{remote}}) 更新。",
     "targetRepository": "目标仓库",
-    "version": "版本"
+    "version": "版本",
+    "openFolderHint": "打开目录",
+    "copyHint": "复制",
+    "deleteHint": "删除"
   },
 
   "editor": {

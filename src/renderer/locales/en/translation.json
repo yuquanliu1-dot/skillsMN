@@ -111,7 +111,10 @@
     "uploadToPrivateRepo": "Upload to private repository",
     "localVersionNewer": "Local version ({{local}}) is newer than remote version ({{remote}}).",
     "targetRepository": "Target Repository",
-    "version": "Version"
+    "version": "Version",
+    "openFolderHint": "Open Folder",
+    "copyHint": "Copy",
+    "deleteHint": "Delete"
   },
 
   "editor": {
