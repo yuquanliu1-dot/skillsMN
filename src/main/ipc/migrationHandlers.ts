@@ -134,4 +134,30 @@ export function registerMigrationHandlers(
       }
     }
   );
+
+  // Handler for migration:check-directory - Check if a specific directory has skills
+  ipcMain.handle(
+    IPC_CHANNELS.MIGRATION_CHECK_DIRECTORY,
+    async (
+      _event,
+      { directoryPath }: { directoryPath: string }
+    ): Promise<IPCResponse<Skill[]>> => {
+      try {
+        logger.debug('Checking directory for skills', 'MigrationHandlers', { directoryPath });
+
+        // Scan the directory for skills
+        const skills = await migrationService!.scanDirectoryForSkills(directoryPath);
+
+        logger.info('Directory skill check completed', 'MigrationHandlers', {
+          directoryPath,
+          skillCount: skills.length,
+        });
+
+        return { success: true, data: skills };
+      } catch (error) {
+        logger.error('Failed to check directory for skills', 'MigrationHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
 }

@@ -15,6 +15,7 @@ import { registerPrivateRepoHandlers } from './ipc/privateRepoHandlers';
 import { registerRegistryHandlers } from './ipc/registryHandlers';
 import { registerSymlinkHandlers } from './ipc/symlinkHandlers';
 import { registerMigrationHandlers } from './ipc/migrationHandlers';
+import { registerAIConversationHandlers } from './ipc/aiConversationHandlers';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
 import { SymlinkService } from './services/SymlinkService';
@@ -201,6 +202,10 @@ async function initialize(): Promise<void> {
     // Register migration handlers
     registerMigrationHandlers(migrationService, skillService, configService);
     logger.info('Migration handlers registered', 'Main');
+
+    // Register AI conversation handlers
+    registerAIConversationHandlers();
+    logger.info('AI conversation handlers registered', 'Main');
 
     // Create main window
     await createWindow();

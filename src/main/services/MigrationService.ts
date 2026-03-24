@@ -98,11 +98,11 @@ export class MigrationService {
   }
 
   /**
-   * Scan a directory for skills (helper method)
+   * Scan a directory for skills
    * @param dirPath - Directory to scan
    * @returns Array of skills found
    */
-  private async scanDirectoryForSkills(dirPath: string): Promise<Skill[]> {
+  async scanDirectoryForSkills(dirPath: string): Promise<Skill[]> {
     try {
       if (!fs.existsSync(dirPath)) {
         return [];
