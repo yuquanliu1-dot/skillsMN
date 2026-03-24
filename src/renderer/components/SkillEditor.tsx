@@ -1003,8 +1003,8 @@ export default function SkillEditor({
 
       {/* Main content area with file tree + editor */}
       <div className="flex-1 flex overflow-hidden">
-        {/* File Tree Panel - only show for local skills (not inline/remote) */}
-        {!isInline && (
+        {/* File Tree Panel - show for skills in local application directory */}
+        {skill.source === 'application' && (
           <FileTreePanel
             skillPath={skill.path}
             selectedFile={currentEditingPath || ''}
