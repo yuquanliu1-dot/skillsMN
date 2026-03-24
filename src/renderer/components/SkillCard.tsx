@@ -145,9 +145,9 @@ export default function SkillCard({
 
   return (
     <>
-      {/* Fixed height card: 136px + 8px bottom margin */}
+      {/* Adaptive height card */}
       <article
-        className={`relative h-[136px] mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
+        className={`relative mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
           isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
         }`}
         onClick={handleClick}
@@ -159,7 +159,7 @@ export default function SkillCard({
         data-testid="skill-card"
       >
         {/* Top row: Name + Badges + Actions */}
-        <div className="flex items-start justify-between mb-2 h-[28px]">
+        <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0 mr-2">
             <div className="flex items-center gap-2 flex-wrap">
               <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate" title={skill.name} data-testid="skill-name">
@@ -280,7 +280,7 @@ export default function SkillCard({
         </div>
 
         {/* Middle row: Description */}
-        <div className="h-[20px] mb-2">
+        <div className="mb-2">
           {skill.description && (
             <p
               ref={descriptionRef}
@@ -294,7 +294,7 @@ export default function SkillCard({
 
         {/* Source Info row */}
         {skill.sourceMetadata && skill.sourceMetadata.type !== 'local' && (
-          <div className="h-[16px] mb-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <div className="mb-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
             </svg>
@@ -312,7 +312,7 @@ export default function SkillCard({
         )}
 
         {/* Bottom row: Metadata */}
-        <div className="flex items-center gap-4 h-[16px] text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
           {/* Author */}
           {skill.author && (
             <span className="flex items-center gap-1 min-w-0">

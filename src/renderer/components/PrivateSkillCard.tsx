@@ -111,12 +111,12 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
 
   return (
     <>
-      {/* Card matching main SkillCard style: fixed height 136px */}
+      {/* Card matching main SkillCard style: adaptive height */}
       <article
         onClick={handleCardClick}
-        className={`relative h-[136px] mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors ${
+        className={`relative mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors ${
           onSkillClick ? 'cursor-pointer' : ''
-        } overflow-hidden`}
+        }`}
         role={onSkillClick ? 'button' : undefined}
         tabIndex={onSkillClick ? 0 : undefined}
         onKeyPress={(e) => {
@@ -127,7 +127,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         aria-label={onSkillClick ? `View ${skill.name} details` : undefined}
       >
         {/* Top row: Name + Badges + Actions */}
-        <div className="flex items-start justify-between mb-2 h-[28px]">
+        <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0 mr-2">
             <div className="flex items-center gap-2 flex-wrap">
               <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate" title={skill.name}>
@@ -203,7 +203,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         )}
 
         {/* Description row */}
-        <div className="h-[20px] mb-2">
+        <div className="mb-2">
           {skill.description ? (
             <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1" title={skill.description}>
               {skill.description}
@@ -216,7 +216,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         </div>
 
         {/* Commit message row */}
-        <div className="h-[20px] mb-2">
+        <div className="mb-2">
           {skill.lastCommitMessage && (
             <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1" title={skill.lastCommitMessage}>
               {skill.lastCommitMessage}
@@ -225,7 +225,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         </div>
 
         {/* Bottom row: Author + Tags */}
-        <div className="flex items-center gap-3 h-[20px] overflow-hidden">
+        <div className="flex items-center gap-3 overflow-hidden">
           {skill.lastCommitAuthor && (
             <span className="flex items-center gap-1 min-w-0 flex-shrink-0">
               <svg className="w-3 h-3 flex-shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
