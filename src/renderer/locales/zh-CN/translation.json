@@ -140,7 +140,7 @@
   "settings": {
     "title": "设置",
     "general": "通用",
-    "storage": "存储",
+    "storage": "技能目录",
     "skillView": "技能视图",
     "privateRepositories": "私有仓库",
     "aiConfiguration": "AI 配置",

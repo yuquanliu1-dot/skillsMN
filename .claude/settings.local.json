@@ -37,7 +37,10 @@
       "Bash(ls -d specs/[0-9]*-* 2>/dev/null | sed 's/specs\\\\///' | sed 's/-.*$//' | sort -n | tail -1 || echo \"0\")",
       "Bash(cd /d D:\\\\skillsMN\\\\src\\\\renderer\\\\components && mv AIRewritePopover.tsx AIAssistantPopover.tsx)",
       "Bash(gh pr:*)",
-      "Bash(npx playwright:*)"
+      "Bash(npx playwright:*)",
+      "Bash(find src:*)",
+      "Bash(xargs wc:*)",
+      "Bash(2)"
     ]
   }
 }

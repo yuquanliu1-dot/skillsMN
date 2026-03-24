@@ -1,0 +1,52 @@
+{
+  "projectDirectories": [
+    "D:\\Auto-Claude\\.claude\\skills",
+    "D:\\skillsMN\\.claude\\skills"
+  ],
+  "defaultInstallDirectory": "project",
+  "editorDefaultMode": "edit",
+  "autoRefresh": true,
+  "skillEditor": {
+    "fontSize": 14,
+    "theme": "light",
+    "autoSaveEnabled": true,
+    "autoSaveDelay": 2000,
+    "showMinimap": false,
+    "lineNumbers": "on",
+    "fontFamily": "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+    "tabSize": 2,
+    "wordWrap": true
+  },
+  "applicationSkillsDirectory": "D:\\skillsMN\\skills",
+  "migrationPreferenceAsked": true,
+  "setupCompleted": true,
+  "version": 1,
+  "ai": {
+    "provider": "anthropic",
+    "apiKey": "djEw2WFkcCikosmTFcHNZwFMzK3LEH42GrUe5S3K5XH0lLlSTuMlxpLM1O6D1FfEFZ49K5JHydzStynxDmzamiAPxMThStmfh8eeg7t5Tzk=",
+    "model": "glm-5",
+    "streamingEnabled": true,
+    "timeout": 30000,
+    "maxRetries": 2,
+    "baseUrl": "https://open.bigmodel.cn/api/anthropic"
+  },
+  "privateRepos": {
+    "version": 1,
+    "repositories": [
+      {
+        "id": "896f7fdd-8757-41bf-9f77-334bd9bb422c",
+        "owner": "yuquanliu1-dot",
+        "repo": "devops-skills",
+        "url": "https://github.com/yuquanliu1-dot/devops-skills",
+        "displayName": "yuquanliu1-dot/devops-skills",
+        "patEncrypted": "djEwqzRvzzDNO+ZHfitfF6kYi2g3u8y/Ermpn7DIK+SV3+F0yMOeUDzbUUmVN4wOkPKQGbicuktmMO+Ocs+/Yr2UbbgIrug=",
+        "defaultBranch": "main",
+        "description": "",
+        "addedAt": "2026-03-18T13:13:18.343Z",
+        "createdAt": "2026-03-18T13:13:18.343Z",
+        "updatedAt": "2026-03-24T04:25:52.933Z",
+        "provider": "github"
+      }
+    ]
+  }
+}

@@ -145,9 +145,9 @@ export default function SkillCard({
 
   return (
     <>
-      {/* Adaptive height card */}
+      {/* Fixed height card: 128px */}
       <article
-        className={`relative mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
+        className={`relative h-[136px] mb-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer overflow-hidden ${
           isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
         }`}
         onClick={handleClick}
@@ -159,8 +159,8 @@ export default function SkillCard({
         data-testid="skill-card"
       >
         {/* Top row: Name + Badges + Actions */}
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2 mb-2 h-[28px]">
+          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate flex-shrink" title={skill.name} data-testid="skill-name">
               {skill.name}
             </h4>

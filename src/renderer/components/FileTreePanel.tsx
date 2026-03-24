@@ -230,8 +230,21 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
   }, []);
 
   if (!isVisible) {
-    return null;
-  }
+    // Show collapsed sidebar strip with expand button
+    return (
+      <div className="w-10 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col items-center py-4 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer transition-colors group">
+        <button
+          onClick={onToggle}
+          className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded transition-colors"
+          title="Show file tree"
+        >
+          <svg className="w-5 h-5 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7 7-7" />
+          </svg>
+        </button>
+      </div>
+    );
+  } // ... rest of the component unchanged
 
   return (
     <div className="w-60 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col">
