@@ -29,7 +29,7 @@ function getDefaultAIConfig(): AIConfigSection {
   return {
     provider: 'anthropic',
     apiKey: '',
-    model: 'claude-3-sonnet-20240229',
+    model: '',
     streamingEnabled: true,
     timeout: 30000,
     maxRetries: 2,

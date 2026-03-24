@@ -24,6 +24,9 @@
         "to": "icon.ico"
       }
     ],
+    "asarUnpack": [
+      "node_modules/@anthropic-ai/claude-agent-sdk/**/*"
+    ],
     "nodeGypRebuild": false,
     "npmRebuild": false,
     "win": {
