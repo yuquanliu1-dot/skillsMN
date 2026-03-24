@@ -140,6 +140,7 @@
   "settings": {
     "title": "Settings",
     "general": "General",
+    "storage": "Storage",
     "skillView": "Skill View",
     "privateRepositories": "Private Repositories",
     "aiConfiguration": "AI Configuration",
