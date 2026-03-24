@@ -265,6 +265,7 @@
     "setupDescription": "Let's get you set up in just a few steps",
     "step": "Step {{number}}",
     "skillsDirectory": "Skills Directory",
+    "privateRepos": "Private Repositories",
     "privateRepositories": "Private Repositories",
     "aiConfiguration": "AI Configuration",
 

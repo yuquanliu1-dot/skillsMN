@@ -265,6 +265,7 @@
     "setupDescription": "让我们通过几个简单步骤完成设置",
     "step": "第 {{number}} 步",
     "skillsDirectory": "技能目录",
+    "privateRepos": "私有仓库",
     "privateRepositories": "私有仓库",
     "aiConfiguration": "AI 配置",
 
