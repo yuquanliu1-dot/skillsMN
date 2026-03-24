@@ -1003,14 +1003,16 @@ export default function SkillEditor({
 
       {/* Main content area with file tree + editor */}
       <div className="flex-1 flex overflow-hidden">
-        {/* File Tree Panel */}
-        <FileTreePanel
-          skillPath={skill.path}
-          selectedFile={currentEditingPath || ''}
-          onFileSelect={handleFileSelect}
-          isVisible={isFileTreeVisible}
-          onToggle={() => setIsFileTreeVisible(!isFileTreeVisible)}
-        />
+        {/* File Tree Panel - only show for local skills (not inline/remote) */}
+        {!isInline && (
+          <FileTreePanel
+            skillPath={skill.path}
+            selectedFile={currentEditingPath || ''}
+            onFileSelect={handleFileSelect}
+            isVisible={isFileTreeVisible}
+            onToggle={() => setIsFileTreeVisible(!isFileTreeVisible)}
+          />
+        )}
 
         {/* Editor area */}
         <div className="flex-1 flex flex-col overflow-hidden">
