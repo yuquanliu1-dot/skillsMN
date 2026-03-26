@@ -897,30 +897,33 @@ export class AIService {
       contextSection = `\n\n## Save Location\nSave to the EXACT same directory: ${skillPath}/SKILL.md\nDo NOT create a new directory.`;
     }
 
+    // Prepend /skill-creator to enforce using the skill-creator skill
+    const skillCreatorPrefix = '/skill-creator\n\n';
+
     switch (mode) {
       case 'new':
-        return `Create a new skill with these requirements:\n\n${prompt}${contextSection}`;
+        return `${skillCreatorPrefix}Create a new skill with these requirements:\n\n${prompt}${contextSection}`;
 
       case 'modify':
-        return `Modify the skill "${skillName}" with these instructions:\n\n${prompt}\n\n--- Current Content ---\n${content}${contextSection}`;
+        return `${skillCreatorPrefix}Modify the skill "${skillName}" with these instructions:\n\n${prompt}\n\n--- Current Content ---\n${content}${contextSection}`;
 
       case 'insert':
-        return `Insert at position ${skillContext?.cursorPosition ?? 0}:\n\n${prompt}\n\n--- Current Content ---\n${content}`;
+        return `${skillCreatorPrefix}Insert at position ${skillContext?.cursorPosition ?? 0}:\n\n${prompt}\n\n--- Current Content ---\n${content}`;
 
       case 'replace':
-        return `Replace "${skillContext?.selectedText || ''}":\n\n${prompt}\n\n--- Current Content ---\n${content}`;
+        return `${skillCreatorPrefix}Replace "${skillContext?.selectedText || ''}":\n\n${prompt}\n\n--- Current Content ---\n${content}`;
 
       case 'evaluate':
-        return `Evaluate this skill (${skillName}):\n\nFocus: ${prompt || 'General'}\n\n--- Content ---\n${content}`;
+        return `${skillCreatorPrefix}Evaluate this skill (${skillName}):\n\nFocus: ${prompt || 'General'}\n\n--- Content ---\n${content}`;
 
       case 'benchmark':
-        return `Benchmark this skill (${skillName}):\n\nFocus: ${prompt || 'General'}\n\n--- Content ---\n${content}`;
+        return `${skillCreatorPrefix}Benchmark this skill (${skillName}):\n\nFocus: ${prompt || 'General'}\n\n--- Content ---\n${content}`;
 
       case 'optimize':
-        return `Optimize this skill for better triggering:\n\nFocus: ${prompt || 'Triggering accuracy'}\n\nSkill: ${skillName}\n\n--- Content ---\n${content}`;
+        return `${skillCreatorPrefix}Optimize this skill for better triggering:\n\nFocus: ${prompt || 'Triggering accuracy'}\n\nSkill: ${skillName}\n\n--- Content ---\n${content}`;
 
       default:
-        return prompt;
+        return `${skillCreatorPrefix}${prompt}`;
     }
   }
 }
