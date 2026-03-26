@@ -2,15 +2,25 @@
  * AI Service (Using Claude Agent SDK)
  *
  * Handles AI-powered skill generation using Claude Agent SDK
+ * Implements NormalizedMessage format, permission management, and session control
+ * Reference: claudecodeui integration pattern
  */
 
-import { safeStorage, app } from 'electron';
+import { safeStorage, app, BrowserWindow } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { logger } from '../utils/Logger';
-import type { AIGenerationRequest, AIStreamChunk } from '../models/AIGenerationRequest';
+import type { AIGenerationRequest } from '../models/AIGenerationRequest';
 import { validateAIGenerationRequest } from '../models/AIGenerationRequest';
-import type { AIConfiguration } from '../../shared/types';
+import type {
+  AIConfiguration,
+  NormalizedMessage,
+  MessageKind,
+  PermissionDecision,
+  PendingPermissionRequest,
+  createNormalizedMessage,
+  generateMessageId,
+} from '../../shared/types';
 
 // Dynamic imports for Claude Agent SDK (ES Module)
 type ClaudeAgentSDK = {
@@ -20,55 +30,75 @@ type ClaudeAgentSDK = {
 };
 
 let sdkModule: ClaudeAgentSDK | null = null;
-
 let currentConfig: AIConfiguration | null = null;
 
-/**
- * Active generation streams (for cancellation)
- */
+// ============================================================================
+// Session Management
+// ============================================================================
+
+interface SessionInfo {
+  id: string;
+  instance: any; // SDK query instance
+  startTime: number;
+  status: 'active' | 'aborted' | 'completed';
+  abortController: AbortController;
+  mainWindow: BrowserWindow | null;
+}
+
+const activeSessions = new Map<string, SessionInfo>();
 const activeStreams = new Map<string, AbortController>();
+
+// ============================================================================
+// Permission Management
+// ============================================================================
+
+const pendingToolApprovals = new Map<string, {
+  resolve: (decision: PermissionDecision) => void;
+  sessionId?: string;
+  toolName: string;
+  input: any;
+  receivedAt: Date;
+}>();
+
+const TOOL_APPROVAL_TIMEOUT_MS = 55000;
+const TOOLS_REQUIRING_INTERACTION = new Set(['AskUserQuestion']);
+
+// ============================================================================
+// SDK Loading
+// ============================================================================
 
 /**
  * Get the correct path to the Claude Agent SDK
- * In packaged apps, the SDK is unpacked to app.asar.unpacked
  */
 function getSDKPath(): string {
   const sdkPackageName = '@anthropic-ai/claude-agent-sdk';
 
-  // Check if running in packaged mode
   if (app.isPackaged) {
-    // In packaged mode, use the unpacked version
     const unpackedPath = path.join(
       path.dirname(app.getPath('exe')),
       'resources',
       'app.asar.unpacked',
       'node_modules',
       sdkPackageName,
-      'sdk.mjs'  // Point to the specific ES module file
+      'sdk.mjs'
     );
 
     if (fs.existsSync(unpackedPath)) {
-      // Convert to file:// URL for Windows compatibility
       const fileUrl = 'file:///' + unpackedPath.replace(/\\/g, '/');
       logger.info('Using unpacked SDK path', 'AIService', { path: unpackedPath, fileUrl });
       return fileUrl;
     }
   }
 
-  // In development or fallback, use normal path
   return sdkPackageName;
 }
 
 /**
  * Load Claude Agent SDK module dynamically
- * Uses Function constructor to prevent TypeScript from transpiling import() to require()
  */
 async function loadSDK(): Promise<ClaudeAgentSDK> {
   if (!sdkModule) {
     const sdkPath = getSDKPath();
-
-    // Use Function constructor to prevent TypeScript from transpiling to require()
-    // This is necessary because @anthropic-ai/claude-agent-sdk is an ES Module
     const dynamicImport = new Function('modulePath', 'return import(modulePath)');
     const module = await dynamicImport(sdkPath);
 
@@ -81,16 +111,135 @@ async function loadSDK(): Promise<ClaudeAgentSDK> {
   return sdkModule;
 }
 
+// ============================================================================
+// Permission Helpers
+// ============================================================================
+
+function createRequestId(): string {
+  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
 /**
- * AI Service for skill generation using Claude Agent SDK
+ * Wait for user to approve/deny a tool permission request
  */
+function waitForToolApproval(
+  requestId: string,
+  options: {
+    timeoutMs?: number;
+    signal?: AbortSignal;
+    sessionId?: string;
+    toolName: string;
+    input: any;
+  }
+): Promise<PermissionDecision | null> {
+  const { timeoutMs = TOOL_APPROVAL_TIMEOUT_MS, signal, sessionId, toolName, input } = options;
+
+  return new Promise(resolve => {
+    let settled = false;
+
+    const finalize = (decision: PermissionDecision | null) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(decision);
+    };
+
+    let timeout: NodeJS.Timeout | undefined;
+
+    const cleanup = () => {
+      pendingToolApprovals.delete(requestId);
+      if (timeout) clearTimeout(timeout);
+      if (signal && abortHandler) {
+        signal.removeEventListener('abort', abortHandler);
+      }
+    };
+
+    // Interactive tools wait indefinitely
+    const actualTimeout = TOOLS_REQUIRING_INTERACTION.has(toolName) ? 0 : timeoutMs;
+    if (actualTimeout > 0) {
+      timeout = setTimeout(() => finalize(null), actualTimeout);
+    }
+
+    const abortHandler = () => {
+      finalize({ allow: false, cancelled: true, message: 'Request cancelled' });
+    };
+
+    if (signal) {
+      if (signal.aborted) {
+        finalize({ allow: false, cancelled: true, message: 'Request already aborted' });
+        return;
+      }
+      signal.addEventListener('abort', abortHandler, { once: true });
+    }
+
+    // Store resolver with metadata
+    pendingToolApprovals.set(requestId, {
+      resolve: finalize,
+      sessionId,
+      toolName,
+      input,
+      receivedAt: new Date(),
+    });
+  });
+}
+
+/**
+ * Match tool permission against allowed/disallowed lists
+ */
+function matchesToolPermission(entry: string, toolName: string, input: any): boolean {
+  if (!entry || !toolName) return false;
+
+  if (entry === toolName) return true;
+
+  // Handle Bash(command:*) pattern
+  const bashMatch = entry.match(/^Bash\((.+):\*\)$/);
+  if (toolName === 'Bash' && bashMatch) {
+    const allowedPrefix = bashMatch[1];
+    let command = '';
+
+    if (typeof input === 'string') {
+      command = input.trim();
+    } else if (input && typeof input === 'object' && typeof input.command === 'string') {
+      command = input.command.trim();
+    }
+
+    return command.startsWith(allowedPrefix);
+  }
+
+  return false;
+}
+
+// ============================================================================
+// Normalized Message Helpers
+// ============================================================================
+
+function createMessage(
+  kind: MessageKind,
+  fields: Partial<NormalizedMessage> = {}
+): NormalizedMessage {
+  return {
+    id: fields.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    sessionId: fields.sessionId || '',
+    timestamp: new Date().toISOString(),
+    provider: 'anthropic',
+    kind,
+    ...fields,
+  };
+}
+
+// ============================================================================
+// Main Service Class
+// ============================================================================
+
 export class AIService {
-  /**
-   * Get executable options for the SDK
-   * In packaged apps, we need to specify the path to the CLI
-   * The SDK will auto-detect Node.js on the system
-   */
-  private static getExecutableOptions(): { executable?: string; pathToClaudeCodeExecutable?: string; executableArgs?: string[] } {
+  // --------------------------------------------------------------------------
+  // Configuration
+  // --------------------------------------------------------------------------
+
+  private static getExecutableOptions(): {
+    executable?: string;
+    pathToClaudeCodeExecutable?: string;
+  } {
     if (app.isPackaged) {
       const cliPath = path.join(
         path.dirname(app.getPath('exe')),
@@ -104,8 +253,6 @@ export class AIService {
 
       if (fs.existsSync(cliPath)) {
         logger.info('Using CLI path for packaged app', 'AIService', { cliPath });
-        // Only specify the CLI path, let SDK auto-detect Node.js
-        // executable option should be 'node' string, not a path
         return {
           executable: 'node',
           pathToClaudeCodeExecutable: cliPath,
@@ -115,265 +262,482 @@ export class AIService {
     return {};
   }
 
-  /**
-   * Encrypt API key using Electron safeStorage for secure storage
-   * Falls back to base64 encoding if encryption is not available (not recommended for production)
-   * @param apiKey - Plain text API key to encrypt
-   * @returns Encrypted API key as base64 string
-   */
   static encryptAPIKey(apiKey: string): string {
     if (!safeStorage.isEncryptionAvailable()) {
-      logger.warn('Encryption not available, storing API key in plaintext (NOT RECOMMENDED)');
+      logger.warn('Encryption not available, storing API key in plaintext');
       return Buffer.from(apiKey).toString('base64');
     }
-
     const encrypted = safeStorage.encryptString(apiKey);
     return encrypted.toString('base64');
   }
 
-  /**
-   * Decrypt API key using Electron safeStorage
-   * Decrypts a previously encrypted API key for use with the Agent SDK
-   * @param encryptedKey - Encrypted API key as base64 string
-   * @returns Decrypted plain text API key
-   */
   static decryptAPIKey(encryptedKey: string): string {
     if (!safeStorage.isEncryptionAvailable()) {
-      logger.warn('Encryption not available, decrypting from base64');
       return Buffer.from(encryptedKey, 'base64').toString('utf-8');
     }
-
     const buffer = Buffer.from(encryptedKey, 'base64');
     return safeStorage.decryptString(buffer);
   }
 
-  /**
-   * Initialize AI service with configuration
-   * Sets up the Claude Agent SDK with the provided configuration
-   * @param config - AI configuration containing API key and settings
-   * @throws Error if initialization fails
-   */
   static async initialize(config: AIConfiguration): Promise<void> {
     try {
-      // API key should already be decrypted
       currentConfig = config;
-
-      // Set environment variables for Claude Agent SDK
       process.env.ANTHROPIC_API_KEY = config.apiKey;
 
       if (config.baseUrl) {
         process.env.ANTHROPIC_BASE_URL = config.baseUrl;
-        logger.info('Using custom base URL for Claude Agent SDK', 'AIService', {
-          hasCustomBaseUrl: !!config.baseUrl
-        });
+        logger.info('Using custom base URL', 'AIService', { hasCustomBaseUrl: true });
       }
 
-      logger.info('AI service initialized successfully with Claude Agent SDK', 'AIService');
+      logger.info('AI service initialized', 'AIService');
     } catch (error) {
       logger.error('Failed to initialize AI service', 'AIService', error);
       throw new Error('Failed to initialize AI service. Please check your API key.');
     }
   }
 
-  /**
-   * Update AI service configuration
-   * Re-initializes the service with new configuration
-   * @param config - New AI configuration to apply
-   * @throws Error if initialization fails
-   */
   static async updateConfiguration(config: AIConfiguration): Promise<void> {
     await AIService.initialize(config);
   }
 
-  /**
-   * Check if AI service is initialized and ready to use
-   * @returns True if configuration is loaded, false otherwise
-   */
   static isInitialized(): boolean {
     return currentConfig !== null;
   }
 
+  // --------------------------------------------------------------------------
+  // Permission Management
+  // --------------------------------------------------------------------------
+
   /**
-   * Generate skill content with streaming support using Claude Agent SDK
-   * Creates an async generator that yields chunks of generated text
-   * @param requestId - Unique identifier for this generation request (used for cancellation)
-   * @param request - AI generation request containing mode, prompt, and optional current content
-   * @yields AIStreamChunk objects containing text chunks, completion status, and potential errors
+   * Resolve a pending permission request with user decision
+   */
+  static resolvePermission(requestId: string, decision: PermissionDecision): boolean {
+    const resolver = pendingToolApprovals.get(requestId);
+    if (resolver) {
+      resolver.resolve(decision);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get all pending permission requests for a session
+   */
+  static getPendingPermissions(sessionId: string): PendingPermissionRequest[] {
+    const pending: PendingPermissionRequest[] = [];
+    for (const [requestId, info] of pendingToolApprovals.entries()) {
+      if (info.sessionId === sessionId) {
+        pending.push({
+          requestId,
+          toolName: info.toolName,
+          input: info.input,
+          sessionId: info.sessionId,
+          receivedAt: info.receivedAt,
+        });
+      }
+    }
+    return pending;
+  }
+
+  // --------------------------------------------------------------------------
+  // Session Management
+  // --------------------------------------------------------------------------
+
+  /**
+   * Abort an active session
+   */
+  static async abortSession(sessionId: string): Promise<boolean> {
+    const session = activeSessions.get(sessionId);
+    if (!session) {
+      logger.info('Session not found for abort', 'AIService', { sessionId });
+      return false;
+    }
+
+    try {
+      logger.info('Aborting session', 'AIService', { sessionId });
+
+      // Call interrupt if available
+      if (session.instance && typeof session.instance.interrupt === 'function') {
+        await session.instance.interrupt();
+      }
+
+      // Also abort via controller
+      session.abortController.abort();
+      session.status = 'aborted';
+
+      activeSessions.delete(sessionId);
+      return true;
+    } catch (error) {
+      logger.error('Error aborting session', 'AIService', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if a session is currently active
+   */
+  static isSessionActive(sessionId: string): boolean {
+    const session = activeSessions.get(sessionId);
+    return session?.status === 'active';
+  }
+
+  /**
+   * Get all active session IDs
+   */
+  static getActiveSessions(): string[] {
+    return Array.from(activeSessions.entries())
+      .filter(([, info]) => info.status === 'active')
+      .map(([id]) => id);
+  }
+
+  /**
+   * Reconnect a session to a new window (for page refresh)
+   */
+  static reconnectSession(sessionId: string, mainWindow: BrowserWindow): boolean {
+    const session = activeSessions.get(sessionId);
+    if (!session) return false;
+    session.mainWindow = mainWindow;
+    logger.info('Session reconnected', 'AIService', { sessionId });
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // Streaming Generation
+  // --------------------------------------------------------------------------
+
+  /**
+   * Generate skill content with streaming support
+   * Uses NormalizedMessage format for all outputs
    */
   static async *generateStream(
     requestId: string,
-    request: AIGenerationRequest
-  ): AsyncGenerator<AIStreamChunk> {
+    request: AIGenerationRequest,
+    mainWindow: BrowserWindow | null = null
+  ): AsyncGenerator<NormalizedMessage> {
     // Validate request
     const validationError = validateAIGenerationRequest(request);
     if (validationError) {
-      yield { type: 'error', text: '', isComplete: false, error: validationError };
+      yield createMessage('error', { error: validationError });
       return;
     }
 
-    // Create abort controller for this request
+    // Create abort controller
     const abortController = new AbortController();
     activeStreams.set(requestId, abortController);
 
-    // Store original environment variables to restore later
-    let originalApiKey: string | undefined = process.env.ANTHROPIC_API_KEY;
-    let originalBaseUrl: string | undefined = process.env.ANTHROPIC_BASE_URL;
+    // Store original env vars
+    const originalApiKey = process.env.ANTHROPIC_API_KEY;
+    const originalBaseUrl = process.env.ANTHROPIC_BASE_URL;
+    const originalClaudeCode = process.env.CLAUDECODE;
+
+    let capturedSessionId: string | null = null;
+    let sessionCreatedSent = false;
 
     try {
-      logger.info('Starting AI generation with Claude Agent SDK', 'AIService', {
+      // Debug: Log environment and paths for test debugging
+      console.log('[AIService] === DEBUG INFO ===');
+      console.log('[AIService] process.cwd():', process.cwd());
+      console.log('[AIService] NODE_ENV:', process.env.NODE_ENV);
+      console.log('[AIService] hasApiKey:', !!currentConfig?.apiKey);
+      console.log('[AIService] baseUrl:', currentConfig?.baseUrl);
+      console.log('[AIService] model:', currentConfig?.model);
+      console.log('[AIService] targetPath:', request?.skillContext?.targetPath);
+      console.log('[AIService] =====================');
+
+      logger.info('Starting AI generation', 'AIService', {
         mode: request.mode,
         requestId,
         targetPath: request?.skillContext?.targetPath,
-        hasBaseUrl: !!currentConfig?.baseUrl
+        cwd: process.cwd(),
+        nodeEnv: process.env.NODE_ENV,
       });
 
-      // Build the user prompt
       const userPrompt = AIService.buildUserPrompt(request);
+      // For modify mode, use the skill's directory; for new skills, use the target directory
+      let workingDirectory: string;
+      if (request.mode === 'modify' && request?.skillContext?.skillPath) {
+        workingDirectory = request.skillContext.skillPath;
+      } else if (request?.skillContext?.targetPath) {
+        workingDirectory = request.skillContext.targetPath;
+      } else {
+        workingDirectory = process.cwd();
+      }
 
-      // Build system prompt (Agent SDK will automatically load skills)
-      const systemPrompt = AIService.buildSystemPrompt(request.mode, request);
+      // Verify working directory exists
+      if (!fs.existsSync(workingDirectory)) {
+        console.error('[AIService] Working directory does not exist:', workingDirectory);
+        yield createMessage('error', { error: `Working directory does not exist: ${workingDirectory}` });
+        return;
+      }
 
-      // Load SDK and use query
+      console.log('[AIService] Working directory:', workingDirectory, 'Mode:', request.mode);
+
       const { query } = await loadSDK();
 
-      // Set working directory to the target skills directory
-      const workingDirectory = request?.skillContext?.targetPath || process.cwd();
-
-      logger.debug('AI generation working directory', 'AIService', { workingDirectory });
-
-      // CRITICAL: Set environment variables directly on process.env BEFORE calling SDK
-      // The SDK spawns a child process that needs these variables to be available
-
-      // Set API key
+      // Set environment variables
       if (currentConfig?.apiKey) {
         process.env.ANTHROPIC_API_KEY = currentConfig.apiKey;
       }
-
-      // Set custom base URL if configured
       if (currentConfig?.baseUrl) {
         process.env.ANTHROPIC_BASE_URL = currentConfig.baseUrl;
-        logger.info('Setting custom base URL in process.env', 'AIService', { baseUrl: currentConfig.baseUrl });
       }
 
-      // Check if model is configured
+      // CRITICAL: Unset CLAUDECODE to allow SDK to run inside Claude Code
+      // The SDK refuses to run if it detects it's inside another Claude Code session
+      delete process.env.CLAUDECODE;
+      console.log('[AIService] Unset CLAUDECODE env var (was:', originalClaudeCode, ')');
+
       if (!currentConfig?.model) {
-        throw new Error('AI model is not configured. Please configure the model in Settings.');
+        yield createMessage('error', { error: 'AI model is not configured' });
+        return;
       }
 
-      // Log query parameters for debugging
-      logger.info('SDK query parameters', 'AIService', {
-        model: currentConfig.model,
-        cwd: workingDirectory,
-        hasApiKey: !!process.env.ANTHROPIC_API_KEY,
-        hasBaseUrl: !!process.env.ANTHROPIC_BASE_URL,
-        baseUrlValue: process.env.ANTHROPIC_BASE_URL,
-      });
+      // Build allowed/disallowed tools lists
+      const allowedTools: string[] = ['Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill', 'NotebookEdit', 'TaskOutput', 'AskUserQuestion'];
+      const disallowedTools: string[] = [];
 
-      // Build query options
-      // Note: permissionMode is NOT included as it's not compatible with some custom API providers (e.g., 智谱AI)
       const execOptions = AIService.getExecutableOptions();
-      logger.info('Generation executable options', 'AIService', execOptions);
 
+      // Build query options with permission callback
       const queryOptions: any = {
         prompt: userPrompt,
         options: {
-          systemPrompt,
+          // Use preset system prompt (claude_code) for CLAUDE.md support
+          systemPrompt: {
+            type: 'preset',
+            preset: 'claude_code',
+          },
+          // Load CLAUDE.md from project, user, and local directories
+          settingSources: ['project', 'user', 'local'],
           model: currentConfig.model,
           cwd: workingDirectory,
-          allowedTools: ['Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill', 'NotebookEdit', 'TaskOutput'],
-          // Configure executable for packaged app
+          // Tools preset for built-in tools
+          tools: { type: 'preset', preset: 'claude_code' },
+          allowedTools,
+          disallowedTools,
           ...execOptions,
-          // Add stderr capture for debugging
           stderr: (msg: string) => {
-            logger.info('CLI stderr output', 'AIService', { stderr: msg });
+            logger.info('CLI stderr', 'AIService', { stderr: msg });
+            // Also log to console for debugging
+            console.log('[CLI stderr]', msg);
           },
         },
       };
 
-      // Use Claude Agent SDK query
-      const stream = query(queryOptions);
+      // Log the configuration being used
+      logger.info('Query options configured', 'AIService', {
+        model: currentConfig.model,
+        hasApiKey: !!currentConfig.apiKey,
+        baseUrl: currentConfig.baseUrl,
+        workingDirectory,
+      });
 
-      let fullText = '';
+      // Add permission callback (canUseTool)
+      queryOptions.options.canUseTool = async (toolName: string, input: any, context: any) => {
+        const requiresInteraction = TOOLS_REQUIRING_INTERACTION.has(toolName);
+
+        // Interactive tools bypass permission checks
+        if (!requiresInteraction) {
+          // Check disallowed tools
+          const isDisallowed = disallowedTools.some(entry =>
+            matchesToolPermission(entry, toolName, input)
+          );
+          if (isDisallowed) {
+            return { behavior: 'deny' as const, message: 'Tool disallowed by settings' };
+          }
+
+          // Check allowed tools
+          const isAllowed = allowedTools.some(entry =>
+            matchesToolPermission(entry, toolName, input)
+          );
+          if (isAllowed) {
+            return { behavior: 'allow' as const, updatedInput: input };
+          }
+        }
+
+        // Request permission from user
+        const requestId = createRequestId();
+        const sessionId = capturedSessionId || request.id || null;
+
+        // Send permission request to frontend
+        const permissionMsg = createMessage('permission_request', {
+          requestId,
+          toolName,
+          toolInput: input,
+          context,
+          sessionId: sessionId || undefined,
+        });
+
+        // Send to main window if available
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('ai:message', permissionMsg);
+        }
+
+        // Wait for user response
+        const decision = await waitForToolApproval(requestId, {
+          timeoutMs: requiresInteraction ? 0 : undefined,
+          signal: context?.signal,
+          sessionId: sessionId || undefined,
+          toolName,
+          input,
+        });
+
+        if (!decision) {
+          return { behavior: 'deny' as const, message: 'Permission request timed out' };
+        }
+
+        if (decision.cancelled) {
+          return { behavior: 'deny' as const, message: 'Permission request cancelled' };
+        }
+
+        if (decision.allow) {
+          // Add to allowed list if remember is set
+          if (decision.rememberEntry && !allowedTools.includes(decision.rememberEntry)) {
+            allowedTools.push(decision.rememberEntry);
+          }
+          return { behavior: 'allow' as const, updatedInput: decision.updatedInput ?? input };
+        }
+
+        return { behavior: 'deny' as const, message: decision.message ?? 'User denied tool use' };
+      };
+
+      // Execute query
+      console.log('[AIService] Executing query with options:', {
+        model: currentConfig.model,
+        cwd: workingDirectory,
+        promptLength: userPrompt.length,
+      });
+      const stream = query(queryOptions);
+      console.log('[AIService] Query initiated, starting stream processing...');
 
       // Process stream events
+      let eventCount = 0;
       for await (const item of stream) {
-        // Check if cancelled
+        eventCount++;
+        console.log(`[AIService] Stream event #${eventCount}:`, item.type, item.subtype || '');
+
+        // Check for abort
         if (abortController.signal.aborted) {
-          logger.info('AI generation cancelled', 'AIService', { requestId });
-          yield { type: 'error', text: fullText, isComplete: false, error: 'Generation cancelled' };
+          console.log('[AIService] Stream aborted');
+          yield createMessage('complete', { aborted: true, exitCode: 0 });
           return;
         }
 
+        // Capture session ID from first message
+        if (item.session_id && !capturedSessionId) {
+          capturedSessionId = item.session_id;
+
+          // Register session
+          activeSessions.set(capturedSessionId, {
+            id: capturedSessionId,
+            instance: stream,
+            startTime: Date.now(),
+            status: 'active',
+            abortController,
+            mainWindow,
+          });
+
+          // Send session_created event for new sessions
+          if (!request.id && !sessionCreatedSent) {
+            sessionCreatedSent = true;
+            yield createMessage('session_created', {
+              newSessionId: capturedSessionId,
+              sessionId: capturedSessionId,
+            });
+          }
+        }
+
+        const sessionId = capturedSessionId || request.id || '';
+
         // Handle different message types
         switch (item.type) {
-          case 'assistant':
-            // Process assistant messages
-            for (const piece of item.message.content) {
-              if (piece.type === 'text') {
-                const chunk = piece.text;
-                fullText += chunk;
-                yield { type: 'text', text: chunk, isComplete: false };
-              } else if (piece.type === 'tool_use') {
-                // Send tool usage to frontend
-                logger.debug('Agent using tool', 'AIService', {
-                  tool: piece.name,
-                  input: piece.input
-                });
+          case 'content_block_delta':
+            // Streaming text delta
+            if (item.delta?.text) {
+              yield createMessage('stream_delta', {
+                content: item.delta.text,
+                sessionId,
+              });
+            }
+            break;
 
-                yield {
-                  type: 'tool_use',
-                  tool: {
-                    name: piece.name,
-                    input: piece.input
-                  },
-                  isComplete: false
-                };
+          case 'content_block_stop':
+            // Streaming ended for this block
+            yield createMessage('stream_end', { sessionId });
+            break;
+
+          case 'assistant':
+            // Full assistant message
+            for (const piece of item.message?.content || []) {
+              if (piece.type === 'text' && piece.text) {
+                yield createMessage('text', {
+                  content: piece.text,
+                  role: 'assistant',
+                  sessionId,
+                });
+              } else if (piece.type === 'tool_use') {
+                yield createMessage('tool_use', {
+                  toolName: piece.name,
+                  toolInput: piece.input,
+                  toolId: piece.id,
+                  sessionId,
+                });
+              } else if (piece.type === 'thinking' && piece.thinking) {
+                yield createMessage('thinking', {
+                  content: piece.thinking,
+                  sessionId,
+                });
               }
             }
             break;
 
           case 'user':
-            // Process tool results
-            for (const piece of item.message.content) {
-              // Type guard: check if piece is an object with 'type' property
-              if (typeof piece === 'object' && piece !== null && 'type' in piece && piece.type === 'tool_result') {
-                const toolResult = piece as { type: 'tool_result'; content: any[]; tool_use_id?: string };
-                logger.debug('Tool execution result', 'AIService', {
-                  tool_use_id: toolResult.tool_use_id,
-                  contentLength: toolResult.content?.length
+            // Tool results in user message
+            for (const piece of item.message?.content || []) {
+              if (piece.type === 'tool_result') {
+                yield createMessage('tool_result', {
+                  toolId: piece.tool_use_id,
+                  toolResult: {
+                    content: typeof piece.content === 'string'
+                      ? piece.content
+                      : JSON.stringify(piece.content),
+                    isError: Boolean(piece.is_error),
+                  },
+                  sessionId,
                 });
-                for (const inner of toolResult.content) {
-                  // Type guard: check if it's an object with 'type' property
-                  if (typeof inner === 'object' && inner !== null && 'type' in inner && inner.type === 'text') {
-                    // Tool results are included in the response
-                    const textContent = inner as { type: 'text'; text: string };
-                    fullText += textContent.text;
-                    yield { type: 'text', text: textContent.text, isComplete: false };
-                  }
-                }
               }
             }
             break;
 
           case 'system':
-            // Log system messages
             if (item.subtype === 'init') {
-              logger.debug('Agent session initialized', 'AIService', {
-                sessionId: item.session_id
-              });
+              logger.debug('Session initialized', 'AIService', { sessionId: item.session_id });
             }
             break;
 
           case 'result':
-            // Handle result messages - check for errors
-            if (item.subtype && item.subtype.startsWith('error')) {
+            // Handle result with token budget
+            if (item.modelUsage) {
+              const modelKey = Object.keys(item.modelUsage)[0];
+              const modelData = item.modelUsage[modelKey];
+              if (modelData) {
+                const inputTokens = modelData.cumulativeInputTokens || modelData.inputTokens || 0;
+                const outputTokens = modelData.cumulativeOutputTokens || modelData.outputTokens || 0;
+                const totalUsed = inputTokens + outputTokens;
+                const contextWindow = parseInt(process.env.CONTEXT_WINDOW || '160000', 10);
+
+                yield createMessage('status', {
+                  text: 'token_budget',
+                  tokenBudget: { used: totalUsed, total: contextWindow },
+                  sessionId,
+                });
+              }
+            }
+
+            // Check for errors
+            if (item.subtype?.startsWith('error')) {
               const errorMsg = item.errors?.join('; ') || item.subtype;
-              logger.error('Agent result error', 'AIService', {
-                subtype: item.subtype,
-                errors: item.errors,
-                stop_reason: item.stop_reason
-              });
-              yield { type: 'error', text: fullText, isComplete: false, error: errorMsg };
+              yield createMessage('error', { error: errorMsg, sessionId });
               return;
             }
             break;
@@ -381,51 +745,37 @@ export class AIService {
       }
 
       // Generation complete
-      logger.info('AI generation complete', 'AIService', {
-        requestId,
-        length: fullText.length,
+      if (capturedSessionId) {
+        const session = activeSessions.get(capturedSessionId);
+        if (session) {
+          session.status = 'completed';
+        }
+      }
+
+      yield createMessage('complete', {
+        exitCode: 0,
+        sessionId: capturedSessionId || request.id || '',
       });
 
-      yield { type: 'complete', text: '', isComplete: true };
     } catch (error) {
-      // Capture detailed error information
-      const errorDetails: any = {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : '';
+      logger.error('AI generation failed', 'AIService', {
+        error: errorMessage,
+        stack: errorStack,
+        model: currentConfig?.model,
+        baseUrl: currentConfig?.baseUrl,
+      });
 
-      // Check for cause property (ES2022+)
-      if (error instanceof Error && 'cause' in error) {
-        errorDetails.cause = (error as any).cause;
-      }
+      // Log full error details to console for debugging
+      console.error('[AIService] Generation failed:', error);
 
-      // Check for stderr/stdout if available
-      if (error instanceof Error && (error as any).stderr) {
-        errorDetails.stderr = (error as any).stderr;
-      }
-      if (error instanceof Error && (error as any).stdout) {
-        errorDetails.stdout = (error as any).stdout;
-      }
-
-      logger.error('AI generation failed', 'AIService', errorDetails);
-
-      // Build error message with actual details
-      let errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-      // If we have stderr, include it in the error message for debugging
-      if (errorDetails.stderr) {
-        errorMessage = `${errorMessage}\n\nCLI Error: ${errorDetails.stderr}`;
-      }
-
-      // For exit code errors, provide context but keep the original message
-      if (errorMessage.includes('exited with code')) {
-        errorMessage = `Claude CLI error: ${errorMessage}\n\nConfig: baseUrl=${currentConfig?.baseUrl || 'default'}, model=${currentConfig?.model || 'default'}`;
-      }
-
-      yield { type: 'error', text: '', isComplete: false, error: errorMessage };
+      yield createMessage('error', {
+        error: errorMessage,
+        sessionId: capturedSessionId || request.id || '',
+      });
     } finally {
-      // Restore original environment variables
+      // Restore environment variables
       if (originalApiKey !== undefined) {
         process.env.ANTHROPIC_API_KEY = originalApiKey;
       } else {
@@ -436,66 +786,60 @@ export class AIService {
       } else {
         delete process.env.ANTHROPIC_BASE_URL;
       }
+      // Restore CLAUDECODE environment variable
+      if (originalClaudeCode !== undefined) {
+        process.env.CLAUDECODE = originalClaudeCode;
+      }
 
       activeStreams.delete(requestId);
+      if (capturedSessionId) {
+        activeSessions.delete(capturedSessionId);
+      }
     }
   }
 
   /**
-   * Cancel an active AI generation stream
-   * Aborts the ongoing generation request and cleans up resources
-   * @param requestId - ID of the generation request to cancel
-   * @returns True if cancellation was successful, false if request not found
+   * Cancel an active generation stream
    */
-  static cancelGeneration(requestId: string): boolean {
+  static async cancelGeneration(requestId: string): Promise<boolean> {
     const controller = activeStreams.get(requestId);
     if (controller) {
       controller.abort();
       activeStreams.delete(requestId);
-      logger.info('AI generation cancelled by user', 'AIService', { requestId });
+      logger.info('AI generation cancelled', 'AIService', { requestId });
       return true;
     }
-    return false;
+
+    // Also check sessions
+    return AIService.abortSession(requestId);
   }
 
-  /**
-   * Test AI connection by making a simple API request
-   * Verifies that the API key is valid and the service is accessible
-   * @returns Object with success status, optional error message, and latency in milliseconds
-   */
+  // --------------------------------------------------------------------------
+  // Connection Testing
+  // --------------------------------------------------------------------------
+
   static async testConnection(): Promise<{ success: boolean; error?: string; latency?: number }> {
-    // Store original environment variables to restore later
     const originalApiKey = process.env.ANTHROPIC_API_KEY;
     const originalBaseUrl = process.env.ANTHROPIC_BASE_URL;
 
     try {
-      logger.info('Testing AI connection with Claude Agent SDK', 'AIService');
-
+      logger.info('Testing AI connection', 'AIService');
       const startTime = Date.now();
 
-      // Load SDK
       const { query } = await loadSDK();
 
-      // Set environment variables directly on process.env
       if (currentConfig?.apiKey) {
         process.env.ANTHROPIC_API_KEY = currentConfig.apiKey;
       }
-
       if (currentConfig?.baseUrl) {
         process.env.ANTHROPIC_BASE_URL = currentConfig.baseUrl;
-        logger.info('Test connection using custom base URL', 'AIService', { baseUrl: currentConfig.baseUrl });
       }
 
-      // Check if model is configured
       if (!currentConfig?.model) {
-        return { success: false, error: 'AI model is not configured. Please configure the model in Settings.' };
+        return { success: false, error: 'AI model is not configured' };
       }
 
-      // Use a simple query to test the connection
-      // Enable debug mode to capture CLI stderr
       const execOptions = AIService.getExecutableOptions();
-      logger.info('Test connection executable options', 'AIService', execOptions);
-
       const stream = query({
         prompt: 'Say "OK" if you can read this.',
         options: {
@@ -507,16 +851,13 @@ export class AIService {
         },
       });
 
-      // Just consume the stream to verify it works
       for await (const item of stream) {
         if (item.type === 'assistant') {
-          // We got a response, connection is working
           break;
         }
       }
 
       const latency = Date.now() - startTime;
-
       logger.info('AI connection test successful', 'AIService');
       return { success: true, latency };
     } catch (error) {
@@ -524,7 +865,6 @@ export class AIService {
       logger.error('AI connection test failed', 'AIService', error);
       return { success: false, error: errorMessage };
     } finally {
-      // Restore original environment variables
       if (originalApiKey !== undefined) {
         process.env.ANTHROPIC_API_KEY = originalApiKey;
       } else {
@@ -538,162 +878,46 @@ export class AIService {
     }
   }
 
-  /**
-   * Build system prompt based on generation mode
-   * Designed to work with skill-creator skill for comprehensive skill management
-   * @private
-   */
-  private static buildSystemPrompt(mode: AIGenerationRequest['mode'], request?: AIGenerationRequest): string {
-    const targetPath = request?.skillContext?.targetPath;
+  // --------------------------------------------------------------------------
+  // Prompt Building (Simplified)
+  // --------------------------------------------------------------------------
 
-    const basePrompt = `You are a skill management assistant. Use the skill-creator skill to help users:
-
-- Create new skills from scratch
-- Modify and improve existing skills
-- Measure skill performance
-- Run evals to test skills
-- Benchmark skill performance with variance analysis
-- Optimize skill descriptions for better triggering accuracy
-
-## CRITICAL: Always Start with skill-creator
-
-Before any task, invoke the Skill tool with "skill-creator" to get comprehensive guidelines.
-
-## Tools
-- **Skill** - Access skill-creator for guidance
-- **Write/Read/Edit** - File operations
-- **Bash** - Directory creation
-- **Grep/Glob** - Search content
-
-${targetPath ? `
-## Save Location
-All skills must be saved to: ${targetPath}/<skill-name>/SKILL.md
-DO NOT use default locations like ~/.claude/skills/
-
-## CRITICAL: File Naming Convention
-The skill file MUST be named exactly "SKILL.md" (all uppercase: SKILL, .md extension).
-DO NOT use variations like:
-- skill.md (lowercase)
-- Skill.md (mixed case)
-- SKILL.MD (uppercase extension)
-Always use: SKILL.md` : ''}
-
-## Skill Format
-\`\`\`markdown
----
-name: Skill Name
-description: What users would say to trigger this skill
-version: 1.0.0
-author: Author Name
-tags: [tag1, tag2]
----
-
-# Skill content with instructions and examples
-\`\`\``;
-
-    const modeInstructions: Record<string, string> = {
-      new: targetPath
-        ? `
-
-## Current Task: Create New Skill
-
-1. Invoke skill-creator for creation guidelines
-2. Determine skill name (kebab-case)
-3. Create directory: mkdir -p "${targetPath}/<skill-name>"
-4. Write to: ${targetPath}/<skill-name>/SKILL.md`
-        : `
-
-## Current Task: Create New Skill
-
-Invoke skill-creator first, then create a production-ready skill.`,
-
-      modify: targetPath
-        ? `
-
-## Current Task: Modify Existing Skill
-
-File: ${targetPath}/${request?.skillContext?.name || 'unknown'}/SKILL.md
-
-1. Invoke skill-creator for best practices
-2. Apply modifications
-3. Save to same path`
-        : `
-
-## Current Task: Modify Existing Skill
-
-Invoke skill-creator first, then apply modifications while preserving core purpose.`,
-
-      insert: `
-
-## Current Task: Insert Content
-
-Invoke skill-creator first, then generate content that fits naturally at the cursor position.`,
-
-      replace: `
-
-## Current Task: Replace Content
-
-Invoke skill-creator first, then generate replacement text that improves the original.`,
-
-      evaluate: `
-
-## Current Task: Measure Skill Performance
-
-1. Invoke skill-creator for evaluation methodology
-2. Analyze: clarity, completeness, edge cases, description accuracy
-3. Provide actionable improvement suggestions`,
-
-      benchmark: `
-
-## Current Task: Benchmark with Variance Analysis
-
-1. Invoke skill-creator for benchmarking methodology
-2. Analyze performance across scenarios
-3. Identify variance and consistency issues
-4. Provide optimization recommendations`,
-
-      optimize: `
-
-## Current Task: Optimize Description for Triggering
-
-1. Invoke skill-creator for description guidelines
-2. Analyze trigger phrase coverage and false positive risks
-3. Propose optimized description options`
-    };
-
-    return basePrompt + (modeInstructions[mode] || '');
-  }
-
-  /**
-   * Build user prompt based on request
-   * @private
-   */
   private static buildUserPrompt(request: AIGenerationRequest): string {
     const { mode, prompt, skillContext } = request;
     const content = skillContext?.content || '(no content)';
     const skillName = skillContext?.name || 'Unknown';
+    const targetPath = skillContext?.targetPath;
+    const skillPath = skillContext?.skillPath;
+
+    // Build context section with save location
+    let contextSection = '';
+    if (mode === 'new' && targetPath) {
+      contextSection = `\n\n## Save Location\nSave the skill to: ${targetPath}/<skill-name>/SKILL.md\nThe file MUST be named "SKILL.md" (uppercase).`;
+    } else if (mode === 'modify' && skillPath) {
+      contextSection = `\n\n## Save Location\nSave to the EXACT same directory: ${skillPath}/SKILL.md\nDo NOT create a new directory.`;
+    }
 
     switch (mode) {
       case 'new':
-        return `Requirements: ${prompt}`;
+        return `Create a new skill with these requirements:\n\n${prompt}${contextSection}`;
 
       case 'modify':
-        return `Instructions: ${prompt}\n\n---\n${content}`;
+        return `Modify the skill "${skillName}" with these instructions:\n\n${prompt}\n\n--- Current Content ---\n${content}${contextSection}`;
 
       case 'insert':
-        return `At position ${skillContext?.cursorPosition ?? 0}: ${prompt}\n\n---\n${content}`;
+        return `Insert at position ${skillContext?.cursorPosition ?? 0}:\n\n${prompt}\n\n--- Current Content ---\n${content}`;
 
       case 'replace':
-        return `Replace "${skillContext?.selectedText || ''}": ${prompt}\n\n---\n${content}`;
+        return `Replace "${skillContext?.selectedText || ''}":\n\n${prompt}\n\n--- Current Content ---\n${content}`;
 
       case 'evaluate':
-        return `Focus: ${prompt || 'General'}\n\nSkill: ${skillName}\n\n---\n${content}`;
+        return `Evaluate this skill (${skillName}):\n\nFocus: ${prompt || 'General'}\n\n--- Content ---\n${content}`;
 
       case 'benchmark':
-        return `Focus: ${prompt || 'General'}\n\nSkill: ${skillName}\n\n---\n${content}`;
+        return `Benchmark this skill (${skillName}):\n\nFocus: ${prompt || 'General'}\n\n--- Content ---\n${content}`;
 
       case 'optimize':
-        return `Focus: ${prompt || 'Triggering accuracy'}\n\nSkill: ${skillName}\n\n---\n${content}`;
+        return `Optimize this skill for better triggering:\n\nFocus: ${prompt || 'Triggering accuracy'}\n\nSkill: ${skillName}\n\n--- Content ---\n${content}`;
 
       default:
         return prompt;
