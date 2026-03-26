@@ -66,12 +66,11 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
   return (
     <div className="h-full flex flex-col bg-gray-50">
       {/* Search Header */}
-      <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">
-            {t('discover.title')}
-          </h2>
-          <div className="relative">
+      <div className="bg-white border-b border-gray-200 p-4 space-y-3 flex-shrink-0">
+        {/* Top row: Search */}
+        <div className="flex items-center gap-3">
+          {/* Search */}
+          <div className="relative flex-1">
             <input
               type="text"
               placeholder={t('discover.searchPlaceholder')}
@@ -101,13 +100,17 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
               </div>
             )}
           </div>
+        </div>
 
-          {/* Sort and Results Count */}
-          {hasSearched && !isLoading && !error && sortedResults && sortedResults.length > 0 && (
-            <div className="flex items-center justify-between mt-3">
-              <p className="text-xs text-gray-500">
-                {t('discover.resultsCount', { count: sortedResults.length })}
-              </p>
+        {/* Bottom row: Results Count + Sort */}
+        {hasSearched && !isLoading && !error && sortedResults && sortedResults.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-500">
+              {t('discover.resultsCount', { count: sortedResults.length })}
+            </span>
+
+            <div className="flex items-center gap-1 ml-auto">
+              {/* Sort by */}
               <div className="flex items-center gap-1">
                 <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
@@ -120,103 +123,101 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
                   aria-label="Sort by"
                   title="Sort results"
                 >
-                  <option value="name">Name</option>
-                  <option value="installs">Installs</option>
+                  <option value="name">{t('skills.name')}</option>
+                  <option value="installs">{t('skills.installs')}</option>
                 </select>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Search Results */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-3xl mx-auto">
-          {/* Loading State */}
-          {isLoading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
-                <span className="text-sm text-gray-600">{t('discover.searching')}</span>
-              </div>
+      <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+              <span className="text-sm text-gray-600">{t('discover.searching')}</span>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Error State */}
-          {error && !isLoading && (
-            <div className="flex flex-col items-center justify-center py-12 px-4">
-              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('discover.searchError')}</h3>
-              <p className="text-sm text-gray-600 text-center max-w-md mb-4">{error}</p>
-              <button
-                onClick={() => handleQueryChange(query)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                aria-label={t('discover.retry')}
-              >
-                {t('discover.retry')}
-              </button>
+        {/* Error State */}
+        {error && !isLoading && (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
             </div>
-          )}
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('discover.searchError')}</h3>
+            <p className="text-sm text-gray-600 text-center max-w-md mb-4">{error}</p>
+            <button
+              onClick={() => handleQueryChange(query)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              aria-label={t('discover.retry')}
+            >
+              {t('discover.retry')}
+            </button>
+          </div>
+        )}
 
-          {/* Empty State - No search yet */}
-          {!hasSearched && !isLoading && !error && (
-            <div className="flex flex-col items-center justify-center py-16 px-4">
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('discover.searchForSkills')}</h3>
-              <p className="text-sm text-gray-600 text-center max-w-md">
-                {t('discover.searchDescription')}
-              </p>
+        {/* Empty State - No search yet */}
+        {!hasSearched && !isLoading && !error && (
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
             </div>
-          )}
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('discover.searchForSkills')}</h3>
+            <p className="text-sm text-gray-600 text-center max-w-md">
+              {t('discover.searchDescription')}
+            </p>
+          </div>
+        )}
 
-          {/* No Results State */}
-          {hasSearched && !isLoading && !error && results.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 px-4">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('discover.noSkillsFound')}</h3>
-              <p className="text-sm text-gray-600 text-center max-w-md">
-                {t('discover.noResultsFor', { query })}
-              </p>
+        {/* No Results State */}
+        {hasSearched && !isLoading && !error && results.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
             </div>
-          )}
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('discover.noSkillsFound')}</h3>
+            <p className="text-sm text-gray-600 text-center max-w-md">
+              {t('discover.noResultsFor', { query })}
+            </p>
+          </div>
+        )}
 
-          {/* Results List */}
-          {hasSearched && !isLoading && !error && sortedResults && sortedResults.length > 0 && (
-            <SearchResultsList
-              results={sortedResults}
-              targetDirectory={targetDirectory}
-              onInstallComplete={onInstallComplete}
-              onSkillClick={onSkillClick}
-            />
-          )}
-        </div>
+        {/* Results List with Grid and Grouping */}
+        {hasSearched && !isLoading && !error && sortedResults && sortedResults.length > 0 && (
+          <SearchResultsList
+            results={sortedResults}
+            targetDirectory={targetDirectory}
+            onInstallComplete={onInstallComplete}
+            onSkillClick={onSkillClick}
+          />
+        )}
       </div>
     </div>
   );
