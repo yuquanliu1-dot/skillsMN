@@ -851,46 +851,58 @@ export default function App(): JSX.Element {
           config={state.config}
         />
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex overflow-hidden" data-testid="main-content">
-          {/* Skills List - Column 2 (flexible) */}
-          <div className="flex-1 max-w-[360px] border-r border-gray-200 bg-white overflow-hidden flex flex-col" data-testid="skills-list">
-            {/* Keep all views mounted but hidden to preserve state */}
-            <div style={{ display: currentView === 'skills' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
-              <SkillList
-                skills={state.skills}
-                onSkillClick={(skill) => setEditingSkill(skill)}
-                onSkillSelect={(skill) => setSelectedSkillPath(skill.path)}
-                onCreateSkill={() => setShowCreateDialog(true)}
-                onDeleteSkill={(skill) => setDeletingSkill(skill)}
-                onCopySkill={(skill) => setCopyingSkill(skill)}
-                onOpenFolder={handleOpenFolder}
-                selectedSkillPath={selectedSkillPath}
-                skillUpdates={skillUpdates}
-                onSkillUpdate={handleUpdateSkill}
-                onSkillUpload={handleUploadSkill}
-              />
-            </div>
-
-            <div style={{ display: currentView === 'discover' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
-              <RegistrySearchPanel
-                config={state.config}
-                onInstallComplete={loadSkills}
-                onSkillClick={handleViewDiscoverSkill}
-              />
-            </div>
-
-            <div style={{ display: currentView === 'private-repos' ? 'flex' : 'none' }} className="flex-1 flex flex-col overflow-hidden">
-              <PrivateRepoList
-                onSkillClick={handleViewPrivateSkill}
-              />
-            </div>
+        {/* Main Content Area - Column 2 (fills remaining space) */}
+        <div className="flex-1 overflow-hidden bg-white" data-testid="main-content">
+          {/* Keep all views mounted but hidden to preserve state */}
+          <div style={{ display: currentView === 'skills' ? 'flex' : 'none' }} className="h-full flex flex-col overflow-hidden">
+            <SkillList
+              skills={state.skills}
+              onSkillClick={(skill) => setEditingSkill(skill)}
+              onSkillSelect={(skill) => setSelectedSkillPath(skill.path)}
+              onCreateSkill={() => setShowCreateDialog(true)}
+              onDeleteSkill={(skill) => setDeletingSkill(skill)}
+              onCopySkill={(skill) => setCopyingSkill(skill)}
+              onOpenFolder={handleOpenFolder}
+              selectedSkillPath={selectedSkillPath}
+              skillUpdates={skillUpdates}
+              onSkillUpdate={handleUpdateSkill}
+              onSkillUpload={handleUploadSkill}
+            />
           </div>
 
-          {/* Detail Panel - Column 3 (adaptive width) */}
-          <div className="flex-1 border-l border-gray-200 bg-white overflow-hidden" data-testid="detail-panel">
-            {/* Skills View - Show editing skill or empty state */}
-            {currentView === 'skills' && editingSkill ? (
+          <div style={{ display: currentView === 'discover' ? 'flex' : 'none' }} className="h-full flex flex-col overflow-hidden">
+            <RegistrySearchPanel
+              config={state.config}
+              onInstallComplete={loadSkills}
+              onSkillClick={handleViewDiscoverSkill}
+            />
+          </div>
+
+          <div style={{ display: currentView === 'private-repos' ? 'flex' : 'none' }} className="h-full flex flex-col overflow-hidden">
+            <PrivateRepoList
+              onSkillClick={handleViewPrivateSkill}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Skill Editor Modal */}
+      {editingSkill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl w-[90vw] h-[90vh] max-w-6xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <h2 className="text-lg font-semibold text-gray-900">{editingSkill.name}</h2>
+              <button
+                onClick={() => setEditingSkill(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close editor"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
               <Suspense
                 fallback={
                   <div className="flex items-center justify-center h-full">
@@ -928,149 +940,112 @@ export default function App(): JSX.Element {
                   onCommitChanges={handleCommitChanges}
                 />
               </Suspense>
-            ) : currentView === 'skills' && !editingSkill ? (
-              <div className="h-full flex items-center justify-center text-gray-400">
-                <div className="text-center">
-                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="text-lg font-medium">No Skill Selected</p>
-                  <p className="text-sm text-gray-400 mt-2">Select a skill to view details</p>
-                </div>
-              </div>
-            ) : null}
-
-            {/* Discover View - Show discover skill or empty state */}
-            {currentView === 'discover' && viewingDiscoverSkill ? (
-              <div className="h-full flex flex-col">
-                <div className="p-4 border-b border-gray-200 bg-gray-50">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900">
-                        {viewingDiscoverSkill.skill.name}
-                      </h2>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {viewingDiscoverSkill.skill.source}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setViewingDiscoverSkill(null)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                      aria-label="Close preview"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <Suspense
-                    fallback={
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-text-muted">Loading editor...</div>
-                      </div>
-                    }
-                  >
-                    <SkillEditor
-                      skill={{
-                        path: viewingDiscoverSkill.skill.skillId,
-                        name: viewingDiscoverSkill.skill.name,
-                        source: 'project',
-                        lastModified: new Date(),
-                        resourceCount: 0,
-                      }}
-                      content={viewingDiscoverSkill.content}
-                      onClose={() => setViewingDiscoverSkill(null)}
-                      onSave={async () => {
-                        showToast('Registry skills are read-only. Install them to edit.', 'info');
-                      }}
-                      isInline={true}
-                      readOnly={true}
-                      config={state.config?.skillEditor}
-                    />
-                  </Suspense>
-                </div>
-              </div>
-            ) : currentView === 'discover' && !viewingDiscoverSkill ? (
-              <div className="h-full flex items-center justify-center text-gray-400">
-                <div className="text-center">
-                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  <p className="text-lg font-medium">No Skill Selected</p>
-                  <p className="text-sm text-gray-400 mt-2">Search and select a skill to preview</p>
-                </div>
-              </div>
-            ) : null}
-
-            {/* Private Repos View - Show private skill or empty state */}
-            {currentView === 'private-repos' && viewingPrivateSkill ? (
-              <div className="h-full flex flex-col">
-                <div className="p-4 border-b border-gray-200 bg-gray-50">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900">
-                        {viewingPrivateSkill.skill.name}
-                      </h2>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {viewingPrivateSkill.repo.displayName || `${viewingPrivateSkill.repo.owner}/${viewingPrivateSkill.repo.repo}`}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setViewingPrivateSkill(null)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                      aria-label="Close preview"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <Suspense
-                    fallback={
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-text-muted">Loading editor...</div>
-                      </div>
-                    }
-                  >
-                    <SkillEditor
-                      skill={{
-                        path: viewingPrivateSkill.skill.path,
-                        name: viewingPrivateSkill.skill.name,
-                        source: 'project',
-                        lastModified: new Date(),
-                        resourceCount: 0,
-                      }}
-                      content={viewingPrivateSkill.content}
-                      onClose={() => setViewingPrivateSkill(null)}
-                      onSave={async () => {
-                        showToast('Private repository skills are read-only. Install them to edit.', 'info');
-                      }}
-                      isInline={true}
-                      readOnly={true}
-                      config={state.config?.skillEditor}
-                    />
-                  </Suspense>
-                </div>
-              </div>
-            ) : currentView === 'private-repos' && !viewingPrivateSkill ? (
-              <div className="h-full flex items-center justify-center text-gray-400">
-                <div className="text-center">
-                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-2-4a2 2 0 114 0v1h-4v-1z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                  </svg>
-                  <p className="text-lg font-medium">No Skill Selected</p>
-                  <p className="text-sm text-gray-400 mt-2">Select a skill from private repos to preview</p>
-                </div>
-              </div>
-            ) : null}
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Discover Skill Preview Modal */}
+      {viewingDiscoverSkill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl w-[90vw] h-[90vh] max-w-6xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">{viewingDiscoverSkill.skill.name}</h2>
+                <p className="text-sm text-gray-600">{viewingDiscoverSkill.skill.source}</p>
+              </div>
+              <button
+                onClick={() => setViewingDiscoverSkill(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close preview"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-text-muted">Loading editor...</div>
+                  </div>
+                }
+              >
+                <SkillEditor
+                  skill={{
+                    path: viewingDiscoverSkill.skill.skillId,
+                    name: viewingDiscoverSkill.skill.name,
+                    source: 'project',
+                    lastModified: new Date(),
+                    resourceCount: 0,
+                  }}
+                  content={viewingDiscoverSkill.content}
+                  onClose={() => setViewingDiscoverSkill(null)}
+                  onSave={async () => {
+                    showToast('Registry skills are read-only. Install them to edit.', 'info');
+                  }}
+                  isInline={true}
+                  readOnly={true}
+                  config={state.config?.skillEditor}
+                />
+              </Suspense>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Private Skill Preview Modal */}
+      {viewingPrivateSkill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl w-[90vw] h-[90vh] max-w-6xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">{viewingPrivateSkill.skill.name}</h2>
+                <p className="text-sm text-gray-600">
+                  {viewingPrivateSkill.repo.displayName || `${viewingPrivateSkill.repo.owner}/${viewingPrivateSkill.repo.repo}`}
+                </p>
+              </div>
+              <button
+                onClick={() => setViewingPrivateSkill(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close preview"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-text-muted">Loading editor...</div>
+                  </div>
+                }
+              >
+                <SkillEditor
+                  skill={{
+                    path: viewingPrivateSkill.skill.path,
+                    name: viewingPrivateSkill.skill.name,
+                    source: 'project',
+                    lastModified: new Date(),
+                    resourceCount: 0,
+                  }}
+                  content={viewingPrivateSkill.content}
+                  onClose={() => setViewingPrivateSkill(null)}
+                  onSave={async () => {
+                    showToast('Private repository skills are read-only. Install them to edit.', 'info');
+                  }}
+                  isInline={true}
+                  readOnly={true}
+                  config={state.config?.skillEditor}
+                />
+              </Suspense>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Skill Dialog */}
       <CreateSkillDialog
