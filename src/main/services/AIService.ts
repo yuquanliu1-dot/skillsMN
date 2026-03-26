@@ -498,14 +498,36 @@ export class AIService {
 
       const execOptions = AIService.getExecutableOptions();
 
+      // Build system prompt with mandatory skill-creator usage
+      const skillCreatorSystemPrompt = `You are a skill creation assistant for the skillsMN application.
+
+## MANDATORY WORKFLOW
+
+Before creating ANY new skill, you MUST use the AskUserQuestion tool to clarify:
+1. What specific functionality should the skill provide?
+2. What triggers should activate this skill?
+3. Who is the target user?
+
+Do NOT proceed to create a skill until you have asked these questions using AskUserQuestion.
+
+## Skill Creation Guidelines
+
+Follow the skill-creator skill pattern:
+- Keep SKILL.md concise (under 500 lines)
+- Include clear frontmatter: name and description
+- Use references/ for detailed documentation
+- Use scripts/ for reusable code
+- Use assets/ for templates and resources`;
+
       // Build query options with permission callback
       const queryOptions: any = {
         prompt: userPrompt,
         options: {
-          // Use preset system prompt (claude_code) for CLAUDE.md support
+          // Use preset system prompt with skill-creator requirements
           systemPrompt: {
             type: 'preset',
             preset: 'claude_code',
+            append: skillCreatorSystemPrompt,
           },
           // Load CLAUDE.md from project, user, and local directories
           settingSources: ['project', 'user', 'local'],
@@ -897,7 +919,7 @@ export class AIService {
       contextSection = `\n\n## Save Location\nSave to the EXACT same directory: ${skillPath}/SKILL.md\nDo NOT create a new directory.`;
     }
 
-    // Prepend /skill-creator to enforce using the skill-creator skill
+    // Prepend /skill-creator to invoke the skill-creator skill
     const skillCreatorPrefix = '/skill-creator\n\n';
 
     switch (mode) {
