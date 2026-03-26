@@ -1,10 +1,13 @@
 /**
  * SkillPreview Component
  *
- * Modal for previewing skill content from GitHub
+ * Right-side drawer for previewing skill content from GitHub with Markdown rendering
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface SkillPreviewProps {
   downloadUrl: string;
@@ -13,6 +16,7 @@ interface SkillPreviewProps {
 }
 
 export default function SkillPreview({ downloadUrl, onClose, onInstall }: SkillPreviewProps): JSX.Element {
+  const { t } = useTranslation();
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,65 +60,87 @@ export default function SkillPreview({ downloadUrl, onClose, onInstall }: SkillP
   }, [downloadUrl]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-slate-800 rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-700">
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black bg-opacity-30 z-40 transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Right-side Drawer */}
+      <div className="fixed right-0 top-0 h-full w-[600px] bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-700">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-100">Preview Skill</h3>
-            <p className="text-sm text-slate-400 mt-1">
-              {repositoryName} - {skillFilePath}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 truncate">
+              {t('discover.previewSkill', 'Preview Skill')}
+            </h3>
+            <p className="text-sm text-gray-500 mt-1 truncate">
+              {repositoryName} · {skillFilePath}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 transition-colors"
+            className="ml-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             aria-label="Close preview"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           {isLoading && (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="text-sm text-gray-500">{t('common.loading')}</span>
+              </div>
             </div>
           )}
 
           {error && (
-            <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
-              {error}
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>{error}</span>
+              </div>
             </div>
           )}
 
           {!isLoading && !error && (
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded border border-slate-700 overflow-x-auto text-sm font-mono whitespace-pre-wrap">
-              {content}
-            </pre>
+            <div className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-h1:text-xl prose-h1:border-b prose-h1:pb-2 prose-h2:text-lg prose-h3:text-base prose-p:text-gray-700 prose-a:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200 prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto prose-ul:list-disc prose-ol:list-decimal prose-li:text-gray-700 prose-blockquote:border-l-blue-200 prose-blockquote:bg-blue-50 prose-blockquote:py-1">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {content}
+              </ReactMarkdown>
+            </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-700 p-4 flex gap-2 justify-end">
+        <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex gap-3 justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 transition-colors"
+            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
           >
-            Cancel
+            {t('common.close')}
           </button>
           <button
             onClick={() => onInstall(repositoryName, skillFilePath || 'skill.md', downloadUrl)}
             disabled={isLoading || !!error}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-slate-700 disabled:text-slate-500 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
           >
-            Install Skill
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            {t('discover.install', 'Install Skill')}
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

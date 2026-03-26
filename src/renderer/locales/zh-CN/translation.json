@@ -394,7 +394,9 @@
     "noSkillsFound": "未找到技能",
     "noResultsFor": "未找到 \"{{query}}\" 的结果。请尝试其他搜索词。",
     "resultsCount": "找到 {{count}} 个结果",
-    "resultsCount_plural": "找到 {{count}} 个结果"
+    "resultsCount_plural": "找到 {{count}} 个结果",
+    "previewSkill": "预览技能",
+    "install": "安装技能"
   },
 
   "privateRepos": {

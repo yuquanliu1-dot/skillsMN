@@ -394,7 +394,9 @@
     "noSkillsFound": "No Skills Found",
     "noResultsFor": "No results for \"{{query}}\". Try a different search term.",
     "resultsCount": "{{count}} result found",
-    "resultsCount_plural": "{{count}} results found"
+    "resultsCount_plural": "{{count}} results found",
+    "previewSkill": "Preview Skill",
+    "install": "Install Skill"
   },
 
   "privateRepos": {
