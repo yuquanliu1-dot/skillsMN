@@ -62,6 +62,7 @@ export interface ElectronAPI {
   loadConfig: () => Promise<IPCResponse<Configuration>>;
   saveConfig: (config: Partial<Configuration>) => Promise<IPCResponse<Configuration>>;
   checkClaudeInstall: () => Promise<IPCResponse<{ installed: boolean; version?: string }>>;
+  openClaudeInTerminal: (workingDirectory: string) => Promise<IPCResponse<void>>;
 
   // File System Watching
   startWatching: () => Promise<IPCResponse<void>>;

@@ -840,6 +840,10 @@ export default function App(): JSX.Element {
               onSkillClick={(skill) => setViewingSkill(skill)}
               onSkillSelect={(skill) => setSelectedSkillPath(skill.path)}
               onCreateSkill={() => setShowCreateDialog(true)}
+              onEditSkill={(skill) => {
+                setEditingSkill(skill);
+                setIsNewSkillMode(false);
+              }}
               onDeleteSkill={(skill) => setDeletingSkill(skill)}
               onCopySkill={(skill) => setCopyingSkill(skill)}
               onOpenFolder={handleOpenFolder}

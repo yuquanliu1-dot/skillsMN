@@ -374,4 +374,96 @@ export class EditorPage extends AppPage {
     // At least one shortcut should be visible
     return visibleCount > 0;
   }
+
+  /**
+   * Check if "Test in Claude" button is visible
+   */
+  async isTestInClaudeButtonVisible(): Promise<boolean> {
+    const selectors = [
+      'button:has-text("Test"):has-text("Claude")',
+      'button[title*="Claude"]',
+      'button[title*="terminal"]',
+      'button:has(svg path[d*="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"])',
+    ];
+
+    for (const selector of selectors) {
+      if (await this.page.isVisible(selector).catch(() => false)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Click "Test in Claude" button
+   */
+  async clickTestInClaude(): Promise<void> {
+    const selectors = [
+      'button:has-text("Test"):has-text("Claude")',
+      'button[title*="Claude"]:has-text("Test")',
+      'button.bg-purple-600:has-text("Test")',
+    ];
+
+    for (const selector of selectors) {
+      if (await this.page.isVisible(selector).catch(() => false)) {
+        await this.page.click(selector);
+        return;
+      }
+    }
+    throw new Error('Test in Claude button not found');
+  }
+
+  /**
+   * Check if full-screen editor mode is active
+   */
+  async isFullScreenEditor(): Promise<boolean> {
+    // Full-screen editor typically has fixed inset-0 positioning
+    const editor = await this.page.$('[data-testid="skill-editor"]');
+    if (editor) {
+      const classes = await editor.getAttribute('class');
+      return classes?.includes('fixed inset-0') || classes?.includes('fixed') || false;
+    }
+    return false;
+  }
+
+  /**
+   * Check if AI sidebar is visible (in full-screen editor)
+   */
+  async isAISidebarVisible(): Promise<boolean> {
+    const selectors = [
+      '[data-testid="ai-sidebar"]',
+      '.ai-sidebar',
+      '[class*="ai-assistant"]',
+      '[class*="AISkillSidebar"]',
+    ];
+
+    for (const selector of selectors) {
+      if (await this.page.isVisible(selector).catch(() => false)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Close full-screen editor with back button
+   */
+  async closeWithBackButton(): Promise<void> {
+    const selectors = [
+      'button:has(svg path[d*="M10 19l-7-7m0 0l7-7m-7 7h18"])',
+      'button[aria-label*="Back"]',
+      'button[aria-label*="Close"]',
+    ];
+
+    for (const selector of selectors) {
+      if (await this.page.isVisible(selector).catch(() => false)) {
+        await this.page.click(selector);
+        await this.page.waitForTimeout(500);
+        return;
+      }
+    }
+
+    // Fallback to keyboard shortcut
+    await this.close();
+  }
 }

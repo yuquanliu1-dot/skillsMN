@@ -376,4 +376,91 @@ export class SkillsPage extends AppPage {
   async waitForSkillRemoval(name: string, timeout = 10000): Promise<void> {
     await this.page.waitForSelector(`[data-testid="skill-card"]:has-text("${name}")`, { state: 'detached', timeout });
   }
+
+  /**
+   * Click edit button on skill card (opens full-screen editor)
+   */
+  async clickEditButton(name: string): Promise<void> {
+    // Search for the skill first
+    await this.searchSkills(name);
+    await this.page.waitForTimeout(500);
+
+    const skillCard = this.page.locator(`[data-testid="skill-card"]:has-text("${name}")`);
+    await skillCard.waitFor({ timeout: 10000 });
+
+    // Hover to show action buttons
+    await skillCard.hover();
+    await this.page.waitForTimeout(300);
+
+    // Click edit button (pencil icon)
+    const editButton = skillCard.locator('button:has(svg path[d*="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414"]), button[title*="Edit"], button[aria-label*="Edit"]').first();
+
+    if (await editButton.isVisible().catch(() => false)) {
+      await editButton.click();
+    } else {
+      // Fallback: click the skill card itself
+      await skillCard.click();
+    }
+
+    // Clear search
+    await this.clearSearch();
+  }
+
+  /**
+   * Check if edit button is visible on skill card
+   */
+  async isEditButtonVisible(name: string): Promise<boolean> {
+    // Search for the skill first
+    await this.searchSkills(name);
+    await this.page.waitForTimeout(500);
+
+    const skillCard = this.page.locator(`[data-testid="skill-card"]:has-text("${name}")`);
+    await skillCard.waitFor({ timeout: 10000 });
+
+    // Hover to show action buttons
+    await skillCard.hover();
+    await this.page.waitForTimeout(300);
+
+    // Check for edit button
+    const editButton = skillCard.locator('button:has(svg path[d*="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414"]), button[title*="Edit"], button[aria-label*="Edit"]').first();
+
+    const isVisible = await editButton.isVisible().catch(() => false);
+
+    // Clear search
+    await this.clearSearch();
+
+    return isVisible;
+  }
+
+  /**
+   * Get action buttons on skill card
+   */
+  async getActionButtons(name: string): Promise<string[]> {
+    // Search for the skill first
+    await this.searchSkills(name);
+    await this.page.waitForTimeout(500);
+
+    const skillCard = this.page.locator(`[data-testid="skill-card"]:has-text("${name}")`);
+    await skillCard.waitFor({ timeout: 10000 });
+
+    // Hover to show action buttons
+    await skillCard.hover();
+    await this.page.waitForTimeout(300);
+
+    // Get all buttons
+    const buttons = await skillCard.locator('button').all();
+    const buttonTitles: string[] = [];
+
+    for (const button of buttons) {
+      const title = await button.getAttribute('title').catch(() => null);
+      const ariaLabel = await button.getAttribute('aria-label').catch(() => null);
+      if (title) buttonTitles.push(title);
+      else if (ariaLabel) buttonTitles.push(ariaLabel);
+    }
+
+    // Clear search
+    await this.clearSearch();
+
+    return buttonTitles;
+  }
 }

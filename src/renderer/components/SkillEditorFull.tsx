@@ -394,7 +394,7 @@ export default function SkillEditorFull({
   const isEditing = !isNewSkill && skill;
 
   return (
-    <div className="fixed inset-0 bg-gray-100 flex flex-col z-50">
+    <div data-testid="skill-editor" className="fixed inset-0 bg-gray-100 flex flex-col z-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -445,6 +445,33 @@ export default function SkillEditorFull({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Open Claude Code in Terminal button */}
+          {isEditing && (
+            <button
+              onClick={async () => {
+                if (skill?.path) {
+                  // Get the skill directory (parent of SKILL.md or the skill folder)
+                  const skillDir = skill.path.replace(/[\\/]SKILL\.md$/i, '');
+                  try {
+                    const result = await window.electronAPI.openClaudeInTerminal(skillDir);
+                    if (!result.success) {
+                      setError(t('editor.failedToOpenTerminal', 'Failed to open terminal'));
+                    }
+                  } catch (err) {
+                    setError(t('editor.failedToOpenTerminal', 'Failed to open terminal'));
+                  }
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+              title={t('editor.openClaudeInTerminal', 'Open Claude Code in terminal to test this skill')}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {t('editor.testInClaude', 'Test in Claude')}
+            </button>
+          )}
+
           {/* Upload to Repository button */}
           {isEditing && onUploadSkill && skill && (
             <button

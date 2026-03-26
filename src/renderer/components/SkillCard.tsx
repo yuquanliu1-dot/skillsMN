@@ -12,6 +12,7 @@ import type { Skill, VersionComparison } from '../../shared/types';
 interface SkillCardProps {
   skill: Skill;
   onClick?: (skill: Skill) => void;
+  onEdit?: (skill: Skill) => void;
   onDelete?: (skill: Skill) => void;
   onCopy?: (skill: Skill) => void;
   onOpenFolder?: (skill: Skill) => void;
@@ -25,6 +26,7 @@ interface SkillCardProps {
 export default function SkillCard({
   skill,
   onClick,
+  onEdit,
   onDelete,
   onCopy,
   onOpenFolder,
@@ -85,6 +87,12 @@ export default function SkillCard({
     e.stopPropagation();
     e.preventDefault();
     onCopy?.(skill);
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onEdit?.(skill);
   };
 
   const handleUpdateClick = (e: React.MouseEvent) => {
@@ -213,6 +221,20 @@ export default function SkillCard({
 
           {/* Right: Actions */}
           <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Edit Button */}
+            {onEdit && (
+              <button
+                onClick={handleEdit}
+                className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                aria-label={t('skillCard.edit')}
+                title={t('skillCard.editHint')}
+              >
+                <svg className="w-4 h-4 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            )}
+
             {/* Update Button */}
             {hasUpdate && onUpdate && updateProgress !== 'success' && (
               <button

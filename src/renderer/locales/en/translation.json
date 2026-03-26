@@ -115,7 +115,9 @@
     "version": "Version",
     "openFolderHint": "Open Folder",
     "copyHint": "Copy",
-    "deleteHint": "Delete"
+    "deleteHint": "Delete",
+    "edit": "Edit",
+    "editHint": "Edit skill in full-screen editor"
   },
 
   "editor": {
@@ -141,7 +143,10 @@
     "upload": "Upload",
     "modified": "Modified",
     "newSkill": "New Skill",
-    "newSkillBadge": "New"
+    "newSkillBadge": "New",
+    "testInClaude": "Test in Claude",
+    "openClaudeInTerminal": "Open Claude Code in terminal to test this skill",
+    "failedToOpenTerminal": "Failed to open terminal"
   },
 
   "settings": {

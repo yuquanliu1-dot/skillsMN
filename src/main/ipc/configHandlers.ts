@@ -126,6 +126,52 @@ export function registerConfigHandlers(): void {
     }
   );
 
+  // Handler for terminal:open-claude - Open terminal and run Claude Code
+  ipcMain.handle(
+    IPC_CHANNELS.TERMINAL_OPEN_CLAUDE,
+    async (_event, { workingDirectory }: { workingDirectory: string }): Promise<IPCResponse<void>> => {
+      try {
+        logger.debug('Opening terminal with Claude Code', 'ConfigHandlers', { workingDirectory });
+
+        const platform = process.platform;
+
+        if (platform === 'win32') {
+          // Windows: Use start to open a new cmd window
+          // /K keeps the window open after command execution
+          await execAsync(`start cmd /K "cd /d "${workingDirectory}" && claude"`, {
+            timeout: 10000,
+            windowsHide: true,
+          });
+        } else if (platform === 'darwin') {
+          // macOS: Use open -a Terminal
+          await execAsync(`open -a Terminal "${workingDirectory}"`, {
+            timeout: 10000,
+          });
+          // Note: On macOS, we can't easily run a command in the new terminal
+          // The user will need to type 'claude' manually
+        } else {
+          // Linux: Try to use gnome-terminal or xterm
+          try {
+            await execAsync(`gnome-terminal --working-directory="${workingDirectory}" -- bash -c "claude; exec bash"`, {
+              timeout: 10000,
+            });
+          } catch {
+            // Fallback to xterm
+            await execAsync(`xterm -e "cd '${workingDirectory}' && claude; bash" &`, {
+              timeout: 10000,
+            });
+          }
+        }
+
+        logger.info('Terminal opened successfully', 'ConfigHandlers', { workingDirectory });
+        return { success: true, data: undefined };
+      } catch (error) {
+        logger.error('Failed to open terminal', 'ConfigHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
   logger.info('Configuration IPC handlers registered', 'ConfigHandlers');
 }
 

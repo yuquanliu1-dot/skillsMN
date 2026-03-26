@@ -15,6 +15,7 @@ interface SkillListProps {
   onSkillClick?: (skill: Skill) => void;
   onSkillSelect?: (skill: Skill) => void;
   onCreateSkill?: () => void;
+  onEditSkill?: (skill: Skill) => void;
   onDeleteSkill?: (skill: Skill) => void;
   onCopySkill?: (skill: Skill) => void;
   onOpenFolder?: (skill: Skill) => void;
@@ -34,6 +35,7 @@ export default function SkillList({
   onSkillClick,
   onSkillSelect,
   onCreateSkill,
+  onEditSkill,
   onDeleteSkill,
   onCopySkill,
   onOpenFolder,
@@ -355,6 +357,7 @@ export default function SkillList({
                         key={skill.path}
                         skill={skill}
                         onClick={onSkillClick}
+                        onEdit={onEditSkill}
                         onSelect={onSkillSelect}
                         onDelete={onDeleteSkill}
                         onCopy={onCopySkill}

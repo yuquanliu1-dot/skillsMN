@@ -217,6 +217,9 @@ export const IPC_CHANNELS = {
   SKILL_GROUP_ADD_SKILL: 'skill-group:add-skill',
   SKILL_GROUP_REMOVE_SKILL: 'skill-group:remove-skill',
   SKILL_GROUP_REORDER: 'skill-group:reorder',
+
+  // Terminal operations
+  TERMINAL_OPEN_CLAUDE: 'terminal:open-claude',
 } as const;
 
 // ============================================================================

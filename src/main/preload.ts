@@ -122,6 +122,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_CHECK_INSTALL);
   },
 
+  openClaudeInTerminal: (workingDirectory: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_OPEN_CLAUDE, { workingDirectory });
+  },
+
   // ============================================================================
   // File System Watching
   // ============================================================================

@@ -115,7 +115,9 @@
     "version": "版本",
     "openFolderHint": "打开目录",
     "copyHint": "复制",
-    "deleteHint": "删除"
+    "deleteHint": "删除",
+    "edit": "编辑",
+    "editHint": "在全屏编辑器中编辑技能"
   },
 
   "editor": {
@@ -141,7 +143,10 @@
     "upload": "上传",
     "modified": "已修改",
     "newSkill": "新建技能",
-    "newSkillBadge": "新建"
+    "newSkillBadge": "新建",
+    "testInClaude": "在 Claude 中测试",
+    "openClaudeInTerminal": "打开终端运行 Claude Code 来测试此技能",
+    "failedToOpenTerminal": "无法打开终端"
   },
 
   "settings": {
