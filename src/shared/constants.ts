@@ -207,6 +207,16 @@ export const IPC_CHANNELS = {
   MIGRATION_START: 'migration:start',
   MIGRATION_PROGRESS: 'migration:progress',
   MIGRATION_CHECK_DIRECTORY: 'migration:check-directory',
+
+  // Skill Group operations
+  SKILL_GROUP_LIST: 'skill-group:list',
+  SKILL_GROUP_GET: 'skill-group:get',
+  SKILL_GROUP_CREATE: 'skill-group:create',
+  SKILL_GROUP_UPDATE: 'skill-group:update',
+  SKILL_GROUP_DELETE: 'skill-group:delete',
+  SKILL_GROUP_ADD_SKILL: 'skill-group:add-skill',
+  SKILL_GROUP_REMOVE_SKILL: 'skill-group:remove-skill',
+  SKILL_GROUP_REORDER: 'skill-group:reorder',
 } as const;
 
 // ============================================================================

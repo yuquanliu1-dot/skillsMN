@@ -16,6 +16,7 @@ import { registerRegistryHandlers } from './ipc/registryHandlers';
 import { registerSymlinkHandlers } from './ipc/symlinkHandlers';
 import { registerMigrationHandlers } from './ipc/migrationHandlers';
 import { registerAIConversationHandlers } from './ipc/aiConversationHandlers';
+import { registerSkillGroupHandlers, setConfigService } from './ipc/skillGroupHandlers';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
 import { SymlinkService } from './services/SymlinkService';
@@ -206,6 +207,11 @@ async function initialize(): Promise<void> {
     // Register AI conversation handlers
     registerAIConversationHandlers();
     logger.info('AI conversation handlers registered', 'Main');
+
+    // Register skill group handlers
+    setConfigService(configService);
+    registerSkillGroupHandlers();
+    logger.info('Skill group handlers registered', 'Main');
 
     // Create main window
     await createWindow();

@@ -257,7 +257,32 @@
 
     "language": "语言",
     "languageDescription": "选择您的首选语言。更改立即生效。",
-    "languageChanged": "语言更改成功"
+    "languageChanged": "语言更改成功",
+
+    "skillGroups": "技能分组",
+    "skillGroupsDescription": "将技能组织到分组中以便更好地管理",
+    "noGroups": "尚未创建技能分组",
+    "noGroupsDescription": "创建分组以按类别、项目或任何您喜欢的标准来组织技能",
+    "addGroup": "添加分组",
+    "editGroup": "编辑分组",
+    "deleteGroup": "删除分组",
+    "deleteGroupConfirm": "删除 \"{{name}}\"？分组中的技能不会被删除。",
+    "groupName": "分组名称",
+    "groupNamePlaceholder": "我的分组",
+    "groupDescription": "描述（可选）",
+    "groupDescriptionPlaceholder": "此分组的简要描述",
+    "groupColor": "颜色",
+    "groupIcon": "图标",
+    "groupIconPlaceholder": "📁",
+    "groupCreated": "分组创建成功",
+    "groupUpdated": "分组更新成功",
+    "groupDeleted": "分组删除成功",
+    "skillsInGroup": "{{count}} 个技能",
+    "selectGroup": "选择分组",
+    "assignToGroup": "分配到分组",
+    "removeFromGroup": "从分组移除",
+    "noSkillsInGroup": "此分组中没有技能",
+    "addSkillsToGroup": "添加技能到此分组"
   },
 
   "setup": {

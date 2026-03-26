@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Configuration, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig } from '../../shared/types';
+import type { Configuration, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig, SkillGroup, Skill } from '../../shared/types';
 import { changeLanguage, availableLanguages, getCurrentLanguage } from '../i18n';
 import type { LanguageCode } from '../../shared/types';
 
@@ -61,7 +61,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editPAT, setEditPAT] = useState('');
   const [isUpdatingRepo, setIsUpdatingRepo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'storage' | 'skill-view' | 'repositories' | 'ai'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'storage' | 'skill-view' | 'repositories' | 'skill-groups' | 'ai'>('general');
 
   console.log('[Settings] Current state', { activeTab, isOpen });
 
@@ -71,6 +71,23 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   const [isSavingAI, setIsSavingAI] = useState(false);
   const [isTestingAI, setIsTestingAI] = useState(false);
   const [aiTestResult, setAITestResult] = useState<{ success: boolean; latency?: number; error?: string } | null>(null);
+
+  // Skill Groups State
+  const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+  const [showAddGroupForm, setShowAddGroupForm] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [newGroupColor, setNewGroupColor] = useState('#3B82F6');
+  const [newGroupIcon, setNewGroupIcon] = useState('📁');
+  const [isAddingGroup, setIsAddingGroup] = useState(false);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editGroupName, setEditGroupName] = useState('');
+  const [editGroupDescription, setEditGroupDescription] = useState('');
+  const [editGroupColor, setEditGroupColor] = useState('#3B82F6');
+  const [editGroupIcon, setEditGroupIcon] = useState('📁');
+  const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
+  const [allSkills, setAllSkills] = useState<Skill[]>([]);
 
   /**
    * Load current settings when dialog opens
@@ -273,6 +290,214 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
       loadAIConfig();
     }
   }, [isOpen, activeTab, loadAIConfig]);
+
+  /**
+   * Load skill groups when Skill Groups tab is opened
+   */
+  useEffect(() => {
+    if (isOpen && activeTab === 'skill-groups') {
+      loadSkillGroups();
+      loadAllSkills();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadSkillGroups = async () => {
+    setIsLoadingGroups(true);
+    setError(null);
+    try {
+      const response = await window.electronAPI.listSkillGroups();
+      if (response.success && response.data) {
+        setSkillGroups(response.data);
+      } else {
+        setError(response.error?.message || 'Failed to load skill groups');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load skill groups';
+      setError(message);
+      console.error('Load skill groups error:', err);
+    } finally {
+      setIsLoadingGroups(false);
+    }
+  };
+
+  const loadAllSkills = async () => {
+    try {
+      const response = await window.electronAPI.listSkills();
+      if (response.success && response.data) {
+        setAllSkills(response.data);
+      }
+    } catch (err) {
+      console.error('Load skills error:', err);
+    }
+  };
+
+  /**
+   * Handle add skill group
+   */
+  const handleAddGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsAddingGroup(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await window.electronAPI.createSkillGroup({
+        name: newGroupName,
+        description: newGroupDescription,
+        color: newGroupColor,
+        icon: newGroupIcon,
+      });
+
+      if (response.success && response.data) {
+        setSuccess(t('settings.groupCreated'));
+        setNewGroupName('');
+        setNewGroupDescription('');
+        setNewGroupColor('#3B82F6');
+        setNewGroupIcon('📁');
+        setShowAddGroupForm(false);
+        await loadSkillGroups();
+      } else {
+        setError(response.error?.message || 'Failed to create group');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create group';
+      setError(message);
+      console.error('Add group error:', err);
+    } finally {
+      setIsAddingGroup(false);
+    }
+  };
+
+  /**
+   * Handle edit skill group - start editing
+   */
+  const handleStartEditGroup = (group: SkillGroup) => {
+    setEditingGroupId(group.id);
+    setEditGroupName(group.name);
+    setEditGroupDescription(group.description || '');
+    setEditGroupColor(group.color || '#3B82F6');
+    setEditGroupIcon(group.icon || '📁');
+    setError(null);
+    setSuccess(null);
+  };
+
+  /**
+   * Handle cancel edit
+   */
+  const handleCancelEditGroup = () => {
+    setEditingGroupId(null);
+    setEditGroupName('');
+    setEditGroupDescription('');
+    setEditGroupColor('#3B82F6');
+    setEditGroupIcon('📁');
+  };
+
+  /**
+   * Handle save edit group
+   */
+  const handleSaveEditGroup = async (groupId: string) => {
+    setIsUpdatingGroup(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await window.electronAPI.updateSkillGroup(groupId, {
+        name: editGroupName,
+        description: editGroupDescription,
+        color: editGroupColor,
+        icon: editGroupIcon,
+      });
+
+      if (response.success) {
+        setSuccess(t('settings.groupUpdated'));
+        setEditingGroupId(null);
+        await loadSkillGroups();
+      } else {
+        setError(response.error?.message || 'Failed to update group');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update group';
+      setError(message);
+      console.error('Update group error:', err);
+    } finally {
+      setIsUpdatingGroup(false);
+    }
+  };
+
+  /**
+   * Handle delete skill group
+   */
+  const handleDeleteGroup = async (groupId: string) => {
+    const group = skillGroups.find(g => g.id === groupId);
+    const groupName = group?.name || 'this group';
+
+    if (!window.confirm(
+      t('settings.deleteGroupConfirm', { name: groupName })
+    )) {
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await window.electronAPI.deleteSkillGroup(groupId);
+      if (response.success) {
+        setSuccess(t('settings.groupDeleted'));
+        await loadSkillGroups();
+      } else {
+        setError(response.error?.message || 'Failed to delete group');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete group';
+      setError(message);
+      console.error('Delete group error:', err);
+    }
+  };
+
+  /**
+   * Handle add skill to group
+   */
+  const handleAddSkillToGroup = async (groupId: string, skillName: string) => {
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await window.electronAPI.addSkillToGroup(groupId, skillName);
+      if (response.success) {
+        setSuccess(t('settings.groupUpdated'));
+        await loadSkillGroups();
+      } else {
+        setError(response.error?.message || 'Failed to add skill to group');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to add skill to group';
+      setError(message);
+      console.error('Add skill to group error:', err);
+    }
+  };
+
+  /**
+   * Handle remove skill from group
+   */
+  const handleRemoveSkillFromGroup = async (groupId: string, skillName: string) => {
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await window.electronAPI.removeSkillFromGroup(groupId, skillName);
+      if (response.success) {
+        setSuccess(t('settings.groupUpdated'));
+        await loadSkillGroups();
+      } else {
+        setError(response.error?.message || 'Failed to remove skill from group');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to remove skill from group';
+      setError(message);
+      console.error('Remove skill from group error:', err);
+    }
+  };
 
   /**
    * Handle test AI connection
@@ -643,6 +868,19 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               }`}
             >
               {t('settings.privateRepositories')}
+            </button>
+            <button
+              onClick={() => {
+                console.log('[Settings] Skill Groups tab clicked');
+                setActiveTab('skill-groups');
+              }}
+              className={`pb-3 px-1 text-sm font-medium transition-colors ${
+                activeTab === 'skill-groups'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
+            >
+              {t('settings.skillGroups')}
             </button>
             <button
               onClick={() => {
@@ -1571,6 +1809,364 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                           >
                             {t('settings.removeRepository')}
                           </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Skill Groups Tab */}
+        {activeTab === 'skill-groups' && (
+          <div>
+            {/* Add Group Button */}
+            <div className="mb-3">
+              <button
+                onClick={() => setShowAddGroupForm(!showAddGroupForm)}
+                className="btn btn-primary btn-sm"
+                disabled={isAddingGroup}
+              >
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                {t('settings.addGroup')}
+              </button>
+            </div>
+
+            {/* Add Group Form */}
+            {showAddGroupForm && (
+              <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <h3 className="text-sm font-medium text-slate-700 mb-3">{t('settings.addGroup')}</h3>
+                <form onSubmit={handleAddGroup}>
+                  <div className="space-y-3">
+                    {/* Group Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        {t('settings.groupName')} *
+                      </label>
+                      <input
+                        type="text"
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        placeholder={t('settings.groupNamePlaceholder')}
+                        className="input w-full"
+                        disabled={isAddingGroup}
+                        required
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        {t('settings.groupDescription')}
+                      </label>
+                      <input
+                        type="text"
+                        value={newGroupDescription}
+                        onChange={(e) => setNewGroupDescription(e.target.value)}
+                        placeholder={t('settings.groupDescriptionPlaceholder')}
+                        className="input w-full"
+                        disabled={isAddingGroup}
+                      />
+                    </div>
+
+                    {/* Color and Icon - Side by side */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          {t('settings.groupColor')}
+                        </label>
+                        <input
+                          type="color"
+                          value={newGroupColor}
+                          onChange={(e) => setNewGroupColor(e.target.value)}
+                          className="w-full h-10 rounded border border-slate-300 cursor-pointer"
+                          disabled={isAddingGroup}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          {t('settings.groupIcon')}
+                        </label>
+                        <input
+                          type="text"
+                          value={newGroupIcon}
+                          onChange={(e) => setNewGroupIcon(e.target.value)}
+                          placeholder="📁"
+                          className="input w-full text-center text-xl"
+                          disabled={isAddingGroup}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddGroupForm(false);
+                        setNewGroupName('');
+                        setNewGroupDescription('');
+                        setNewGroupColor('#3B82F6');
+                        setNewGroupIcon('📁');
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      disabled={isAddingGroup}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary btn-sm"
+                      disabled={isAddingGroup || !newGroupName.trim()}
+                    >
+                      {isAddingGroup ? t('common.creating') : t('common.create')}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Success message */}
+            {success && activeTab === 'skill-groups' && (
+              <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-green-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <p className="text-sm text-green-400">{success}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error message */}
+            {error && activeTab === 'skill-groups' && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-red-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Groups List */}
+            {isLoadingGroups ? (
+              <div className="flex items-center justify-center py-6">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
+            ) : skillGroups.length === 0 ? (
+              <div className="text-center py-6">
+                <svg
+                  className="mx-auto h-10 w-10 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+                <p className="mt-2 text-sm text-slate-600">{t('settings.noGroups')}</p>
+                <p className="mt-1 text-xs text-slate-500">{t('settings.noGroupsDescription')}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {skillGroups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="p-3 bg-slate-50 border border-slate-200 rounded-lg"
+                  >
+                    {editingGroupId === group.id ? (
+                      // Edit Form
+                      <div className="space-y-2.5">
+                        <h4 className="text-sm font-medium text-slate-900">{t('settings.editGroup')}</h4>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              {t('settings.groupName')}
+                            </label>
+                            <input
+                              type="text"
+                              value={editGroupName}
+                              onChange={(e) => setEditGroupName(e.target.value)}
+                              className="input w-full text-sm"
+                              disabled={isUpdatingGroup}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              {t('settings.groupDescription')}
+                            </label>
+                            <input
+                              type="text"
+                              value={editGroupDescription}
+                              onChange={(e) => setEditGroupDescription(e.target.value)}
+                              className="input w-full text-sm"
+                              disabled={isUpdatingGroup}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                {t('settings.groupColor')}
+                              </label>
+                              <input
+                                type="color"
+                                value={editGroupColor}
+                                onChange={(e) => setEditGroupColor(e.target.value)}
+                                className="w-full h-8 rounded border border-slate-300 cursor-pointer"
+                                disabled={isUpdatingGroup}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                {t('settings.groupIcon')}
+                              </label>
+                              <input
+                                type="text"
+                                value={editGroupIcon}
+                                onChange={(e) => setEditGroupIcon(e.target.value)}
+                                className="input w-full text-sm text-center"
+                                disabled={isUpdatingGroup}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleSaveEditGroup(group.id)}
+                            disabled={isUpdatingGroup}
+                            className="btn btn-primary btn-sm"
+                          >
+                            {isUpdatingGroup ? t('common.saving') : t('common.save')}
+                          </button>
+                          <button
+                            onClick={handleCancelEditGroup}
+                            disabled={isUpdatingGroup}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            {t('common.cancel')}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Normal Display
+                      <div>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="text-xl"
+                              style={{ color: group.color }}
+                            >
+                              {group.icon || '📁'}
+                            </span>
+                            <div>
+                              <h4
+                                className="text-sm font-medium"
+                                style={{ color: group.color }}
+                              >
+                                {group.name}
+                              </h4>
+                              {group.description && (
+                                <p className="text-xs text-slate-500">{group.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleStartEditGroup(group)}
+                              className="btn btn-secondary btn-sm"
+                              title={t('settings.editGroup')}
+                            >
+                              {t('common.edit')}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteGroup(group.id)}
+                              className="btn btn-secondary btn-sm text-red-600 hover:text-red-700"
+                              title={t('settings.deleteGroup')}
+                            >
+                              {t('common.delete')}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Skills in group */}
+                        <div className="mt-2 pt-2 border-t border-slate-200">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs text-slate-500">
+                              {t('settings.skillsInGroup', { count: group.skills.length })}
+                            </span>
+                            <select
+                              className="text-xs border border-slate-300 rounded px-2 py-1"
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  handleAddSkillToGroup(group.id, e.target.value);
+                                  e.target.value = '';
+                                }
+                              }}
+                              value=""
+                            >
+                              <option value="">{t('settings.addSkillsToGroup')}</option>
+                              {allSkills
+                                .filter(s => !group.skills.includes(s.name))
+                                .map(skill => (
+                                  <option key={skill.path} value={skill.name}>
+                                    {skill.name}
+                                  </option>
+                                ))
+                              }
+                            </select>
+                          </div>
+                          {group.skills.length === 0 ? (
+                            <p className="text-xs text-slate-400 italic">{t('settings.noSkillsInGroup')}</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {group.skills.map(skillName => (
+                                <span
+                                  key={skillName}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full"
+                                  style={{ backgroundColor: `${group.color}20`, color: group.color }}
+                                >
+                                  {skillName}
+                                  <button
+                                    onClick={() => handleRemoveSkillFromGroup(group.id, skillName)}
+                                    className="hover:opacity-70"
+                                    title={t('settings.removeFromGroup')}
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

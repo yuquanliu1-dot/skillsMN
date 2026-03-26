@@ -327,6 +327,8 @@ export interface AppConfiguration extends BaseConfiguration {
   ai: AIConfigSection;
   /** Private repository settings */
   privateRepos: PrivateRepoConfigSection;
+  /** Skill groups configuration */
+  skillGroups?: SkillGroupsConfig;
 }
 
 // ============================================================================
@@ -944,4 +946,40 @@ export type RegistryErrorCode =
   | 'DISK_SPACE_ERROR'
   | 'INVALID_SKILL'
   | 'INSTALLATION_FAILED';
+
+// ============================================================================
+// Skill Group Types
+// ============================================================================
+
+/**
+ * Skill group for organizing skills
+ */
+export interface SkillGroup {
+  /** Unique group identifier */
+  id: string;
+  /** Group display name */
+  name: string;
+  /** Group description */
+  description?: string;
+  /** Group color (hex code) */
+  color?: string;
+  /** Group icon (emoji or icon name) */
+  icon?: string;
+  /** List of skill names in this group */
+  skills: string[];
+  /** Creation timestamp */
+  createdAt: string;
+  /** Last update timestamp */
+  updatedAt: string;
+}
+
+/**
+ * Skill groups configuration section
+ */
+export interface SkillGroupsConfig {
+  /** Configuration version */
+  version: number;
+  /** List of skill groups */
+  groups: SkillGroup[];
+}
 

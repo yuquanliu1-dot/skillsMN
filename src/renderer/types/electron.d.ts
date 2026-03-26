@@ -29,6 +29,7 @@ import type {
   NormalizedMessage,
   PermissionDecision,
   PendingPermissionRequest,
+  SkillGroup,
 } from '../../shared/types';
 
 export interface ElectronAPI {
@@ -230,6 +231,16 @@ export interface ElectronAPI {
   loadAIConversations: () => Promise<IPCResponse<import('../../shared/types').AIConversation[]>>;
   getAIConversation: (conversationId: string) => Promise<IPCResponse<import('../../shared/types').AIConversation | null>>;
   deleteAIConversation: (conversationId: string) => Promise<IPCResponse<void>>;
+
+  // Skill Group Operations
+  listSkillGroups: () => Promise<IPCResponse<SkillGroup[]>>;
+  getSkillGroup: (id: string) => Promise<IPCResponse<SkillGroup>>;
+  createSkillGroup: (data: Omit<SkillGroup, 'id' | 'skills' | 'createdAt' | 'updatedAt'>) => Promise<IPCResponse<SkillGroup>>;
+  updateSkillGroup: (id: string, data: Partial<Omit<SkillGroup, 'id' | 'createdAt'>>) => Promise<IPCResponse<SkillGroup>>;
+  deleteSkillGroup: (id: string) => Promise<IPCResponse<void>>;
+  addSkillToGroup: (groupId: string, skillName: string) => Promise<IPCResponse<SkillGroup>>;
+  removeSkillFromGroup: (groupId: string, skillName: string) => Promise<IPCResponse<SkillGroup>>;
+  reorderSkillGroups: (groupIds: string[]) => Promise<IPCResponse<void>>;
 }
 
 declare global {

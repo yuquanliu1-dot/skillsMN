@@ -257,7 +257,32 @@
 
     "language": "Language",
     "languageDescription": "Select your preferred language. Changes take effect immediately.",
-    "languageChanged": "Language changed successfully"
+    "languageChanged": "Language changed successfully",
+
+    "skillGroups": "Skill Groups",
+    "skillGroupsDescription": "Organize your skills into groups for better management",
+    "noGroups": "No skill groups created yet",
+    "noGroupsDescription": "Create groups to organize your skills by category, project, or any criteria you prefer",
+    "addGroup": "Add Group",
+    "editGroup": "Edit Group",
+    "deleteGroup": "Delete Group",
+    "deleteGroupConfirm": "Delete \"{{name}}\"? Skills in this group will not be deleted.",
+    "groupName": "Group Name",
+    "groupNamePlaceholder": "My Group",
+    "groupDescription": "Description (optional)",
+    "groupDescriptionPlaceholder": "A brief description of this group",
+    "groupColor": "Color",
+    "groupIcon": "Icon",
+    "groupIconPlaceholder": "📁",
+    "groupCreated": "Group created successfully",
+    "groupUpdated": "Group updated successfully",
+    "groupDeleted": "Group deleted successfully",
+    "skillsInGroup": "{{count}} skills",
+    "selectGroup": "Select a group",
+    "assignToGroup": "Assign to Group",
+    "removeFromGroup": "Remove from Group",
+    "noSkillsInGroup": "No skills in this group",
+    "addSkillsToGroup": "Add skills to this group"
   },
 
   "setup": {

@@ -36,6 +36,7 @@ import type {
   NormalizedMessage,
   PermissionDecision,
   PendingPermissionRequest,
+  SkillGroup,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
@@ -496,6 +497,42 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   deleteAIConversation: (conversationId: string): Promise<IPCResponse<void>> => {
     return ipcRenderer.invoke('ai-conversation:delete', conversationId);
+  },
+
+  // ============================================================================
+  // Skill Group Operations
+  // ============================================================================
+
+  listSkillGroups: (): Promise<IPCResponse<SkillGroup[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_LIST);
+  },
+
+  getSkillGroup: (id: string): Promise<IPCResponse<SkillGroup>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_GET, { id });
+  },
+
+  createSkillGroup: (data: Omit<SkillGroup, 'id' | 'skills' | 'createdAt' | 'updatedAt'>): Promise<IPCResponse<SkillGroup>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_CREATE, { data });
+  },
+
+  updateSkillGroup: (id: string, data: Partial<Omit<SkillGroup, 'id' | 'createdAt'>>): Promise<IPCResponse<SkillGroup>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_UPDATE, { id, data });
+  },
+
+  deleteSkillGroup: (id: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_DELETE, { id });
+  },
+
+  addSkillToGroup: (groupId: string, skillName: string): Promise<IPCResponse<SkillGroup>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_ADD_SKILL, { groupId, skillName });
+  },
+
+  removeSkillFromGroup: (groupId: string, skillName: string): Promise<IPCResponse<SkillGroup>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_REMOVE_SKILL, { groupId, skillName });
+  },
+
+  reorderSkillGroups: (groupIds: string[]): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_REORDER, { groupIds });
   },
 });
 
