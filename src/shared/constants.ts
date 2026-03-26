@@ -145,9 +145,16 @@ export const IPC_CHANNELS = {
   AI_GENERATE: 'ai:generate',
   AI_CANCEL: 'ai:cancel',
   AI_CHUNK: 'ai:chunk',
+  AI_MESSAGE: 'ai:message', // NormalizedMessage from main to renderer
   AI_CONFIG_GET: 'ai:config:get',
   AI_CONFIG_SAVE: 'ai:config:save',
   AI_CONFIG_TEST: 'ai:config:test',
+  AI_ABORT_SESSION: 'ai:abort-session',
+  AI_CHECK_SESSION_STATUS: 'ai:check-session-status',
+  AI_GET_ACTIVE_SESSIONS: 'ai:get-active-sessions',
+  AI_RESOLVE_PERMISSION: 'ai:resolve-permission',
+  AI_GET_PENDING_PERMISSIONS: 'ai:get-pending-permissions',
+  AI_RECONNECT_SESSION: 'ai:reconnect-session',
 
   // GitHub operations (Public Skill Discovery - Feature 004)
   GITHUB_SEARCH_SKILLS: 'github:search-skills',

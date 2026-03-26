@@ -29,6 +29,8 @@ export interface AIGenerationRequest {
     selectedText?: string;
     /** Skill name */
     name?: string;
+    /** Full path to the current skill directory (for modify mode - ensures writes go to this directory) */
+    skillPath?: string;
     /** Skill metadata */
     metadata?: Record<string, any>;
     /** Target directory for new skills */

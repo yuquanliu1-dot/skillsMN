@@ -94,7 +94,7 @@ function appReducer(state: AppState, action: Action): AppState {
 interface AppContextValue {
   state: AppState;
   dispatch: React.Dispatch<Action>;
-  loadSkills: () => Promise<void>;
+  loadSkills: () => Promise<Skill[] | undefined>;
 }
 
 export const AppContext = createContext<AppContextValue | null>(null);
@@ -119,7 +119,7 @@ export default function App(): JSX.Element {
   const [skillUpdates, setSkillUpdates] = useState<Record<string, VersionComparison>>({});
 
   // Ref to store latest loadSkills function for file watcher callback
-  const loadSkillsRef = useRef<() => Promise<void>>(async () => {});
+  const loadSkillsRef = useRef<() => Promise<Skill[] | undefined>>(async () => undefined);
   // Ref to prevent concurrent loadSkills calls
   const isLoadingSkillsRef = useRef(false);
   const [viewingPrivateSkill, setViewingPrivateSkill] = useState<{
@@ -267,8 +267,9 @@ export default function App(): JSX.Element {
 
   /**
    * Load skills from file system
+   * @returns The loaded skills array, or undefined if loading was skipped/failed
    */
-  const loadSkills = useCallback(async (): Promise<void> => {
+  const loadSkills = useCallback(async (): Promise<Skill[] | undefined> => {
     if (!state.config) {
       console.log('⚠️ [loadSkills] No config, skipping');
       return;
@@ -286,9 +287,11 @@ export default function App(): JSX.Element {
       const skills = await ipcClient.listSkills(state.config);
       console.log(`✅ [loadSkills] Loaded ${skills.length} skills`);
       dispatch({ type: 'SET_SKILLS', payload: skills });
+      return skills;
     } catch (error) {
       console.error('❌ [loadSkills] Failed to load skills:', error);
       dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
+      return;
     } finally {
       isLoadingSkillsRef.current = false;
     }
@@ -528,7 +531,19 @@ export default function App(): JSX.Element {
       }
 
       // Refresh skill list
-      await loadSkills();
+      const skillsResponse = await loadSkills();
+
+      // Open the newly created skill in the editor
+      // Use the returned skills from loadSkills to avoid stale closure issue
+      if (response.data?.path) {
+        const newSkillPath = response.data.path;
+        // Find skill from the freshly loaded skills
+        const newSkill = skillsResponse?.find(s => s.path === newSkillPath);
+        if (newSkill) {
+          setEditingSkill(newSkill);
+          setSelectedSkillPath(newSkill.path);
+        }
+      }
 
       // Show success notification
       showToast(`Skill "${name}" created successfully`, 'success');
@@ -890,8 +905,23 @@ export default function App(): JSX.Element {
                   isInline={true}
                   config={state.config?.skillEditor}
                   appConfig={state.config}
-                  onSkillCreated={() => {
-                    loadSkills();
+                  onSkillCreated={async (skillInfo) => {
+                    // Reload skills first
+                    await loadSkills();
+
+                    // If skill info is provided, navigate to the new skill
+                    if (skillInfo?.path) {
+                      // Wait a bit for the skills list to update
+                      setTimeout(() => {
+                        // Find the newly created skill in the updated list
+                        const newSkill = state.skills.find(s => s.path === skillInfo.path);
+                        if (newSkill) {
+                          setEditingSkill(newSkill);
+                          setSelectedSkillPath(newSkill.path);
+                        }
+                      }, 100);
+                    }
+
                     showToast('Skill created successfully!', 'success');
                   }}
                   onUploadSkill={handleUploadSkill}

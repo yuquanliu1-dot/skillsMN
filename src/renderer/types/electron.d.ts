@@ -26,6 +26,9 @@ import type {
   AgentTool,
   SkillFileTreeNode,
   SkillFileContent,
+  NormalizedMessage,
+  PermissionDecision,
+  PendingPermissionRequest,
 } from '../../shared/types';
 
 export interface ElectronAPI {
@@ -73,9 +76,25 @@ export interface ElectronAPI {
   cancelAI: (requestId: string) => Promise<IPCResponse<void>>;
   onAIChunk: (callback: (event: any, chunk: any) => void) => void;
   removeAIChunkListener: () => void;
+  onAIMessage: (callback: (event: any, message: NormalizedMessage) => void) => void;
+  removeAIMessageListener: () => void;
   getAIConfiguration: () => Promise<IPCResponse<AIConfiguration>>;
   saveAIConfiguration: (config: AIConfiguration) => Promise<IPCResponse<void>>;
   testAIConnection: (config?: AIConfiguration) => Promise<IPCResponse<{ success: boolean; latency?: number }>>;
+
+  // AI Session & Permission Management
+  abortAISession: (sessionId: string) => Promise<IPCResponse<boolean>>;
+  checkSessionStatus: (sessionId: string) => Promise<IPCResponse<{
+    isActive: boolean;
+    pendingPermissions: PendingPermissionRequest[];
+  }>>;
+  getActiveSessions: () => Promise<IPCResponse<string[]>>;
+  resolvePermission: (params: {
+    requestId: string;
+    decision: PermissionDecision;
+  }) => Promise<IPCResponse<boolean>>;
+  getPendingPermissions: (sessionId?: string) => Promise<IPCResponse<PendingPermissionRequest[]>>;
+  reconnectSession: (sessionId: string) => Promise<IPCResponse<boolean>>;
 
   // Private Repository Operations
   addPrivateRepo: (params: {

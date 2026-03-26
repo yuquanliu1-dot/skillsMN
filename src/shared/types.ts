@@ -461,11 +461,16 @@ export interface AIGenerationRequest {
     selectedText?: string;
     /** Target path for skill creation (parent directory where skill directory should be created) */
     targetPath?: string;
+    /** Full path to the current skill directory (for modify mode - ensures writes go to this directory) */
+    skillPath?: string;
   };
   /** Request timestamp */
   timestamp?: Date;
 }
 
+/**
+ * @deprecated Use NormalizedMessage instead
+ */
 export interface AIStreamChunk {
   /** Type of chunk */
   type: 'text' | 'tool_use' | 'complete' | 'error';
@@ -490,6 +495,139 @@ export type AIModel = string; // Allow any model name for flexibility
  * @deprecated Use AIConfigSection instead
  */
 export type AIConfiguration = AIConfigSection;
+
+// ============================================================================
+// Normalized Message Types (claudecodeui pattern)
+// ============================================================================
+
+/**
+ * Normalized message kind - unified across all AI providers
+ */
+export type MessageKind =
+  | 'text'           // Regular text message
+  | 'tool_use'       // Tool is being invoked
+  | 'tool_result'    // Tool execution result
+  | 'thinking'       // AI thinking/reasoning
+  | 'stream_delta'   // Streaming text chunk
+  | 'stream_end'     // Streaming completed
+  | 'error'          // Error occurred
+  | 'complete'       // Generation completed
+  | 'status'         // Status update (tokens, etc.)
+  | 'permission_request'   // Request user permission for tool
+  | 'permission_cancelled' // Permission request cancelled
+  | 'session_created'      // New session created
+  | 'interactive_prompt';  // Interactive prompt for user
+
+/**
+ * Normalized message format - all AI providers output to this format
+ */
+export interface NormalizedMessage {
+  /** Unique message ID */
+  id: string;
+  /** Session ID for tracking */
+  sessionId?: string;
+  /** ISO 8601 timestamp */
+  timestamp: string;
+  /** AI provider */
+  provider: AIProvider;
+  /** Message kind */
+  kind: MessageKind;
+
+  // kind-specific fields
+  /** Text content (for text, stream_delta, thinking, error kinds) */
+  content?: string;
+  /** Message role (for text kind) */
+  role?: 'user' | 'assistant';
+  /** Tool name (for tool_use, permission_request kinds) */
+  toolName?: string;
+  /** Tool input (for tool_use kind) */
+  toolInput?: any;
+  /** Tool ID (for tool_use, tool_result kinds) */
+  toolId?: string;
+  /** Tool result content (for tool_result kind) */
+  toolResult?: {
+    content: string;
+    isError: boolean;
+  };
+  /** Permission request ID (for permission_request, permission_cancelled kinds) */
+  requestId?: string;
+  /** Permission context (for permission_request kind) */
+  context?: any;
+  /** Error message (for error kind) */
+  error?: string;
+  /** Exit code (for complete kind) */
+  exitCode?: number;
+  /** Whether session was aborted (for complete kind) */
+  aborted?: boolean;
+  /** New session ID (for session_created kind) */
+  newSessionId?: string;
+  /** Token budget info (for status kind with text='token_budget') */
+  tokenBudget?: {
+    used: number;
+    total: number;
+  };
+  /** Status text (for status kind) */
+  text?: string;
+  /** Whether can interrupt (for status kind) */
+  canInterrupt?: boolean;
+}
+
+/**
+ * Helper function to create a NormalizedMessage with common fields pre-filled
+ */
+export function createNormalizedMessage(
+  fields: Partial<NormalizedMessage> & { kind: MessageKind; provider: AIProvider }
+): NormalizedMessage {
+  return {
+    id: fields.id || generateMessageId(fields.kind),
+    sessionId: fields.sessionId || '',
+    timestamp: fields.timestamp || new Date().toISOString(),
+    provider: fields.provider,
+    kind: fields.kind,
+    ...fields,
+  };
+}
+
+/**
+ * Generate a unique message ID
+ */
+export function generateMessageId(prefix: string = 'msg'): string {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Permission decision from user
+ */
+export interface PermissionDecision {
+  /** Whether to allow the tool use */
+  allow: boolean;
+  /** Optional updated input */
+  updatedInput?: any;
+  /** Optional message explaining the decision */
+  message?: string;
+  /** Optional: remember this permission for future */
+  rememberEntry?: string;
+  /** Whether cancelled */
+  cancelled?: boolean;
+}
+
+/**
+ * Pending permission request
+ */
+export interface PendingPermissionRequest {
+  /** Request ID */
+  requestId: string;
+  /** Tool name */
+  toolName: string;
+  /** Tool input */
+  input: any;
+  /** Additional context */
+  context?: any;
+  /** Session ID */
+  sessionId?: string;
+  /** When request was received */
+  receivedAt: Date;
+}
 
 // ============================================================================
 // AI Conversation History Types

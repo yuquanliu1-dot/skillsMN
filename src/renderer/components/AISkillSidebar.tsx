@@ -9,15 +9,19 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAIGeneration } from '../hooks/useAIGeneration';
-import type { Configuration, AIConversation, AIConversationMessage } from '../../shared/types';
+import { PermissionRequestPanel } from './PermissionRequestPanel';
+import type { Configuration, AIConversation, AIConversationMessage, PermissionDecision } from '../../shared/types';
 
 interface AISkillSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  onSkillCreated: () => void;
+  onSkillCreated: (skillInfo?: { name: string; path: string }) => void;
+  onSkillModified?: (filePath?: string) => void;
   config: Configuration | null;
   currentSkillContent?: string;
   currentSkillName?: string;
+  /** Full path to the current skill directory (for modify mode - ensures writes go to this directory) */
+  currentSkillPath?: string;
 }
 
 /**
@@ -120,13 +124,46 @@ const RECOMMENDED_PROMPTS = [
   },
 ];
 
+/**
+ * Question type for AskUserQuestion tool
+ */
+interface PendingQuestion {
+  question: string;
+  header: string;
+  options: Array<{
+    label: string;
+    description?: string;
+    preview?: string;
+  }>;
+  multiSelect: boolean;
+  selectedOptions: Set<number>;
+}
+
+/**
+ * AskUserQuestion tool input structure
+ */
+interface AskUserQuestionInput {
+  questions: Array<{
+    question: string;
+    header?: string;
+    options: Array<{
+      label: string;
+      description?: string;
+      preview?: string;
+    }>;
+    multiSelect?: boolean;
+  }>;
+}
+
 export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   isOpen,
   onClose,
   onSkillCreated,
+  onSkillModified,
   config,
   currentSkillContent,
   currentSkillName,
+  currentSkillPath,
 }) => {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<InternalMessage[]>([]);
@@ -134,6 +171,10 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const [showPromptMenu, setShowPromptMenu] = useState(false);
   const [showHistoryMenu, setShowHistoryMenu] = useState(false);
+
+  // Pending questions from AskUserQuestion tool
+  const [pendingQuestions, setPendingQuestions] = useState<PendingQuestion[]>([]);
+  const [isWaitingForAnswers, setIsWaitingForAnswers] = useState(false);
 
   // Conversation history state
   const [conversations, setConversations] = useState<AIConversation[]>([]);
@@ -150,15 +191,34 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
     content,
     error,
     toolCalls,
+    pendingPermissions,
     isStreaming,
     isComplete,
     isIdle,
+    isWaitingPermission,
     generate,
     stop,
     reset,
+    resolvePermission,
+    abort,
   } = useAIGeneration({
     onComplete: async () => {
       console.log('AI skill generation complete - file created by Agent SDK');
+
+      // Extract created skill path from tool calls
+      const writeToolCall = toolCalls.find(t => t.name === 'Write');
+      if (writeToolCall?.input?.file_path) {
+        const filePath = writeToolCall.input.file_path as string;
+        // Extract skill name from path (e.g., /path/to/skills/skill-name/SKILL.md -> skill-name)
+        const pathParts = filePath.replace(/\\/g, '/').split('/');
+        const skillsIndex = pathParts.findIndex(p => p === 'skills');
+        if (skillsIndex !== -1 && pathParts.length > skillsIndex + 1) {
+          const skillName = pathParts[skillsIndex + 1];
+          onSkillCreated({ name: skillName, path: filePath });
+          return;
+        }
+      }
+
       onSkillCreated();
     },
     onError: (errorMessage) => {
@@ -167,13 +227,17 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   });
 
   /**
-   * Load conversation history on mount
+   * Load conversation history on mount or when skill changes
    */
   useEffect(() => {
     if (isOpen) {
+      // Reset current conversation when skill changes
+      setMessages([]);
+      setCurrentConversationId(null);
+      reset();
       loadConversations();
     }
-  }, [isOpen]);
+  }, [isOpen, currentSkillPath]);
 
   /**
    * Handle clicking outside menus to close them
@@ -192,21 +256,25 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   }, []);
 
   /**
-   * Load all conversations from storage
+   * Load all conversations from storage, filtered by current skill
    */
   const loadConversations = useCallback(async () => {
     setIsLoadingHistory(true);
     try {
       const response = await window.electronAPI.loadAIConversations();
       if (response.success && response.data) {
-        setConversations(response.data);
+        // Filter conversations by current skill
+        const filtered = currentSkillName
+          ? response.data.filter(c => c.skillName === currentSkillName)
+          : response.data.filter(c => !c.skillName); // Show unassociated conversations when no skill is open
+        setConversations(filtered);
       }
     } catch (error) {
       console.error('Failed to load conversations:', error);
     } finally {
       setIsLoadingHistory(false);
     }
-  }, []);
+  }, [currentSkillName]);
 
   /**
    * Save current conversation to storage
@@ -230,7 +298,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         : now,
       updatedAt: now,
       skillName: currentSkillName,
-      skillPath: undefined,
+      skillPath: currentSkillPath,
     };
 
     try {
@@ -243,7 +311,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       console.error('Failed to save conversation:', error);
     }
     return null;
-  }, [conversations, currentSkillName, loadConversations]);
+  }, [conversations, currentSkillName, currentSkillPath, loadConversations]);
 
   /**
    * Load a specific conversation
@@ -307,6 +375,23 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   }, []);
 
   /**
+   * Auto-expand the last tool call during streaming
+   * Previous tool calls are collapsed, only the latest one is expanded
+   */
+  useEffect(() => {
+    if (isStreaming && toolCalls.length > 0) {
+      // Find the streaming message to get its ID
+      const streamingMsg = messages.find(m => m.isStreaming);
+      if (streamingMsg) {
+        // Only expand the last tool call, collapse all others
+        const lastToolIndex = toolCalls.length - 1;
+        const lastToolKey = `${streamingMsg.id}-${lastToolIndex}`;
+        setExpandedTools(new Set([lastToolKey]));
+      }
+    }
+  }, [isStreaming, toolCalls.length, messages]);
+
+  /**
    * Scroll to bottom when new messages arrive
    */
   useEffect(() => {
@@ -325,20 +410,29 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   }, [isOpen]);
 
   /**
-   * Update streaming message with content
+   * Update streaming message with content and tool calls
+   * This must trigger whenever toolCalls changes, even without text content
    */
   useEffect(() => {
-    if (isStreaming && content) {
+    if (isStreaming && (content || toolCalls.length > 0)) {
       setMessages((prev) => {
         const streamingMsgIndex = prev.findIndex((m) => m.isStreaming);
         if (streamingMsgIndex >= 0) {
-          const updated = [...prev];
-          updated[streamingMsgIndex] = {
-            ...updated[streamingMsgIndex],
-            content,
-            toolCalls,
-          };
-          return updated;
+          const currentMsg = prev[streamingMsgIndex];
+          // Only update if there's actual changes
+          const hasContentChanges = content !== currentMsg.content;
+          const hasToolChanges = toolCalls.length !== (currentMsg.toolCalls?.length || 0) ||
+            JSON.stringify(toolCalls) !== JSON.stringify(currentMsg.toolCalls || []);
+
+          if (hasContentChanges || hasToolChanges) {
+            const updated = [...prev];
+            updated[streamingMsgIndex] = {
+              ...updated[streamingMsgIndex],
+              content,
+              toolCalls,
+            };
+            return updated;
+          }
         }
         return prev;
       });
@@ -346,7 +440,183 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   }, [content, isStreaming, toolCalls]);
 
   /**
-   * Finalize streaming message when complete
+   * Detect AskUserQuestion tool calls and extract questions
+   * IMPORTANT: Stop streaming immediately to wait for user answers
+   */
+  useEffect(() => {
+    if (toolCalls && toolCalls.length > 0) {
+      const askUserTool = toolCalls.find(t => t.name === 'AskUserQuestion');
+      if (askUserTool?.input) {
+        const input = askUserTool.input as AskUserQuestionInput;
+        if (input.questions && Array.isArray(input.questions)) {
+          const questions: PendingQuestion[] = input.questions.map((q) => ({
+            question: q.question || '',
+            header: q.header || '',
+            options: (q.options || []).map(opt => ({
+              label: opt.label || '',
+              description: opt.description,
+              preview: opt.preview,
+            })),
+            multiSelect: q.multiSelect || false,
+            selectedOptions: new Set<number>(),
+          }));
+          setPendingQuestions(questions);
+          setIsWaitingForAnswers(true);
+
+          // CRITICAL: Stop the current stream to wait for user answers
+          // This prevents the AI from continuing to create the skill before getting answers
+          if (isStreaming) {
+            console.log('[AISkillSidebar] AskUserQuestion detected, stopping stream to wait for answers');
+            stop();
+          }
+        }
+      }
+    }
+  }, [toolCalls, isStreaming, stop]);
+
+  /**
+   * Detect Write tool calls and notify parent to refresh editor
+   * This allows the editor to refresh when the AI modifies the current skill file
+   */
+  useEffect(() => {
+    if (toolCalls && toolCalls.length > 0 && onSkillModified) {
+      const writeTool = toolCalls.find(t => t.name === 'Write');
+      if (writeTool?.input?.file_path) {
+        const filePath = writeTool.input.file_path as string;
+        console.log('[AISkillSidebar] Write tool detected, notifying parent to refresh:', filePath);
+        onSkillModified(filePath);
+      }
+    }
+  }, [toolCalls, onSkillModified]);
+
+  /**
+   * Handle selecting an option for a question
+   */
+  const handleSelectOption = useCallback((questionIndex: number, optionIndex: number) => {
+    setPendingQuestions(prev => {
+      const updated = [...prev];
+      const question = { ...updated[questionIndex] };
+
+      if (question.multiSelect) {
+        // Multi-select: toggle selection
+        const newSelected = new Set(question.selectedOptions);
+        if (newSelected.has(optionIndex)) {
+          newSelected.delete(optionIndex);
+        } else {
+          newSelected.add(optionIndex);
+        }
+        question.selectedOptions = newSelected;
+      } else {
+        // Single-select: replace selection
+        question.selectedOptions = new Set([optionIndex]);
+      }
+
+      updated[questionIndex] = question;
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Submit answers and continue conversation
+   */
+  const handleSubmitAnswers = useCallback(async () => {
+    if (pendingQuestions.length === 0) return;
+
+    // Build answer text
+    const answerParts: string[] = [];
+    pendingQuestions.forEach((q, qIndex) => {
+      const selectedLabels = Array.from(q.selectedOptions)
+        .map(optIndex => q.options[optIndex]?.label)
+        .filter(Boolean);
+
+      if (selectedLabels.length > 0) {
+        answerParts.push(`**${q.header || `Question ${qIndex + 1}`}:** ${selectedLabels.join(', ')}`);
+      }
+    });
+
+    const answerText = answerParts.join('\n');
+
+    // Clear pending questions
+    setPendingQuestions([]);
+    setIsWaitingForAnswers(false);
+
+    // Add user message with answers
+    const userMessage: InternalMessage = {
+      id: generateId(),
+      role: 'user',
+      content: answerText,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+
+    // Add placeholder for streaming assistant message (IMPORTANT: this is needed to show AI execution)
+    const assistantMessageId = generateId();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isStreaming: true,
+        toolCalls: [],
+      },
+    ]);
+
+    // Continue conversation with answers
+    const conversationContext = messages
+      .filter((m) => !m.isStreaming)
+      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n\n');
+
+    const skillContext: any = {
+      targetPath: config?.applicationSkillsDirectory,
+    };
+
+    if (currentSkillContent) {
+      skillContext.content = currentSkillContent;
+      skillContext.name = currentSkillName;
+      skillContext.skillPath = currentSkillPath;
+    }
+
+    const fullPrompt = `[Previous conversation]\n${conversationContext}\n\n[User's answers]\n${answerText}\n\nNow proceed to create the skill based on these answers.`;
+
+    await generate(fullPrompt, currentSkillContent ? 'modify' : 'new', skillContext);
+  }, [pendingQuestions, messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath]);
+
+  /**
+   * Skip answering questions (provide text input instead)
+   */
+  const handleSkipQuestions = useCallback(() => {
+    setPendingQuestions([]);
+    setIsWaitingForAnswers(false);
+  }, []);
+
+  /**
+   * Handle resolving a permission request
+   */
+  const handleResolvePermission = useCallback(async (
+    requestId: string,
+    allow: boolean,
+    rememberEntry?: string
+  ) => {
+    const decision: PermissionDecision = {
+      allow,
+      rememberEntry,
+    };
+    await resolvePermission(requestId, decision);
+  }, [resolvePermission]);
+
+  /**
+   * Handle dismissing a permission request
+   */
+  const handleDismissPermission = useCallback((requestId: string) => {
+    // Dismiss by denying without remembering
+    handleResolvePermission(requestId, false);
+  }, [handleResolvePermission]);
+
+  /**
+   * Finalize streaming message and save conversation when complete
    */
   useEffect(() => {
     if (isComplete && content) {
@@ -360,29 +630,24 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             toolCalls,
             isStreaming: false,
           };
+
+          // Save conversation with finalized messages (including toolCalls)
+          const finalMessages = updated.filter(m => !m.isStreaming);
+          if (finalMessages.length > 0) {
+            saveCurrentConversation(finalMessages, currentConversationId).then(newId => {
+              if (newId && !currentConversationId) {
+                setCurrentConversationId(newId);
+              }
+            });
+          }
+
           return updated;
         }
         return prev;
       });
       reset();
     }
-  }, [isComplete, content, reset]);
-
-  /**
-   * Save conversation after streaming is complete
-   */
-  useEffect(() => {
-    if (isComplete && content) {
-      const finalMessages = messages.filter(m => !m.isStreaming);
-      if (finalMessages.length > 0) {
-        saveCurrentConversation(finalMessages, currentConversationId).then(newId => {
-          if (newId && !currentConversationId) {
-            setCurrentConversationId(newId);
-          }
-        });
-      }
-    }
-  }, [isComplete, content, messages, saveCurrentConversation, currentConversationId]);
+  }, [isComplete, content, toolCalls, reset, saveCurrentConversation, currentConversationId]);
 
   /**
    * Handle sending a message
@@ -429,6 +694,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
     if (currentSkillContent) {
       skillContext.content = currentSkillContent;
       skillContext.name = currentSkillName;
+      skillContext.skillPath = currentSkillPath;
     }
 
     // Include conversation context in prompt
@@ -437,7 +703,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       : userMessage.content;
 
     await generate(fullPrompt, currentSkillContent ? 'modify' : 'new', skillContext);
-  }, [inputValue, isStreaming, messages, generate, config, currentSkillContent, currentSkillName]);
+  }, [inputValue, isStreaming, messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath]);
 
   /**
    * Handle stop generation
@@ -658,8 +924,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         )}
 
         {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={message.id}
+            data-testid={`message-${message.role}`}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
+              data-testid={message.role === 'assistant' ? 'ai-response-content' : undefined}
               className={`max-w-[95%] rounded-lg px-3 py-2 ${
                 message.role === 'user'
                   ? 'bg-purple-600 text-white'
@@ -725,14 +994,144 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                     const toolKey = `${message.id}-${index}`;
                     const isExpanded = expandedTools.has(toolKey);
                     if (!isExpanded || !tool.input) return null;
+
+                    // Format tool input in a user-friendly way
+                    const formatToolInput = (toolName: string, input: any): JSX.Element => {
+                      if (!input || typeof input !== 'object') {
+                        return <span className="text-slate-500">{String(input)}</span>;
+                      }
+
+                      switch (toolName) {
+                        case 'Write':
+                          return (
+                            <div className="space-y-1">
+                              {input.file_path && (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-slate-400">📁</span>
+                                  <span className="text-blue-600 font-medium break-all">{input.file_path}</span>
+                                </div>
+                              )}
+                              {input.content && (
+                                <div className="bg-slate-100 rounded p-1.5 max-h-24 overflow-y-auto">
+                                  <pre className="text-slate-600 whitespace-pre-wrap break-words text-[10px]">
+                                    {input.content.length > 500 ? input.content.substring(0, 500) + '...' : input.content}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          );
+
+                        case 'Read':
+                          return (
+                            <div className="flex items-center gap-1">
+                              <span className="text-slate-400">📖</span>
+                              <span className="text-blue-600 font-medium break-all">{input.file_path}</span>
+                            </div>
+                          );
+
+                        case 'Edit':
+                          return (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-400">✏️</span>
+                                <span className="text-blue-600 font-medium break-all">{input.file_path}</span>
+                              </div>
+                              {input.old_string && (
+                                <div className="text-[10px]">
+                                  <span className="text-red-500">- </span>
+                                  <span className="text-slate-500 line-through">{input.old_string.substring(0, 100)}{input.old_string.length > 100 ? '...' : ''}</span>
+                                </div>
+                              )}
+                              {input.new_string && (
+                                <div className="text-[10px]">
+                                  <span className="text-green-500">+ </span>
+                                  <span className="text-slate-600">{input.new_string.substring(0, 100)}{input.new_string.length > 100 ? '...' : ''}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+
+                        case 'Bash':
+                          return (
+                            <div className="flex items-start gap-1">
+                              <span className="text-slate-400">$</span>
+                              <code className="text-green-600 bg-green-50 px-1 rounded text-[10px] break-all">
+                                {input.command}
+                              </code>
+                            </div>
+                          );
+
+                        case 'Skill':
+                          return (
+                            <div className="flex items-center gap-1">
+                              <span className="text-slate-400">🎯</span>
+                              <span className="text-purple-600 font-medium">{input.skill}</span>
+                              {input.args && <span className="text-slate-400 text-[10px]">{input.args}</span>}
+                            </div>
+                          );
+
+                        case 'AskUserQuestion':
+                          return (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-amber-600">
+                                <span>❓</span>
+                                <span className="font-medium">Asking user...</span>
+                              </div>
+                              {input.questions && Array.isArray(input.questions) && input.questions.length > 0 && (
+                                <div className="text-[10px] text-slate-600 pl-4">
+                                  {input.questions.map((q: any, i: number) => (
+                                    <div key={i}>• {q.question || q.header || 'Question'}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+
+                        case 'Grep':
+                          return (
+                            <div className="space-y-0.5 text-[10px]">
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-400">🔍</span>
+                                <code className="text-blue-600">{input.pattern}</code>
+                              </div>
+                              {input.path && <span className="text-slate-400 pl-4">in: {input.path}</span>}
+                            </div>
+                          );
+
+                        case 'Glob':
+                          return (
+                            <div className="flex items-center gap-1">
+                              <span className="text-slate-400">📄</span>
+                              <code className="text-blue-600">{input.pattern}</code>
+                            </div>
+                          );
+
+                        default:
+                          // For unknown tools, show a simplified view
+                          const keys = Object.keys(input);
+                          if (keys.length === 0) return <span className="text-slate-400">No parameters</span>;
+                          return (
+                            <div className="space-y-0.5 text-[10px]">
+                              {keys.slice(0, 3).map(key => (
+                                <div key={key} className="flex gap-1">
+                                  <span className="text-slate-500">{key}:</span>
+                                  <span className="text-slate-700 truncate max-w-[200px]">
+                                    {typeof input[key] === 'string' ? input[key] : JSON.stringify(input[key])}
+                                  </span>
+                                </div>
+                              ))}
+                              {keys.length > 3 && <span className="text-slate-400">+{keys.length - 3} more</span>}
+                            </div>
+                          );
+                      }
+                    };
+
                     return (
                       <div
                         key={`detail-${index}`}
                         className="bg-slate-50 border border-slate-200 rounded p-2 text-xs"
                       >
-                        <pre className="text-slate-600 whitespace-pre-wrap break-words font-mono text-[10px]">
-                          {typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input, null, 2)}
-                        </pre>
+                        {formatToolInput(tool.name, tool.input)}
                       </div>
                     );
                   })}
@@ -750,11 +1149,106 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           </div>
         ))}
 
-        {/* Error display */}
-        {error && (
+        {/* Error display - hide "cancelled" errors as they're expected when waiting for user input */}
+        {error && !error.includes('cancelled') && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
             <div className="font-medium mb-0.5">{t('aiSidebar.error')}</div>
             <div>{error}</div>
+          </div>
+        )}
+
+        {/* Permission Request Panel - Tool permission requests */}
+        {isWaitingPermission && pendingPermissions.length > 0 && (
+          <PermissionRequestPanel
+            requests={pendingPermissions}
+            onResolve={handleResolvePermission}
+            onDismiss={handleDismissPermission}
+          />
+        )}
+
+        {/* Pending Questions UI - AskUserQuestion interaction */}
+        {isWaitingForAnswers && pendingQuestions.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
+            <div className="flex items-center gap-2 text-amber-700 font-medium text-xs">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{t('aiSidebar.pleaseAnswer')}</span>
+            </div>
+
+            {pendingQuestions.map((q, qIndex) => (
+              <div key={qIndex} className="bg-white rounded-lg border border-amber-100 p-2 space-y-2">
+                {/* Question header */}
+                <div className="text-xs">
+                  {q.header && (
+                    <span className="text-amber-600 font-medium mr-1">[{q.header}]</span>
+                  )}
+                  <span className="text-slate-700">{q.question}</span>
+                  {q.multiSelect && (
+                    <span className="text-slate-400 ml-1 text-[10px]">({t('aiSidebar.multiSelect')})</span>
+                  )}
+                </div>
+
+                {/* Options */}
+                <div className="space-y-1">
+                  {q.options.map((opt, optIndex) => {
+                    const isSelected = q.selectedOptions.has(optIndex);
+                    return (
+                      <button
+                        key={optIndex}
+                        onClick={() => handleSelectOption(qIndex, optIndex)}
+                        className={`w-full text-left px-2 py-1.5 rounded text-xs transition-all ${
+                          isSelected
+                            ? 'bg-amber-100 border-amber-300 text-amber-800 border'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 border hover:bg-slate-100 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-1.5">
+                          {/* Selection indicator */}
+                          <span className={`flex-shrink-0 w-3.5 h-3.5 rounded ${q.multiSelect ? 'rounded' : 'rounded-full'} border flex items-center justify-center ${
+                            isSelected
+                              ? 'bg-amber-500 border-amber-500'
+                              : 'border-slate-300 bg-white'
+                          }`}>
+                            {isSelected && (
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium">{opt.label}</div>
+                            {opt.description && (
+                              <div className="text-[10px] text-slate-400 mt-0.5">{opt.description}</div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Action buttons */}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleSubmitAnswers}
+                disabled={pendingQuestions.some(q => q.selectedOptions.size === 0)}
+                className="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                {t('aiSidebar.submitAnswers')}
+              </button>
+              <button
+                onClick={handleSkipQuestions}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium transition-colors"
+              >
+                {t('aiSidebar.skipQuestions')}
+              </button>
+            </div>
           </div>
         )}
 
@@ -810,6 +1304,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         <div className="relative">
           <textarea
             ref={inputRef}
+            data-testid="ai-prompt-input"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -841,6 +1336,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             ) : (
               <button
                 onClick={handleSend}
+                data-testid="ai-send-button"
                 disabled={!inputValue.trim()}
                 className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >

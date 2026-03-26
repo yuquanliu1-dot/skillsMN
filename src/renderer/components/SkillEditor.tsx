@@ -29,9 +29,10 @@ interface SkillEditorProps {
   readOnly?: boolean;
   config?: SkillEditorConfig;
   appConfig?: Configuration | null;
-  onSkillCreated?: () => void;
+  onSkillCreated?: (skillInfo?: { name: string; path: string }) => void;
   onUploadSkill?: (skill: Skill) => void;
   onCommitChanges?: (skill: Skill) => void;
+  onSkillModified?: (filePath?: string) => void;
 }
 
 export default function SkillEditor({
@@ -56,6 +57,7 @@ export default function SkillEditor({
   onSkillCreated,
   onUploadSkill,
   onCommitChanges,
+  onSkillModified,
 }: SkillEditorProps): JSX.Element {
   const { t } = useTranslation();
   const [content, setContent] = useState<string>('');
@@ -828,7 +830,7 @@ export default function SkillEditor({
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">{skill.name}</h2>
+            <h2 data-testid="editor-skill-name" className="text-lg font-semibold text-gray-900">{skill.name}</h2>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               {/* Source badge based on sourceMetadata.type */}
               {skill.sourceMetadata?.type === 'local' && (
@@ -1165,14 +1167,21 @@ export default function SkillEditor({
       <AISkillSidebar
         isOpen={isAISidebarOpen}
         onClose={() => setIsAISidebarOpen(false)}
-        onSkillCreated={() => {
-          onSkillCreated?.();
-          // Don't reload here - let the external change detection handle it
-          // The useEffect at line 649-681 will auto-reload when file actually changes
+        onSkillCreated={(skillInfo) => {
+          // Pass the skill info to parent (don't close the sidebar - let user continue conversation)
+          onSkillCreated?.(skillInfo);
+        }}
+        onSkillModified={(filePath) => {
+          // Refresh the editor if the modified file matches the current skill
+          if (filePath && skill.path && filePath.includes(skill.path)) {
+            console.log('[SkillEditor] Current skill was modified, reloading content...');
+            reloadSkillContent();
+          }
         }}
         config={appConfig}
         currentSkillContent={content}
         currentSkillName={skill.name}
+        currentSkillPath={skill.path}
       />
     </div>
   );

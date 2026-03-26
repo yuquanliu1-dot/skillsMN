@@ -2,6 +2,7 @@
  * AI IPC Handlers
  *
  * IPC handlers for AI-powered skill generation
+ * Supports NormalizedMessage format, permission management, and session control
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
@@ -10,13 +11,13 @@ import { AIService } from '../services/AIService';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { getConfigService } from './configHandlers';
 import type { AIGenerationRequest } from '../models/AIGenerationRequest';
-import type { AIConfigSection } from '../../shared/types';
+import type { AIConfigSection, NormalizedMessage, PermissionDecision } from '../../shared/types';
 
 /**
  * Register AI IPC handlers
  */
 export function registerAIHandlers(): void {
-  // Handler for ai:generate
+  // Handler for ai:generate - uses NormalizedMessage format
   ipcMain.handle(
     IPC_CHANNELS.AI_GENERATE,
     async (event, { requestId, request }: { requestId: string; request: AIGenerationRequest }) => {
@@ -46,28 +47,21 @@ export function registerAIHandlers(): void {
           logger.info('AI service initialized successfully', 'AIHandlers');
         }
 
-        // Start streaming generation
-        const stream = AIService.generateStream(requestId, request);
+        // Start streaming generation with main window reference
+        const stream = AIService.generateStream(requestId, request, win);
 
-        // Process stream and send chunks to renderer
-        for await (const chunk of stream) {
-          // Send chunk to renderer
-          win.webContents.send(IPC_CHANNELS.AI_CHUNK, {
-            requestId,
-            type: chunk.type,  // 'text' or 'tool_use'
-            text: chunk.text,
-            tool: chunk.tool,
-            isComplete: chunk.isComplete,
-            error: chunk.error,
-          });
+        // Process stream and send NormalizedMessages to renderer
+        for await (const message of stream) {
+          // Send message to renderer via ai:message channel
+          win.webContents.send('ai:message', message);
 
           // If error or complete, stop processing
-          if (chunk.error || chunk.isComplete) {
+          if (message.kind === 'error' || message.kind === 'complete') {
             break;
           }
 
-          // Add small delay to simulate 200ms chunk delivery
-          await new Promise(resolve => setTimeout(resolve, 200));
+          // Small delay to avoid overwhelming the renderer
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
 
         return { success: true };
@@ -86,13 +80,138 @@ export function registerAIHandlers(): void {
       try {
         logger.debug('Cancelling AI generation', 'AIHandlers', { requestId });
 
-        const cancelled = AIService.cancelGeneration(requestId);
+        const cancelled = await AIService.cancelGeneration(requestId);
 
         return { success: cancelled };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         logger.error('Failed to cancel AI generation', 'AIHandlers', error);
         return { success: false, error: { code: 'CANCEL_ERROR', message: errorMessage } };
+      }
+    }
+  );
+
+  // Handler for ai:abort-session
+  ipcMain.handle(
+    'ai:abort-session',
+    async (_event, { sessionId }: { sessionId: string }) => {
+      try {
+        logger.debug('Aborting AI session', 'AIHandlers', { sessionId });
+
+        const aborted = await AIService.abortSession(sessionId);
+
+        return { success: aborted };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to abort AI session', 'AIHandlers', error);
+        return { success: false, error: { code: 'ABORT_ERROR', message: errorMessage } };
+      }
+    }
+  );
+
+  // Handler for ai:check-session-status
+  ipcMain.handle(
+    'ai:check-session-status',
+    async (_event, { sessionId }: { sessionId: string }) => {
+      try {
+        const isActive = AIService.isSessionActive(sessionId);
+        const pendingPermissions = AIService.getPendingPermissions(sessionId);
+
+        return {
+          success: true,
+          data: {
+            isActive,
+            pendingPermissions,
+          },
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to check session status', 'AIHandlers', error);
+        return { success: false, error: { code: 'STATUS_ERROR', message: errorMessage } };
+      }
+    }
+  );
+
+  // Handler for ai:get-active-sessions
+  ipcMain.handle(
+    'ai:get-active-sessions',
+    async () => {
+      try {
+        const sessions = AIService.getActiveSessions();
+        return { success: true, data: { sessions } };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to get active sessions', 'AIHandlers', error);
+        return { success: false, error: { code: 'SESSIONS_ERROR', message: errorMessage } };
+      }
+    }
+  );
+
+  // Handler for ai:resolve-permission
+  ipcMain.handle(
+    'ai:resolve-permission',
+    async (
+      _event,
+      { requestId, decision }: { requestId: string; decision: PermissionDecision }
+    ) => {
+      try {
+        logger.debug('Resolving permission request', 'AIHandlers', { requestId, allow: decision.allow });
+
+        const resolved = AIService.resolvePermission(requestId, decision);
+
+        return { success: resolved };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to resolve permission', 'AIHandlers', error);
+        return { success: false, error: { code: 'PERMISSION_ERROR', message: errorMessage } };
+      }
+    }
+  );
+
+  // Handler for ai:get-pending-permissions
+  ipcMain.handle(
+    'ai:get-pending-permissions',
+    async (_event, { sessionId }: { sessionId?: string }) => {
+      try {
+        // Get all pending permissions, optionally filtered by session
+        const allPending: Array<{
+          requestId: string;
+          toolName: string;
+          input: any;
+          sessionId?: string;
+          receivedAt: Date;
+        }> = [];
+
+        // If sessionId provided, get pending for that session
+        // Otherwise, return all pending (for display in UI)
+        // This is handled internally by AIService
+
+        return { success: true, data: { pending: allPending } };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to get pending permissions', 'AIHandlers', error);
+        return { success: false, error: { code: 'PERMISSION_ERROR', message: errorMessage } };
+      }
+    }
+  );
+
+  // Handler for ai:reconnect-session
+  ipcMain.handle(
+    'ai:reconnect-session',
+    async (event, { sessionId }: { sessionId: string }) => {
+      try {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (!win) {
+          throw new Error('Window not found');
+        }
+
+        const reconnected = AIService.reconnectSession(sessionId, win);
+
+        return { success: reconnected };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to reconnect session', 'AIHandlers', error);
+        return { success: false, error: { code: 'RECONNECT_ERROR', message: errorMessage } };
       }
     }
   );

@@ -57,7 +57,7 @@ export default function Sidebar({
         </svg>
       ),
       description: t('sidebar.localSkillsDescription'),
-      disabled: !config?.projectDirectories || config.projectDirectories.length === 0,
+      disabled: false,
     },
     {
       id: 'discover' as const,
@@ -81,7 +81,7 @@ export default function Sidebar({
         </svg>
       ),
       description: t('sidebar.discoverDescription'),
-      disabled: !config?.projectDirectories || config.projectDirectories.length === 0,
+      disabled: false,
     },
     {
       id: 'private-repos' as const,
@@ -104,7 +104,7 @@ export default function Sidebar({
         </svg>
       ),
       description: t('sidebar.privateReposDescription'),
-      disabled: !config?.projectDirectories || config.projectDirectories.length === 0,
+      disabled: false,
     },
   ];
 

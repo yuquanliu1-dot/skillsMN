@@ -440,7 +440,11 @@
     "noConversations": "暂无对话",
     "deleteConversation": "删除对话",
     "yesterday": "昨天",
-    "daysAgo": "{{count}} 天前"
+    "daysAgo": "{{count}} 天前",
+    "pleaseAnswer": "请回答以下问题：",
+    "multiSelect": "可多选",
+    "submitAnswers": "提交答案",
+    "skipQuestions": "跳过"
   },
 
   "symlink": {
@@ -490,6 +494,23 @@
     "committing": "提交中...",
     "commitSuccess": "更改已成功提交",
     "commitFailed": "提交更改失败"
+  },
+
+  "permissions": {
+    "toolRequest": "工具权限请求",
+    "risk": {
+      "low": "低风险",
+      "medium": "中等风险",
+      "high": "高风险"
+    },
+    "toolWantsTo": "工具想要执行：",
+    "rememberChoice": "记住我对此工具的选择",
+    "allow": "允许",
+    "deny": "拒绝",
+    "dismiss": "关闭",
+    "noPendingRequests": "没有待处理的权限请求",
+    "waitingForPermission": "等待权限确认...",
+    "permissionResolved": "权限已处理"
   },
 
   "errors": {

@@ -440,7 +440,11 @@
     "noConversations": "No conversations yet",
     "deleteConversation": "Delete conversation",
     "yesterday": "Yesterday",
-    "daysAgo": "{{count}} days ago"
+    "daysAgo": "{{count}} days ago",
+    "pleaseAnswer": "Please answer the following questions:",
+    "multiSelect": "multi-select",
+    "submitAnswers": "Submit Answers",
+    "skipQuestions": "Skip"
   },
 
   "symlink": {
@@ -490,6 +494,23 @@
     "committing": "Committing...",
     "commitSuccess": "Changes committed successfully",
     "commitFailed": "Failed to commit changes"
+  },
+
+  "permissions": {
+    "toolRequest": "Tool Permission Request",
+    "risk": {
+      "low": "Low Risk",
+      "medium": "Medium Risk",
+      "high": "High Risk"
+    },
+    "toolWantsTo": "The tool wants to:",
+    "rememberChoice": "Remember my choice for this tool",
+    "allow": "Allow",
+    "deny": "Deny",
+    "dismiss": "Dismiss",
+    "noPendingRequests": "No pending permission requests",
+    "waitingForPermission": "Waiting for permission...",
+    "permissionResolved": "Permission resolved"
   },
 
   "errors": {

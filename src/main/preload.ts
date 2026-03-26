@@ -33,6 +33,9 @@ import type {
   AIConversation,
   SkillFileTreeNode,
   SkillFileContent,
+  NormalizedMessage,
+  PermissionDecision,
+  PendingPermissionRequest,
 } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
@@ -143,7 +146,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // ============================================================================
-  // AI Operations
+  // AI Operations (extended - Permission & Session management)
   // ============================================================================
 
   generateAI: (params: {
@@ -161,8 +164,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on(IPC_CHANNELS.AI_CHUNK, callback);
   },
 
+  onAIMessage: (callback: (event: any, message: NormalizedMessage) => void): void => {
+    ipcRenderer.on(IPC_CHANNELS.AI_MESSAGE, callback);
+  },
+
   removeAIChunkListener: (): void => {
     ipcRenderer.removeAllListeners(IPC_CHANNELS.AI_CHUNK);
+  },
+
+  removeAIMessageListener: (): void => {
+    ipcRenderer.removeAllListeners(IPC_CHANNELS.AI_MESSAGE);
   },
 
   getAIConfiguration: (): Promise<IPCResponse<AIConfiguration>> => {
@@ -175,6 +186,37 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   testAIConnection: (config?: AIConfiguration): Promise<IPCResponse<{ success: boolean; latency?: number }>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.AI_CONFIG_TEST, { config });
+  },
+
+  // Permission & Session Management
+  abortAISession: (sessionId: string): Promise<IPCResponse<boolean>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.AI_ABORT_SESSION, { sessionId });
+  },
+
+  checkSessionStatus: (sessionId: string): Promise<IPCResponse<{
+    isActive: boolean;
+    pendingPermissions: any[];
+  }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.AI_CHECK_SESSION_STATUS, { sessionId });
+  },
+
+  getActiveSessions: (): Promise<IPCResponse<string[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.AI_GET_ACTIVE_SESSIONS);
+  },
+
+  resolvePermission: (params: {
+    requestId: string;
+    decision: PermissionDecision;
+  }): Promise<IPCResponse<boolean>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.AI_RESOLVE_PERMISSION, params);
+  },
+
+  getPendingPermissions: (sessionId?: string): Promise<IPCResponse<any[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.AI_GET_PENDING_PERMISSIONS, { sessionId });
+  },
+
+  reconnectSession: (sessionId: string): Promise<IPCResponse<boolean>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.AI_RECONNECT_SESSION, { sessionId });
   },
 
   // ============================================================================
