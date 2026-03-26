@@ -266,10 +266,11 @@ export class MigrationService {
       return config.applicationSkillsDirectory;
     }
 
-    // Default to skills subdirectory in app installation directory
+    // Default to .claude/skills subdirectory in app installation directory
+    // This allows Claude Code to directly use the skills
     const { app } = require('electron');
     const appPath = app.getAppPath();
-    return path.join(appPath, 'skills');
+    return path.join(appPath, '.claude', 'skills');
   }
 
   /**

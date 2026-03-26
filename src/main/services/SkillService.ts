@@ -45,8 +45,9 @@ export class SkillService {
 
     // In packaged apps, use userData directory (writable location for app data)
     // In development, use the app root directory
+    // Default to .claude/skills subdirectory for Claude Code compatibility
     const basePath = app.isPackaged ? app.getPath('userData') : app.getAppPath();
-    return path.join(basePath, 'skills');
+    return path.join(basePath, '.claude', 'skills');
   }
 
   /**

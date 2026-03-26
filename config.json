@@ -17,13 +17,13 @@
     "tabSize": 2,
     "wordWrap": true
   },
-  "applicationSkillsDirectory": "D:\\skillsMN\\skills",
+  "applicationSkillsDirectory": "D:\\skillsMN\\.claude\\skills",
   "migrationPreferenceAsked": true,
   "setupCompleted": true,
   "version": 1,
   "ai": {
     "provider": "anthropic",
-    "apiKey": "djEw8jBHGGhucgu5NaOo2HB6qFLvbsfDlc1ILgXs8Pla8Usw7GGnmcLrx07OGtwpLNhPLVKXPnx0zqDbpmOBrwo7CVzpVn6V+WRZKGpm65g=",
+    "apiKey": "djEwTr8RBLkQTfWGYMfqbQGiBppd8nQIWECaqkuJrn1XyZUIQ8hz0M1j4/3/0ZeNSk2JD0Bbs4fvXawP0/G43glZkJiuabMuHoX2LGEK+rU=",
     "model": "glm-5",
     "streamingEnabled": true,
     "timeout": 30000,
@@ -34,17 +34,17 @@
     "version": 1,
     "repositories": [
       {
-        "id": "896f7fdd-8757-41bf-9f77-334bd9bb422c",
+        "id": "e07a5562-4f60-4cde-a5f2-12f1982548d0",
         "owner": "yuquanliu1-dot",
         "repo": "devops-skills",
         "url": "https://github.com/yuquanliu1-dot/devops-skills",
         "displayName": "yuquanliu1-dot/devops-skills",
-        "patEncrypted": "djEwqzRvzzDNO+ZHfitfF6kYi2g3u8y/Ermpn7DIK+SV3+F0yMOeUDzbUUmVN4wOkPKQGbicuktmMO+Ocs+/Yr2UbbgIrug=",
+        "patEncrypted": "djEwq+BrR90wb5iCMJK35MQREuJBK2AYdykRSHzzLk3Sg0aTuQkJsTsS+C6B7bbmXmdTRB4yCTVem/XYlw93FMOAxexgpaU=",
         "defaultBranch": "main",
         "description": "",
-        "addedAt": "2026-03-18T13:13:18.343Z",
-        "createdAt": "2026-03-18T13:13:18.343Z",
-        "updatedAt": "2026-03-24T05:02:40.692Z",
+        "addedAt": "2026-03-24T14:35:24.082Z",
+        "createdAt": "2026-03-24T14:35:24.082Z",
+        "updatedAt": "2026-03-26T11:41:21.596Z",
         "provider": "github"
       }
     ]
