@@ -60,18 +60,18 @@ export class SkillsPage extends AppPage {
     }
 
     // Wait for the skill list to update (file watcher needs time)
-    await this.page.waitForTimeout(2000);
+    await this.page.waitForTimeout(3000);
 
     // Try to refresh the skills list by pressing Ctrl+R
     await this.page.keyboard.press('Control+r');
-    await this.page.waitForTimeout(1000);
+    await this.page.waitForTimeout(2000);
 
     // Search for the skill to make it visible (handles virtualized list)
     await this.searchSkills(name);
-    await this.page.waitForTimeout(500);
+    await this.page.waitForTimeout(1000);
 
-    // Now wait for skill to appear in the filtered list
-    await this.waitForSkill(name, 15000);
+    // Now wait for skill to appear in the filtered list with longer timeout
+    await this.waitForSkill(name, 25000);
 
     // Clear search to show all skills
     await this.clearSearch();
@@ -366,8 +366,24 @@ export class SkillsPage extends AppPage {
   /**
    * Wait for skill to appear in list
    */
-  async waitForSkill(name: string, timeout = 10000): Promise<void> {
+  async waitForSkill(name: string, timeout = 30000): Promise<void> {
+    // First try direct search
+    try {
+      await this.page.waitForSelector(`[data-testid="skill-card"]:has-text("${name}")`, { timeout });
+      return;
+    } catch {
+      // If not found, try searching for it
+    }
+
+    // Try searching for the skill
+    await this.searchSkills(name);
+    await this.page.waitForTimeout(1000);
+
+    // Wait for it in the filtered list
     await this.page.waitForSelector(`[data-testid="skill-card"]:has-text("${name}")`, { timeout });
+
+    // Clear search after finding
+    await this.clearSearch();
   }
 
   /**

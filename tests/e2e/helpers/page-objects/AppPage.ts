@@ -18,6 +18,17 @@ export class AppPage {
    * Navigate to a specific view
    */
   async navigateTo(view: ViewType): Promise<void> {
+    // First, try to close any open modals/overlays by pressing Escape
+    try {
+      const hasOverlay = await this.page.isVisible('.fixed.inset-0.bg-black\\/30, .fixed.inset-0.bg-slate-900\\/50');
+      if (hasOverlay) {
+        await this.page.keyboard.press('Escape');
+        await this.page.waitForTimeout(300);
+      }
+    } catch {
+      // Ignore errors when checking for overlay
+    }
+
     await this.page.click(`[data-testid="nav-${view}"]`);
     await this.page.waitForLoadState('domcontentloaded');
 

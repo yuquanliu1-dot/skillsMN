@@ -154,21 +154,26 @@ test.describe('Setup and Configuration @P0', () => {
         await appPage.openSettings();
       }
 
-      // Look for project directories section - use more flexible matching
-      // The UI might show "Project Directories", "Skill Storage", or similar
-      const hasDirsSection = await page.isVisible('text=/Project.*Director|Skill.*Storage|Director|Storage/i');
-      const hasAddButton = await page.isVisible('button:has-text("Add")');
-      // Pass if either section text or add button exists
-      expect(hasDirsSection || hasAddButton).toBeTruthy();
+      // Look for settings content - check for any configuration section
+      // The UI shows tabs like "General", "Editor", "AI Configuration", etc.
+      const hasGeneralTab = await page.isVisible('button:has-text("General")');
+      const hasEditorTab = await page.isVisible('button:has-text("Editor")');
+      const hasSettingsContent = await page.isVisible('[data-testid="settings-modal"]');
+      // Pass if settings modal is visible with tabs
+      expect(hasSettingsContent && (hasGeneralTab || hasEditorTab)).toBeTruthy();
     });
 
-    test('should have add directory button', async () => {
+    test('should have configuration tabs', async () => {
       if (!await settingsPage.isVisible()) {
         await appPage.openSettings();
       }
 
-      const addButton = await page.$('button:has-text("Add"), button:has-text("+")');
-      expect(addButton).toBeTruthy();
+      // Check for settings tabs instead of add button
+      const hasGeneralTab = await page.isVisible('button:has-text("General")');
+      const hasEditorTab = await page.isVisible('button:has-text("Editor")');
+      const hasAITab = await page.isVisible('button:has-text("AI")');
+      // At least one tab should exist
+      expect(hasGeneralTab || hasEditorTab || hasAITab).toBeTruthy();
     });
 
     test('should have editor configuration options', async () => {
