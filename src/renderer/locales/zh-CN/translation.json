@@ -136,9 +136,12 @@
     "aiRewrite": "AI 重写",
     "aiInsert": "AI 插入",
     "save": "保存",
+    "saving": "保存中...",
     "commitChanges": "提交更改",
     "upload": "上传",
-    "modified": "已修改"
+    "modified": "已修改",
+    "newSkill": "新建技能",
+    "newSkillBadge": "新建"
   },
 
   "settings": {

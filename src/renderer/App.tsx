@@ -24,6 +24,7 @@ import { RegistrySearchPanel } from './components/RegistrySearchPanel';
 import MigrationDialog from './components/MigrationDialog';
 import SkillPreviewDrawer from './components/SkillPreviewDrawer';
 import LocalSkillPreviewDrawer from './components/LocalSkillPreviewDrawer';
+import SkillEditorFull from './components/SkillEditorFull';
 
 type MainTab = 'local' | 'private-repos';
 
@@ -110,6 +111,7 @@ export default function App(): JSX.Element {
   const [showSetup, setShowSetup] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
+  const [isNewSkillMode, setIsNewSkillMode] = useState(false);
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
   const [copyingSkill, setCopyingSkill] = useState<Skill | null>(null);
   const [uploadingSkill, setUploadingSkill] = useState<Skill | null>(null);
@@ -523,40 +525,15 @@ export default function App(): JSX.Element {
   };
 
   /**
-   * Handle create skill
+   * Handle create skill - Opens the full-screen editor in new skill mode
+   * The actual skill creation will be handled by the AI assistant
    */
   const handleCreateSkill = async (name: string): Promise<void> => {
-    try {
-      // Skills are always created in the application directory
-      const response = await window.electronAPI.createSkill(name);
-      if (!response.success) {
-        throw new Error(response.error?.message || 'Failed to create skill');
-      }
-
-      // Refresh skill list
-      const skillsResponse = await loadSkills();
-
-      // Open the newly created skill in the editor
-      // Use the returned skills from loadSkills to avoid stale closure issue
-      if (response.data?.path) {
-        const newSkillPath = response.data.path;
-        // Find skill from the freshly loaded skills
-        const newSkill = skillsResponse?.find(s => s.path === newSkillPath);
-        if (newSkill) {
-          setEditingSkill(newSkill);
-          setSelectedSkillPath(newSkill.path);
-        }
-      }
-
-      // Show success notification
-      showToast(`Skill "${name}" created successfully`, 'success');
-
-      console.log('Skill created successfully:', name);
-    } catch (error) {
-      console.error('Failed to create skill:', error);
-      showToast(`Failed to create skill: ${(error as Error).message}`, 'error');
-      throw error;
-    }
+    // Close the dialog and open the full-screen editor in new skill mode
+    // The AI assistant will handle the actual skill creation
+    setShowCreateDialog(false);
+    setEditingSkill(null);
+    setIsNewSkillMode(true);
   };
 
   /**
@@ -897,66 +874,39 @@ export default function App(): JSX.Element {
         onEdit={(skill) => {
           setViewingSkill(null);
           setEditingSkill(skill);
+          setIsNewSkillMode(false);
         }}
       />
 
-      {/* Skill Editor Modal */}
-      {editingSkill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg shadow-xl w-[90vw] h-[90vh] max-w-6xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-900">{editingSkill.name}</h2>
-              <button
-                onClick={() => setEditingSkill(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label="Close editor"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-text-muted">Loading editor...</div>
-                  </div>
-                }
-              >
-                <SkillEditor
-                  skill={editingSkill}
-                  onClose={() => setEditingSkill(null)}
-                  onSave={handleSaveSkill}
-                  isInline={true}
-                  config={state.config?.skillEditor}
-                  appConfig={state.config}
-                  onSkillCreated={async (skillInfo) => {
-                    // Reload skills first
-                    await loadSkills();
+      {/* Full-Screen Skill Editor (Two-Column Layout) */}
+      {(editingSkill || isNewSkillMode) && (
+        <SkillEditorFull
+          skill={editingSkill}
+          isNewSkill={isNewSkillMode}
+          onClose={() => {
+            setEditingSkill(null);
+            setIsNewSkillMode(false);
+          }}
+          onSave={handleSaveSkill}
+          config={state.config?.skillEditor}
+          appConfig={state.config}
+          onSkillCreated={async (skillInfo) => {
+            // Reload skills first
+            await loadSkills();
 
-                    // If skill info is provided, navigate to the new skill
-                    if (skillInfo?.path) {
-                      // Wait a bit for the skills list to update
-                      setTimeout(() => {
-                        // Find the newly created skill in the updated list
-                        const newSkill = state.skills.find(s => s.path === skillInfo.path);
-                        if (newSkill) {
-                          setEditingSkill(newSkill);
-                          setSelectedSkillPath(newSkill.path);
-                        }
-                      }, 100);
-                    }
+            // Close editor and show success
+            setEditingSkill(null);
+            setIsNewSkillMode(false);
 
-                    showToast('Skill created successfully!', 'success');
-                  }}
-                  onUploadSkill={handleUploadSkill}
-                  onCommitChanges={handleCommitChanges}
-                />
-              </Suspense>
-            </div>
-          </div>
-        </div>
+            if (skillInfo?.path) {
+              setSelectedSkillPath(skillInfo.path);
+            }
+
+            showToast('Skill created successfully!', 'success');
+          }}
+          onUploadSkill={handleUploadSkill}
+          onCommitChanges={handleCommitChanges}
+        />
       )}
 
       {/* Discover Skill Preview Drawer */}

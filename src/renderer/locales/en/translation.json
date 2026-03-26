@@ -136,9 +136,12 @@
     "aiRewrite": "AI Rewrite",
     "aiInsert": "AI Insert",
     "save": "Save",
+    "saving": "Saving...",
     "commitChanges": "Commit Changes",
     "upload": "Upload",
-    "modified": "Modified"
+    "modified": "Modified",
+    "newSkill": "New Skill",
+    "newSkillBadge": "New"
   },
 
   "settings": {
