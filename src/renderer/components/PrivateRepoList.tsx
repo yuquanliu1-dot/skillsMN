@@ -2,14 +2,20 @@
  * PrivateRepoList Component
  *
  * Displays and browses skills from configured private repositories
+ * with grid layout and skill grouping
  */
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { PrivateRepo, PrivateSkill } from '../../shared/types';
+import type { PrivateRepo, PrivateSkill, SkillGroup } from '../../shared/types';
 import PrivateSkillCard from './PrivateSkillCard';
 
 type SortBy = 'name' | 'modified';
+
+interface GroupedSkills {
+  group: SkillGroup | null;
+  skills: PrivateSkill[];
+}
 
 interface PrivateRepoListProps {
   onInstallSkill?: (skill: PrivateSkill, repo: PrivateRepo) => void;
@@ -59,6 +65,22 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
   const [isAuthError, setIsAuthError] = useState(false);
   const [visibleCount, setVisibleCount] = useState(50); // Pagination for large lists
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to force refresh
+  const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
+
+  // Load skill groups
+  useEffect(() => {
+    const loadGroups = async () => {
+      try {
+        const response = await window.electronAPI.listSkillGroups();
+        if (response.success && response.data) {
+          setSkillGroups(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to load skill groups:', error);
+      }
+    };
+    loadGroups();
+  }, []);
 
   // Extract all unique tags from skills
   const allTags = useMemo(() => {
@@ -105,6 +127,45 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
 
     return result;
   }, [skills, filterTag, searchQuery, sortBy]);
+
+  // Group skills by configured groups
+  const groupedSkills = useMemo((): GroupedSkills[] => {
+    const result: GroupedSkills[] = [];
+    const assignedSkills = new Set<string>();
+
+    // Create a map of skill name to group
+    const skillToGroup = new Map<string, SkillGroup>();
+    for (const group of skillGroups) {
+      for (const skillName of group.skills) {
+        skillToGroup.set(skillName.toLowerCase(), group);
+      }
+    }
+
+    // Group skills by their assigned group
+    for (const group of skillGroups) {
+      const groupSkills: PrivateSkill[] = [];
+      for (const skill of filteredAndSortedSkills) {
+        const assignedGroup = skillToGroup.get(skill.name.toLowerCase());
+        if (assignedGroup?.id === group.id && !assignedSkills.has(skill.path)) {
+          groupSkills.push(skill);
+          assignedSkills.add(skill.path);
+        }
+      }
+      if (groupSkills.length > 0) {
+        result.push({ group, skills: groupSkills });
+      }
+    }
+
+    // Ungrouped skills
+    const ungroupedSkills = filteredAndSortedSkills.filter(
+      (skill) => !assignedSkills.has(skill.path)
+    );
+    if (ungroupedSkills.length > 0) {
+      result.push({ group: null, skills: ungroupedSkills });
+    }
+
+    return result;
+  }, [filteredAndSortedSkills, skillGroups]);
 
   /**
    * Load repositories on mount
@@ -589,19 +650,60 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
             </p>
           </div>
         ) : (
-          <>
-            <ul className="space-y-0">
-              {filteredAndSortedSkills.slice(0, visibleCount).map((skill) => (
-                <li key={skill.path}>
-                  <PrivateSkillCard
-                    skill={skill}
-                    repo={selectedRepo!}
-                    onInstallComplete={() => loadSkills(selectedRepo!.id)}
-                    onSkillClick={onSkillClick}
-                  />
-                </li>
-              ))}
-            </ul>
+          <div className="space-y-6">
+            {groupedSkills.map(({ group, skills: groupSkills }) => (
+              <div key={group?.id || 'ungrouped'}>
+                {/* Group header */}
+                {group && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span
+                      className="text-xl"
+                      style={{ color: group.color }}
+                    >
+                      {group.icon || '📁'}
+                    </span>
+                    <h3
+                      className="text-sm font-semibold"
+                      style={{ color: group.color }}
+                    >
+                      {group.name}
+                    </h3>
+                    {group.description && (
+                      <span className="text-xs text-gray-500">
+                        · {group.description}
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400">
+                      ({groupSkills.length})
+                    </span>
+                  </div>
+                )}
+                {!group && groupSkills.length > 0 && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xl text-gray-400">📦</span>
+                    <h3 className="text-sm font-semibold text-gray-500">
+                      {t('skills.ungrouped')}
+                    </h3>
+                    <span className="text-xs text-gray-400">
+                      ({groupSkills.length})
+                    </span>
+                  </div>
+                )}
+
+                {/* Skill cards grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {groupSkills.slice(0, visibleCount).map((skill) => (
+                    <PrivateSkillCard
+                      key={skill.path}
+                      skill={skill}
+                      repo={selectedRepo!}
+                      onInstallComplete={() => loadSkills(selectedRepo!.id)}
+                      onSkillClick={onSkillClick}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
 
             {/* Load More Button for Large Lists */}
             {filteredAndSortedSkills.length > visibleCount && (
@@ -622,7 +724,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
                 {t('privateRepos.showingOf', { visible: Math.min(visibleCount, filteredAndSortedSkills.length), total: filteredAndSortedSkills.length })}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
