@@ -23,6 +23,7 @@ import Sidebar, { ViewType } from './components/Sidebar';
 import { RegistrySearchPanel } from './components/RegistrySearchPanel';
 import MigrationDialog from './components/MigrationDialog';
 import SkillPreviewDrawer from './components/SkillPreviewDrawer';
+import LocalSkillPreviewDrawer from './components/LocalSkillPreviewDrawer';
 
 type MainTab = 'local' | 'private-repos';
 
@@ -135,6 +136,7 @@ export default function App(): JSX.Element {
   const [showMigrationDialog, setShowMigrationDialog] = useState(false);
   const [migrationGlobalSkills, setMigrationGlobalSkills] = useState<Skill[]>([]);
   const [migrationProjectSkills, setMigrationProjectSkills] = useState<Skill[]>([]);
+  const [viewingSkill, setViewingSkill] = useState<Skill | null>(null);
 
   /**
    * Load configuration on mount
@@ -858,7 +860,7 @@ export default function App(): JSX.Element {
           <div style={{ display: currentView === 'skills' ? 'flex' : 'none' }} className="h-full flex flex-col overflow-hidden">
             <SkillList
               skills={state.skills}
-              onSkillClick={(skill) => setEditingSkill(skill)}
+              onSkillClick={(skill) => setViewingSkill(skill)}
               onSkillSelect={(skill) => setSelectedSkillPath(skill.path)}
               onCreateSkill={() => setShowCreateDialog(true)}
               onDeleteSkill={(skill) => setDeletingSkill(skill)}
@@ -886,6 +888,17 @@ export default function App(): JSX.Element {
           </div>
         </div>
       </div>
+
+      {/* Local Skill Preview Drawer */}
+      <LocalSkillPreviewDrawer
+        isOpen={!!viewingSkill}
+        skill={viewingSkill}
+        onClose={() => setViewingSkill(null)}
+        onEdit={(skill) => {
+          setViewingSkill(null);
+          setEditingSkill(skill);
+        }}
+      />
 
       {/* Skill Editor Modal */}
       {editingSkill && (
