@@ -1,14 +1,12 @@
 /**
  * SkillList Component
  *
- * Virtualized list with fixed-height items (80px each)
+ * Grid-based skill list with group support
  */
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FixedSizeList as List } from 'react-window';
-import type { Skill, FilterSource, SortBy, VersionComparison } from '../../shared/types';
-import { SKILL_LIST_ITEM_HEIGHT } from '../../shared/constants';
+import type { Skill, FilterSource, SortBy, VersionComparison, SkillGroup } from '../../shared/types';
 import SkillCard from './SkillCard';
 import { ipcClient } from '../services/ipcClient';
 
@@ -24,6 +22,11 @@ interface SkillListProps {
   skillUpdates?: Record<string, VersionComparison>;
   onSkillUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
   onSkillUpload?: (skill: Skill) => Promise<void>;
+}
+
+interface GroupedSkills {
+  group: SkillGroup | null;
+  skills: Skill[];
 }
 
 export default function SkillList({
@@ -44,8 +47,22 @@ export default function SkillList({
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [filterTag, setFilterTag] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
-  const listRef = useRef<HTMLDivElement>(null);
-  const [listHeight, setListHeight] = useState(600);
+  const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
+
+  // Load skill groups
+  useEffect(() => {
+    const loadGroups = async () => {
+      try {
+        const response = await window.electronAPI.listSkillGroups();
+        if (response.success && response.data) {
+          setSkillGroups(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to load skill groups:', error);
+      }
+    };
+    loadGroups();
+  }, []);
 
   // Extract all unique tags from skills
   const allTags = useMemo(() => {
@@ -99,6 +116,45 @@ export default function SkillList({
     return result;
   }, [skills, filterSource, filterTag, searchQuery, sortBy]);
 
+  // Group skills by configured groups
+  const groupedSkills = useMemo((): GroupedSkills[] => {
+    const result: GroupedSkills[] = [];
+    const assignedSkills = new Set<string>();
+
+    // Create a map of skill name to group
+    const skillToGroup = new Map<string, SkillGroup>();
+    for (const group of skillGroups) {
+      for (const skillName of group.skills) {
+        skillToGroup.set(skillName.toLowerCase(), group);
+      }
+    }
+
+    // Group skills by their assigned group
+    for (const group of skillGroups) {
+      const groupSkills: Skill[] = [];
+      for (const skill of filteredAndSortedSkills) {
+        const assignedGroup = skillToGroup.get(skill.name.toLowerCase());
+        if (assignedGroup?.id === group.id && !assignedSkills.has(skill.path)) {
+          groupSkills.push(skill);
+          assignedSkills.add(skill.path);
+        }
+      }
+      if (groupSkills.length > 0) {
+        result.push({ group, skills: groupSkills });
+      }
+    }
+
+    // Ungrouped skills
+    const ungroupedSkills = filteredAndSortedSkills.filter(
+      (skill) => !assignedSkills.has(skill.path)
+    );
+    if (ungroupedSkills.length > 0) {
+      result.push({ group: null, skills: ungroupedSkills });
+    }
+
+    return result;
+  }, [filteredAndSortedSkills, skillGroups]);
+
   const handleFilterChange = useCallback((newFilter: FilterSource) => {
     setFilterSource(newFilter);
   }, []);
@@ -119,53 +175,6 @@ export default function SkillList({
       await ipcClient.updateSkillFromSource(skill.path, createBackup);
     }
   }, [onSkillUpdate]);
-
-  // Row renderer for virtualized list
-  const Row = useCallback(
-    ({ index, style }: { index: number; style: React.CSSProperties }) => {
-      const skill = filteredAndSortedSkills[index];
-      const versionStatus = skillUpdates[skill.path];
-
-      return (
-        <div style={style}>
-          <div className="px-4">
-            <SkillCard
-              skill={skill}
-              onClick={onSkillClick}
-              onSelect={onSkillSelect}
-              onDelete={onDeleteSkill}
-              onCopy={onCopySkill}
-              onOpenFolder={onOpenFolder}
-              isSelected={skill.path === selectedSkillPath}
-              versionStatus={versionStatus}
-              onUpdate={handleSkillUpdate}
-              onUpload={onSkillUpload}
-            />
-          </div>
-        </div>
-      );
-    },
-    [filteredAndSortedSkills, onSkillClick, onSkillSelect, onDeleteSkill, onCopySkill, onOpenFolder, selectedSkillPath, skillUpdates, handleSkillUpdate, onSkillUpload]
-  );
-
-  // Update list height on container resize
-  useEffect(() => {
-    const updateHeight = () => {
-      if (listRef.current) {
-        const rect = listRef.current.getBoundingClientRect();
-        setListHeight(rect.height);
-      }
-    };
-
-    updateHeight();
-
-    const resizeObserver = new ResizeObserver(updateHeight);
-    if (listRef.current) {
-      resizeObserver.observe(listRef.current);
-    }
-
-    return () => resizeObserver.disconnect();
-  }, []);
 
   return (
     <div className="flex flex-col h-full">
@@ -219,7 +228,6 @@ export default function SkillList({
               </svg>
             </button>
           )}
-
         </div>
 
         {/* Bottom row: Filters + Sort (with icons) */}
@@ -295,18 +303,73 @@ export default function SkillList({
         </div>
       </div>
 
-      {/* Skill list with virtualization */}
-      <div ref={listRef} data-testid="skills-list" className="flex-1 overflow-hidden bg-gray-50 pt-2">
+      {/* Skill grid with groups */}
+      <div data-testid="skills-list" className="flex-1 overflow-auto bg-gray-50 p-4">
         {filteredAndSortedSkills.length > 0 ? (
-          <List
-            height={listHeight - 8}
-            itemCount={filteredAndSortedSkills.length}
-            itemSize={SKILL_LIST_ITEM_HEIGHT}
-            width="100%"
-            className="scrollbar-thin"
-          >
-            {Row}
-          </List>
+          <div className="space-y-6">
+            {groupedSkills.map(({ group, skills: groupSkills }) => (
+              <div key={group?.id || 'ungrouped'}>
+                {/* Group header */}
+                {group && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span
+                      className="text-xl"
+                      style={{ color: group.color }}
+                    >
+                      {group.icon || '📁'}
+                    </span>
+                    <h3
+                      className="text-sm font-semibold"
+                      style={{ color: group.color }}
+                    >
+                      {group.name}
+                    </h3>
+                    {group.description && (
+                      <span className="text-xs text-gray-500">
+                        · {group.description}
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400">
+                      ({groupSkills.length})
+                    </span>
+                  </div>
+                )}
+                {!group && groupSkills.length > 0 && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xl text-gray-400">📦</span>
+                    <h3 className="text-sm font-semibold text-gray-500">
+                      {t('skills.ungrouped')}
+                    </h3>
+                    <span className="text-xs text-gray-400">
+                      ({groupSkills.length})
+                    </span>
+                  </div>
+                )}
+
+                {/* Skill cards grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {groupSkills.map((skill) => {
+                    const versionStatus = skillUpdates[skill.path];
+                    return (
+                      <SkillCard
+                        key={skill.path}
+                        skill={skill}
+                        onClick={onSkillClick}
+                        onSelect={onSkillSelect}
+                        onDelete={onDeleteSkill}
+                        onCopy={onCopySkill}
+                        onOpenFolder={onOpenFolder}
+                        isSelected={skill.path === selectedSkillPath}
+                        versionStatus={versionStatus}
+                        onUpdate={handleSkillUpdate}
+                        onUpload={onSkillUpload}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500">

@@ -81,7 +81,8 @@
     "templateFile": "模板文件。",
     "savedToLibrary": "技能将保存到您的集中式技能库。",
     "createdSuccessfully": "技能创建成功！",
-    "location": "位置"
+    "location": "位置",
+    "ungrouped": "未分组"
   },
 
   "skillCard": {

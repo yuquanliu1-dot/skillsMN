@@ -81,7 +81,8 @@
     "templateFile": "template file.",
     "savedToLibrary": "Skill will be saved to your centralized skills library.",
     "createdSuccessfully": "Skill created successfully!",
-    "location": "Location"
+    "location": "Location",
+    "ungrouped": "Ungrouped"
   },
 
   "skillCard": {
