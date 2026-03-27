@@ -384,11 +384,6 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
     <div data-testid="private-repos-list" className="h-full flex flex-col">
       {/* Header with filters and search */}
       <div className="border-b border-gray-200 p-4 space-y-3 flex-shrink-0 bg-white">
-        {/* Title */}
-        <h2 className="text-lg font-semibold text-gray-900">
-          {t('privateRepos.title')}
-        </h2>
-
         {/* Top row: Search + Refresh button */}
         <div className="flex items-center gap-3">
           {/* Search */}

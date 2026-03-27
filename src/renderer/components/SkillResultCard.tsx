@@ -275,8 +275,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </>
   );
 };
