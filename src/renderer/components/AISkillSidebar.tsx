@@ -1302,7 +1302,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             disabled={isStreaming}
             placeholder={t('aiSidebar.inputPlaceholder')}
             className="w-full px-2 py-1.5 pr-10 border border-slate-300 rounded resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed text-[10px] bg-white text-slate-900 placeholder-slate-400"
-            rows={2}
+            rows={4}
             maxLength={2000}
           />
           <div className="absolute bottom-1 right-1.5 text-[9px] text-slate-400">{inputValue.length}/2000</div>

@@ -620,13 +620,14 @@ export default function SkillEditorFull({
 
   /**
    * Handle AI skill creation callback
+   * The parent component will handle switching to edit mode
    */
   const handleSkillCreated = useCallback((skillInfo?: { name: string; path: string }) => {
     if (skillInfo) {
       onSkillCreated?.(skillInfo);
-      onClose();
+      // Don't close - parent will switch to edit mode which shows file tree
     }
-  }, [onSkillCreated, onClose]);
+  }, [onSkillCreated]);
 
   /**
    * Handle AI skill modification callback

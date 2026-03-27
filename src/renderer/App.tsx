@@ -839,7 +839,11 @@ export default function App(): JSX.Element {
               skills={state.skills}
               onSkillClick={(skill) => setViewingSkill(skill)}
               onSkillSelect={(skill) => setSelectedSkillPath(skill.path)}
-              onCreateSkill={() => setShowCreateDialog(true)}
+              onCreateSkill={() => {
+                // Directly open the skill editor in new skill mode, skip the dialog
+                setEditingSkill(null);
+                setIsNewSkillMode(true);
+              }}
               onEditSkill={(skill) => {
                 setEditingSkill(skill);
                 setIsNewSkillMode(false);
@@ -900,14 +904,30 @@ export default function App(): JSX.Element {
           appConfig={state.config}
           onSkillCreated={async (skillInfo) => {
             // Reload skills first
-            await loadSkills();
-
-            // Close editor and show success
-            setEditingSkill(null);
-            setIsNewSkillMode(false);
+            const skills = await loadSkills();
 
             if (skillInfo?.path) {
-              setSelectedSkillPath(skillInfo.path);
+              // Extract skill directory path from SKILL.md path
+              const skillDirPath = skillInfo.path.replace(/[\\\/]SKILL\.md$/i, '');
+
+              // Find the newly created skill from the refreshed list
+              const newSkill = skills?.find(s => s.path === skillDirPath);
+
+              if (newSkill) {
+                // Switch to edit mode - keep editor open and show file tree
+                setEditingSkill(newSkill);
+                setIsNewSkillMode(false);
+              } else {
+                // Fallback: close editor if skill not found
+                setEditingSkill(null);
+                setIsNewSkillMode(false);
+              }
+
+              setSelectedSkillPath(skillDirPath);
+            } else {
+              // No path info, close editor
+              setEditingSkill(null);
+              setIsNewSkillMode(false);
             }
 
             showToast('Skill created successfully!', 'success');
