@@ -291,7 +291,8 @@
     "assignToGroup": "分配到分组",
     "removeFromGroup": "从分组移除",
     "noSkillsInGroup": "此分组中没有技能",
-    "addSkillsToGroup": "添加技能到此分组"
+    "addSkillsToGroup": "添加技能到此分组",
+    "noTagsInGroup": "此分组中没有标签，编辑分组以添加标签"
   },
 
   "setup": {

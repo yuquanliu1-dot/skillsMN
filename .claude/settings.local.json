@@ -40,7 +40,12 @@
       "Bash(npx playwright:*)",
       "Bash(find src:*)",
       "Bash(xargs wc:*)",
-      "Bash(2)"
+      "Bash(2)",
+      "WebSearch",
+      "Read(//d/skillsMN/$APPDATA/**)",
+      "Read(//d/skillsMN/$LOCALAPPDATA/**)",
+      "Read(//d/skillsMN/Roaming/**)",
+      "Read(//d/skillsMN/Local/**)"
     ]
   }
 }

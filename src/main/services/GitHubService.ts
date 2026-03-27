@@ -327,20 +327,20 @@ export class GitHubService {
 
   /**
    * Install skill from GitHub to local directory
-   * Downloads skill content and saves to project or global directory
+   * Downloads entire skill directory and saves to application skills directory
    * Handles conflicts based on resolution strategy
    * @param repositoryName - Full repository name (owner/repo)
-   * @param skillFilePath - Path to skill.md in repository
-   * @param downloadUrl - Raw GitHub URL to skill.md file
-   * @param targetDirectory - 'project' or 'global' directory
+   * @param skillFilePath - Path to SKILL.md in repository
+   * @param downloadUrl - Raw GitHub URL to SKILL.md file
+   * @param targetDirectory - 'project' or 'global' (deprecated, uses application directory)
    * @param pathValidator - PathValidator instance for security checks
    * @param conflictResolution - Strategy for handling conflicts: 'overwrite', 'rename', or 'skip'
    * @returns Object with success status, new path if successful, or error message
    * @example
    * const result = await GitHubService.installSkill(
    *   'user/repo',
-   *   'skills/my-skill/skill.md',
-   *   'https://raw.githubusercontent.com/user/repo/main/skills/my-skill/skill.md',
+   *   'skills/my-skill/SKILL.md',
+   *   'https://raw.githubusercontent.com/user/repo/main/skills/my-skill/SKILL.md',
    *   'project',
    *   pathValidator,
    *   'rename'
@@ -368,14 +368,11 @@ export class GitHubService {
       // Use stored preference if no explicit resolution provided
       const resolution = conflictResolution || GitHubService.getConflictPreference();
 
-      // Determine target directory path
-      const baseDir =
-        targetDirectory === 'project'
-          ? pathValidator.getProjectDirectory()
-          : pathValidator.getGlobalDirectory();
+      // Always use application skills directory (centralized storage)
+      const baseDir = pathValidator.getApplicationDirectory();
 
       if (!baseDir) {
-        throw new Error(`Target directory not configured for ${targetDirectory}`);
+        throw new Error('Application skills directory not configured');
       }
 
       // Extract skill directory name from path
@@ -395,11 +392,11 @@ export class GitHubService {
             counter++;
             newPath = `${targetPath}-${counter}`;
           }
-          return await GitHubService.downloadAndInstallSkill(
-            downloadUrl,
-            newPath,
+          return await GitHubService.downloadAndInstallSkillDirectory(
             repositoryName,
-            skillFilePath
+            skillFilePath,
+            newPath,
+            downloadUrl
           );
         } else if (resolution === 'overwrite') {
           // Remove existing directory
@@ -413,12 +410,12 @@ export class GitHubService {
         }
       }
 
-      // Download and install
-      return await GitHubService.downloadAndInstallSkill(
-        downloadUrl,
-        targetPath,
+      // Download and install entire skill directory
+      return await GitHubService.downloadAndInstallSkillDirectory(
         repositoryName,
-        skillFilePath
+        skillFilePath,
+        targetPath,
+        downloadUrl
       );
     } catch (error) {
       logger.error('Failed to install skill', 'GitHubService', error);
@@ -430,16 +427,148 @@ export class GitHubService {
   }
 
   /**
-   * Download skill content and install to local directory
+   * Download entire skill directory from GitHub and install to local directory
+   * Extracts repository owner/name from repositoryName and downloads all files in skill directory
    */
-  private static async downloadAndInstallSkill(
-    downloadUrl: string,
-    targetPath: string,
+  private static async downloadAndInstallSkillDirectory(
     repositoryName: string,
-    _skillFilePath: string
+    skillFilePath: string,
+    targetPath: string,
+    downloadUrl: string
   ): Promise<{ success: boolean; newPath?: string; error?: string }> {
     try {
-      // Download skill content
+      // Parse repository name (owner/repo)
+      const [owner, repo] = repositoryName.split('/');
+      if (!owner || !repo) {
+        throw new Error(`Invalid repository name: ${repositoryName}`);
+      }
+
+      // Extract skill directory path (parent of SKILL.md)
+      const skillDirPath = path.dirname(skillFilePath);
+
+      // Get the branch from download URL
+      // URL format: https://raw.githubusercontent.com/owner/repo/branch/path/to/SKILL.md
+      const urlParts = downloadUrl.split('/');
+      const branchIndex = urlParts.findIndex(part => part === 'raw.githubusercontent.com') + 3;
+      const branch = urlParts[branchIndex] || 'main';
+
+      logger.debug('Downloading skill directory from GitHub', 'GitHubService', {
+        owner,
+        repo,
+        branch,
+        skillDirPath,
+        targetPath,
+      });
+
+      // Get repository tree to find all files in skill directory
+      const treeUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
+      const treeResponse = await fetch(treeUrl, {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'skillsMN-App',
+        },
+      });
+
+      if (!treeResponse.ok) {
+        // If tree API fails, fallback to downloading just SKILL.md
+        logger.warn('Failed to get repository tree, downloading SKILL.md only', 'GitHubService', {
+          status: treeResponse.status,
+        });
+        return await GitHubService.downloadSingleFile(downloadUrl, targetPath, repositoryName);
+      }
+
+      const treeData = await treeResponse.json();
+      const skillDirFiles = treeData.tree.filter((item: any) =>
+        item.type === 'blob' &&
+        item.path.startsWith(skillDirPath + '/') ||
+        item.path === skillFilePath
+      );
+
+      if (skillDirFiles.length === 0) {
+        // No files found in tree, fallback to single file
+        logger.warn('No files found in skill directory, downloading SKILL.md only', 'GitHubService');
+        return await GitHubService.downloadSingleFile(downloadUrl, targetPath, repositoryName);
+      }
+
+      // Create skill directory
+      await fs.ensureDir(targetPath);
+
+      // Download all files in parallel
+      let downloadedCount = 0;
+      const errors: string[] = [];
+
+      await Promise.all(
+        skillDirFiles.map(async (file: any) => {
+          try {
+            const fileDownloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file.path}`;
+            const fileResponse = await fetch(fileDownloadUrl, {
+              headers: {
+                'User-Agent': 'skillsMN-App',
+              },
+            });
+
+            if (!fileResponse.ok) {
+              errors.push(`Failed to download ${file.path}: ${fileResponse.status}`);
+              return;
+            }
+
+            const fileContent = await fileResponse.text();
+
+            // Calculate relative path within skill directory
+            const relativePath = file.path.substring(skillDirPath.length + 1);
+            const localFilePath = path.join(targetPath, relativePath);
+
+            // Ensure parent directory exists
+            await fs.ensureDir(path.dirname(localFilePath));
+
+            // Write file
+            await fs.writeFile(localFilePath, fileContent, 'utf-8');
+            downloadedCount++;
+
+            logger.debug('Downloaded skill file', 'GitHubService', {
+              file: file.path,
+              localPath: localFilePath,
+            });
+          } catch (fileError) {
+            errors.push(`Failed to download ${file.path}: ${fileError}`);
+          }
+        })
+      );
+
+      if (downloadedCount === 0) {
+        // All downloads failed, try single file fallback
+        return await GitHubService.downloadSingleFile(downloadUrl, targetPath, repositoryName);
+      }
+
+      logger.info('Skill directory installed successfully', 'GitHubService', {
+        targetPath,
+        repositoryName,
+        fileCount: downloadedCount,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+
+      return {
+        success: true,
+        newPath: targetPath,
+      };
+    } catch (error) {
+      logger.error('Failed to download skill directory', 'GitHubService', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Fallback: Download single SKILL.md file
+   */
+  private static async downloadSingleFile(
+    downloadUrl: string,
+    targetPath: string,
+    repositoryName: string
+  ): Promise<{ success: boolean; newPath?: string; error?: string }> {
+    try {
       const response = await fetch(downloadUrl, {
         headers: {
           'User-Agent': 'skillsMN-App',
@@ -458,7 +587,7 @@ export class GitHubService {
       // Write SKILL.md file
       await fs.writeFile(path.join(targetPath, 'SKILL.md'), content, 'utf-8');
 
-      logger.info('Skill installed successfully', 'GitHubService', {
+      logger.info('Skill installed (single file)', 'GitHubService', {
         targetPath,
         repositoryName,
       });
@@ -468,7 +597,7 @@ export class GitHubService {
         newPath: targetPath,
       };
     } catch (error) {
-      logger.error('Failed to download and install skill', 'GitHubService', error);
+      logger.error('Failed to download single file', 'GitHubService', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

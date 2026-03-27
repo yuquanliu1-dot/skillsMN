@@ -23,7 +23,7 @@
   "version": 1,
   "ai": {
     "provider": "anthropic",
-    "apiKey": "djEwTr8RBLkQTfWGYMfqbQGiBppd8nQIWECaqkuJrn1XyZUIQ8hz0M1j4/3/0ZeNSk2JD0Bbs4fvXawP0/G43glZkJiuabMuHoX2LGEK+rU=",
+    "apiKey": "djEw41PzWF0e07mPxzEzyaorYfs5g4hzMfNqncR4bO6nUMYx/TKrdF/N7wGwnr6zY9TVTzt9uOyyr9/FoULPN++9j6baR8IMA7+A8vmn/S8=",
     "model": "glm-5",
     "streamingEnabled": true,
     "timeout": 30000,
@@ -44,8 +44,59 @@
         "description": "",
         "addedAt": "2026-03-24T14:35:24.082Z",
         "createdAt": "2026-03-24T14:35:24.082Z",
-        "updatedAt": "2026-03-26T11:41:21.596Z",
+        "updatedAt": "2026-03-27T08:25:09.263Z",
         "provider": "github"
+      }
+    ]
+  },
+  "skillGroups": {
+    "version": 1,
+    "groups": [
+      {
+        "id": "0cfddd6f-a5cd-4bcd-bc1a-f92086ebf656",
+        "name": "Code Generation",
+        "description": "",
+        "color": "#3B82F6",
+        "icon": "📁",
+        "tags": [
+          "code-review"
+        ],
+        "createdAt": "2026-03-27T04:52:02.946Z",
+        "updatedAt": "2026-03-27T04:53:01.814Z"
+      },
+      {
+        "id": "b7560757-5c77-48d4-ad2e-483e7f6ce595",
+        "name": "Testing Automation",
+        "description": "",
+        "color": "#f73b7d",
+        "icon": "📁",
+        "tags": [],
+        "createdAt": "2026-03-27T04:52:24.100Z",
+        "updatedAt": "2026-03-27T04:52:24.100Z"
+      },
+      {
+        "id": "cb911f3b-493e-43f9-856d-54da2e451ee9",
+        "name": "Delivery Document",
+        "description": "",
+        "color": "#a71ee6",
+        "icon": "📁",
+        "tags": [
+          "文档开发"
+        ],
+        "createdAt": "2026-03-27T04:52:52.067Z",
+        "updatedAt": "2026-03-27T07:41:20.884Z"
+      },
+      {
+        "id": "152c48a4-27a4-470d-8361-0c2b6c670386",
+        "name": "CI/CD",
+        "description": "",
+        "color": "#3B82F6",
+        "icon": "📁",
+        "tags": [
+          "filesystem"
+        ],
+        "createdAt": "2026-03-27T06:46:58.144Z",
+        "updatedAt": "2026-03-27T06:47:09.320Z"
       }
     ]
   }

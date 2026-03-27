@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { SearchSkillResult } from '../../shared/types';
+import { SearchSkillResult, SkillOption } from '../../shared/types';
 import { checkSkillInstalled, installFromRegistry, onInstallProgress } from '../services/registryClient';
 import { InstallDialog } from './InstallDialog';
 
@@ -28,6 +28,9 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
   const [installError, setInstallError] = useState<string>('');
   const [isInstalled, setIsInstalled] = useState(false);
   const [installedAt, setInstalledAt] = useState<string | undefined>();
+  const [selectedDirectoryPath, setSelectedDirectoryPath] = useState<string | undefined>();
+  const [multipleSkillsOptions, setMultipleSkillsOptions] = useState<SkillOption[]>([]);
+  const [showSkillSelectionDialog, setShowSkillSelectionDialog] = useState(false);
 
   // Check if skill is already installed
   useEffect(() => {
@@ -64,7 +67,8 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
       await installFromRegistry(
         {
           source: skill.source,
-          skillId: skill.skillId
+          skillId: skill.skillId,
+          selectedDirectoryPath: selectedDirectoryPath // Add this
         },
         targetDirectory
       );
@@ -75,7 +79,14 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
       onInstallComplete?.(skill);
     } catch (error: any) {
       console.error('Installation failed:', error);
-      setInstallError(error.message || 'Installation failed');
+
+      // Check if this is a multiple skills found error
+      if (error.code === 'REGISTRY_MULTIPLE_SKILLS_FOUND') {
+        setMultipleSkillsOptions(error.skillOptions);
+        setShowSkillSelectionDialog(true);
+      } else {
+        setInstallError(error.message || 'Installation failed');
+      }
       throw error; // Re-throw so InstallDialog knows it failed
     } finally {
       setIsInstalling(false);
@@ -210,6 +221,61 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
           installProgress={installProgress}
           installError={installError}
         />
+      )}
+
+      {/* Skill Selection Dialog */}
+      {showSkillSelectionDialog && multipleSkillsOptions.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowSkillSelectionDialog(false)}
+            aria-hidden="true"
+          />
+          <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full border border-slate-200 dark:border-slate-700">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Select a Skill
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Multiple skills were found. Please select one to install.
+              </p>
+            </div>
+            <div className="p-4 max-h-80 overflow-y-auto space-y-2">
+                {multipleSkillsOptions.map((option) => (
+                  <button
+                    key={option.directoryPath}
+                    onClick={() => {
+                      setSelectedDirectoryPath(option.directoryPath);
+                      setShowSkillSelectionDialog(false);
+                      setShowDialog(true);
+                    }}
+                    className="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  >
+                    <div className="font-medium text-slate-900 dark:text-white">
+                      {option.name}
+                    </div>
+                    {option.description && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                        {option.description}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
+                      {option.directoryPath}
+                    </p>
+                  </button>
+                ))}
+              </div>
+              <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                <button
+                  onClick={() => setShowSkillSelectionDialog(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

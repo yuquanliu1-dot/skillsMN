@@ -23,6 +23,64 @@ interface SkillMetadata {
   author?: string;
 }
 
+/**
+ * Found skill match in repository
+ */
+interface FoundSkill {
+  directoryPath: string;
+  skillMdPath: string;
+  metadata: SkillMetadata;
+  branch: string;
+}
+
+// Timeout for fetch operations (30 seconds)
+const FETCH_TIMEOUT_MS = 30000;
+// Max retries for failed downloads
+const MAX_RETRIES = 3;
+
+/**
+ * Fetch with timeout and retry
+ */
+async function fetchWithTimeout(url: string, options?: RequestInit, timeoutMs: number = FETCH_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Fetch with retry logic
+ */
+async function fetchWithRetry(url: string, options?: RequestInit, maxRetries: number = MAX_RETRIES): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetchWithTimeout(url, options);
+      return response;
+    } catch (error: any) {
+      lastError = error;
+      logger.warn(`Fetch attempt ${attempt}/${maxRetries} failed for ${url}`, 'SkillInstaller', {
+        error: error.message
+      });
+      if (attempt < maxRetries) {
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+  }
+
+  throw lastError || new Error('Fetch failed after retries');
+}
+
 export class SkillInstaller {
   /**
    * Install a skill from the registry
@@ -72,7 +130,13 @@ export class SkillInstaller {
       });
 
       // Try to download skill directory using GitHub API
-      const files = await this.downloadSkillDirectory(owner, repo, request.skillId);
+      // Pass selectedDirectoryPath if user has already selected a specific skill
+      const files = await this.downloadSkillDirectory(
+        owner,
+        repo,
+        request.skillId,
+        request.selectedDirectoryPath
+      );
 
       if (files.size === 0) {
         throw Object.assign(
@@ -214,49 +278,248 @@ export class SkillInstaller {
   /**
    * Download skill directory from public GitHub repository
    * Uses GitHub API (no Git required)
+   * Searches for SKILL.md files and matches by skill name
    */
   private async downloadSkillDirectory(
     owner: string,
     repo: string,
-    skillId: string
+    skillId: string,
+    selectedDirectoryPath?: string
   ): Promise<Map<string, string>> {
     const files = new Map<string, string>();
 
     try {
-      // Get repository tree
-      const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`;
-      const treeResponse = await fetch(treeUrl, {
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'skillsMN-App'
-        }
-      });
+      // Try to get repository info first to find default branch
+      const repoInfoUrl = `https://api.github.com/repos/${owner}/${repo}`;
+      let defaultBranch = 'main';
 
-      if (!treeResponse.ok) {
-        // Try 'master' branch if 'main' fails
-        const masterTreeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/master?recursive=1`;
-        const masterResponse = await fetch(masterTreeUrl, {
+      try {
+        const repoInfoResponse = await fetchWithRetry(repoInfoUrl, {
           headers: {
             'Accept': 'application/vnd.github.v3+json',
             'User-Agent': 'skillsMN-App'
           }
         });
 
-        if (!masterResponse.ok) {
-          throw new Error(`Failed to fetch repository tree: ${treeResponse.status}`);
+        if (repoInfoResponse.ok) {
+          const repoInfo: any = await repoInfoResponse.json();
+          defaultBranch = repoInfo.default_branch || 'main';
+          logger.debug('Found default branch', 'SkillInstaller', { defaultBranch });
         }
+      } catch (error) {
+        logger.warn('Failed to get repo info, using default branch', 'SkillInstaller');
+      }
 
-        const masterData: any = await masterResponse.json();
-        await this.downloadFilesFromTree(owner, repo, 'master', masterData.tree, skillId, files);
+      // Get repository tree
+      const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch}?recursive=1`;
+      let treeResponse = await fetchWithRetry(treeUrl, {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'skillsMN-App'
+        }
+      });
+
+      // Try alternative branches if default fails
+      if (!treeResponse.ok) {
+        const branches = defaultBranch === 'main' ? ['master'] : ['main'];
+        for (const branch of branches) {
+          const altTreeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
+          treeResponse = await fetchWithRetry(altTreeUrl, {
+            headers: {
+              'Accept': 'application/vnd.github.v3+json',
+              'User-Agent': 'skillsMN-App'
+            }
+          });
+          if (treeResponse.ok) {
+            defaultBranch = branch;
+            break;
+          }
+        }
+      }
+
+      if (!treeResponse.ok) {
+        throw new Error(`Failed to fetch repository tree: ${treeResponse.status}`);
+      }
+
+      const data: any = await treeResponse.json();
+      const tree = data.tree;
+
+      // Step 1: Find all SKILL.md files in the repository
+      const skillMdFiles = tree.filter((item: any) =>
+        item.type === 'blob' &&
+        (item.path.endsWith('SKILL.md') || item.path.endsWith('skill.md'))
+      );
+
+      logger.debug('Found SKILL.md files in repository', 'SkillInstaller', {
+        count: skillMdFiles.length,
+        paths: skillMdFiles.map((f: any) => f.path)
+      });
+
+      if (skillMdFiles.length === 0) {
+        throw Object.assign(
+          new Error(`No SKILL.md files found in repository ${owner}/${repo}`),
+          { code: 'REGISTRY_SKILL_NOT_FOUND' }
+        );
+      }
+
+      // Step 2: Download each SKILL.md and parse metadata to find matching skill
+      // If selectedDirectoryPath is provided, skip search and use it directly
+      const foundSkills: FoundSkill[] = [];
+
+      if (selectedDirectoryPath) {
+        // User has already selected a specific skill directory
+        logger.info('Using pre-selected directory path', 'SkillInstaller', {
+          selectedDirectoryPath
+        });
+
+        // Find the SKILL.md in the selected directory
+        const selectedSkillMd = skillMdFiles.find((f: any) =>
+          f.path.startsWith(selectedDirectoryPath + '/') ||
+          path.dirname(f.path) === selectedDirectoryPath
+        );
+
+        if (selectedSkillMd) {
+          const skillMdUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${selectedSkillMd.path}`;
+          const skillMdResponse = await fetchWithRetry(skillMdUrl, {
+            headers: { 'User-Agent': 'skillsMN-App' }
+          });
+
+          if (skillMdResponse.ok) {
+            const skillMdContent = await skillMdResponse.text();
+            const metadata = await this.parseSkillMetadataFromContent(skillMdContent);
+
+            foundSkills.push({
+              directoryPath: selectedDirectoryPath,
+              skillMdPath: selectedSkillMd.path,
+              metadata,
+              branch: defaultBranch
+            });
+          }
+        }
       } else {
-        const data: any = await treeResponse.json();
-        await this.downloadFilesFromTree(owner, repo, 'main', data.tree, skillId, files);
+        // Search for matching skills
+        for (const skillMdFile of skillMdFiles) {
+          try {
+            const skillMdUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${skillMdFile.path}`;
+            const skillMdResponse = await fetchWithRetry(skillMdUrl, {
+              headers: { 'User-Agent': 'skillsMN-App' }
+            });
+
+            if (skillMdResponse.ok) {
+              const skillMdContent = await skillMdResponse.text();
+              const metadata = await this.parseSkillMetadataFromContent(skillMdContent);
+              const directoryPath = path.dirname(skillMdFile.path);
+
+              // Check if this skill matches the requested skillId
+              // Exact match only: skillId must match skill name OR directory name
+              const skillName = (metadata.name || '').trim();
+              const dirName = path.basename(directoryPath);
+
+              const isMatch =
+                skillName === skillId ||
+                dirName === skillId;
+
+              if (isMatch) {
+                foundSkills.push({
+                  directoryPath,
+                  skillMdPath: skillMdFile.path,
+                  metadata,
+                  branch: defaultBranch
+                });
+
+                logger.debug('Found matching skill', 'SkillInstaller', {
+                  directoryPath,
+                  skillName: metadata.name,
+                  matchedWith: skillId
+                });
+              }
+            }
+          } catch (error) {
+            logger.warn(`Failed to check SKILL.md: ${skillMdFile.path}`, 'SkillInstaller');
+          }
+        }
+      } // end of else block
+
+      // Step 3: Handle found skills
+      if (foundSkills.length === 0) {
+        throw Object.assign(
+          new Error(
+            `Skill "${skillId}" not found in repository. ` +
+            `Available skills: ${skillMdFiles.map((f: any) => path.dirname(f.path)).join(', ')}`
+          ),
+          { code: 'REGISTRY_SKILL_NOT_FOUND' }
+        );
+      }
+
+      // If multiple skills found, return list for user selection
+      if (foundSkills.length > 1) {
+        const skillOptions = foundSkills.map(s => ({
+          name: s.metadata.name || path.basename(s.directoryPath),
+          directoryPath: s.directoryPath,
+          description: s.metadata.description
+        }));
+
+        logger.info('Multiple skills found, returning options for user selection', 'SkillInstaller', {
+          count: foundSkills.length,
+          options: skillOptions
+        });
+
+        throw Object.assign(
+          new Error(`Multiple skills found matching "${skillId}". Please select one.`),
+          {
+            code: 'REGISTRY_MULTIPLE_SKILLS_FOUND',
+            skillOptions
+          }
+        );
+      }
+
+      // Single skill found, proceed with installation
+      const selectedSkill = foundSkills[0];
+      logger.info('Selected skill for installation', 'SkillInstaller', {
+        directoryPath: selectedSkill.directoryPath,
+        skillName: selectedSkill.metadata.name
+      });
+
+      // Step 4: Download all files in the selected skill directory
+      const skillDirPath = selectedSkill.directoryPath;
+      const skillFiles = tree.filter((item: any) => {
+        if (item.type !== 'blob') return false;
+        // File is in skill directory (including subdirectories)
+        return item.path.startsWith(skillDirPath + '/') || item.path === `${skillDirPath}/SKILL.md`;
+      });
+
+      logger.debug('Files to download', 'SkillInstaller', {
+        count: skillFiles.length,
+        paths: skillFiles.map((f: any) => f.path)
+      });
+
+      // Download files sequentially to avoid network overload
+      for (const file of skillFiles) {
+        try {
+          const downloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${file.path}`;
+          const response = await fetchWithRetry(downloadUrl, {
+            headers: { 'User-Agent': 'skillsMN-App' }
+          });
+
+          if (response.ok) {
+            const content = await response.text();
+            files.set(file.path, content);
+          } else {
+            logger.warn(`Failed to download file: ${file.path}`, 'SkillInstaller', {
+              status: response.status
+            });
+          }
+        } catch (error) {
+          logger.warn(`Error downloading file: ${file.path}`, 'SkillInstaller', { error });
+        }
       }
 
       logger.info('Downloaded skill directory', 'SkillInstaller', {
         owner,
         repo,
         skillId,
+        skillName: selectedSkill.metadata.name,
+        directoryPath: skillDirPath,
         fileCount: files.size
       });
 
@@ -265,53 +528,6 @@ export class SkillInstaller {
       logger.error('Failed to download skill directory', 'SkillInstaller', error);
       throw error;
     }
-  }
-
-  /**
-   * Download files from GitHub tree that match skill directory
-   */
-  private async downloadFilesFromTree(
-    owner: string,
-    repo: string,
-    branch: string,
-    tree: any[],
-    skillId: string,
-    files: Map<string, string>
-  ): Promise<void> {
-    // Find all files in skill directory
-    const possiblePaths = [
-      skillId,
-      `skills/${skillId}`,
-      `skill/${skillId}`
-    ];
-
-    const skillFiles = tree.filter((item: any) => {
-      if (item.type !== 'blob') return false;
-      return possiblePaths.some(prefix => item.path.startsWith(prefix + '/'));
-    });
-
-    if (skillFiles.length === 0) {
-      return;
-    }
-
-    // Download all files in parallel
-    await Promise.all(
-      skillFiles.map(async (file: any) => {
-        const downloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file.path}`;
-        const response = await fetch(downloadUrl, {
-          headers: {
-            'User-Agent': 'skillsMN-App'
-          }
-        });
-
-        if (response.ok) {
-          const content = await response.text();
-          files.set(file.path, content);
-        } else {
-          logger.warn(`Failed to download file: ${file.path}`, 'SkillInstaller');
-        }
-      })
-    );
   }
 
   /**

@@ -83,18 +83,22 @@ export function validateSearchQuery(query: string): string | null {
  * Create SearchResult from GitHub API response
  */
 export function createSearchResultFromGitHub(data: any): SearchResult {
+  // Get the default branch first (used for constructing download URLs)
+  const defaultBranch = data.default_branch || 'main';
+  const repositoryName = data.full_name || data.repositoryName;
+
   const skillFiles: SkillFileMatch[] = [];
-  
+
   // Extract skill files from repository tree
   if (data.tree && Array.isArray(data.tree)) {
     for (const item of data.tree) {
       if (item.type === 'blob' && item.path.endsWith('SKILL.md')) {
         const directoryPath = item.path.substring(0, item.path.lastIndexOf('/'));
-        
+
         skillFiles.push({
           path: item.path,
           directoryPath,
-          downloadUrl: `https://raw.githubusercontent.com/${data.repositoryName}/main/${item.path}`,
+          downloadUrl: `https://raw.githubusercontent.com/${repositoryName}/${defaultBranch}/${item.path}`,
           lastModified: new Date(), // Will be updated when we fetch actual file info
         });
       }
@@ -102,14 +106,14 @@ export function createSearchResultFromGitHub(data: any): SearchResult {
   }
 
   return {
-    repositoryName: data.full_name || data.repositoryName,
-    repositoryUrl: data.html_url || `https://github.com/${data.full_name}`,
+    repositoryName,
+    repositoryUrl: data.html_url || `https://github.com/${repositoryName}`,
     description: data.description || 'No description available',
     stars: data.stargazers_count || data.stars || 0,
     forks: data.forks_count || data.forks || 0,
     archived: data.archived || false,
     language: data.language,
-    defaultBranch: data.default_branch || 'main',
+    defaultBranch,
     skillFiles,
     totalSkills: skillFiles.length,
   };

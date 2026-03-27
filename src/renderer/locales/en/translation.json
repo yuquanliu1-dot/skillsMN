@@ -291,7 +291,8 @@
     "assignToGroup": "Assign to Group",
     "removeFromGroup": "Remove from Group",
     "noSkillsInGroup": "No skills in this group",
-    "addSkillsToGroup": "Add skills to this group"
+    "addSkillsToGroup": "Add skills to this group",
+    "noTagsInGroup": "No tags in this group. Edit the group to add tags"
   },
 
   "setup": {

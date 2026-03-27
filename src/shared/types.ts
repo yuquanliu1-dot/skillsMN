@@ -879,6 +879,20 @@ export interface InstallFromRegistryRequest {
   skillId: string;
   /** Target tool identifier (optional - no longer used) */
   targetToolId?: string;
+  /** Selected directory path when multiple skills found (user selection) */
+  selectedDirectoryPath?: string;
+}
+
+/**
+ * Skill option for user selection when multiple skills found
+ */
+export interface SkillOption {
+  /** Skill display name */
+  name: string;
+  /** Directory path in repository */
+  directoryPath: string;
+  /** Skill description */
+  description?: string;
 }
 
 /**
@@ -945,7 +959,9 @@ export type RegistryErrorCode =
   | 'REPO_NETWORK_ERROR'
   | 'DISK_SPACE_ERROR'
   | 'INVALID_SKILL'
-  | 'INSTALLATION_FAILED';
+  | 'INSTALLATION_FAILED'
+  | 'REGISTRY_SKILL_NOT_FOUND'
+  | 'REGISTRY_MULTIPLE_SKILLS_FOUND';
 
 // ============================================================================
 // Skill Group Types
