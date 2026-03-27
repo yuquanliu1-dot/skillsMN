@@ -91,7 +91,7 @@ export default function DeleteConfirmDialog({
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
         onClick={(e) => {
           if (e.target === e.currentTarget && !isDeleting) {
             onClose();
@@ -100,71 +100,78 @@ export default function DeleteConfirmDialog({
         aria-hidden="true"
       />
 
-      {/* Dialog */}
+      {/* Dialog - Modern card style */}
       <div
         ref={dialogRef}
         data-testid="delete-confirm-dialog"
-        className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full border border-slate-200 dark:border-slate-700 dialog-content"
+        className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200/50 dark:border-slate-700/50 overflow-hidden dialog-content animate-in fade-in zoom-in-95 duration-200"
       >
-        {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-red-600 dark:text-red-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
+        {/* Header with gradient accent */}
+        <div className="relative bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/30 px-6 py-5 border-b border-red-100 dark:border-red-900/30">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-red-100 dark:bg-red-900/50 rounded-xl flex items-center justify-center shadow-sm">
+                <svg
+                  className="w-6 h-6 text-red-600 dark:text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h2
+                  id="delete-dialog-title"
+                  className="text-lg font-semibold text-slate-900 dark:text-white"
+                >
+                  {t('delete.title')}
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  {t('delete.cannotBeUndone')}
+                </p>
+              </div>
+            </div>
+            <button
+              ref={cancelButtonRef}
+              onClick={onClose}
+              disabled={isDeleting}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-400 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"
+              aria-label="Close dialog"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-            </div>
-            <div>
-              <h2
-                id="delete-dialog-title"
-                className="text-lg font-semibold text-slate-900 dark:text-white"
-              >
-                {t('delete.title')}
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                {t('delete.cannotBeUndone')}
-              </p>
-            </div>
+            </button>
           </div>
-          <button
-            ref={cancelButtonRef}
-            onClick={onClose}
-            disabled={isDeleting}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-400 rounded-lg p-1 disabled:opacity-50"
-            aria-label="Close dialog"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
         </div>
 
         {/* Body */}
         <div className="p-6 space-y-4">
-          {/* Skill name */}
-          <p className="text-slate-600 dark:text-slate-300">
-            {t('delete.confirmDelete')}{' '}
-            <span className="font-semibold text-slate-900 dark:text-white">{skill.name}</span>?
-          </p>
+          {/* Skill name highlight */}
+          <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+            <svg className="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('delete.confirmDelete')}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{skill.name}</p>
+            </div>
+          </div>
 
           {/* Warning info */}
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg p-4">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4">
             <div className="flex gap-3">
               <svg
                 className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"
@@ -190,53 +197,40 @@ export default function DeleteConfirmDialog({
             </div>
           </div>
 
-          {/* Skill info */}
-          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 space-y-3">
+          {/* Skill info - compact badges */}
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Source badge */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400">{t('delete.source')}</span>
-              {skill.sourceMetadata?.type === 'local' && (
-                <span className="badge badge-local">{t('skillCard.local')}</span>
-              )}
-              {skill.sourceMetadata?.type === 'registry' && (
-                <span
-                  className="badge badge-registry"
-                  title={`From ${skill.sourceMetadata.source}`}
-                >
-                  {skill.sourceMetadata.source}
-                </span>
-              )}
-              {skill.sourceMetadata?.type === 'private-repo' && (
-                <span
-                  className="badge badge-private"
-                  title={`From ${skill.sourceMetadata.repoPath}`}
-                >
-                  {t('skillCard.private')}
-                </span>
-              )}
-            </div>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{t('delete.source')}</span>
+            {skill.sourceMetadata?.type === 'local' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                {t('skillCard.local')}
+              </span>
+            )}
+            {skill.sourceMetadata?.type === 'registry' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
+                {skill.sourceMetadata.source}
+              </span>
+            )}
+            {skill.sourceMetadata?.type === 'private-repo' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                {t('skillCard.private')}
+              </span>
+            )}
 
-            {/* Resource count */}
+            {/* Resource count badge */}
             {skill.resourceCount > 0 && (
-              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
-                <span>
-                  {t('delete.resourcesWillBeDeleted', { count: skill.resourceCount })}
-                </span>
-              </div>
+                {skill.resourceCount}
+              </span>
             )}
           </div>
 
           {/* Error message */}
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-4">
               <div className="flex gap-3">
                 <svg
                   className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"
@@ -262,13 +256,13 @@ export default function DeleteConfirmDialog({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 rounded-b-lg">
+        {/* Footer - Modern button layout */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700">
           <button
             data-testid="cancel-delete-button"
             onClick={onClose}
             disabled={isDeleting}
-            className="btn btn-secondary"
+            className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:opacity-50 transition-colors"
           >
             {t('common.cancel')}
           </button>
@@ -276,7 +270,7 @@ export default function DeleteConfirmDialog({
             data-testid="confirm-delete-button"
             onClick={handleConfirm}
             disabled={isDeleting}
-            className="btn btn-danger min-w-[100px]"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 transition-colors min-w-[100px]"
           >
             {isDeleting ? (
               <>

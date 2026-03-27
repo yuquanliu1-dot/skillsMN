@@ -35,11 +35,11 @@
   "sidebar": {
     "localSkills": "本地技能",
     "searchOnInternet": "网络搜索",
-    "privateRepos": "私有仓库",
+    "privateRepos": "共享技能库",
     "settings": "设置",
     "localSkillsDescription": "本地技能",
     "discoverDescription": "在 skills.sh 上查找公开技能",
-    "privateReposDescription": "管理私有仓库"
+    "privateReposDescription": "管理共享技能库"
   },
 
   "claudeStatus": {

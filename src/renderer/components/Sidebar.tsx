@@ -26,6 +26,7 @@ export default function Sidebar({
   const { t } = useTranslation();
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
   const [claudeInstalled, setClaudeInstalled] = useState<boolean | null>(null); // null = checking
+  const [claudeVersion, setClaudeVersion] = useState<string | null>(null);
 
   // Check Claude CLI installation status
   useEffect(() => {
@@ -33,8 +34,11 @@ export default function Sidebar({
       try {
         const result = await window.electronAPI.checkClaudeInstall();
         setClaudeInstalled(result.data?.installed ?? false);
-      } catch {
+        setClaudeVersion(result.data?.version ?? null);
+      } catch (error) {
+        console.error('[Sidebar] Claude install check error:', error);
         setClaudeInstalled(false);
+        setClaudeVersion(null);
       }
     };
 
@@ -64,18 +68,12 @@ export default function Sidebar({
       label: t('sidebar.privateRepos'),
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          {/* Folder with lock icon for private repositories */}
+          {/* Users/share icon for shared skill library */}
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 15v2m-2-4a2 2 0 114 0v1h-4v-1z"
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
           />
         </svg>
       ),
@@ -87,19 +85,12 @@ export default function Sidebar({
       label: t('sidebar.searchOnInternet'),
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          {/* Blue cloud with search icon for internet/discover skills */}
+          {/* Globe icon for internet search */}
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 15l3 3m0-3l3 3"
-            opacity={0.6}
+            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
           />
         </svg>
       ),
@@ -223,11 +214,24 @@ export default function Sidebar({
                 ? 'bg-red-600 text-white whitespace-normal w-64 bottom-0'
                 : 'bg-slate-800 text-white whitespace-nowrap'
             }`}>
+              {(() => {
+                console.log('[Sidebar] Rendering tooltip, claudeInstalled:', claudeInstalled, 'claudeVersion:', claudeVersion);
+                return null;
+              })()}
               {claudeInstalled === null ? (
                 t('claudeStatus.checking')
               ) : claudeInstalled ? (
                 <>
-                  <span className="font-medium">{t('claudeStatus.installed')}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{t('claudeStatus.installed')}</span>
+                    {claudeVersion ? (
+                      <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded text-[10px] font-mono">
+                        v{claudeVersion}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 text-[10px]">(version unknown)</span>
+                    )}
+                  </div>
                   <span className="block text-slate-300 mt-0.5">{t('claudeStatus.aiFeaturesAvailable')}</span>
                 </>
               ) : (
