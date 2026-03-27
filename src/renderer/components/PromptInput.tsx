@@ -44,7 +44,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
           onChange={handleChange}
           disabled={disabled}
           placeholder={placeholder}
-          rows={4}
+          rows={8}
           aria-label="AI generation prompt"
         />
         <div className={`character-counter ${isNearLimit ? 'near-limit' : ''} ${isAtLimit ? 'at-limit' : ''}`}>
@@ -67,7 +67,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
 
         .prompt-textarea {
           width: 100%;
-          min-height: 100px;
+          min-height: 200px;
           padding: 1rem;
           padding-bottom: 2rem;
           font-family: inherit;
