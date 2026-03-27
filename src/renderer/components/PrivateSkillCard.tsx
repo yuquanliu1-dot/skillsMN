@@ -9,21 +9,62 @@ import { useState, useEffect } from 'react';
 import type { PrivateSkill, PrivateRepo } from '../../shared/types';
 import PrivateInstallDialog from './PrivateInstallDialog';
 import ConflictResolutionDialog from './ConflictResolutionDialog';
+import TagGroupPopup from './TagGroupPopup';
 
 interface PrivateSkillCardProps {
   skill: PrivateSkill;
   repo: PrivateRepo;
   onInstallComplete?: () => void;
   onSkillClick?: (skill: PrivateSkill) => void;
+  onNavigateToSettings?: () => void;
+  onTagAssigned?: () => void;
 }
 
-export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSkillClick }: PrivateSkillCardProps): JSX.Element {
+export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSkillClick, onNavigateToSettings, onTagAssigned }: PrivateSkillCardProps): JSX.Element {
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [installProgress, setInstallProgress] = useState<'idle' | 'installing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [showTagPopup, setShowTagPopup] = useState(false);
+  const [selectedTag, setSelectedTag] = useState<string>('');
+
+  /**
+   * Handle tag click to show group assignment popup
+   */
+  const handleTagClick = (e: React.MouseEvent, tag: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedTag(tag);
+    setShowTagPopup(true);
+  };
+
+  /**
+   * Handle tag assignment to a group
+   */
+  const handleAssignTag = async (tag: string, groupId: string | null) => {
+    try {
+      if (groupId) {
+        await window.electronAPI.addTagToGroup(groupId, tag);
+      } else {
+        // Remove tag from any group it's in
+        const groups = await window.electronAPI.listSkillGroups();
+        if (groups.success && groups.data) {
+          for (const group of groups.data) {
+            if (group.tags.includes(tag)) {
+              await window.electronAPI.removeTagFromGroup(group.id, tag);
+            }
+          }
+        }
+      }
+      // Notify parent to refresh
+      onTagAssigned?.();
+    } catch (error) {
+      console.error('Failed to assign tag:', error);
+      throw error;
+    }
+  };
 
   /**
    * Check if skill is already installed
@@ -237,13 +278,14 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
           {skill.tags && skill.tags.length > 0 && (
             <div className="flex items-center gap-1 overflow-hidden flex-1">
               {skill.tags.slice(0, 3).map((tag, index) => (
-                <span
+                <button
                   key={index}
-                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-0 flex-shrink-0"
-                  title={tag}
+                  onClick={(e) => handleTagClick(e, tag)}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-0 flex-shrink-0 hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors cursor-pointer"
+                  title={`${tag} - Click to assign to group`}
                 >
                   {tag}
-                </span>
+                </button>
               ))}
               {skill.tags.length > 3 && (
                 <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">+{skill.tags.length - 3}</span>
@@ -277,6 +319,15 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
           onResolve={handleConflictResolve}
         />
       )}
+
+      {/* Tag Group Popup */}
+      <TagGroupPopup
+        isOpen={showTagPopup}
+        tag={selectedTag}
+        onClose={() => setShowTagPopup(false)}
+        onAssign={handleAssignTag}
+        onNavigateToSettings={onNavigateToSettings}
+      />
     </>
   );
 }

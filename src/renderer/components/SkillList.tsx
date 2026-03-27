@@ -23,6 +23,8 @@ interface SkillListProps {
   skillUpdates?: Record<string, VersionComparison>;
   onSkillUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
   onSkillUpload?: (skill: Skill) => Promise<void>;
+  onNavigateToSettings?: () => void;
+  onTagAssigned?: () => void;
 }
 
 interface GroupedSkills {
@@ -43,37 +45,36 @@ export default function SkillList({
   skillUpdates = {},
   onSkillUpdate,
   onSkillUpload,
+  onNavigateToSettings,
+  onTagAssigned,
 }: SkillListProps): JSX.Element {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
-  const [filterTag, setFilterTag] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
   const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
 
   // Load skill groups
-  useEffect(() => {
-    const loadGroups = async () => {
-      try {
-        const response = await window.electronAPI.listSkillGroups();
-        if (response.success && response.data) {
-          setSkillGroups(response.data);
-        }
-      } catch (error) {
-        console.error('Failed to load skill groups:', error);
+  const loadSkillGroups = useCallback(async () => {
+    try {
+      const response = await window.electronAPI.listSkillGroups();
+      if (response.success && response.data) {
+        setSkillGroups(response.data);
       }
-    };
-    loadGroups();
+    } catch (error) {
+      console.error('Failed to load skill groups:', error);
+    }
   }, []);
 
-  // Extract all unique tags from skills
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    skills.forEach((skill) => {
-      skill.tags?.forEach((tag) => tagSet.add(tag));
-    });
-    return Array.from(tagSet).sort();
-  }, [skills]);
+  useEffect(() => {
+    loadSkillGroups();
+  }, [loadSkillGroups]);
+
+  // Handle tag assigned callback
+  const handleTagAssigned = useCallback(() => {
+    loadSkillGroups();
+    onTagAssigned?.();
+  }, [loadSkillGroups, onTagAssigned]);
 
   // Filter and sort skills
   const filteredAndSortedSkills = useMemo(() => {
@@ -85,11 +86,6 @@ export default function SkillList({
         const sourceType = skill.sourceMetadata?.type || 'local';
         return sourceType === filterSource;
       });
-    }
-
-    // Filter by tag
-    if (filterTag !== 'all') {
-      result = result.filter((skill) => skill.tags?.includes(filterTag));
     }
 
     // Filter by search query (matches name, description, and tags)
@@ -116,27 +112,35 @@ export default function SkillList({
     });
 
     return result;
-  }, [skills, filterSource, filterTag, searchQuery, sortBy]);
+  }, [skills, filterSource, searchQuery, sortBy]);
 
-  // Group skills by configured groups
+  // Group skills by configured groups (based on tags)
   const groupedSkills = useMemo((): GroupedSkills[] => {
     const result: GroupedSkills[] = [];
     const assignedSkills = new Set<string>();
 
-    // Create a map of skill name to group
-    const skillToGroup = new Map<string, SkillGroup>();
+    // Create a map of tag to group
+    const tagToGroup = new Map<string, SkillGroup>();
     for (const group of skillGroups) {
-      for (const skillName of group.skills) {
-        skillToGroup.set(skillName.toLowerCase(), group);
+      for (const tag of group.tags) {
+        tagToGroup.set(tag.toLowerCase(), group);
       }
     }
 
-    // Group skills by their assigned group
+    // Group skills by their tags' group assignments
     for (const group of skillGroups) {
       const groupSkills: Skill[] = [];
       for (const skill of filteredAndSortedSkills) {
-        const assignedGroup = skillToGroup.get(skill.name.toLowerCase());
-        if (assignedGroup?.id === group.id && !assignedSkills.has(skill.path)) {
+        if (assignedSkills.has(skill.path)) continue;
+
+        // Check if any of the skill's tags belong to this group
+        const skillTags = skill.tags || [];
+        const hasGroupTag = skillTags.some(tag => {
+          const assignedGroup = tagToGroup.get(tag.toLowerCase());
+          return assignedGroup?.id === group.id;
+        });
+
+        if (hasGroupTag) {
           groupSkills.push(skill);
           assignedSkills.add(skill.path);
         }
@@ -146,7 +150,7 @@ export default function SkillList({
       }
     }
 
-    // Ungrouped skills
+    // Ungrouped skills (skills without tags or tags not assigned to any group)
     const ungroupedSkills = filteredAndSortedSkills.filter(
       (skill) => !assignedSkills.has(skill.path)
     );
@@ -260,30 +264,6 @@ export default function SkillList({
               </select>
             </div>
 
-            {/* Filter by tag */}
-            {allTags.length > 0 && (
-              <div className="flex items-center gap-1">
-                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                <select
-                  id="filter-tag"
-                  value={filterTag}
-                  onChange={(e) => setFilterTag(e.target.value)}
-                  className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
-                  aria-label={t('skills.filterByTag')}
-                  title={t('skills.filterByTag')}
-                >
-                  <option value="all">{t('skills.allTags')}</option>
-                  {allTags.map((tag) => (
-                    <option key={tag} value={tag}>
-                      {tag}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             {/* Sort by */}
             <div className="flex items-center gap-1">
               <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -366,6 +346,8 @@ export default function SkillList({
                         versionStatus={versionStatus}
                         onUpdate={handleSkillUpdate}
                         onUpload={onSkillUpload}
+                        onNavigateToSettings={onNavigateToSettings}
+                        onTagAssigned={handleTagAssigned}
                       />
                     );
                   })}

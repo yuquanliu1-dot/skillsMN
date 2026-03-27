@@ -54,6 +54,7 @@ export interface ElectronAPI {
   ) => Promise<IPCResponse<{ newPath: string }>>;
   getSkillFileTree: (skillPath: string) => Promise<IPCResponse<SkillFileTreeNode>>;
   readSkillFile: (filePath: string) => Promise<IPCResponse<SkillFileContent>>;
+  writeSkillFile: (filePath: string, content: string) => Promise<IPCResponse<void>>;
 
   // Dialog Operations
   selectDirectory: () => Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>>;
@@ -236,11 +237,11 @@ export interface ElectronAPI {
   // Skill Group Operations
   listSkillGroups: () => Promise<IPCResponse<SkillGroup[]>>;
   getSkillGroup: (id: string) => Promise<IPCResponse<SkillGroup>>;
-  createSkillGroup: (data: Omit<SkillGroup, 'id' | 'skills' | 'createdAt' | 'updatedAt'>) => Promise<IPCResponse<SkillGroup>>;
+  createSkillGroup: (data: Omit<SkillGroup, 'id' | 'tags' | 'createdAt' | 'updatedAt'>) => Promise<IPCResponse<SkillGroup>>;
   updateSkillGroup: (id: string, data: Partial<Omit<SkillGroup, 'id' | 'createdAt'>>) => Promise<IPCResponse<SkillGroup>>;
   deleteSkillGroup: (id: string) => Promise<IPCResponse<void>>;
-  addSkillToGroup: (groupId: string, skillName: string) => Promise<IPCResponse<SkillGroup>>;
-  removeSkillFromGroup: (groupId: string, skillName: string) => Promise<IPCResponse<SkillGroup>>;
+  addTagToGroup: (groupId: string, tag: string) => Promise<IPCResponse<SkillGroup>>;
+  removeTagFromGroup: (groupId: string, tag: string) => Promise<IPCResponse<SkillGroup>>;
   reorderSkillGroups: (groupIds: string[]) => Promise<IPCResponse<void>>;
 }
 

@@ -12,7 +12,11 @@ import { IPC_CHANNELS } from '../../shared/constants';
 import { SkillGroup, SkillGroupsConfig, IPCResponse, IPCError } from '../../shared/types';
 
 let skillGroupService: SkillGroupService | null = null;
-let configService: { load: () => Promise<any>; save: (config: any) => Promise<any> } | null = null;
+let configService: {
+  load: () => Promise<any>;
+  save: (config: any) => Promise<any>;
+  saveSkillGroups: (skillGroups: SkillGroupsConfig) => Promise<void>;
+} | null = null;
 
 /**
  * Convert error to IPCError format
@@ -31,7 +35,11 @@ function toIPCError(error: unknown): IPCError {
 /**
  * Set config service reference
  */
-export function setConfigService(service: { load: () => Promise<any>; save: (config: any) => Promise<any> }): void {
+export function setConfigService(service: {
+  load: () => Promise<any>;
+  save: (config: any) => Promise<any>;
+  saveSkillGroups: (skillGroups: SkillGroupsConfig) => Promise<void>;
+}): void {
   configService = service;
 }
 
@@ -138,39 +146,39 @@ export function registerSkillGroupHandlers(): void {
     }
   );
 
-  // Handler for skill-group:add-skill
+  // Handler for skill-group:add-tag
   ipcMain.handle(
-    IPC_CHANNELS.SKILL_GROUP_ADD_SKILL,
-    async (_event, { groupId, skillName }: { groupId: string; skillName: string }): Promise<IPCResponse<SkillGroup>> => {
+    IPC_CHANNELS.SKILL_GROUP_ADD_TAG,
+    async (_event, { groupId, tag }: { groupId: string; tag: string }): Promise<IPCResponse<SkillGroup>> => {
       try {
-        logger.debug('Adding skill to group', 'SkillGroupHandlers', { groupId, skillName });
+        logger.debug('Adding tag to group', 'SkillGroupHandlers', { groupId, tag });
         await loadConfigIntoService();
-        const result = skillGroupService!.addSkillToGroup(groupId, skillName);
+        const result = skillGroupService!.addTagToGroup(groupId, tag);
         if (result.success) {
           await saveConfigFromService();
         }
         return result;
       } catch (error) {
-        logger.error('Failed to add skill to group', 'SkillGroupHandlers', error);
+        logger.error('Failed to add tag to group', 'SkillGroupHandlers', error);
         return { success: false, error: toIPCError(error) };
       }
     }
   );
 
-  // Handler for skill-group:remove-skill
+  // Handler for skill-group:remove-tag
   ipcMain.handle(
-    IPC_CHANNELS.SKILL_GROUP_REMOVE_SKILL,
-    async (_event, { groupId, skillName }: { groupId: string; skillName: string }): Promise<IPCResponse<SkillGroup>> => {
+    IPC_CHANNELS.SKILL_GROUP_REMOVE_TAG,
+    async (_event, { groupId, tag }: { groupId: string; tag: string }): Promise<IPCResponse<SkillGroup>> => {
       try {
-        logger.debug('Removing skill from group', 'SkillGroupHandlers', { groupId, skillName });
+        logger.debug('Removing tag from group', 'SkillGroupHandlers', { groupId, tag });
         await loadConfigIntoService();
-        const result = skillGroupService!.removeSkillFromGroup(groupId, skillName);
+        const result = skillGroupService!.removeTagFromGroup(groupId, tag);
         if (result.success) {
           await saveConfigFromService();
         }
         return result;
       } catch (error) {
-        logger.error('Failed to remove skill from group', 'SkillGroupHandlers', error);
+        logger.error('Failed to remove tag from group', 'SkillGroupHandlers', error);
         return { success: false, error: toIPCError(error) };
       }
     }
@@ -223,7 +231,7 @@ async function saveConfigFromService(): Promise<void> {
   }
 
   const groupsConfig = skillGroupService!.getConfig();
-  await configService.save({ skillGroups: groupsConfig });
+  await configService.saveSkillGroups(groupsConfig);
 }
 
 /**

@@ -100,6 +100,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_FILE_READ, { filePath });
   },
 
+  writeSkillFile: (filePath: string, content: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_FILE_WRITE, { filePath, content });
+  },
+
   // ============================================================================
   // Configuration Operations
   // ============================================================================
@@ -527,12 +531,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_DELETE, { id });
   },
 
-  addSkillToGroup: (groupId: string, skillName: string): Promise<IPCResponse<SkillGroup>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_ADD_SKILL, { groupId, skillName });
+  addTagToGroup: (groupId: string, tag: string): Promise<IPCResponse<SkillGroup>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_ADD_TAG, { groupId, tag });
   },
 
-  removeSkillFromGroup: (groupId: string, skillName: string): Promise<IPCResponse<SkillGroup>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_REMOVE_SKILL, { groupId, skillName });
+  removeTagFromGroup: (groupId: string, tag: string): Promise<IPCResponse<SkillGroup>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_REMOVE_TAG, { groupId, tag });
   },
 
   reorderSkillGroups: (groupIds: string[]): Promise<IPCResponse<void>> => {

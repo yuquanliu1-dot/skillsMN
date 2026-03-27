@@ -49,7 +49,7 @@ export class SkillGroupService {
   /**
    * Create a new group
    */
-  createGroup(data: Omit<SkillGroup, 'id' | 'skills' | 'createdAt' | 'updatedAt'>): IPCResponse<SkillGroup> {
+  createGroup(data: Omit<SkillGroup, 'id' | 'tags' | 'createdAt' | 'updatedAt'>): IPCResponse<SkillGroup> {
     try {
       const now = new Date().toISOString();
       const group: SkillGroup = {
@@ -58,7 +58,7 @@ export class SkillGroupService {
         description: data.description,
         color: data.color || '#3B82F6',
         icon: data.icon || '📁',
-        skills: [],
+        tags: [],
         createdAt: now,
         updatedAt: now,
       };
@@ -153,9 +153,9 @@ export class SkillGroupService {
   }
 
   /**
-   * Add skill to group
+   * Add tag to group
    */
-  addSkillToGroup(groupId: string, skillName: string): IPCResponse<SkillGroup> {
+  addTagToGroup(groupId: string, tag: string): IPCResponse<SkillGroup> {
     try {
       const group = this.config.groups.find(g => g.id === groupId);
       if (!group) {
@@ -168,41 +168,41 @@ export class SkillGroupService {
         };
       }
 
-      if (group.skills.includes(skillName)) {
+      if (group.tags.includes(tag)) {
         return {
           success: false,
           error: {
-            code: 'SKILL_ALREADY_IN_GROUP',
-            message: 'Skill is already in this group',
+            code: 'TAG_ALREADY_IN_GROUP',
+            message: 'Tag is already in this group',
           },
         };
       }
 
-      // Remove skill from other groups first
-      this.removeSkillFromAllGroups(skillName);
+      // Remove tag from other groups first (a tag can only belong to one group)
+      this.removeTagFromAllGroups(tag);
 
-      group.skills.push(skillName);
+      group.tags.push(tag);
       group.updatedAt = new Date().toISOString();
 
-      logger.info('Skill added to group', 'SkillGroupService', { groupId, skillName });
+      logger.info('Tag added to group', 'SkillGroupService', { groupId, tag });
 
       return { success: true, data: group };
     } catch (error) {
-      logger.error('Failed to add skill to group', 'SkillGroupService', { error, groupId, skillName });
+      logger.error('Failed to add tag to group', 'SkillGroupService', { error, groupId, tag });
       return {
         success: false,
         error: {
-          code: 'ADD_SKILL_FAILED',
-          message: error instanceof Error ? error.message : 'Failed to add skill to group',
+          code: 'ADD_TAG_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to add tag to group',
         },
       };
     }
   }
 
   /**
-   * Remove skill from group
+   * Remove tag from group
    */
-  removeSkillFromGroup(groupId: string, skillName: string): IPCResponse<SkillGroup> {
+  removeTagFromGroup(groupId: string, tag: string): IPCResponse<SkillGroup> {
     try {
       const group = this.config.groups.find(g => g.id === groupId);
       if (!group) {
@@ -215,53 +215,53 @@ export class SkillGroupService {
         };
       }
 
-      const skillIndex = group.skills.indexOf(skillName);
-      if (skillIndex === -1) {
+      const tagIndex = group.tags.indexOf(tag);
+      if (tagIndex === -1) {
         return {
           success: false,
           error: {
-            code: 'SKILL_NOT_IN_GROUP',
-            message: 'Skill is not in this group',
+            code: 'TAG_NOT_IN_GROUP',
+            message: 'Tag is not in this group',
           },
         };
       }
 
-      group.skills.splice(skillIndex, 1);
+      group.tags.splice(tagIndex, 1);
       group.updatedAt = new Date().toISOString();
 
-      logger.info('Skill removed from group', 'SkillGroupService', { groupId, skillName });
+      logger.info('Tag removed from group', 'SkillGroupService', { groupId, tag });
 
       return { success: true, data: group };
     } catch (error) {
-      logger.error('Failed to remove skill from group', 'SkillGroupService', { error, groupId, skillName });
+      logger.error('Failed to remove tag from group', 'SkillGroupService', { error, groupId, tag });
       return {
         success: false,
         error: {
-          code: 'REMOVE_SKILL_FAILED',
-          message: error instanceof Error ? error.message : 'Failed to remove skill from group',
+          code: 'REMOVE_TAG_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to remove tag from group',
         },
       };
     }
   }
 
   /**
-   * Remove skill from all groups
+   * Remove tag from all groups
    */
-  removeSkillFromAllGroups(skillName: string): void {
+  removeTagFromAllGroups(tag: string): void {
     for (const group of this.config.groups) {
-      const index = group.skills.indexOf(skillName);
+      const index = group.tags.indexOf(tag);
       if (index !== -1) {
-        group.skills.splice(index, 1);
+        group.tags.splice(index, 1);
         group.updatedAt = new Date().toISOString();
       }
     }
   }
 
   /**
-   * Get group for a skill
+   * Get group for a tag
    */
-  getGroupForSkill(skillName: string): SkillGroup | undefined {
-    return this.config.groups.find(g => g.skills.includes(skillName));
+  getGroupForTag(tag: string): SkillGroup | undefined {
+    return this.config.groups.find(g => g.tags.includes(tag));
   }
 
   /**

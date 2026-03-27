@@ -272,6 +272,21 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
     }
   );
 
+  // Handler for skill:file-write
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_FILE_WRITE,
+    async (_event, { filePath, content }: { filePath: string; content: string }): Promise<IPCResponse<void>> => {
+      try {
+        logger.debug(`Writing skill file: ${filePath}`, 'SkillHandlers');
+        await skillService!.writeSkillFile(filePath, content);
+        return { success: true };
+      } catch (error) {
+        logger.error('Failed to write skill file', 'SkillHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
   // Handler for fs:watch-start
   ipcMain.handle(
     IPC_CHANNELS.FS_WATCH_START,

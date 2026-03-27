@@ -217,7 +217,7 @@ export default function SymlinkPanel({
   onError,
 }: SymlinkPanelProps): JSX.Element {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true); // Default expanded
   const [installedTools, setInstalledTools] = useState<AgentTool[]>([]);
   const [symlinkStatus, setSymlinkStatus] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);

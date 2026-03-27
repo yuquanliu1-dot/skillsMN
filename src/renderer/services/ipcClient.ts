@@ -145,6 +145,16 @@ export const ipcClient = {
     return response.data!;
   },
 
+  async writeSkillFile(filePath: string, content: string): Promise<void> {
+    if (!isElectron()) {
+      throw new Error('Cannot write skill file in browser mode');
+    }
+    const response = await window.electronAPI.writeSkillFile(filePath, content);
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Unknown error');
+    }
+  },
+
   // ============================================================================
   // Configuration Operations
   // ============================================================================

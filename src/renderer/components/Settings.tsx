@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Configuration, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig, SkillGroup, Skill } from '../../shared/types';
+import type { Configuration, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig, SkillGroup } from '../../shared/types';
 import { changeLanguage, availableLanguages, getCurrentLanguage } from '../i18n';
 import type { LanguageCode } from '../../shared/types';
 
@@ -87,7 +87,6 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   const [editGroupColor, setEditGroupColor] = useState('#3B82F6');
   const [editGroupIcon, setEditGroupIcon] = useState('📁');
   const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
-  const [allSkills, setAllSkills] = useState<Skill[]>([]);
 
   /**
    * Load current settings when dialog opens
@@ -297,7 +296,6 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   useEffect(() => {
     if (isOpen && activeTab === 'skill-groups') {
       loadSkillGroups();
-      loadAllSkills();
     }
   }, [isOpen, activeTab]);
 
@@ -317,17 +315,6 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
       console.error('Load skill groups error:', err);
     } finally {
       setIsLoadingGroups(false);
-    }
-  };
-
-  const loadAllSkills = async () => {
-    try {
-      const response = await window.electronAPI.listSkills();
-      if (response.success && response.data) {
-        setAllSkills(response.data);
-      }
-    } catch (err) {
-      console.error('Load skills error:', err);
     }
   };
 
@@ -456,46 +443,46 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   };
 
   /**
-   * Handle add skill to group
+   * Handle add tag to group
    */
-  const handleAddSkillToGroup = async (groupId: string, skillName: string) => {
+  const handleAddTagToGroup = async (groupId: string, tag: string) => {
     setError(null);
     setSuccess(null);
 
     try {
-      const response = await window.electronAPI.addSkillToGroup(groupId, skillName);
+      const response = await window.electronAPI.addTagToGroup(groupId, tag);
       if (response.success) {
         setSuccess(t('settings.groupUpdated'));
         await loadSkillGroups();
       } else {
-        setError(response.error?.message || 'Failed to add skill to group');
+        setError(response.error?.message || 'Failed to add tag to group');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to add skill to group';
+      const message = err instanceof Error ? err.message : 'Failed to add tag to group';
       setError(message);
-      console.error('Add skill to group error:', err);
+      console.error('Add tag to group error:', err);
     }
   };
 
   /**
-   * Handle remove skill from group
+   * Handle remove tag from group
    */
-  const handleRemoveSkillFromGroup = async (groupId: string, skillName: string) => {
+  const handleRemoveTagFromGroup = async (groupId: string, tag: string) => {
     setError(null);
     setSuccess(null);
 
     try {
-      const response = await window.electronAPI.removeSkillFromGroup(groupId, skillName);
+      const response = await window.electronAPI.removeTagFromGroup(groupId, tag);
       if (response.success) {
         setSuccess(t('settings.groupUpdated'));
         await loadSkillGroups();
       } else {
-        setError(response.error?.message || 'Failed to remove skill from group');
+        setError(response.error?.message || 'Failed to remove tag from group');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to remove skill from group';
+      const message = err instanceof Error ? err.message : 'Failed to remove tag from group';
       setError(message);
-      console.error('Remove skill from group error:', err);
+      console.error('Remove tag from group error:', err);
     }
   };
 
@@ -2118,46 +2105,24 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                           </div>
                         </div>
 
-                        {/* Skills in group */}
+                        {/* Tags in group */}
                         <div className="mt-2 pt-2 border-t border-slate-200">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs text-slate-500">
-                              {t('settings.skillsInGroup', { count: group.skills.length })}
-                            </span>
-                            <select
-                              className="text-xs border border-slate-300 rounded px-2 py-1"
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  handleAddSkillToGroup(group.id, e.target.value);
-                                  e.target.value = '';
-                                }
-                              }}
-                              value=""
-                            >
-                              <option value="">{t('settings.addSkillsToGroup')}</option>
-                              {allSkills
-                                .filter(s => !group.skills.includes(s.name))
-                                .map(skill => (
-                                  <option key={skill.path} value={skill.name}>
-                                    {skill.name}
-                                  </option>
-                                ))
-                              }
-                            </select>
-                          </div>
-                          {group.skills.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic">{t('settings.noSkillsInGroup')}</p>
+                          <span className="text-xs text-slate-500">
+                            {t('settings.tagsInGroup', { count: group.tags.length })}
+                          </span>
+                          {group.tags.length === 0 ? (
+                            <p className="text-xs text-slate-400 italic mt-1">{t('settings.noTagsInGroup')}</p>
                           ) : (
-                            <div className="flex flex-wrap gap-1">
-                              {group.skills.map(skillName => (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {group.tags.map(tag => (
                                 <span
-                                  key={skillName}
+                                  key={tag}
                                   className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full"
                                   style={{ backgroundColor: `${group.color}20`, color: group.color }}
                                 >
-                                  {skillName}
+                                  {tag}
                                   <button
-                                    onClick={() => handleRemoveSkillFromGroup(group.id, skillName)}
+                                    onClick={() => handleRemoveTagFromGroup(group.id, tag)}
                                     className="hover:opacity-70"
                                     title={t('settings.removeFromGroup')}
                                   >

@@ -128,6 +128,7 @@ export const IPC_CHANNELS = {
   SKILL_UPDATE_SKILL: 'skill:update-skill',
   SKILL_FILE_TREE: 'skill:file-tree',
   SKILL_FILE_READ: 'skill:file-read',
+  SKILL_FILE_WRITE: 'skill:file-write',
 
   // Configuration operations
   CONFIG_LOAD: 'config:load',
@@ -214,8 +215,8 @@ export const IPC_CHANNELS = {
   SKILL_GROUP_CREATE: 'skill-group:create',
   SKILL_GROUP_UPDATE: 'skill-group:update',
   SKILL_GROUP_DELETE: 'skill-group:delete',
-  SKILL_GROUP_ADD_SKILL: 'skill-group:add-skill',
-  SKILL_GROUP_REMOVE_SKILL: 'skill-group:remove-skill',
+  SKILL_GROUP_ADD_TAG: 'skill-group:add-tag',
+  SKILL_GROUP_REMOVE_TAG: 'skill-group:remove-tag',
   SKILL_GROUP_REORDER: 'skill-group:reorder',
 
   // Terminal operations

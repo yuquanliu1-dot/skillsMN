@@ -5,7 +5,7 @@
  * with grid layout and skill grouping
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PrivateRepo, PrivateSkill, SkillGroup } from '../../shared/types';
 import PrivateSkillCard from './PrivateSkillCard';
@@ -15,11 +15,6 @@ type SortBy = 'name' | 'modified';
 interface GroupedSkills {
   group: SkillGroup | null;
   skills: PrivateSkill[];
-}
-
-interface PrivateRepoListProps {
-  onInstallSkill?: (skill: PrivateSkill, repo: PrivateRepo) => void;
-  onSkillClick?: (skill: PrivateSkill) => void;
 }
 
 /**
@@ -50,13 +45,19 @@ function logPerformance(operation: string, startTime: number, targetMs: number =
   }
 }
 
-export default function PrivateRepoList({ onInstallSkill, onSkillClick }: PrivateRepoListProps): JSX.Element {
+interface PrivateRepoListProps {
+  onInstallSkill?: (skill: PrivateSkill, repo: PrivateRepo) => void;
+  onSkillClick?: (skill: PrivateSkill) => void;
+  onNavigateToSettings?: () => void;
+  onTagAssigned?: () => void;
+}
+
+export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNavigateToSettings, onTagAssigned }: PrivateRepoListProps): JSX.Element {
   const { t } = useTranslation();
   const [repositories, setRepositories] = useState<PrivateRepo[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
   const [skills, setSkills] = useState<PrivateSkill[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterTag, setFilterTag] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
   const [isLoadingRepos, setIsLoadingRepos] = useState(true);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
@@ -68,28 +69,26 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
   const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
 
   // Load skill groups
-  useEffect(() => {
-    const loadGroups = async () => {
-      try {
-        const response = await window.electronAPI.listSkillGroups();
-        if (response.success && response.data) {
-          setSkillGroups(response.data);
-        }
-      } catch (error) {
-        console.error('Failed to load skill groups:', error);
+  const loadSkillGroups = useCallback(async () => {
+    try {
+      const response = await window.electronAPI.listSkillGroups();
+      if (response.success && response.data) {
+        setSkillGroups(response.data);
       }
-    };
-    loadGroups();
+    } catch (error) {
+      console.error('Failed to load skill groups:', error);
+    }
   }, []);
 
-  // Extract all unique tags from skills
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    skills.forEach((skill) => {
-      skill.tags?.forEach((tag) => tagSet.add(tag));
-    });
-    return Array.from(tagSet).sort();
-  }, [skills]);
+  useEffect(() => {
+    loadSkillGroups();
+  }, [loadSkillGroups]);
+
+  // Handle tag assigned callback
+  const handleTagAssigned = useCallback(() => {
+    loadSkillGroups();
+    onTagAssigned?.();
+  }, [loadSkillGroups, onTagAssigned]);
 
   // Filter and sort skills
   const filteredAndSortedSkills = useMemo(() => {
@@ -97,13 +96,8 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
 
     let result = [...skills];
 
-    // Filter by tag
-    if (filterTag !== 'all') {
-      result = result.filter((skill) => skill.tags?.includes(filterTag));
-    }
-
     // Filter by search query (matches name, description, and tags)
-    if (searchQuery.trim() && filterTag === 'all') {
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (skill) =>
@@ -126,27 +120,35 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
     });
 
     return result;
-  }, [skills, filterTag, searchQuery, sortBy]);
+  }, [skills, searchQuery, sortBy]);
 
-  // Group skills by configured groups
+  // Group skills by configured groups (based on tags)
   const groupedSkills = useMemo((): GroupedSkills[] => {
     const result: GroupedSkills[] = [];
     const assignedSkills = new Set<string>();
 
-    // Create a map of skill name to group
-    const skillToGroup = new Map<string, SkillGroup>();
+    // Create a map of tag to group
+    const tagToGroup = new Map<string, SkillGroup>();
     for (const group of skillGroups) {
-      for (const skillName of group.skills) {
-        skillToGroup.set(skillName.toLowerCase(), group);
+      for (const tag of group.tags) {
+        tagToGroup.set(tag.toLowerCase(), group);
       }
     }
 
-    // Group skills by their assigned group
+    // Group skills by their tags' group assignments
     for (const group of skillGroups) {
       const groupSkills: PrivateSkill[] = [];
       for (const skill of filteredAndSortedSkills) {
-        const assignedGroup = skillToGroup.get(skill.name.toLowerCase());
-        if (assignedGroup?.id === group.id && !assignedSkills.has(skill.path)) {
+        if (assignedSkills.has(skill.path)) continue;
+
+        // Check if any of the skill's tags belong to this group
+        const skillTags = skill.tags || [];
+        const hasGroupTag = skillTags.some(tag => {
+          const assignedGroup = tagToGroup.get(tag.toLowerCase());
+          return assignedGroup?.id === group.id;
+        });
+
+        if (hasGroupTag) {
           groupSkills.push(skill);
           assignedSkills.add(skill.path);
         }
@@ -156,7 +158,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
       }
     }
 
-    // Ungrouped skills
+    // Ungrouped skills (skills without tags or tags not assigned to any group)
     const ungroupedSkills = filteredAndSortedSkills.filter(
       (skill) => !assignedSkills.has(skill.path)
     );
@@ -223,13 +225,6 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
   useEffect(() => {
     setVisibleCount(50);
   }, [skills.length]);
-
-  /**
-   * Reset tag filter when skills change
-   */
-  useEffect(() => {
-    setFilterTag('all');
-  }, [selectedRepoId]);
 
   /**
    * Load skills when repository is selected
@@ -471,36 +466,12 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
             </select>
           </div>
 
-          {/* Skills count, Tag filter and Sort */}
+          {/* Skills count and Sort */}
           {selectedRepoId && skills.length > 0 && (
             <>
               <span className="text-xs text-gray-500">
                 {t('privateRepos.skillsCount', { count: filteredAndSortedSkills.length })}
               </span>
-
-              {/* Tag filter */}
-              {allTags.length > 0 && (
-                <div className="flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                  <select
-                    id="filter-tag-private"
-                    value={filterTag}
-                    onChange={(e) => setFilterTag(e.target.value)}
-                    className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
-                    aria-label={t('skills.filterByTag')}
-                    title={t('skills.filterByTag')}
-                  >
-                    <option value="all">{t('skills.allTags')}</option>
-                    {allTags.map((tag) => (
-                      <option key={tag} value={tag}>
-                        {tag}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               {/* Sort by */}
               <div className="flex items-center gap-1 ml-auto">
@@ -639,14 +610,12 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {searchQuery || filterTag !== 'all' ? t('privateRepos.noSkillsFound') : t('privateRepos.noSkillsAvailable')}
+              {searchQuery ? t('privateRepos.noSkillsFound') : t('privateRepos.noSkillsAvailable')}
             </h3>
             <p className="text-sm text-gray-600 text-center max-w-md">
               {searchQuery
                 ? t('discover.noResultsFor', { query: searchQuery })
-                : filterTag !== 'all'
-                  ? t('privateRepos.noSkillsForTag', { tag: filterTag })
-                  : t('privateRepos.noSkillsInRepo')}
+                : t('privateRepos.noSkillsInRepo')}
             </p>
           </div>
         ) : (
@@ -693,12 +662,14 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick }: Privat
                 {/* Skill cards grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {groupSkills.slice(0, visibleCount).map((skill) => (
-                    <PrivateSkillCard
+                        <PrivateSkillCard
                       key={skill.path}
                       skill={skill}
                       repo={selectedRepo!}
                       onInstallComplete={() => loadSkills(selectedRepo!.id)}
                       onSkillClick={onSkillClick}
+                      onNavigateToSettings={onNavigateToSettings}
+                      onTagAssigned={handleTagAssigned}
                     />
                   ))}
                 </div>

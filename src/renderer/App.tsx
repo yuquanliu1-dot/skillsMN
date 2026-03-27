@@ -851,6 +851,8 @@ export default function App(): JSX.Element {
               skillUpdates={skillUpdates}
               onSkillUpdate={handleUpdateSkill}
               onSkillUpload={handleUploadSkill}
+              onNavigateToSettings={() => setShowSettings(true)}
+              onTagAssigned={loadSkills}
             />
           </div>
 
@@ -865,6 +867,8 @@ export default function App(): JSX.Element {
           <div style={{ display: currentView === 'private-repos' ? 'flex' : 'none' }} className="h-full flex flex-col overflow-hidden">
             <PrivateRepoList
               onSkillClick={handleViewPrivateSkill}
+              onNavigateToSettings={() => setShowSettings(true)}
+              onTagAssigned={loadSkills}
             />
           </div>
         </div>

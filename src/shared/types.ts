@@ -952,7 +952,7 @@ export type RegistryErrorCode =
 // ============================================================================
 
 /**
- * Skill group for organizing skills
+ * Skill group for organizing skills by tags
  */
 export interface SkillGroup {
   /** Unique group identifier */
@@ -965,8 +965,8 @@ export interface SkillGroup {
   color?: string;
   /** Group icon (emoji or icon name) */
   icon?: string;
-  /** List of skill names in this group */
-  skills: string[];
+  /** List of tags assigned to this group */
+  tags: string[];
   /** Creation timestamp */
   createdAt: string;
   /** Last update timestamp */

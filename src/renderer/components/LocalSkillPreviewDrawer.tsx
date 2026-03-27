@@ -14,7 +14,8 @@ import remarkFrontmatter from 'remark-frontmatter';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import type { Components } from 'react-markdown';
-import type { Skill, SkillSymlinkConfig, AgentTool } from '../../shared/types';
+import type { Skill } from '../../shared/types';
+import SymlinkPanel from './SymlinkPanel';
 
 interface LocalSkillPreviewDrawerProps {
   isOpen: boolean;
@@ -107,132 +108,6 @@ function CodeBlock({
   );
 }
 
-// Symlink Management Component
-function SymlinkPanel({ skill }: { skill: Skill }) {
-  const { t } = useTranslation();
-  const [symlinkStatus, setSymlinkStatus] = useState<Record<string, boolean>>({});
-  const [availableTargets, setAvailableTargets] = useState<AgentTool[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadSymlinkData();
-  }, [skill.path]);
-
-  const loadSymlinkData = async () => {
-    setIsLoading(true);
-    try {
-      const [statusRes, toolsRes] = await Promise.all([
-        window.electronAPI.getMultiSymlinkStatus(skill.name),
-        window.electronAPI.getInstalledTools(),
-      ]);
-
-      if (statusRes.success && statusRes.data) {
-        setSymlinkStatus(statusRes.data);
-      }
-
-      if (toolsRes.success && toolsRes.data) {
-        setAvailableTargets(toolsRes.data);
-      }
-    } catch (error) {
-      console.error('Failed to load symlink data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleToggleLink = async (toolId: string, enabled: boolean) => {
-    setIsUpdating(toolId);
-    try {
-      const response = await window.electronAPI.updateSymlinkTarget({
-        skillName: skill.name,
-        skillPath: skill.path,
-        toolId,
-        enabled,
-      });
-
-      if (response.success) {
-        await loadSymlinkData();
-      }
-    } catch (error) {
-      console.error('Failed to update symlink:', error);
-    } finally {
-      setIsUpdating(null);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-4">
-        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-        </svg>
-        {t('symlink.title')}
-      </h4>
-
-      {availableTargets.length === 0 ? (
-        <p className="text-xs text-gray-500">{t('symlink.noTargetsAvailable')}</p>
-      ) : (
-        <div className="space-y-2">
-          {availableTargets.map((tool) => {
-            const isLinked = symlinkStatus[tool.id] ?? false;
-            const isBusy = isUpdating === tool.id;
-
-            return (
-              <div
-                key={tool.id}
-                className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{tool.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{tool.skillsDir}</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleToggleLink(tool.id, !isLinked)}
-                  disabled={isBusy}
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                    isLinked
-                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  } ${isBusy ? 'opacity-50 cursor-wait' : ''}`}
-                >
-                  {isBusy ? (
-                    <span className="flex items-center gap-1">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                    </span>
-                  ) : isLinked ? (
-                    t('symlink.linked')
-                  ) : (
-                    t('symlink.notLinked')
-                  )}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <p className="text-xs text-gray-500 mt-2">{t('symlink.helpText')}</p>
-    </div>
-  );
-}
-
 export default function LocalSkillPreviewDrawer({
   isOpen,
   skill,
@@ -242,7 +117,6 @@ export default function LocalSkillPreviewDrawer({
   const { t } = useTranslation();
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'content' | 'links'>('content');
 
   useEffect(() => {
     if (isOpen && skill) {
@@ -404,17 +278,6 @@ export default function LocalSkillPreviewDrawer({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {onEdit && (
-              <button
-                onClick={() => onEdit(skill)}
-                className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                {t('common.edit')}
-              </button>
-            )}
             <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -427,41 +290,7 @@ export default function LocalSkillPreviewDrawer({
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 bg-gray-50">
-          <button
-            onClick={() => setActiveTab('content')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'content'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <span className="flex items-center justify-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              {t('editor.title', 'Skill Content')}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('links')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'links'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <span className="flex items-center justify-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-              {t('symlink.title')}
-            </span>
-          </button>
-        </div>
-
-        {/* Content */}
+        {/* Content with collapsible Link panel */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
@@ -470,30 +299,29 @@ export default function LocalSkillPreviewDrawer({
                 <span className="text-sm text-gray-500">Loading...</span>
               </div>
             </div>
-          ) : activeTab === 'content' ? (
-            <div className="px-8 py-6">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkFrontmatter]}
-                components={markdownComponents}
-              >
-                {content}
-              </ReactMarkdown>
-            </div>
           ) : (
-            <div className="px-6 py-4">
-              <SymlinkPanel skill={skill} />
-            </div>
+            <>
+              {/* Symlink Panel - uses the shared component with collapsible functionality */}
+              <SymlinkPanel
+                skillName={skill.name}
+                skillPath={skill.path}
+              />
+
+              {/* Skill Content */}
+              <div className="px-8 py-6">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkFrontmatter]}
+                  components={markdownComponents}
+                >
+                  {content}
+                </ReactMarkdown>
+              </div>
+            </>
           )}
         </div>
 
         {/* Footer */}
         <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex gap-3 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-          >
-            {t('common.close')}
-          </button>
           {onEdit && (
             <button
               onClick={() => onEdit(skill)}
@@ -505,6 +333,12 @@ export default function LocalSkillPreviewDrawer({
               {t('common.edit')}
             </button>
           )}
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+          >
+            {t('common.close')}
+          </button>
         </div>
       </div>
     </>

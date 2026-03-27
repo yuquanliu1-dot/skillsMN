@@ -1265,4 +1265,28 @@ installedAt: ${new Date().toISOString()}
       language,
     };
   }
+
+  /**
+   * Write content to a file within a skill directory
+   * Validates path security before writing
+   * @param filePath - Absolute path to file
+   * @param content - Content to write
+   */
+  async writeSkillFile(filePath: string, content: string): Promise<void> {
+    logger.debug(`Writing skill file: ${filePath}`, 'SkillService');
+
+    // Validate path
+    const validatedPath = this.pathValidator.validate(filePath);
+
+    // Ensure parent directory exists
+    const parentDir = path.dirname(validatedPath);
+    await fsExtra.ensureDir(parentDir);
+
+    // Write content to file
+    await fs.promises.writeFile(validatedPath, content, 'utf-8');
+
+    logger.info(`File written successfully: ${filePath}`, 'SkillService', {
+      contentLength: content.length,
+    });
+  }
 }
