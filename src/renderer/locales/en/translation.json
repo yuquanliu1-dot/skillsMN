@@ -35,11 +35,11 @@
   "sidebar": {
     "localSkills": "Local Skills",
     "searchOnInternet": "Search on Internet",
-    "privateRepos": "Private Repos",
+    "privateRepos": "Shared Skills",
     "settings": "Settings",
     "localSkillsDescription": "Local Skills",
     "discoverDescription": "Find public skills on skills.sh",
-    "privateReposDescription": "Manage private repositories"
+    "privateReposDescription": "Browse shared team skills"
   },
 
   "claudeStatus": {
@@ -109,7 +109,7 @@
     "localModificationsOverwritten": "Any local modifications will be overwritten.",
     "createBackup": "Create backup before update",
     "backupDescription": "Saves a copy with a timestamp suffix",
-    "uploadToPrivateRepo": "Upload to private repository",
+    "uploadToPrivateRepo": "Upload to shared repository",
     "localVersionNewer": "Local version ({{local}}) is newer than remote version ({{remote}}).",
     "targetRepository": "Target Repository",
     "version": "Version",
@@ -154,7 +154,7 @@
     "general": "General",
     "storage": "Skills Directories",
     "skillView": "Skill View",
-    "privateRepositories": "Private Repositories",
+    "privateRepositories": "Shared Skills",
     "aiConfiguration": "AI Configuration",
 
     "directories": "Skills Storage Directories",
@@ -202,7 +202,7 @@
     "skillEditorSettingsSaved": "Skill editor settings saved successfully",
 
     "addRepository": "Add Repository",
-    "addPrivateRepository": "Add Private Repository",
+    "addPrivateRepository": "Add Shared Repository",
     "provider": "Provider",
     "gitlabInstanceUrl": "GitLab Instance URL (optional)",
     "gitlabInstanceUrlPlaceholder": "https://gitlab.company.com (leave empty for GitLab.com)",
@@ -299,12 +299,12 @@
     "setupDescription": "Let's get you set up in just a few steps",
     "step": "Step {{number}}",
     "skillsDirectory": "Skills Directory",
-    "privateRepos": "Private Repositories",
-    "privateRepositories": "Private Repositories",
+    "privateRepos": "Shared Skills",
+    "privateRepositories": "Shared Skills",
     "aiConfiguration": "AI Configuration",
 
     "skillsDirectoryDescription": "Select a directory for skill storage and linking",
-    "privateReposDescription": "Connect your private skill repositories",
+    "privateReposDescription": "Connect to shared skill repositories",
     "aiConfigDescription": "Configure your AI assistant settings",
 
     "clickToSelectDirectory": "Click to Select Skills Directory",
@@ -315,8 +315,8 @@
     "projectSkillsTip": "For project-level skills, the directory name is typically",
     "addMultipleLater": "You can add multiple directories later from Settings.",
 
-    "addPrivateRepository": "Add Private Repository",
-    "noPrivateReposYet": "No private repositories yet",
+    "addPrivateRepository": "Add Shared Repository",
+    "noPrivateReposYet": "No shared repositories yet",
     "skipAndAddLater": "You can skip this step and add repositories later from Settings",
     "connectionVerified": "Connection verified",
 
@@ -364,8 +364,8 @@
         "action": "The skill repository may have been moved or deleted. Try searching for an alternative skill."
       },
       "privateRepo": {
-        "title": "Private Repository",
-        "action": "This skill is in a private repository. Contact the skill author or search for public alternatives."
+        "title": "Shared Repository",
+        "action": "This skill is in a shared repository. Contact the skill author or search for public alternatives."
       },
       "networkError": {
         "title": "Network Error",
@@ -408,14 +408,14 @@
   },
 
   "privateRepos": {
-    "title": "Private Repositories",
+    "title": "Shared Skills",
     "searchPlaceholder": "Search skills...",
     "repository": "Repository:",
     "skillsCount": "{{count}} skills",
     "loadMore": "Load More ({{count}} remaining)",
     "showingOf": "Showing {{visible}} of {{total}} skills",
     "noRepositories": "No repositories configured",
-    "addInSettings": "Add a private repository in Settings to get started.",
+    "addInSettings": "Add a shared repository in Settings to get started.",
     "errorLoadingSkills": "Error Loading Skills",
     "noSkillsAvailable": "No skills available",
     "noSkillsFound": "No skills found",
@@ -507,10 +507,10 @@
   },
 
   "upload": {
-    "title": "Upload to Private Repository",
+    "title": "Upload to Shared Repository",
     "selectRepository": "Select Repository",
     "selectDirectory": "Select Directory",
-    "uploadDescription": "Upload this skill to a private repository",
+    "uploadDescription": "Upload this skill to a shared repository",
     "skillName": "Skill Name",
     "targetPath": "Target Path",
     "commitMessage": "Commit Message",
