@@ -934,6 +934,7 @@ export default function App(): JSX.Element {
           }}
           onUploadSkill={handleUploadSkill}
           onCommitChanges={handleCommitChanges}
+          versionStatus={editingSkill ? skillUpdates[editingSkill.path] : undefined}
         />
       )}
 

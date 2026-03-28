@@ -15,10 +15,12 @@ import { useTranslation } from 'react-i18next';
 import Editor, { OnMount, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor';
-import type { Skill, SkillEditorConfig, Configuration, SkillFileTreeNode } from '../../shared/types';
+import type { Skill, SkillEditorConfig, Configuration, SkillFileTreeNode, VersionComparison } from '../../shared/types';
 import { AISkillSidebar } from './AISkillSidebar';
+import { AIAssistantPopover } from './AIAssistantPopover';
 import { ipcClient } from '../services/ipcClient';
 import { FileTreePanel } from './FileTreePanel';
+import { useAIGeneration } from '../hooks/useAIGeneration';
 
 // Configure Monaco to use local installation instead of CDN
 loader.config({ monaco });
@@ -132,6 +134,8 @@ interface SkillEditorFullProps {
   onUploadSkill?: (skill: Skill) => void;
   onCommitChanges?: (skill: Skill) => void;
   onSkillModified?: (filePath?: string) => void;
+  /** Version comparison status for conflict detection */
+  versionStatus?: VersionComparison;
 }
 
 export default function SkillEditorFull({
@@ -155,6 +159,7 @@ export default function SkillEditorFull({
   onUploadSkill,
   onCommitChanges,
   onSkillModified,
+  versionStatus,
 }: SkillEditorFullProps): JSX.Element {
   const { t } = useTranslation();
 
@@ -168,14 +173,28 @@ export default function SkillEditorFull({
   const [error, setError] = useState<string | null>(null);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saving'>('idle');
   const [externalChangeDetected, setExternalChangeDetected] = useState(false);
+  const [showExternalModificationDialog, setShowExternalModificationDialog] = useState(false);
+  const [pendingSaveContent, setPendingSaveContent] = useState<string | null>(null);
 
   // File tree state
   const [isFileTreeVisible, setIsFileTreeVisible] = useState<boolean>(true); // Default visible
+  const [fileTreeRefreshKey, setFileTreeRefreshKey] = useState<number>(0);
   const [selectedFileNode, setSelectedFileNode] = useState<SkillFileTreeNode | null>(null);
   const [binaryFileError, setBinaryFileError] = useState<string | null>(null);
 
   // AI Assistant visibility state
   const [isAIPanelVisible, setIsAIPanelVisible] = useState<boolean>(true);
+
+  // AI Rewrite/Insert popover state
+  const [isAIRewritePopoverOpen, setIsAIRewritePopoverOpen] = useState<boolean>(false);
+  const [rewriteSelection, setRewriteSelection] = useState<{ text: string; range: monaco.Range } | null>(null);
+  const [rewritePopoverPosition, setRewritePopoverPosition] = useState<{ x: number; y: number } | undefined>();
+  const [isAIInsertPopoverOpen, setIsAIInsertPopoverOpen] = useState<boolean>(false);
+  const [insertPosition, setInsertPosition] = useState<{ line: number; column: number } | null>(null);
+  const [insertPopoverPosition, setInsertPopoverPosition] = useState<{ x: number; y: number } | undefined>();
+
+  // AI generation hook for rewrite/insert
+  const { status: aiStatus, content: aiContent, generate, reset: resetAI } = useAIGeneration();
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -430,19 +449,8 @@ export default function SkillEditorFull({
   const handleEditorDidMount: OnMount = (editor) => {
     editorRef.current = editor;
 
-    // Add custom context menu action for AI Rewrite
-    editor.addAction({
-      id: 'ai-rewrite',
-      label: '✨ AI Rewrite',
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyR],
-      contextMenuGroupId: 'navigation',
-      contextMenuOrder: 1.5,
-      run: (ed) => {
-        const selection = ed.getSelection();
-        if (!selection || selection.isEmpty()) return;
-        // The AI assistant on the right will handle this
-      },
-    });
+    // AI Rewrite and AI Insert features are temporarily disabled
+    // TODO: Re-enable when design is finalized
 
     editor.focus();
   };
@@ -506,7 +514,7 @@ export default function SkillEditorFull({
   /**
    * Manual save handler - saves active tab
    */
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (forceOverwrite: boolean = false) => {
     if (isNewSkill) {
       // For new skills, just mark as having unsaved changes
       // The AI assistant will handle the actual creation
@@ -525,7 +533,11 @@ export default function SkillEditorFull({
 
       if (activeTab.isMainFile) {
         // Save main SKILL.md
-        const response = await onSave(activeTab.content, activeTab.loadedLastModified);
+        // If forceOverwrite is true, pass 0 as lastModified to skip external modification check
+        const response = await onSave(
+          activeTab.content,
+          forceOverwrite ? 0 : activeTab.loadedLastModified
+        );
 
         const newLastModified = response && response.lastModified
           ? new Date(response.lastModified).getTime()
@@ -548,17 +560,38 @@ export default function SkillEditorFull({
       }
 
       setAutoSaveStatus('idle');
+      setShowExternalModificationDialog(false);
+      setPendingSaveContent(null);
     } catch (err: any) {
       if (err?.code === 'EXTERNAL_MODIFICATION') {
-        setError(t('editor.fileModifiedExternally'));
+        // Show dialog instead of just error message
+        setPendingSaveContent(activeTab.content);
+        setShowExternalModificationDialog(true);
+        setAutoSaveStatus('idle');
       } else {
         setError(t('editor.failedToSave'));
+        setAutoSaveStatus('idle');
       }
-      setAutoSaveStatus('idle');
     } finally {
       setIsSaving(false);
     }
   }, [activeTab, activeTabId, isSaving, isNewSkill, onSave, t]);
+
+  /**
+   * Handle reload from disk (user chose to reload)
+   */
+  const handleReloadFromDisk = useCallback(async () => {
+    setShowExternalModificationDialog(false);
+    setPendingSaveContent(null);
+    await reloadSkillContent();
+  }, [reloadSkillContent]);
+
+  /**
+   * Handle force overwrite (user chose to overwrite)
+   */
+  const handleForceOverwrite = useCallback(() => {
+    handleSave(true);
+  }, [handleSave]);
 
   /**
    * Keyboard shortcuts
@@ -624,6 +657,8 @@ export default function SkillEditorFull({
    */
   const handleSkillCreated = useCallback((skillInfo?: { name: string; path: string }) => {
     if (skillInfo) {
+      // Refresh file tree to show new files
+      setFileTreeRefreshKey(prev => prev + 1);
       onSkillCreated?.(skillInfo);
       // Don't close - parent will switch to edit mode which shows file tree
     }
@@ -642,8 +677,101 @@ export default function SkillEditorFull({
         reloadSkillContent();
       }
     }
+    // Refresh the file tree to show any new/modified files
+    setFileTreeRefreshKey(prev => prev + 1);
     onSkillModified?.(filePath);
   }, [skill, tabs, reloadSkillContent, onSkillModified]);
+
+  /**
+   * Handle AI Rewrite confirmation
+   */
+  const handleAIRewriteConfirm = useCallback((prompt: string) => {
+    if (!rewriteSelection || !activeTab) return;
+
+    generate(prompt, 'replace', {
+      content: activeTab.content,
+      selectedText: rewriteSelection.text,
+      cursorPosition: undefined,
+    });
+  }, [rewriteSelection, activeTab, generate]);
+
+  /**
+   * Handle AI Insert confirmation
+   */
+  const handleAIInsertConfirm = useCallback((prompt: string) => {
+    if (!insertPosition || !activeTab) return;
+
+    generate(prompt, 'insert', {
+      content: activeTab.content,
+      selectedText: undefined,
+      cursorPosition: undefined,
+    });
+  }, [insertPosition, activeTab, generate]);
+
+  /**
+   * Watch for AI rewrite completion
+   */
+  useEffect(() => {
+    if (aiStatus === 'COMPLETE' && aiContent && rewriteSelection && editorRef.current) {
+      // Replace the selected text with AI-generated content
+      editorRef.current.executeEdits('ai-rewrite', [
+        {
+          range: rewriteSelection.range,
+          text: aiContent,
+        },
+      ]);
+
+      // Mark tab as modified
+      setTabs(prev => prev.map(tab =>
+        tab.id === activeTabId
+          ? { ...tab, isModified: true }
+          : tab
+      ));
+      setIsAIRewritePopoverOpen(false);
+      setRewriteSelection(null);
+      resetAI();
+    } else if (aiStatus === 'ERROR') {
+      // Close popover on error
+      setIsAIRewritePopoverOpen(false);
+      setRewriteSelection(null);
+      resetAI();
+    }
+  }, [aiStatus, aiContent, rewriteSelection, activeTabId, resetAI]);
+
+  /**
+   * Watch for AI insert completion
+   */
+  useEffect(() => {
+    if (aiStatus === 'COMPLETE' && aiContent && insertPosition && editorRef.current) {
+      // Insert the AI-generated content at cursor position
+      editorRef.current.executeEdits('ai-insert', [
+        {
+          range: new monaco.Range(
+            insertPosition.line,
+            insertPosition.column,
+            insertPosition.line,
+            insertPosition.column
+          ),
+          text: aiContent,
+        },
+      ]);
+
+      // Mark tab as modified
+      setTabs(prev => prev.map(tab =>
+        tab.id === activeTabId
+          ? { ...tab, isModified: true }
+          : tab
+      ));
+      setIsAIInsertPopoverOpen(false);
+      setInsertPosition(null);
+      resetAI();
+    } else if (aiStatus === 'ERROR') {
+      // Close popover on error
+      setIsAIInsertPopoverOpen(false);
+      setInsertPosition(null);
+      resetAI();
+    }
+  }, [aiStatus, aiContent, insertPosition, activeTabId, resetAI]);
 
   // Get display name
   const displayName = isNewSkill ? t('editor.newSkill', 'New Skill') : skill?.name || 'Unknown';
@@ -764,19 +892,30 @@ export default function SkillEditorFull({
           {isEditing && onCommitChanges && skill?.sourceMetadata && skill.sourceMetadata.type !== 'local' && hasUnsavedChanges && (
             <button
               onClick={() => onCommitChanges(skill)}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                versionStatus?.hasUpdate
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+              title={versionStatus?.hasUpdate ? t('editor.commitConflictWarning') : undefined}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              {t('editor.commitChanges')}
+              {versionStatus?.hasUpdate ? (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {versionStatus?.hasUpdate ? t('editor.commitChangesConflict') : t('editor.commitChanges')}
             </button>
           )}
 
           {/* Save button */}
           {isEditing && (
             <button
-              onClick={handleSave}
+              onClick={() => handleSave(false)}
               disabled={isSaving || !hasUnsavedChanges}
               className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -862,6 +1001,7 @@ export default function SkillEditorFull({
             onFileSelect={handleFileSelect}
             isVisible={isFileTreeVisible}
             onToggle={() => setIsFileTreeVisible(!isFileTreeVisible)}
+            refreshKey={fileTreeRefreshKey}
           />
         )}
 
@@ -1019,6 +1159,88 @@ export default function SkillEditorFull({
           </div>
         )}
       </div>
+
+      {/* AI Rewrite Popover */}
+      {isAIRewritePopoverOpen && rewriteSelection && (
+        <AIAssistantPopover
+          isOpen={isAIRewritePopoverOpen}
+          mode="rewrite"
+          selectedText={rewriteSelection.text}
+          onClose={() => {
+            setIsAIRewritePopoverOpen(false);
+            setRewriteSelection(null);
+            resetAI();
+          }}
+          onConfirm={handleAIRewriteConfirm}
+          isProcessing={aiStatus === 'STREAMING'}
+          position={rewritePopoverPosition}
+        />
+      )}
+
+      {/* AI Insert Popover */}
+      {isAIInsertPopoverOpen && insertPosition && (
+        <AIAssistantPopover
+          isOpen={isAIInsertPopoverOpen}
+          mode="insert"
+          onClose={() => {
+            setIsAIInsertPopoverOpen(false);
+            setInsertPosition(null);
+            resetAI();
+          }}
+          onConfirm={handleAIInsertConfirm}
+          isProcessing={aiStatus === 'STREAMING'}
+          position={insertPopoverPosition}
+        />
+      )}
+
+      {/* External Modification Dialog */}
+      {showExternalModificationDialog && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100]">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                {t('editor.externalModificationTitle')}
+              </h3>
+            </div>
+
+            {/* Message */}
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+              {t('editor.externalModificationMessage')}
+            </p>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowExternalModificationDialog(false);
+                  setPendingSaveContent(null);
+                }}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleReloadFromDisk}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                {t('editor.reload')}
+              </button>
+              <button
+                onClick={handleForceOverwrite}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                {t('editor.overwrite')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

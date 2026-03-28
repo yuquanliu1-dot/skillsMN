@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import type { Skill } from '../../shared/types';
+import { useTranslation } from 'react-i18next';
+import type { Skill, VersionComparison } from '../../shared/types';
 import { ipcClient } from '../services/ipcClient';
 
 interface CommitChangesDialogProps {
@@ -13,6 +14,7 @@ interface CommitChangesDialogProps {
   skill: Skill;
   onClose: () => void;
   onSuccess: () => void;
+  versionStatus?: VersionComparison;
 }
 
 export default function CommitChangesDialog({
@@ -20,7 +22,9 @@ export default function CommitChangesDialog({
   skill,
   onClose,
   onSuccess,
+  versionStatus,
 }: CommitChangesDialogProps): JSX.Element | null {
+  const { t } = useTranslation();
   const [commitMessage, setCommitMessage] = useState('');
   const [isCommitting, setIsCommitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,18 +150,41 @@ export default function CommitChangesDialog({
             </div>
           </div>
 
-          {/* Warning Message */}
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 px-4 py-3 rounded text-sm">
-            <div className="flex items-start gap-2">
-              <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <div className="flex-1">
-                <p className="font-medium">This will update the skill in the repository</p>
-                <p className="text-xs mt-1">Your local changes will be committed and pushed to the remote repository.</p>
+          {/* Version Conflict Warning */}
+          {versionStatus?.hasUpdate && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-600 text-red-800 dark:text-red-200 px-4 py-3 rounded text-sm">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="flex-1">
+                  <p className="font-medium">{t('commit.versionConflict')}</p>
+                  <p className="text-xs mt-1">
+                    {t('commit.versionConflictDesc', {
+                      local: versionStatus.localVersion || 'unknown',
+                      remote: versionStatus.remoteVersion || 'unknown'
+                    })}
+                  </p>
+                  <p className="text-xs mt-1 font-medium">{t('commit.versionConflictSuggestion')}</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Standard Warning Message */}
+          {!versionStatus?.hasUpdate && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 px-4 py-3 rounded text-sm">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="flex-1">
+                  <p className="font-medium">{t('commit.willUpdate')}</p>
+                  <p className="text-xs mt-1">{t('commit.willUpdateDesc')}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Commit Message */}
           <div>
