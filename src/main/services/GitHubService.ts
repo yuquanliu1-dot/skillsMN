@@ -21,6 +21,72 @@ import { toKebabCase } from '../utils/pathUtils';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
+// Proxy agents loaded via require to avoid ESM module resolution issues
+let HttpsProxyAgent: any = null;
+let HttpProxyAgent: any = null;
+
+// Lazy load proxy agents
+function loadProxyAgents(): void {
+  if (!HttpsProxyAgent) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      HttpsProxyAgent = require('https-proxy-agent');
+    } catch {
+      logger.warn('https-proxy-agent not available', 'GitHubService');
+    }
+  }
+  if (!HttpProxyAgent) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      HttpProxyAgent = require('http-proxy-agent');
+    } catch {
+      logger.warn('http-proxy-agent not available', 'GitHubService');
+    }
+  }
+}
+
+/**
+ * Get proxy agent from system environment variables
+ * Supports HTTP_PROXY, HTTPS_PROXY, http_proxy, https_proxy
+ */
+function getProxyAgent(url: string): any {
+  loadProxyAgents();
+
+  const parsedUrl = new URL(url);
+  const isHttps = parsedUrl.protocol === 'https:';
+
+  // Check for proxy environment variables
+  const proxyUrl = isHttps
+    ? (process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy)
+    : (process.env.HTTP_PROXY || process.env.http_proxy);
+
+  if (!proxyUrl) {
+    return undefined;
+  }
+
+  logger.debug(`Using proxy for ${url}`, 'GitHubService', { proxyUrl });
+
+  try {
+    if (isHttps && HttpsProxyAgent) {
+      return new HttpsProxyAgent(proxyUrl);
+    } else if (!isHttps && HttpProxyAgent) {
+      return new HttpProxyAgent(proxyUrl);
+    }
+  } catch (error) {
+    logger.warn('Failed to create proxy agent', 'GitHubService', error);
+  }
+
+  return undefined;
+}
+
+/**
+ * Fetch with system proxy support
+ */
+async function fetchWithProxy(url: string, options: any = {}): Promise<any> {
+  const agent = getProxyAgent(url);
+  return fetch(url, { ...options, agent });
+}
+
 /**
  * Cache entry
  */
@@ -179,7 +245,7 @@ export class GitHubService {
             'User-Agent': 'skillsMN-App',
           };
 
-          const res = await fetch(url, {
+          const res = await fetchWithProxy(url, {
             headers,
             signal: controller.signal,
           });
@@ -299,7 +365,7 @@ export class GitHubService {
     }
 
     try {
-      const response = await fetch(downloadUrl, {
+      const response = await fetchWithProxy(downloadUrl, {
         headers: {
           'User-Agent': 'skillsMN-App',
         },
@@ -462,7 +528,7 @@ export class GitHubService {
 
       // Get repository tree to find all files in skill directory
       const treeUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
-      const treeResponse = await fetch(treeUrl, {
+      const treeResponse = await fetchWithProxy(treeUrl, {
         headers: {
           'Accept': 'application/vnd.github.v3+json',
           'User-Agent': 'skillsMN-App',
@@ -501,7 +567,7 @@ export class GitHubService {
         skillDirFiles.map(async (file: any) => {
           try {
             const fileDownloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file.path}`;
-            const fileResponse = await fetch(fileDownloadUrl, {
+            const fileResponse = await fetchWithProxy(fileDownloadUrl, {
               headers: {
                 'User-Agent': 'skillsMN-App',
               },
@@ -569,7 +635,7 @@ export class GitHubService {
     repositoryName: string
   ): Promise<{ success: boolean; newPath?: string; error?: string }> {
     try {
-      const response = await fetch(downloadUrl, {
+      const response = await fetchWithProxy(downloadUrl, {
         headers: {
           'User-Agent': 'skillsMN-App',
         },
@@ -705,7 +771,7 @@ export class GitHubService {
   ): Promise<any[]> {
     try {
       const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
-      const response = await fetch(url, {
+      const response = await fetchWithProxy(url, {
         headers: {
           'Authorization': `token ${pat}`,
           'Accept': 'application/vnd.github.v3+json',
@@ -798,7 +864,7 @@ export class GitHubService {
                 headers['Authorization'] = `token ${pat}`;
               }
 
-              const response = await fetch(
+              const response = await fetchWithProxy(
                 `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${file.path}?ref=${branch}`,
                 { headers }
               );
@@ -871,7 +937,7 @@ export class GitHubService {
   }> {
     try {
       const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}`;
-      const response = await fetch(url, {
+      const response = await fetchWithProxy(url, {
         headers: {
           'Authorization': `token ${pat}`,
           'Accept': 'application/vnd.github.v3+json',
@@ -944,7 +1010,7 @@ export class GitHubService {
   ): Promise<any[]> {
     try {
       const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits?path=${encodeURIComponent(directoryPath)}&sha=${branch}&per_page=10`;
-      const response = await fetch(url, {
+      const response = await fetchWithProxy(url, {
         headers: {
           'Authorization': `token ${pat}`,
           'Accept': 'application/vnd.github.v3+json',
@@ -1060,7 +1126,7 @@ export class GitHubService {
       headers['Authorization'] = `token ${pat}`;
     }
 
-    const response = await fetch(
+    const response = await fetchWithProxy(
       `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}?ref=${actualBranch}`,
       { headers }
     );
@@ -1125,10 +1191,11 @@ export class GitHubService {
       return controller;
     };
 
-    // Helper function to fetch with timeout
+    // Helper function to fetch with timeout and proxy
     const fetchWithTimeout = async (url: string, options: any): Promise<any> => {
       const controller = createTimeoutController();
-      return fetch(url, { ...options, signal: controller.signal });
+      const agent = getProxyAgent(url);
+      return fetch(url, { ...options, signal: controller.signal, agent });
     };
 
     try {
@@ -1322,10 +1389,11 @@ export class GitHubService {
       return controller;
     };
 
-    // Helper function to fetch with timeout
+    // Helper function to fetch with timeout and proxy
     const fetchWithTimeout = async (url: string, options: any): Promise<any> => {
       const controller = createTimeoutController();
-      return fetch(url, { ...options, signal: controller.signal });
+      const agent = getProxyAgent(url);
+      return fetch(url, { ...options, signal: controller.signal, agent });
     };
 
     try {
