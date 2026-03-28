@@ -127,3 +127,20 @@ playwright-report/
 
 # Spec process commands (speckit)
 .claude/commands/speckit.*
+
+# Documentation that should not be in repo
+*INTEGRATION*.md
+*GUIDE*.md
+*CONFIGURATION*.md
+*IMPLEMENTATION*.md
+*SUMMARY*.md
+*STATUS*.md
+*DESIGN*.md
+*IMPROVEMENTS*.md
+*需求*.txt
+*需求*.md
+*优化*.txt
+*BUG_FIX*.md
+*DEVTOOLS*.md
+*SETUP*.md
+*HOW_TO*.md
