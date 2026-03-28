@@ -12,6 +12,7 @@ import { ErrorHandler } from '../utils/ErrorHandler';
 import { ConfigService } from '../services/ConfigService';
 import { setProxyConfig } from '../services/GitHubService';
 import { setRegistryProxyConfig } from '../services/RegistryService';
+import { setGitProxyConfig } from '../utils/gitOperations';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { IPCResponse, IPCError, AppConfiguration, BaseConfiguration, ProxyConfig } from '../../shared/types';
 
@@ -41,6 +42,7 @@ function applyProxyConfig(proxyConfig: ProxyConfig | undefined): void {
     // Proxy disabled - clear all proxy settings
     setProxyConfig(undefined);
     setRegistryProxyConfig(undefined);
+    setGitProxyConfig(undefined);
     logger.info('Proxy disabled', 'ConfigHandlers');
     return;
   }
@@ -48,6 +50,7 @@ function applyProxyConfig(proxyConfig: ProxyConfig | undefined): void {
   // Pass the new format directly to services
   setProxyConfig(proxyConfig);
   setRegistryProxyConfig(proxyConfig);
+  setGitProxyConfig(proxyConfig);
   logger.info(`Proxy enabled (${proxyConfig.type})`, 'ConfigHandlers');
 }
 

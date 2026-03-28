@@ -7,8 +7,47 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
+import type { ProxyConfig } from '../../shared/types';
 
 const execAsync = promisify(exec);
+
+// Proxy settings from application config
+let proxyConfig: ProxyConfig | null = null;
+
+/**
+ * Set proxy configuration for git operations
+ */
+export function setGitProxyConfig(config: ProxyConfig | undefined): void {
+  proxyConfig = config || null;
+}
+
+/**
+ * Get environment variables for git commands based on proxy settings
+ */
+function getGitEnv(): NodeJS.ProcessEnv {
+  const baseEnv = { ...process.env };
+
+  // If proxy is not enabled, remove proxy env vars to prevent git from using them
+  if (!proxyConfig?.enabled) {
+    delete baseEnv.HTTPS_PROXY;
+    delete baseEnv.https_proxy;
+    delete baseEnv.HTTP_PROXY;
+    delete baseEnv.http_proxy;
+    return baseEnv;
+  }
+
+  // If using custom proxy, set the custom URL
+  if (proxyConfig.type === 'custom' && proxyConfig.customUrl) {
+    baseEnv.HTTPS_PROXY = proxyConfig.customUrl;
+    baseEnv.https_proxy = proxyConfig.customUrl;
+    baseEnv.HTTP_PROXY = proxyConfig.customUrl;
+    baseEnv.http_proxy = proxyConfig.customUrl;
+    return baseEnv;
+  }
+
+  // If using system proxy, keep the existing env vars
+  return baseEnv;
+}
 
 /**
  * Result of a shallow clone operation
@@ -78,7 +117,7 @@ export class GitOperations {
    */
   async checkGitAvailable(): Promise<boolean> {
     try {
-      await execAsync('git --version', { timeout: 5000 });
+      await execAsync('git --version', { timeout: 5000, env: getGitEnv() });
       return true;
     } catch (error) {
       return false;
@@ -139,7 +178,8 @@ export class GitOperations {
       const { stdout, stderr } = await execAsync(
         `git clone --depth 1 --single-branch "${repoUrl}" "${targetDir}"`,
         {
-          windowsHide: true
+          windowsHide: true,
+          env: getGitEnv()
         }
       );
 
@@ -184,7 +224,8 @@ export class GitOperations {
     try {
       const { stdout } = await execAsync('git rev-parse HEAD', {
         cwd: repoDir,
-        timeout: 5000
+        timeout: 5000,
+        env: getGitEnv()
       });
       return stdout.trim();
     } catch {
