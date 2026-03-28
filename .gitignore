@@ -90,6 +90,17 @@ specs/
 *.test.ts
 **/__tests__/
 
+# Test scripts and reports
+test-*.js
+test-*.py
+test_*.py
+*-test.js
+*-test.py
+*-test-report.*
+*TEST*.md
+*TEST*.json
+test*.json
+
 # Requirements and spec files
 requirements*.txt
 *requirements.txt
@@ -99,3 +110,20 @@ tasks.md
 findings.md
 progress.md
 task_plan.md
+*PROGRESS*.md
+*REPORT*.md
+*GUIDE*.md
+checklist*.md
+coverage/
+.nyc_output/
+
+# AI test files
+ai-*-test*.*
+ai-*-report*.*
+
+# E2E test files
+e2e-test*.*
+playwright-report/
+
+# Spec process commands (speckit)
+.claude/commands/speckit.*
