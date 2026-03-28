@@ -174,12 +174,21 @@ export class ConfigService {
     // Validate skill groups
     const skillGroupsConfig: SkillGroupsConfig | undefined = rawConfig.skillGroups || undefined;
 
+    // Validate proxy config
+    const proxyConfig = rawConfig.proxy ? {
+      useSystemProxy: rawConfig.proxy.useSystemProxy ?? true,
+      customProxyUrl: rawConfig.proxy.customProxyUrl,
+      proxyGitHub: rawConfig.proxy.proxyGitHub ?? true,
+      proxyRegistry: rawConfig.proxy.proxyRegistry ?? true,
+    } : undefined;
+
     return {
       ...validatedBase,
       version: rawConfig.version || CONFIG_VERSION,
       ai: aiConfig,
       privateRepos: privateReposConfig,
       skillGroups: skillGroupsConfig,
+      proxy: proxyConfig,
     };
   }
 
@@ -524,6 +533,49 @@ export class ConfigService {
     } catch (error) {
       ErrorHandler.log(error, 'ConfigService.saveSkillGroups');
       throw new ConfigurationError('Failed to save skill groups', 'skill-groups');
+    }
+  }
+
+  // ============================================================================
+  // Proxy Configuration Methods
+  // ============================================================================
+
+  /**
+   * Load proxy configuration
+   */
+  async loadProxyConfig(): Promise<import('../../shared/types').ProxyConfig | undefined> {
+    const config = await this.load();
+    return config.proxy;
+  }
+
+  /**
+   * Save proxy configuration
+   */
+  async saveProxyConfig(proxyConfig: import('../../shared/types').ProxyConfig): Promise<void> {
+    try {
+      const config = await this.load();
+      config.proxy = proxyConfig;
+
+      // Save (encrypt API key in AI section)
+      const configToSave = {
+        ...config,
+        ai: {
+          ...config.ai,
+          apiKey: config.ai.apiKey ? encryptAPIKey(config.ai.apiKey) : '',
+        },
+      };
+
+      await fs.promises.writeFile(
+        this.configPath,
+        JSON.stringify(configToSave, null, 2),
+        'utf-8'
+      );
+
+      this.config = config;
+      logger.info('Proxy configuration saved', 'ConfigService');
+    } catch (error) {
+      ErrorHandler.log(error, 'ConfigService.saveProxyConfig');
+      throw new ConfigurationError('Failed to save proxy configuration', 'proxy-config');
     }
   }
 }

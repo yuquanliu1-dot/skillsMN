@@ -10,8 +10,10 @@ import { promisify } from 'util';
 import { logger } from '../utils/Logger';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { ConfigService } from '../services/ConfigService';
+import { setProxyConfig } from '../services/GitHubService';
+import { setRegistryProxyConfig } from '../services/RegistryService';
 import { IPC_CHANNELS } from '../../shared/constants';
-import { IPCResponse, IPCError, AppConfiguration, BaseConfiguration } from '../../shared/types';
+import { IPCResponse, IPCError, AppConfiguration, BaseConfiguration, ProxyConfig } from '../../shared/types';
 
 const execAsync = promisify(exec);
 
@@ -32,6 +34,25 @@ function toIPCError(error: unknown): IPCError {
 }
 
 /**
+ * Apply proxy configuration to services
+ */
+function applyProxyConfig(proxyConfig: ProxyConfig | undefined): void {
+  if (proxyConfig?.proxyGitHub) {
+    setProxyConfig(proxyConfig);
+    logger.info('Proxy configuration applied to GitHub service', 'ConfigHandlers');
+  } else {
+    setProxyConfig(undefined);
+  }
+
+  if (proxyConfig?.proxyRegistry) {
+    setRegistryProxyConfig(proxyConfig);
+    logger.info('Proxy configuration applied to Registry service', 'ConfigHandlers');
+  } else {
+    setRegistryProxyConfig(undefined);
+  }
+}
+
+/**
  * Initialize configuration service and register IPC handlers
  */
 export function registerConfigHandlers(): void {
@@ -46,6 +67,8 @@ export function registerConfigHandlers(): void {
       try {
         logger.debug('Loading configuration', 'ConfigHandlers');
         const config = await configService!.load();
+        // Apply proxy configuration to services
+        applyProxyConfig(config.proxy);
         return { success: true, data: config };
       } catch (error) {
         logger.error('Failed to load configuration', 'ConfigHandlers', error);
@@ -64,6 +87,8 @@ export function registerConfigHandlers(): void {
       try {
         logger.debug('Saving configuration', 'ConfigHandlers', config);
         const updated = await configService!.save(config);
+        // Apply proxy configuration to services
+        applyProxyConfig(updated.proxy);
         logger.info('Configuration saved successfully', 'ConfigHandlers');
         return { success: true, data: updated };
       } catch (error) {
