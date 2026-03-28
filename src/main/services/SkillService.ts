@@ -576,18 +576,12 @@ ${content}`;
   /**
    * Check for updates to a registry-installed skill
    * Compares local version with remote version and commit SHA
+   * If commitHash is missing, fetches and saves it for future checks
    */
   private async checkRegistrySkillForUpdates(
     skill: Skill,
     sourceMetadata: import('../models/SkillSource').RegistrySource
   ): Promise<VersionComparison | null> {
-    if (!sourceMetadata.commitHash) {
-      logger.debug('No commit hash stored for registry skill, skipping update check', 'SkillService', {
-        skillPath: skill.path
-      });
-      return null;
-    }
-
     try {
       // Get latest commit SHA from remote repository using GitHub API
       const [owner, repo] = sourceMetadata.source.split('/');
@@ -611,6 +605,45 @@ ${content}`;
       }
 
       const latestCommitSHA = commits[0].sha;
+
+      // If no commit hash stored, save the current commit hash for future checks
+      if (!sourceMetadata.commitHash) {
+        logger.info('No commit hash stored for registry skill, saving current commit hash for future update checks', 'SkillService', {
+          skillPath: skill.path,
+          commitHash: latestCommitSHA
+        });
+
+        // Update the source metadata file
+        const metadataPath = path.join(skill.path, SOURCE_METADATA_FILE);
+        const updatedMetadata = {
+          ...sourceMetadata,
+          commitHash: latestCommitSHA,
+          installedAt: sourceMetadata.installedAt || new Date().toISOString()
+        };
+
+        try {
+          await fs.promises.writeFile(metadataPath, JSON.stringify(updatedMetadata, null, 2), 'utf-8');
+          logger.debug('Updated source metadata with commit hash', 'SkillService', {
+            skillPath: skill.path,
+            commitHash: latestCommitSHA
+          });
+        } catch (writeError) {
+          logger.warn('Failed to save commit hash to source metadata', 'SkillService', {
+            skillPath: skill.path,
+            error: writeError instanceof Error ? writeError.message : 'Unknown error'
+          });
+        }
+
+        // Since this is the first check with no prior commit hash,
+        // assume no update is available (the skill was just installed or this is the first check)
+        return {
+          hasUpdate: false,
+          canUpload: false,
+          localVersion: skill.version,
+          remoteSHA: latestCommitSHA,
+        };
+      }
+
       const commitChanged = latestCommitSHA !== sourceMetadata.commitHash;
 
       // Default to commit-based detection if version comparison is not possible
@@ -679,18 +712,12 @@ ${content}`;
   /**
    * Check for updates to a private repo-installed skill
    * Compares local version with remote version to determine update/upload status
+   * If commitHash is missing, fetches and saves it for future checks
    */
   private async checkPrivateRepoSkillForUpdates(
     skill: Skill,
     sourceMetadata: import('../models/SkillSource').PrivateRepoSource
   ): Promise<VersionComparison | null> {
-    if (!sourceMetadata.commitHash) {
-      logger.debug('No commit hash stored for private repo skill, skipping update check', 'SkillService', {
-        skillPath: skill.path
-      });
-      return null;
-    }
-
     try {
       const configService = await this.getConfigService();
       const repo = await configService.getPrivateRepo(sourceMetadata.repoId);
@@ -718,9 +745,54 @@ ${content}`;
         branch
       );
 
-      if (commits && commits.length > 0) {
-        const latestCommitSHA = commits[0].sha;
-        const commitChanged = latestCommitSHA !== sourceMetadata.commitHash;
+      if (!commits || commits.length === 0) {
+        logger.warn(`Failed to get commits for skill: ${skill.name}`, 'SkillService', {
+          skillPath: skill.path
+        });
+        return null;
+      }
+
+      const latestCommitSHA = commits[0].sha;
+
+      // If no commit hash stored, save the current commit hash for future checks
+      if (!sourceMetadata.commitHash) {
+        logger.info('No commit hash stored, saving current commit hash for future update checks', 'SkillService', {
+          skillPath: skill.path,
+          commitHash: latestCommitSHA
+        });
+
+        // Update the source metadata file
+        const metadataPath = path.join(skill.path, SOURCE_METADATA_FILE);
+        const updatedMetadata = {
+          ...sourceMetadata,
+          commitHash: latestCommitSHA,
+          installedAt: sourceMetadata.installedAt || new Date().toISOString()
+        };
+
+        try {
+          await fs.promises.writeFile(metadataPath, JSON.stringify(updatedMetadata, null, 2), 'utf-8');
+          logger.debug('Updated source metadata with commit hash', 'SkillService', {
+            skillPath: skill.path,
+            commitHash: latestCommitSHA
+          });
+        } catch (writeError) {
+          logger.warn('Failed to save commit hash to source metadata', 'SkillService', {
+            skillPath: skill.path,
+            error: writeError instanceof Error ? writeError.message : 'Unknown error'
+          });
+        }
+
+        // Since this is the first check with no prior commit hash,
+        // assume no update is available (the skill was just installed or this is the first check)
+        return {
+          hasUpdate: false,
+          canUpload: false,
+          localVersion: skill.version,
+          remoteSHA: latestCommitSHA,
+        };
+      }
+
+      const commitChanged = latestCommitSHA !== sourceMetadata.commitHash;
 
         // Default to commit-based detection
         let hasUpdate = commitChanged;
@@ -806,9 +878,6 @@ ${content}`;
           remoteVersion,
           remoteSHA: latestCommitSHA,
         };
-      }
-
-      return null;
     } catch (error) {
       logger.error(`Failed to check private repo skill updates: ${skill.name}`, 'SkillService', error);
       return null;

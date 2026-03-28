@@ -193,6 +193,7 @@
     "proxy": {
       "title": "Network Proxy",
       "description": "Configure proxy for GitHub and skills.sh access",
+      "scopeDescription": "Proxy settings affect: GitHub API requests, skills.sh registry searches, and Git clone operations for installing skills.",
       "enabled": "Enable Proxy",
       "systemProxy": "System Proxy",
       "systemProxyHint": "Automatically use system proxy settings (HTTPS_PROXY/HTTP_PROXY environment variables)",

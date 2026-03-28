@@ -1024,6 +1024,16 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               </label>
             </div>
 
+            {/* Proxy Scope Info */}
+            <div className="mb-3 flex items-start gap-2 text-xs text-blue-600 bg-blue-50 px-2.5 py-2 rounded-md">
+              <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>
+                {t('settings.proxy.scopeDescription')}
+              </span>
+            </div>
+
             {proxyConfig.enabled && (
               <div className="space-y-3 pl-1">
                 {/* Proxy Type Selection */}

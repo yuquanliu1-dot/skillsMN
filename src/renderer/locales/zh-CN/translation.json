@@ -193,6 +193,7 @@
     "proxy": {
       "title": "网络代理",
       "description": "配置访问 GitHub 和 skills.sh 的代理设置",
+      "scopeDescription": "代理设置影响以下操作：GitHub API 请求、skills.sh 注册表搜索、以及 Git 克隆操作（安装技能时）。",
       "enabled": "启用代理",
       "systemProxy": "系统代理",
       "systemProxyHint": "自动使用系统代理设置（HTTPS_PROXY/HTTP_PROXY 环境变量）",
