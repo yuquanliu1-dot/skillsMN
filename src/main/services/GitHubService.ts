@@ -782,24 +782,49 @@ export class GitHubService {
 
       const files = new Map<string, string>();
 
-      await Promise.all(
-        directoryFiles.map(async (file: any) => {
-          const downloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file.path}`;
-          const response = await fetch(downloadUrl, {
-            headers: {
-              'Authorization': `token ${pat}`,
-              'User-Agent': 'skillsMN-App',
+      // Process files sequentially with delay to avoid rate limiting and connection issues
+      // Using GitHub API instead of raw.githubusercontent.com to avoid IPv6 issues
+      for (const file of directoryFiles) {
+        try {
+          // Use GitHub API to get file content (more reliable than raw.githubusercontent.com)
+          const content = await retryWithBackoff(
+            async () => {
+              const headers: Record<string, string> = {
+                Accept: 'application/vnd.github.v3+json',
+                'User-Agent': 'skillsMN-App',
+              };
+
+              if (pat) {
+                headers['Authorization'] = `token ${pat}`;
+              }
+
+              const response = await fetch(
+                `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${file.path}?ref=${branch}`,
+                { headers }
+              );
+
+              if (!response.ok) {
+                throw new Error(`Failed to download ${file.path}: ${response.status}`);
+              }
+
+              const data = await response.json();
+              // GitHub API returns base64-encoded content
+              return Buffer.from(data.content, 'base64').toString('utf-8');
             },
-          });
+            { maxAttempts: 3, initialDelay: 1000, backoffMultiplier: 2 }
+          );
 
-          if (!response.ok) {
-            throw new Error(`Failed to download ${file.path}: ${response.status}`);
-          }
-
-          const content = await response.text();
           files.set(file.path, content);
-        })
-      );
+
+          // Small delay between files to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (fileError) {
+          logger.warn(`Failed to download file ${file.path}, skipping`, 'GitHubService', {
+            error: fileError instanceof Error ? fileError.message : 'Unknown error',
+          });
+          // Continue with other files instead of failing completely
+        }
+      }
 
       logger.info('Downloaded directory from private repo', 'GitHubService', {
         owner,

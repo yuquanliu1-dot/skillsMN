@@ -666,11 +666,37 @@ export class PrivateRepoService {
         await fs.writeFile(absolutePath, content, 'utf-8');
       }
 
+      // Fetch the latest commit hash for the skill directory
+      let commitHash: string | undefined;
+      try {
+        const commits = await (gitProvider as any).getDirectoryCommits?.(
+          repo.owner,
+          repo.repo,
+          skillPath,
+          pat,
+          repo.defaultBranch || 'main',
+          repo.instanceUrl
+        );
+        if (commits && commits.length > 0) {
+          commitHash = commits[0].sha;
+          logger.debug('Fetched commit hash for installed skill', 'PrivateRepoService', {
+            skillPath,
+            commitHash,
+          });
+        }
+      } catch (commitError) {
+        logger.warn('Failed to fetch commit hash for installed skill, update detection may not work', 'PrivateRepoService', {
+          skillPath,
+          error: commitError instanceof Error ? commitError.message : 'Unknown error',
+        });
+      }
+
       // Write source metadata for version tracking
       const sourceMetadata = createPrivateRepoSource(
         repoId,
         `${repo.owner}/${repo.repo}`,
-        skillPath
+        skillPath,
+        commitHash
       );
 
       const metadataPath = path.join(finalPath, SOURCE_METADATA_FILE);

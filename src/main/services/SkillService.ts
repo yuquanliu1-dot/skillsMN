@@ -464,13 +464,12 @@ ${content}`;
 
   /**
    * Delete a skill by moving to system recycle bin
-   * Safe deletion that allows recovery from trash
-   * Performs deletion asynchronously in background for faster UI response
+   * Falls back to direct deletion if recycle bin fails (common on Windows with file watchers)
    * @param skillPath - Absolute path to skill directory
-   * @throws Error if path validation fails
+   * @throws Error if path validation fails or deletion fails
    * @example
    * await skillService.deleteSkill('/path/to/skill');
-   * console.log('Skill deletion started');
+   * console.log('Skill deleted successfully');
    */
   async deleteSkill(skillPath: string): Promise<void> {
     logger.info(`Deleting skill: ${skillPath}`, 'SkillService');
@@ -478,14 +477,22 @@ ${content}`;
     // Validate path
     const validatedPath = this.pathValidator.validate(skillPath);
 
-    // Move to recycle bin asynchronously (don't wait for completion)
-    trash(validatedPath).then(() => {
+    try {
+      // First try to move to recycle bin
+      await trash(validatedPath);
       logger.info(`Skill moved to recycle bin: ${skillPath}`, 'SkillService');
-    }).catch((error) => {
-      logger.error(`Failed to move skill to recycle bin: ${skillPath}`, 'SkillService', { error });
-    });
+    } catch (trashError) {
+      logger.warn(`Failed to move skill to recycle bin, trying direct deletion: ${skillPath}`, 'SkillService', { error: trashError });
 
-    // Return immediately for faster UI response
+      try {
+        // Fallback: directly delete the directory
+        await fs.promises.rm(validatedPath, { recursive: true, force: true });
+        logger.info(`Skill deleted directly (not in recycle bin): ${skillPath}`, 'SkillService');
+      } catch (rmError) {
+        logger.error(`Failed to delete skill: ${skillPath}`, 'SkillService', { error: rmError });
+        throw new Error(`Failed to delete skill: ${rmError instanceof Error ? rmError.message : 'Unknown error'}`);
+      }
+    }
   }
 
   /**
@@ -856,9 +863,10 @@ ${content}`;
       const pat = decryptPAT(repo.patEncrypted);
 
       // Create backup if requested
+      let backupPath: string | null = null;
       if (createBackup) {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const backupPath = `${skillPath}-backup-${timestamp}`;
+        backupPath = `${skillPath}-backup-${timestamp}`;
 
         await fs.promises.mkdir(backupPath, { recursive: true });
         await fs.promises.cp(skillPath, backupPath, { recursive: true });
@@ -876,11 +884,11 @@ ${content}`;
       const result = await this.installPrivateSkill(
         repo.owner,
         repo.repo,
-        skill.metadata.sourceRepoPath,
+        sourceMetadata.skillPath,
         pat,
         'project', // Keep in same directory
         repo.id,
-        skill.metadata.sourceRepoPath, // Will be updated with new SHA
+        '', // directoryCommitSHA - will be fetched during install
         'overwrite', // Already removed, so no conflict
         repo.defaultBranch || 'main'
       );
@@ -890,9 +898,37 @@ ${content}`;
           skillPath,
           newPath: result.newPath,
         });
-      }
+        return result;
+      } else {
+        // Update failed - attempt to restore from backup
+        if (backupPath) {
+          logger.warn('Update failed, restoring from backup', 'SkillService', {
+            skillPath,
+            backupPath,
+            error: result.error,
+          });
 
-      return result;
+          try {
+            await fs.promises.mkdir(skillPath, { recursive: true });
+            await fs.promises.cp(backupPath, skillPath, { recursive: true });
+            logger.info('Successfully restored skill from backup', 'SkillService', {
+              skillPath,
+              backupPath,
+            });
+          } catch (restoreError) {
+            logger.error('Failed to restore from backup', 'SkillService', restoreError);
+            return {
+              success: false,
+              error: `Update failed: ${result.error}. Backup restoration also failed: ${restoreError instanceof Error ? restoreError.message : 'Unknown error'}`,
+            };
+          }
+        }
+
+        return {
+          success: false,
+          error: result.error || 'Update failed',
+        };
+      }
     } catch (error) {
       logger.error('Failed to update skill', 'SkillService', error);
       return {

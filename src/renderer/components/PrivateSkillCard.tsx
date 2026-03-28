@@ -119,31 +119,39 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         conflictResolution,
       });
 
-      if (response.success) {
-        setInstallProgress('success');
-        setShowInstallDialog(false);
-        setShowConflictDialog(false);
-        setIsInstalled(true);
-
-        if (onInstallComplete) {
-          onInstallComplete();
-        }
-
-        setTimeout(() => {
-          setInstallProgress('idle');
-        }, 3000);
-      } else if (response.error?.code === 'CONFLICT') {
+      // Check actual installation result from response.data
+      if (response.success && response.data?.success) {
+        handleInstallSuccess();
+      } else if (response.data?.error === 'CONFLICT' || response.error?.code === 'CONFLICT') {
         setShowInstallDialog(false);
         setShowConflictDialog(true);
         setInstallProgress('idle');
       } else {
         setInstallProgress('error');
-        setErrorMessage(response.error?.message || 'Installation failed');
+        setErrorMessage(response.data?.error || response.error?.message || 'Installation failed');
       }
     } catch (err) {
       setInstallProgress('error');
       setErrorMessage(err instanceof Error ? err.message : 'Installation failed');
     }
+  };
+
+  /**
+   * Handle successful installation (updates UI state only)
+   */
+  const handleInstallSuccess = () => {
+    setInstallProgress('success');
+    setShowInstallDialog(false);
+    setShowConflictDialog(false);
+    setIsInstalled(true);
+
+    if (onInstallComplete) {
+      onInstallComplete();
+    }
+
+    setTimeout(() => {
+      setInstallProgress('idle');
+    }, 3000);
   };
 
   const handleConflictResolve = async (resolution: 'overwrite' | 'rename' | 'skip') => {
@@ -301,7 +309,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
           skill={skill}
           repo={repo}
           onClose={() => setShowInstallDialog(false)}
-          onInstall={handleInstall}
+          onInstall={handleInstallSuccess}
           onConflict={() => {
             setShowInstallDialog(false);
             setShowConflictDialog(true);

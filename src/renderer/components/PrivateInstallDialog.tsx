@@ -36,12 +36,13 @@ export default function PrivateInstallDialog({
         skillPath: skill.path,
       });
 
-      if (response.success) {
+      // Check actual installation result from response.data
+      if (response.success && response.data?.success) {
         onInstall();
-      } else if (response.error?.code === 'CONFLICT') {
+      } else if (response.data?.error === 'CONFLICT' || response.error?.code === 'CONFLICT') {
         onConflict();
       } else {
-        setError(response.error?.message || 'Installation failed');
+        setError(response.data?.error || response.error?.message || 'Installation failed');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Installation failed');
