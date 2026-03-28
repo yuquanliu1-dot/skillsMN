@@ -20,6 +20,62 @@ import { SearchSkillResult } from '../models/SearchSkillResult';
 import { gitOperations, GitErrorCode } from '../utils/gitOperations';
 import { SkillDiscovery } from '../utils/skillDiscovery';
 
+// Proxy agents loaded via require to avoid ESM module resolution issues
+let HttpsProxyAgent: any = null;
+let HttpProxyAgent: any = null;
+
+/**
+ * Load proxy agents lazily
+ */
+function loadProxyAgents(): void {
+  if (!HttpsProxyAgent) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      HttpsProxyAgent = require('https-proxy-agent');
+    } catch {
+      // Proxy agent not available
+    }
+  }
+  if (!HttpProxyAgent) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      HttpProxyAgent = require('http-proxy-agent');
+    } catch {
+      // Proxy agent not available
+    }
+  }
+}
+
+/**
+ * Get proxy agent from system environment variables
+ */
+function getProxyAgent(url: string): any {
+  loadProxyAgents();
+
+  const parsedUrl = new URL(url);
+  const isHttps = parsedUrl.protocol === 'https:';
+
+  const proxyUrl = isHttps
+    ? (process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy)
+    : (process.env.HTTP_PROXY || process.env.http_proxy);
+
+  if (!proxyUrl) {
+    return undefined;
+  }
+
+  try {
+    if (isHttps && HttpsProxyAgent) {
+      return new HttpsProxyAgent(proxyUrl);
+    } else if (!isHttps && HttpProxyAgent) {
+      return new HttpProxyAgent(proxyUrl);
+    }
+  } catch {
+    // Failed to create proxy agent
+  }
+
+  return undefined;
+}
+
 /**
  * Registry-specific error codes
  */
@@ -71,13 +127,15 @@ export class RegistryService {
     console.log(`[RegistryService] Searching for skills: ${query}, limit: ${limit}`);
 
     try {
-      // Make HTTP request with timeout
+      // Make HTTP request with timeout and proxy support
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), REGISTRY_API_TIMEOUT_MS);
+      const proxyAgent = getProxyAgent(url.toString());
 
       const response = await fetch(url.toString(), {
         method: 'GET',
         signal: controller.signal,
+        agent: proxyAgent,
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'skillsMN-Desktop/1.0'
@@ -166,8 +224,10 @@ export class RegistryService {
           const rawUrl = `https://raw.githubusercontent.com/${source}/${branch}/${skillPath}`;
           console.log(`[RegistryService] Trying: ${rawUrl}`);
 
+          const proxyAgent = getProxyAgent(rawUrl);
           const response = await fetch(rawUrl, {
             method: 'GET',
+            agent: proxyAgent,
             headers: {
               'User-Agent': 'skillsMN-Desktop/1.0'
             },
