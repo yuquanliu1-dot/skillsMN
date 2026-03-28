@@ -19,10 +19,21 @@ import { validateSearchResponse, extractSearchResults } from '../models/SearchSk
 import { SearchSkillResult } from '../models/SearchSkillResult';
 import { gitOperations, GitErrorCode } from '../utils/gitOperations';
 import { SkillDiscovery } from '../utils/skillDiscovery';
+import type { ProxyConfig } from '../../shared/types';
 
 // Proxy agents loaded via require to avoid ESM module resolution issues
 let HttpsProxyAgent: any = null;
 let HttpProxyAgent: any = null;
+
+// Proxy configuration from settings
+let proxySettings: ProxyConfig | null = null;
+
+/**
+ * Set proxy configuration from settings
+ */
+export function setRegistryProxyConfig(config: ProxyConfig | undefined): void {
+  proxySettings = config || null;
+}
 
 /**
  * Load proxy agents lazily
@@ -47,30 +58,50 @@ function loadProxyAgents(): void {
 }
 
 /**
- * Get proxy agent from system environment variables
+ * Get proxy agent from settings or system environment variables
  */
 function getProxyAgent(url: string): any {
   loadProxyAgents();
 
-  const parsedUrl = new URL(url);
-  const isHttps = parsedUrl.protocol === 'https:';
-
-  const proxyUrl = isHttps
-    ? (process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy)
-    : (process.env.HTTP_PROXY || process.env.http_proxy);
-
-  if (!proxyUrl) {
+  // If proxy is not enabled, return undefined
+  if (!proxySettings?.enabled) {
     return undefined;
   }
 
-  try {
-    if (isHttps && HttpsProxyAgent) {
-      return new HttpsProxyAgent(proxyUrl);
-    } else if (!isHttps && HttpProxyAgent) {
-      return new HttpProxyAgent(proxyUrl);
+  const parsedUrl = new URL(url);
+  const isHttps = parsedUrl.protocol === 'https:';
+
+  // Priority 1: Custom proxy URL
+  if (proxySettings.type === 'custom' && proxySettings.customUrl) {
+    try {
+      if (isHttps && HttpsProxyAgent) {
+        return new HttpsProxyAgent(proxySettings.customUrl);
+      } else if (!isHttps && HttpProxyAgent) {
+        return new HttpProxyAgent(proxySettings.customUrl);
+      }
+    } catch {
+      // Failed to create proxy agent
     }
-  } catch {
-    // Failed to create proxy agent
+    return undefined;
+  }
+
+  // Priority 2: System proxy
+  if (proxySettings.type === 'system') {
+    const proxyUrl = isHttps
+      ? (process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy)
+      : (process.env.HTTP_PROXY || process.env.http_proxy);
+
+    if (proxyUrl) {
+      try {
+        if (isHttps && HttpsProxyAgent) {
+          return new HttpsProxyAgent(proxyUrl);
+        } else if (!isHttps && HttpProxyAgent) {
+          return new HttpProxyAgent(proxyUrl);
+        }
+      } catch {
+        // Failed to create proxy agent
+      }
+    }
   }
 
   return undefined;

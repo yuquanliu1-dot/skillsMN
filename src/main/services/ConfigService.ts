@@ -174,13 +174,25 @@ export class ConfigService {
     // Validate skill groups
     const skillGroupsConfig: SkillGroupsConfig | undefined = rawConfig.skillGroups || undefined;
 
-    // Validate proxy config
-    const proxyConfig = rawConfig.proxy ? {
-      useSystemProxy: rawConfig.proxy.useSystemProxy ?? true,
-      customProxyUrl: rawConfig.proxy.customProxyUrl,
-      proxyGitHub: rawConfig.proxy.proxyGitHub ?? true,
-      proxyRegistry: rawConfig.proxy.proxyRegistry ?? true,
-    } : undefined;
+    // Validate proxy config (handle both old and new format)
+    let proxyConfig: import('../../shared/types').ProxyConfig | undefined;
+    if (rawConfig.proxy) {
+      // Check if new format
+      if (rawConfig.proxy.enabled !== undefined) {
+        proxyConfig = {
+          enabled: rawConfig.proxy.enabled,
+          type: rawConfig.proxy.type || 'system',
+          customUrl: rawConfig.proxy.customUrl,
+        };
+      } else {
+        // Migrate old format to new
+        proxyConfig = {
+          enabled: !!(rawConfig.proxy.useSystemProxy || rawConfig.proxy.customProxyUrl),
+          type: rawConfig.proxy.customProxyUrl ? 'custom' : 'system',
+          customUrl: rawConfig.proxy.customProxyUrl || undefined,
+        };
+      }
+    }
 
     return {
       ...validatedBase,

@@ -188,6 +188,16 @@
     "aiRewrite": "AI Rewrite",
     "aiInsert": "AI Insert",
 
+    "proxy": {
+      "title": "Network Proxy",
+      "description": "Configure proxy for GitHub and skills.sh access",
+      "enabled": "Enable Proxy",
+      "systemProxy": "System Proxy",
+      "systemProxyHint": "Automatically use system proxy settings (HTTPS_PROXY/HTTP_PROXY environment variables)",
+      "customProxy": "Custom Proxy",
+      "customProxyHint": "Enter proxy URL, e.g., http://127.0.0.1:7890"
+    },
+
     "skillEditor": "Skill Editor",
     "fontSize": "Font Size",
     "theme": "Theme",

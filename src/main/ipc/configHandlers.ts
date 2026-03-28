@@ -37,19 +37,18 @@ function toIPCError(error: unknown): IPCError {
  * Apply proxy configuration to services
  */
 function applyProxyConfig(proxyConfig: ProxyConfig | undefined): void {
-  if (proxyConfig?.proxyGitHub) {
-    setProxyConfig(proxyConfig);
-    logger.info('Proxy configuration applied to GitHub service', 'ConfigHandlers');
-  } else {
+  if (!proxyConfig?.enabled) {
+    // Proxy disabled - clear all proxy settings
     setProxyConfig(undefined);
+    setRegistryProxyConfig(undefined);
+    logger.info('Proxy disabled', 'ConfigHandlers');
+    return;
   }
 
-  if (proxyConfig?.proxyRegistry) {
-    setRegistryProxyConfig(proxyConfig);
-    logger.info('Proxy configuration applied to Registry service', 'ConfigHandlers');
-  } else {
-    setRegistryProxyConfig(undefined);
-  }
+  // Pass the new format directly to services
+  setProxyConfig(proxyConfig);
+  setRegistryProxyConfig(proxyConfig);
+  logger.info(`Proxy enabled (${proxyConfig.type})`, 'ConfigHandlers');
 }
 
 /**

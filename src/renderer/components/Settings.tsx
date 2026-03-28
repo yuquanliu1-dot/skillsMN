@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Configuration, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig, SkillGroup } from '../../shared/types';
+import type { Configuration, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig, SkillGroup, ProxyConfig } from '../../shared/types';
 import { changeLanguage, availableLanguages, getCurrentLanguage } from '../i18n';
 import type { LanguageCode } from '../../shared/types';
 
@@ -88,6 +88,13 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   const [editGroupIcon, setEditGroupIcon] = useState('📁');
   const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
 
+  // Proxy Configuration State
+  const [proxyConfig, setProxyConfig] = useState<ProxyConfig>({
+    enabled: false,
+    type: 'system',
+    customUrl: '',
+  });
+
   /**
    * Load current settings when dialog opens
    */
@@ -104,6 +111,21 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
       // Load current language
       setCurrentLanguage(getCurrentLanguage());
+
+      // Load proxy configuration (handle both old and new format)
+      if (config.proxy) {
+        // Migrate old format to new format if needed
+        if (config.proxy.enabled !== undefined) {
+          setProxyConfig(config.proxy);
+        } else if (config.proxy.useSystemProxy !== undefined || config.proxy.customProxyUrl) {
+          // Old format - migrate to new
+          setProxyConfig({
+            enabled: !!(config.proxy.useSystemProxy || config.proxy.customProxyUrl),
+            type: config.proxy.customProxyUrl ? 'custom' : 'system',
+            customUrl: config.proxy.customProxyUrl || '',
+          });
+        }
+      }
 
       setError(null);
       setSuccess(null);
@@ -244,6 +266,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
         editorDefaultMode,
         autoRefresh,
         skillEditor: skillEditorConfig,
+        proxy: proxyConfig,
       });
       setSuccess('Settings saved successfully');
       setTimeout(() => {
@@ -964,6 +987,84 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Proxy Configuration */}
+          <div className="pt-4 border-t border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-medium text-slate-700">{t('settings.proxy.title')}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {t('settings.proxy.description')}
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={proxyConfig.enabled}
+                  onChange={(e) => setProxyConfig({ ...proxyConfig, enabled: e.target.checked })}
+                  className="sr-only peer"
+                  disabled={isSaving}
+                />
+                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            {proxyConfig.enabled && (
+              <div className="space-y-3 pl-1">
+                {/* Proxy Type Selection */}
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="proxyType"
+                      value="system"
+                      checked={proxyConfig.type === 'system'}
+                      onChange={() => setProxyConfig({ ...proxyConfig, type: 'system' })}
+                      className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                      disabled={isSaving}
+                    />
+                    <span className="text-sm text-slate-700">{t('settings.proxy.systemProxy')}</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="proxyType"
+                      value="custom"
+                      checked={proxyConfig.type === 'custom'}
+                      onChange={() => setProxyConfig({ ...proxyConfig, type: 'custom' })}
+                      className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                      disabled={isSaving}
+                    />
+                    <span className="text-sm text-slate-700">{t('settings.proxy.customProxy')}</span>
+                  </label>
+                </div>
+
+                {/* System Proxy Hint */}
+                {proxyConfig.type === 'system' && (
+                  <p className="text-xs text-slate-400">
+                    {t('settings.proxy.systemProxyHint')}
+                  </p>
+                )}
+
+                {/* Custom Proxy URL */}
+                {proxyConfig.type === 'custom' && (
+                  <div>
+                    <input
+                      type="text"
+                      value={proxyConfig.customUrl || ''}
+                      onChange={(e) => setProxyConfig({ ...proxyConfig, customUrl: e.target.value || undefined })}
+                      placeholder="http://127.0.0.1:7890"
+                      className="input w-full"
+                      disabled={isSaving}
+                    />
+                    <p className="text-xs text-slate-400 mt-1">
+                      {t('settings.proxy.customProxyHint')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Keyboard Shortcuts */}

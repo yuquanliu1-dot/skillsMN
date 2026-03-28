@@ -18,6 +18,7 @@ import type {
 import { createSearchResultFromGitHub } from '../models/SearchResult';
 import { PathValidator } from './PathValidator';
 import { toKebabCase } from '../utils/pathUtils';
+import type { ProxyConfig } from '../../shared/types';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
@@ -45,35 +46,65 @@ function loadProxyAgents(): void {
   }
 }
 
+// Proxy configuration from settings
+let proxySettings: ProxyConfig | null = null;
+
 /**
- * Get proxy agent from system environment variables
- * Supports HTTP_PROXY, HTTPS_PROXY, http_proxy, https_proxy
+ * Set proxy configuration from settings
+ */
+export function setProxyConfig(config: ProxyConfig | undefined): void {
+  proxySettings = config || null;
+  logger.debug('Proxy configuration updated', 'GitHubService', { config });
+}
+
+/**
+ * Get proxy agent from settings or system environment variables
+ * Priority: 1. Custom proxy URL from settings 2. System proxy (if enabled) 3. No proxy
  */
 function getProxyAgent(url: string): any {
   loadProxyAgents();
 
-  const parsedUrl = new URL(url);
-  const isHttps = parsedUrl.protocol === 'https:';
-
-  // Check for proxy environment variables
-  const proxyUrl = isHttps
-    ? (process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy)
-    : (process.env.HTTP_PROXY || process.env.http_proxy);
-
-  if (!proxyUrl) {
+  // If proxy is not enabled, return undefined
+  if (!proxySettings?.enabled) {
     return undefined;
   }
 
-  logger.debug(`Using proxy for ${url}`, 'GitHubService', { proxyUrl });
+  const parsedUrl = new URL(url);
+  const isHttps = parsedUrl.protocol === 'https:';
 
-  try {
-    if (isHttps && HttpsProxyAgent) {
-      return new HttpsProxyAgent(proxyUrl);
-    } else if (!isHttps && HttpProxyAgent) {
-      return new HttpProxyAgent(proxyUrl);
+  // Priority 1: Custom proxy URL
+  if (proxySettings.type === 'custom' && proxySettings.customUrl) {
+    logger.debug(`Using custom proxy for ${url}`, 'GitHubService', { proxyUrl: proxySettings.customUrl });
+    try {
+      if (isHttps && HttpsProxyAgent) {
+        return new HttpsProxyAgent(proxySettings.customUrl);
+      } else if (!isHttps && HttpProxyAgent) {
+        return new HttpProxyAgent(proxySettings.customUrl);
+      }
+    } catch (error) {
+      logger.warn('Failed to create proxy agent from custom URL', 'GitHubService', error);
     }
-  } catch (error) {
-    logger.warn('Failed to create proxy agent', 'GitHubService', error);
+    return undefined;
+  }
+
+  // Priority 2: System proxy
+  if (proxySettings.type === 'system') {
+    const proxyUrl = isHttps
+      ? (process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy)
+      : (process.env.HTTP_PROXY || process.env.http_proxy);
+
+    if (proxyUrl) {
+      logger.debug(`Using system proxy for ${url}`, 'GitHubService', { proxyUrl });
+      try {
+        if (isHttps && HttpsProxyAgent) {
+          return new HttpsProxyAgent(proxyUrl);
+        } else if (!isHttps && HttpProxyAgent) {
+          return new HttpProxyAgent(proxyUrl);
+        }
+      } catch (error) {
+        logger.warn('Failed to create proxy agent from system proxy', 'GitHubService', error);
+      }
+    }
   }
 
   return undefined;

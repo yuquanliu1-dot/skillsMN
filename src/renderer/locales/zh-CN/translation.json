@@ -188,6 +188,16 @@
     "aiRewrite": "AI 重写",
     "aiInsert": "AI 插入",
 
+    "proxy": {
+      "title": "网络代理",
+      "description": "配置访问 GitHub 和 skills.sh 的代理设置",
+      "enabled": "启用代理",
+      "systemProxy": "系统代理",
+      "systemProxyHint": "自动使用系统代理设置（HTTPS_PROXY/HTTP_PROXY 环境变量）",
+      "customProxy": "自定义代理",
+      "customProxyHint": "输入代理地址，例如：http://127.0.0.1:7890"
+    },
+
     "skillEditor": "技能编辑器",
     "fontSize": "字体大小",
     "theme": "主题",

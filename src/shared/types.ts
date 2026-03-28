@@ -279,6 +279,8 @@ export interface BaseConfiguration {
   language?: LanguageCode;
   /** Whether the initial setup wizard has been completed */
   setupCompleted?: boolean;
+  /** Proxy configuration settings */
+  proxy?: ProxyConfig;
 }
 
 /**
@@ -317,6 +319,26 @@ export interface PrivateRepoConfigSection {
 }
 
 /**
+ * Proxy configuration settings
+ */
+export interface ProxyConfig {
+  /** Whether proxy is enabled */
+  enabled: boolean;
+  /** Proxy type: 'system' reads from env vars, 'custom' uses customUrl */
+  type: 'system' | 'custom';
+  /** Custom proxy URL (only used when type is 'custom') */
+  customUrl?: string;
+  /** @deprecated Use 'enabled' and 'type' instead */
+  useSystemProxy?: boolean;
+  /** @deprecated Use 'customUrl' instead */
+  customProxyUrl?: string;
+  /** @deprecated Proxy now applies to all network requests when enabled */
+  proxyGitHub?: boolean;
+  /** @deprecated Proxy now applies to all network requests when enabled */
+  proxyRegistry?: boolean;
+}
+
+/**
  * Unified application configuration
  * Combines base config, AI config, and private repos into a single file
  */
@@ -329,6 +351,8 @@ export interface AppConfiguration extends BaseConfiguration {
   privateRepos: PrivateRepoConfigSection;
   /** Skill groups configuration */
   skillGroups?: SkillGroupsConfig;
+  /** Proxy configuration settings */
+  proxy?: ProxyConfig;
 }
 
 // ============================================================================
