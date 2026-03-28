@@ -25,24 +25,36 @@ const GITHUB_API_BASE = 'https://api.github.com';
 // Proxy agents loaded via require to avoid ESM module resolution issues
 let HttpsProxyAgent: any = null;
 let HttpProxyAgent: any = null;
+let proxyAgentsLoaded = false;
+let proxyAgentsWarningLogged = false;
 
-// Lazy load proxy agents
+// Lazy load proxy agents (only when needed)
 function loadProxyAgents(): void {
-  if (!HttpsProxyAgent) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      HttpsProxyAgent = require('https-proxy-agent');
-    } catch {
-      logger.warn('https-proxy-agent not available', 'GitHubService');
-    }
+  if (proxyAgentsLoaded) return;
+
+  proxyAgentsLoaded = true;
+  let loaded = false;
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    HttpsProxyAgent = require('https-proxy-agent');
+    loaded = true;
+  } catch {
+    // Module not available
   }
-  if (!HttpProxyAgent) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      HttpProxyAgent = require('http-proxy-agent');
-    } catch {
-      logger.warn('http-proxy-agent not available', 'GitHubService');
-    }
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    HttpProxyAgent = require('http-proxy-agent');
+    loaded = true;
+  } catch {
+    // Module not available
+  }
+
+  // Only log warning once if proxy agents are needed but not available
+  if (!loaded && !proxyAgentsWarningLogged) {
+    proxyAgentsWarningLogged = true;
+    logger.warn('Proxy agents not available. Proxy functionality will be disabled.', 'GitHubService');
   }
 }
 
@@ -62,12 +74,13 @@ export function setProxyConfig(config: ProxyConfig | undefined): void {
  * Priority: 1. Custom proxy URL from settings 2. System proxy (if enabled) 3. No proxy
  */
 function getProxyAgent(url: string): any {
-  loadProxyAgents();
-
-  // If proxy is not enabled, return undefined
+  // If proxy is not enabled, return undefined immediately (don't load proxy agents)
   if (!proxySettings?.enabled) {
     return undefined;
   }
+
+  // Only load proxy agents when proxy is actually enabled
+  loadProxyAgents();
 
   const parsedUrl = new URL(url);
   const isHttps = parsedUrl.protocol === 'https:';
