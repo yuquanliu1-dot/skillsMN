@@ -178,6 +178,7 @@
     "autoRefresh": "Auto-refresh skill list on file changes",
 
     "keyboardShortcuts": "Keyboard Shortcuts",
+    "generalShortcuts": "General Shortcuts",
     "createNewSkill": "Create new skill",
     "refreshSkillList": "Refresh skill list",
     "saveSkill": "Save skill",

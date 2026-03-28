@@ -61,7 +61,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editPAT, setEditPAT] = useState('');
   const [isUpdatingRepo, setIsUpdatingRepo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'storage' | 'skill-view' | 'repositories' | 'skill-groups' | 'ai'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'storage' | 'skill-view' | 'shortcuts' | 'repositories' | 'skill-groups' | 'ai'>('general');
 
   console.log('[Settings] Current state', { activeTab, isOpen });
 
@@ -853,6 +853,20 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               {t('settings.skillView')}
             </button>
             <button
+              onClick={() => setActiveTab('shortcuts')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'shortcuts'
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {t('settings.keyboardShortcuts')}
+            </button>
+            <button
               onClick={() => setActiveTab('skill-groups')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'skill-groups'
@@ -902,6 +916,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               {activeTab === 'general' && t('settings.general')}
               {activeTab === 'storage' && t('settings.storage')}
               {activeTab === 'skill-view' && t('settings.skillView')}
+              {activeTab === 'shortcuts' && t('settings.keyboardShortcuts')}
               {activeTab === 'skill-groups' && t('settings.skillGroups')}
               {activeTab === 'repositories' && t('settings.privateRepositories')}
               {activeTab === 'ai' && t('settings.aiConfiguration')}
@@ -1065,51 +1080,6 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                 )}
               </div>
             )}
-          </div>
-
-          {/* Keyboard Shortcuts */}
-          <div className="pt-4 border-t border-slate-200">
-            <h3 className="text-sm font-medium text-slate-700 mb-2.5">{t('settings.keyboardShortcuts')}</h3>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-              {/* General Shortcuts */}
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">{t('settings.createNewSkill')}</span>
-                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+N</kbd>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">{t('settings.refreshSkillList')}</span>
-                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+R</kbd>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">{t('settings.saveSkill')}</span>
-                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+S</kbd>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">{t('settings.closeEditor')}</span>
-                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Ctrl+W</kbd>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">{t('settings.deleteSkill')}</span>
-                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Delete</kbd>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">{t('settings.closeDialog')}</span>
-                <kbd className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-mono">Esc</kbd>
-              </div>
-
-              {/* AI Shortcuts */}
-              <div className="col-span-2 pt-2 mt-2 border-t border-slate-100">
-                <div className="text-xs font-medium text-slate-500 mb-2">{t('settings.aiShortcuts')}</div>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">{t('settings.aiRewrite')}</span>
-                <kbd className="px-2 py-0.5 bg-purple-50 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+R</kbd>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">{t('settings.aiInsert')}</span>
-                <kbd className="px-2 py-0.5 bg-purple-50 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+I</kbd>
-              </div>
-            </div>
           </div>
 
           {/* Success message */}
@@ -1567,6 +1537,57 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               >
                 {isSaving ? t('common.saving') : t('settings.settingsSaved')}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Keyboard Shortcuts Tab */}
+        {activeTab === 'shortcuts' && (
+          <div className="space-y-6">
+            {/* General Shortcuts */}
+            <div>
+              <h3 className="text-sm font-medium text-slate-700 mb-3">{t('settings.generalShortcuts')}</h3>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
+                  <span className="text-slate-600">{t('settings.createNewSkill')}</span>
+                  <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Ctrl+N</kbd>
+                </div>
+                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
+                  <span className="text-slate-600">{t('settings.refreshSkillList')}</span>
+                  <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Ctrl+R</kbd>
+                </div>
+                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
+                  <span className="text-slate-600">{t('settings.saveSkill')}</span>
+                  <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Ctrl+S</kbd>
+                </div>
+                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
+                  <span className="text-slate-600">{t('settings.closeEditor')}</span>
+                  <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Ctrl+W</kbd>
+                </div>
+                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
+                  <span className="text-slate-600">{t('settings.deleteSkill')}</span>
+                  <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Delete</kbd>
+                </div>
+                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
+                  <span className="text-slate-600">{t('settings.closeDialog')}</span>
+                  <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Esc</kbd>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Shortcuts */}
+            <div>
+              <h3 className="text-sm font-medium text-slate-700 mb-3">{t('settings.aiShortcuts')}</h3>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm p-2 bg-purple-50 rounded">
+                  <span className="text-slate-600">{t('settings.aiRewrite')}</span>
+                  <kbd className="px-2.5 py-1 bg-purple-100 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+R</kbd>
+                </div>
+                <div className="flex items-center justify-between text-sm p-2 bg-purple-50 rounded">
+                  <span className="text-slate-600">{t('settings.aiInsert')}</span>
+                  <kbd className="px-2.5 py-1 bg-purple-100 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+I</kbd>
+                </div>
+              </div>
             </div>
           </div>
         )}

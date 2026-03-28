@@ -178,6 +178,7 @@
     "autoRefresh": "文件更改时自动刷新技能列表",
 
     "keyboardShortcuts": "键盘快捷键",
+    "generalShortcuts": "通用快捷键",
     "createNewSkill": "创建新技能",
     "refreshSkillList": "刷新技能列表",
     "saveSkill": "保存技能",
