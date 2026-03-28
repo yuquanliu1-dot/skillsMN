@@ -81,3 +81,21 @@ skills/
 
 # TypeScript
 *.tsbuildinfo
+
+# Test code and reports - never upload
+tests/
+specs/
+.specify/
+*.spec.ts
+*.test.ts
+**/__tests__/
+
+# Requirements and spec files
+requirements*.txt
+*requirements.txt
+plan.md
+spec.md
+tasks.md
+findings.md
+progress.md
+task_plan.md
