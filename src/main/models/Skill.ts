@@ -46,7 +46,21 @@ export class SkillModel {
       : name;
 
     // Validate description length
-    let description = frontmatter.description?.trim();
+    // Handle case where description might be parsed as array (due to YAML bracket syntax)
+    let description: string | undefined;
+    const rawDescription = frontmatter.description as string | unknown[] | undefined;
+    if (rawDescription) {
+      if (typeof rawDescription === 'string') {
+        description = rawDescription.trim();
+      } else if (Array.isArray(rawDescription)) {
+        // Convert array to string (handles YAML bracket syntax like [TODO: ...])
+        description = rawDescription.map(item =>
+          typeof item === 'string' ? item : JSON.stringify(item)
+        ).join(' ').trim();
+      } else {
+        description = String(rawDescription).trim();
+      }
+    }
     if (description && description.length > MAX_SKILL_DESCRIPTION_LENGTH) {
       description = description.substring(0, MAX_SKILL_DESCRIPTION_LENGTH);
     }
@@ -54,7 +68,10 @@ export class SkillModel {
     // Extract version, author, and tags from frontmatter
     const version = frontmatter.version?.trim();
     const author = frontmatter.author?.trim();
-    const tags = frontmatter.tags?.map(tag => tag.trim()).filter(tag => tag.length > 0);
+    const rawTags = frontmatter.tags as (string | unknown)[] | undefined;
+    const tags = rawTags
+      ?.map((tag) => typeof tag === 'string' ? tag.trim() : String(tag))
+      .filter((tag: string) => tag.length > 0);
 
     // Count resources (all files except skill.md)
     const resourceCount = await this.countResources(dirPath);
