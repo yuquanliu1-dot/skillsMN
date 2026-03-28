@@ -208,7 +208,7 @@ export class ConfigService {
    * Save configuration to disk
    * Merges updates with existing configuration and validates before saving
    */
-  async save(updates: Partial<BaseConfiguration> & { skillGroups?: SkillGroupsConfig }): Promise<AppConfiguration> {
+  async save(updates: Partial<BaseConfiguration> & { skillGroups?: SkillGroupsConfig; proxy?: import('../../shared/types').ProxyConfig }): Promise<AppConfiguration> {
     try {
       // Load existing config or create default
       const existing = this.config ?? (await this.load());
@@ -219,13 +219,14 @@ export class ConfigService {
       // Validate merged config
       const validated = ConfigurationModel.validate(merged);
 
-      // Build new config preserving AI, private repos, and skill groups
+      // Build new config preserving AI, private repos, skill groups, and proxy
       const newConfig: AppConfiguration = {
         ...validated,
         version: this.config?.version || CONFIG_VERSION,
         ai: this.config?.ai || getDefaultAIConfig(),
         privateRepos: this.config?.privateRepos || getDefaultPrivateReposConfig(),
         skillGroups: updates.skillGroups !== undefined ? updates.skillGroups : this.config?.skillGroups,
+        proxy: updates.proxy !== undefined ? updates.proxy : this.config?.proxy,
       };
 
       // Write to disk (encrypt API key before saving)
