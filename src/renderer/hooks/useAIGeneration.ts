@@ -219,35 +219,59 @@ export function useAIGeneration(
     context?: AIGenerationRequest['skillContext'];
   } | null>(null);
 
+  // Use refs to track latest values for synchronous access in onComplete callback
+  // These are updated synchronously via our custom dispatch wrapper
+  const toolCallsRef = useRef<AIState['toolCalls']>([]);
+  const contentRef = useRef<string>('');
+
+  // Custom dispatch that updates refs synchronously
+  const dispatchWithRefUpdate = useCallback((action: AIAction) => {
+    // Update refs BEFORE dispatching so they're immediately available
+    switch (action.type) {
+      case 'START_GENERATION':
+      case 'RESET':
+        toolCallsRef.current = [];
+        contentRef.current = '';
+        break;
+      case 'STREAM_DELTA':
+        contentRef.current = contentRef.current + action.content;
+        break;
+      case 'TOOL_USE':
+        toolCallsRef.current = [...toolCallsRef.current, action.tool];
+        break;
+    }
+    dispatch(action);
+  }, []);
+
   /**
    * Handle NormalizedMessage from AI service
    */
   const handleMessage = useCallback((message: NormalizedMessage) => {
     switch (message.kind) {
       case 'session_created':
-        dispatch({ type: 'SESSION_CREATED', sessionId: message.sessionId });
+        dispatchWithRefUpdate({ type: 'SESSION_CREATED', sessionId: message.sessionId });
         options.onSessionCreated?.(message.sessionId);
         break;
 
       case 'stream_delta':
         if (message.content) {
-          dispatch({ type: 'STREAM_DELTA', content: message.content });
+          dispatchWithRefUpdate({ type: 'STREAM_DELTA', content: message.content });
         }
         break;
 
       case 'stream_end':
-        dispatch({ type: 'STREAM_END' });
+        dispatchWithRefUpdate({ type: 'STREAM_END' });
         break;
 
       case 'text':
         if (message.content) {
-          dispatch({ type: 'STREAM_DELTA', content: message.content });
+          dispatchWithRefUpdate({ type: 'STREAM_DELTA', content: message.content });
         }
         break;
 
       case 'tool_use':
         if (message.toolName && message.toolInput) {
-          dispatch({
+          dispatchWithRefUpdate({
             type: 'TOOL_USE',
             tool: {
               name: message.toolName,
@@ -259,7 +283,7 @@ export function useAIGeneration(
 
       case 'tool_result':
         if (message.toolId && message.toolResult !== undefined) {
-          dispatch({
+          dispatchWithRefUpdate({
             type: 'TOOL_RESULT',
             toolId: message.toolId,
             result: message.toolResult,
@@ -278,7 +302,7 @@ export function useAIGeneration(
             sessionId: message.sessionId,
             receivedAt: new Date(),
           };
-          dispatch({
+          dispatchWithRefUpdate({
             type: 'PERMISSION_REQUEST',
             request: permissionRequest,
           });
@@ -287,7 +311,7 @@ export function useAIGeneration(
 
       case 'permission_cancelled':
         if (message.requestId) {
-          dispatch({
+          dispatchWithRefUpdate({
             type: 'PERMISSION_CANCELLED',
             requestId: message.requestId,
           });
@@ -295,7 +319,7 @@ export function useAIGeneration(
         break;
 
       case 'complete':
-        dispatch({
+        dispatchWithRefUpdate({
           type: 'COMPLETE',
           exitCode: message.exitCode,
           aborted: message.aborted,
@@ -303,7 +327,7 @@ export function useAIGeneration(
         break;
 
       case 'error':
-        dispatch({
+        dispatchWithRefUpdate({
           type: 'ERROR',
           error: message.error || 'Unknown error',
         });
@@ -335,7 +359,7 @@ export function useAIGeneration(
     lastRequestRef.current = { prompt, mode, context };
 
     // Start generation
-    dispatch({ type: 'START_GENERATION', requestId });
+    dispatchWithRefUpdate({ type: 'START_GENERATION', requestId });
 
     const request: AIGenerationRequest = {
       id: requestId, // 将requestId设置为request.id，以便后端正确关联
@@ -348,20 +372,23 @@ export function useAIGeneration(
       await aiClient.generateStream(requestId, request, {
         onMessage: handleMessage,
         onComplete: () => {
-          dispatch({ type: 'COMPLETE' });
-          options.onComplete?.(state.content, state.toolCalls);
+          // Call options.onComplete FIRST to set up any refs (like createdSkillNameRef)
+          // BEFORE dispatching COMPLETE which triggers the isComplete effect
+          // Use the mutable variables that are updated synchronously in the reducer
+          options.onComplete?.(contentRef.current, toolCallsRef.current);
+          dispatchWithRefUpdate({ type: 'COMPLETE' });
         },
         onError: (error) => {
-          dispatch({ type: 'ERROR', error });
+          dispatchWithRefUpdate({ type: 'ERROR', error });
           options.onError?.(error);
         },
         onPermissionRequest: (request) => {
-          dispatch({ type: 'PERMISSION_REQUEST', request: request });
+          dispatchWithRefUpdate({ type: 'PERMISSION_REQUEST', request: request });
         },
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      dispatch({ type: 'ERROR', error: errorMessage });
+      dispatchWithRefUpdate({ type: 'ERROR', error: errorMessage });
       options.onError?.(errorMessage);
     }
   }, [handleMessage, options, state.content, state.toolCalls]);
@@ -372,7 +399,7 @@ export function useAIGeneration(
   const stop = useCallback(async () => {
     if (state.requestId) {
       await aiClient.cancelGeneration(state.requestId);
-      dispatch({ type: 'COMPLETE', aborted: true });
+      dispatchWithRefUpdate({ type: 'COMPLETE', aborted: true });
     }
   }, [state.requestId]);
 
@@ -390,7 +417,7 @@ export function useAIGeneration(
    * Reset state
    */
   const reset = useCallback(() => {
-    dispatch({ type: 'RESET' });
+    dispatchWithRefUpdate({ type: 'RESET' });
     lastRequestRef.current = null;
   }, []);
 
@@ -404,7 +431,7 @@ export function useAIGeneration(
     const success = await aiClient.resolvePermission(requestId, decision);
 
     if (success) {
-      dispatch({ type: 'PERMISSION_CANCELLED', requestId });
+      dispatchWithRefUpdate({ type: 'PERMISSION_CANCELLED', requestId });
     }
   }, []);
 
@@ -414,7 +441,7 @@ export function useAIGeneration(
   const abort = useCallback(async () => {
     if (state.sessionId) {
       await aiClient.abortSession(state.sessionId);
-      dispatch({ type: 'COMPLETE', aborted: true });
+      dispatchWithRefUpdate({ type: 'COMPLETE', aborted: true });
     }
   }, [state.sessionId]);
 

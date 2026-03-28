@@ -104,14 +104,24 @@ export class AIClientService {
 
       // Route message by kind
       switch (message.kind) {
+        case 'complete':
+          // Call onMessage first to handle the message
+          callbacks.onMessage(message);
+          // Then call onComplete to trigger cleanup and callbacks
+          callbacks.onComplete();
+          break;
+
+        case 'error':
+          callbacks.onMessage(message);
+          callbacks.onError(message.error || 'Unknown error');
+          break;
+
         case 'stream_delta':
         case 'stream_end':
         case 'text':
         case 'tool_use':
         case 'tool_result':
         case 'thinking':
-        case 'complete':
-        case 'error':
         case 'status':
         case 'permission_request':
         case 'permission_cancelled':
