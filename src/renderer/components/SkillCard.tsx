@@ -44,7 +44,7 @@ export default function SkillCard({
   const { t } = useTranslation();
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [createBackup, setCreateBackup] = useState(true);
+  const [createBackup, setCreateBackup] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<'idle' | 'updating' | 'success' | 'error'>('idle');
   const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
