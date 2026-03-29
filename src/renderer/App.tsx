@@ -116,6 +116,8 @@ export default function App(): JSX.Element {
   const [copyingSkill, setCopyingSkill] = useState<Skill | null>(null);
   const [uploadingSkill, setUploadingSkill] = useState<Skill | null>(null);
   const [committingSkill, setCommittingSkill] = useState<Skill | null>(null);
+  const [uncommittedResetTrigger, setUncommittedResetTrigger] = useState(0);
+  const [skillsWithUncommittedChanges, setSkillsWithUncommittedChanges] = useState<Set<string>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -359,6 +361,15 @@ export default function App(): JSX.Element {
   /**
    * Handle commit changes to repository
    */
+  /**
+   * Handle reset uncommitted changes state (called after successful commit from SkillEditorFull)
+   */
+  const handleResetUncommitted = (): void => {
+    // This is called from SkillEditorFull after a successful commit
+    // For now, just pass an empty callback
+    setCommittingSkill(null);
+  };
+
   const handleCommitChanges = async (skill: Skill): Promise<void> => {
     if (!skill.sourceMetadata || skill.sourceMetadata.type === 'local') {
       showToast('This skill was not installed from a repository', 'error');
@@ -873,6 +884,7 @@ export default function App(): JSX.Element {
               onSkillClick={handleViewPrivateSkill}
               onNavigateToSettings={() => setShowSettings(true)}
               onTagAssigned={loadSkills}
+              onLocalSkillsRefresh={loadSkills}
             />
           </div>
         </div>
@@ -910,6 +922,13 @@ export default function App(): JSX.Element {
               // Extract skill directory path from SKILL.md path
               const skillDirPath = skillInfo.path.replace(/[\\\/]SKILL\.md$/i, '');
 
+              // Ensure source metadata exists for AI-created skills
+              try {
+                await ipcClient.ensureSourceMetadata(skillDirPath);
+              } catch (error) {
+                console.warn('Failed to ensure source metadata:', error);
+              }
+
               // Find the newly created skill from the refreshed list
               const newSkill = skills?.find(s => s.path === skillDirPath);
 
@@ -935,6 +954,21 @@ export default function App(): JSX.Element {
           onUploadSkill={handleUploadSkill}
           onCommitChanges={handleCommitChanges}
           versionStatus={editingSkill ? skillUpdates[editingSkill.path] : undefined}
+          uncommittedResetTrigger={uncommittedResetTrigger}
+          hasUncommittedChanges={editingSkill ? skillsWithUncommittedChanges.has(editingSkill.path) : false}
+          onSetHasUncommittedChanges={(value) => {
+            if (editingSkill) {
+              setSkillsWithUncommittedChanges(prev => {
+                const newSet = new Set(prev);
+                if (value) {
+                  newSet.add(editingSkill.path);
+                } else {
+                  newSet.delete(editingSkill.path);
+                }
+                return newSet;
+              });
+            }
+          }}
         />
       )}
 
@@ -987,10 +1021,25 @@ export default function App(): JSX.Element {
           isOpen={uploadingSkill !== null}
           skill={uploadingSkill}
           onClose={() => setUploadingSkill(null)}
-          onSuccess={() => {
-            showToast(`Skill "${uploadingSkill.name}" uploaded successfully!`, 'success');
+          onSuccess={async () => {
+            // Store skill info before clearing state
+            const skillPath = uploadingSkill.path;
+            const skillName = uploadingSkill.name;
+
+            // Refresh skills first
+            const skills = await loadSkills();
+
+            // Find and update the editing skill
+            const updatedSkill = skills?.find(s => s.path === skillPath);
+            if (updatedSkill) {
+              setEditingSkill(updatedSkill);
+            }
+
+            // Clear uploading state after refresh
             setUploadingSkill(null);
-            loadSkills(); // Refresh skill list to update sourceMetadata
+
+            // Show success toast
+            showToast(`Skill "${skillName}" uploaded successfully!`, 'success');
           }}
         />
       )}
@@ -1003,7 +1052,16 @@ export default function App(): JSX.Element {
           onClose={() => setCommittingSkill(null)}
           onSuccess={() => {
             showToast(`Changes committed successfully for "${committingSkill.name}"!`, 'success');
+            // Clear from uncommitted changes set
+            if (committingSkill) {
+              setSkillsWithUncommittedChanges(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(committingSkill.path);
+                return newSet;
+              });
+            }
             setCommittingSkill(null);
+            setUncommittedResetTrigger(prev => prev + 1); // Signal SkillEditorFull to reset
             loadSkills(); // Refresh skill list
           }}
         />

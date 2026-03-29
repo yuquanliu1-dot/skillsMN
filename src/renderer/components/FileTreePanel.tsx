@@ -20,6 +20,8 @@ interface FileTreePanelProps {
   isVisible: boolean;
   /** Callback to toggle panel visibility */
   onToggle: () => void;
+  /** Refresh key - changes to this will trigger a file tree reload */
+  refreshKey?: number;
 }
 
 /**
@@ -183,6 +185,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
   onFileSelect,
   isVisible,
   onToggle,
+  refreshKey,
 }) => {
   const [fileTree, setFileTree] = useState<SkillFileTreeNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -212,7 +215,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
     };
 
     loadFileTree();
-  }, [skillPath, isVisible]);
+  }, [skillPath, isVisible, refreshKey]);
 
   /**
    * Handle folder toggle

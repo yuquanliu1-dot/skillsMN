@@ -946,3 +946,43 @@
 .animate-bounce {
   animation: bounce 1s infinite;
 }
+
+/* Blink animation for AI cursor */
+@keyframes blink {
+  0%, 45% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 0;
+    transform: scaleY(0.8);
+  }
+  95% {
+    opacity: 0;
+    transform: scaleY(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.animate-blink {
+  animation: blink 0.8s ease-in-out infinite;
+}
+
+/* Pulse shadow animation for AI response bubbles during streaming */
+@keyframes pulseShadow {
+  0%, 100% {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 0 0 0 rgba(168, 85, 247, 0);
+    border-color: rgb(202 138 4); /* amber-600 */
+  }
+  50% {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(168, 85, 247, 0.2);
+    border-color: rgb(139, 92, 246); /* violet-500 */
+  }
+}
+
+.animate-pulse-shadow {
+  animation: pulseShadow 1.5s ease-in-out infinite;
+}

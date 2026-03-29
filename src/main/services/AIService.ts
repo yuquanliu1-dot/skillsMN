@@ -22,6 +22,24 @@ import type {
   generateMessageId,
 } from '../../shared/types';
 
+/**
+ * Write prompt log to ai_prompt.log file in app's user data directory
+ */
+function logPromptToFile(type: 'USER PROMPT' | 'SYSTEM PROMPT', content: string): void {
+  try {
+    const logDir = app.getPath('userData');
+    const logPath = path.join(logDir, 'ai_prompt.log');
+    const timestamp = new Date().toISOString();
+    const separator = '='.repeat(50);
+    const logEntry = `\n${separator}\n[${timestamp}] ${type}\n${separator}\n${content}\n${separator}\n`;
+
+    fs.appendFileSync(logPath, logEntry, 'utf-8');
+    console.log(`[AIService] ${type} logged to: ${logPath}`);
+  } catch (error) {
+    console.error('[AIService] Failed to write prompt log:', error);
+  }
+}
+
 // Dynamic imports for Claude Agent SDK (ES Module)
 type ClaudeAgentSDK = {
   query: any;
@@ -453,6 +471,10 @@ export class AIService {
       });
 
       const userPrompt = AIService.buildUserPrompt(request);
+
+      // Log user prompt to file
+      logPromptToFile('USER PROMPT', userPrompt);
+
       // For modify mode, use the skill's directory; for new skills, use the target directory
       let workingDirectory: string;
       if (request.mode === 'modify' && request?.skillContext?.skillPath) {
@@ -498,36 +520,15 @@ export class AIService {
 
       const execOptions = AIService.getExecutableOptions();
 
-      // Build system prompt with mandatory skill-creator usage
-      const skillCreatorSystemPrompt = `You are a skill creation assistant for the skillsMN application.
-
-## MANDATORY WORKFLOW
-
-Before creating ANY new skill, you MUST use the AskUserQuestion tool to clarify:
-1. What specific functionality should the skill provide?
-2. What triggers should activate this skill?
-3. Who is the target user?
-
-Do NOT proceed to create a skill until you have asked these questions using AskUserQuestion.
-
-## Skill Creation Guidelines
-
-Follow the skill-creator skill pattern:
-- Keep SKILL.md concise (under 500 lines)
-- Include clear frontmatter: name and description
-- Use references/ for detailed documentation
-- Use scripts/ for reusable code
-- Use assets/ for templates and resources`;
-
       // Build query options with permission callback
+      // No custom system prompt - let skill-creator skill handle all guidance
       const queryOptions: any = {
         prompt: userPrompt,
         options: {
-          // Use preset system prompt with skill-creator requirements
+          // Use preset system prompt without any custom append
           systemPrompt: {
             type: 'preset',
             preset: 'claude_code',
-            append: skillCreatorSystemPrompt,
           },
           // Load CLAUDE.md from project, user, and local directories
           settingSources: ['project', 'user', 'local'],
@@ -907,16 +908,37 @@ Follow the skill-creator skill pattern:
   private static buildUserPrompt(request: AIGenerationRequest): string {
     const { mode, prompt, skillContext } = request;
     const content = skillContext?.content || '(no content)';
-    const skillName = skillContext?.name || 'Unknown';
+    // Use "New Skill" for new mode, actual name for others, or "Untitled" as fallback
+    const skillName = mode === 'new' ? 'New Skill' : (skillContext?.name || 'Untitled');
     const targetPath = skillContext?.targetPath;
     const skillPath = skillContext?.skillPath;
 
-    // Build context section with save location
+    // Strip any existing /skill-creator prefix from user input to avoid duplication
+    let cleanPrompt = prompt.trim();
+    if (cleanPrompt.startsWith('/skill-creator')) {
+      cleanPrompt = cleanPrompt.replace(/^\/skill-creator\s*/i, '').trim();
+    }
+
+    // Build context section with save location - make it VERY explicit
     let contextSection = '';
     if (mode === 'new' && targetPath) {
-      contextSection = `\n\n## Save Location\nSave the skill to: ${targetPath}/<skill-name>/SKILL.md\nThe file MUST be named "SKILL.md" (uppercase).`;
+      contextSection = `
+
+## CRITICAL: Save Location
+You MUST save the skill to this EXACT directory (use absolute path):
+${targetPath}/<skill-name>/SKILL.md
+
+IMPORTANT:
+- Do NOT save to ~/.claude/skills or any other location
+- Do NOT use the global Claude skills directory
+- Use the path above which is the project's local skills directory
+- The file MUST be named "SKILL.md" (uppercase)`;
     } else if (mode === 'modify' && skillPath) {
-      contextSection = `\n\n## Save Location\nSave to the EXACT same directory: ${skillPath}/SKILL.md\nDo NOT create a new directory.`;
+      contextSection = `
+
+## CRITICAL: Save Location
+Save to the EXACT same directory: ${skillPath}/SKILL.md
+Do NOT create a new directory. Do NOT change the location.`;
     }
 
     // Prepend /skill-creator to invoke the skill-creator skill
@@ -924,28 +946,28 @@ Follow the skill-creator skill pattern:
 
     switch (mode) {
       case 'new':
-        return `${skillCreatorPrefix}Create a new skill with these requirements:\n\n${prompt}${contextSection}`;
+        return `${skillCreatorPrefix}Create a new skill with these requirements:\n\n${cleanPrompt}${contextSection}`;
 
       case 'modify':
-        return `${skillCreatorPrefix}Modify the skill "${skillName}" with these instructions:\n\n${prompt}\n\n--- Current Content ---\n${content}${contextSection}`;
+        return `${skillCreatorPrefix}Modify the skill "${skillName}" with these instructions:\n\n${cleanPrompt}\n\n--- Current Content ---\n${content}${contextSection}`;
 
       case 'insert':
-        return `${skillCreatorPrefix}Insert at position ${skillContext?.cursorPosition ?? 0}:\n\n${prompt}\n\n--- Current Content ---\n${content}`;
+        return `${skillCreatorPrefix}Insert at position ${skillContext?.cursorPosition ?? 0}:\n\n${cleanPrompt}\n\n--- Current Content ---\n${content}`;
 
       case 'replace':
-        return `${skillCreatorPrefix}Replace "${skillContext?.selectedText || ''}":\n\n${prompt}\n\n--- Current Content ---\n${content}`;
+        return `${skillCreatorPrefix}Replace "${skillContext?.selectedText || ''}":\n\n${cleanPrompt}\n\n--- Current Content ---\n${content}`;
 
       case 'evaluate':
-        return `${skillCreatorPrefix}Evaluate this skill (${skillName}):\n\nFocus: ${prompt || 'General'}\n\n--- Content ---\n${content}`;
+        return `${skillCreatorPrefix}Evaluate this skill (${skillName}):\n\nFocus: ${cleanPrompt || 'General'}\n\n--- Content ---\n${content}`;
 
       case 'benchmark':
-        return `${skillCreatorPrefix}Benchmark this skill (${skillName}):\n\nFocus: ${prompt || 'General'}\n\n--- Content ---\n${content}`;
+        return `${skillCreatorPrefix}Benchmark this skill (${skillName}):\n\nFocus: ${cleanPrompt || 'General'}\n\n--- Content ---\n${content}`;
 
       case 'optimize':
-        return `${skillCreatorPrefix}Optimize this skill for better triggering:\n\nFocus: ${prompt || 'Triggering accuracy'}\n\nSkill: ${skillName}\n\n--- Content ---\n${content}`;
+        return `${skillCreatorPrefix}Optimize this skill for better triggering:\n\nFocus: ${cleanPrompt || 'Triggering accuracy'}\n\nSkill: ${skillName}\n\n--- Content ---\n${content}`;
 
       default:
-        return `${skillCreatorPrefix}${prompt}`;
+        return `${skillCreatorPrefix}${cleanPrompt}`;
     }
   }
 }

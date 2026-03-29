@@ -287,6 +287,21 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
     }
   );
 
+  // Handler for skill:ensure-source-metadata
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_ENSURE_SOURCE_METADATA,
+    async (_event, { skillPath }: { skillPath: string }): Promise<IPCResponse<void>> => {
+      try {
+        logger.debug(`Ensuring source metadata for skill: ${skillPath}`, 'SkillHandlers');
+        await skillService!.ensureSourceMetadata(skillPath);
+        return { success: true };
+      } catch (error) {
+        logger.error('Failed to ensure source metadata', 'SkillHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
   // Handler for fs:watch-start
   ipcMain.handle(
     IPC_CHANNELS.FS_WATCH_START,

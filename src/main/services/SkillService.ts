@@ -499,13 +499,19 @@ ${content}`;
    * Open skill folder in system file explorer
    * Uses Electron shell to open the directory in the default file manager
    * @param skillPath - Absolute path to skill directory
-   * @throws Error if path validation fails
+   * @throws Error if path validation fails or path doesn't exist
    * @example
    * await skillService.openFolder('/path/to/skill');
    */
   async openFolder(skillPath: string): Promise<void> {
     const { shell } = require('electron');
     const validatedPath = this.pathValidator.validate(skillPath);
+
+    // Check if path exists before trying to open
+    if (!fs.existsSync(validatedPath)) {
+      throw new Error(`Folder does not exist: ${validatedPath}`);
+    }
+
     await shell.openPath(validatedPath);
     logger.debug(`Opened folder: ${validatedPath}`, 'SkillService');
   }
@@ -1369,6 +1375,27 @@ installedAt: ${new Date().toISOString()}
       isBinary: false,
       language,
     };
+  }
+
+  /**
+   * Ensure a skill has source metadata
+   * Creates local source metadata if missing (e.g., for AI-created skills)
+   * @param skillPath - Path to the skill directory
+   */
+  async ensureSourceMetadata(skillPath: string): Promise<void> {
+    const metadataPath = path.join(skillPath, SOURCE_METADATA_FILE);
+
+    // Check if source metadata already exists
+    if (fs.existsSync(metadataPath)) {
+      logger.debug('Source metadata already exists', 'SkillService', { skillPath });
+      return;
+    }
+
+    // Create local source metadata
+    const sourceMetadata = createLocalSource();
+    await fs.promises.writeFile(metadataPath, JSON.stringify(sourceMetadata, null, 2), 'utf-8');
+
+    logger.info('Created source metadata for skill', 'SkillService', { skillPath });
   }
 
   /**

@@ -104,6 +104,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_FILE_WRITE, { filePath, content });
   },
 
+  ensureSourceMetadata: (skillPath: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_ENSURE_SOURCE_METADATA, { skillPath });
+  },
+
   // ============================================================================
   // Configuration Operations
   // ============================================================================

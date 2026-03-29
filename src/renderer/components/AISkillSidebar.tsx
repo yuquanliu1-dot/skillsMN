@@ -186,6 +186,13 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   const promptMenuRef = useRef<HTMLDivElement>(null);
   const historyMenuRef = useRef<HTMLDivElement>(null);
 
+  // Track the created skill name to update conversation history
+  // Use ref for immediate access in onComplete callback (state updates are async)
+  const createdSkillNameRef = useRef<string | null>(null);
+
+  // Track the previous skill path to detect actual skill changes vs. initial skill creation
+  const prevSkillPathRef = useRef<string | undefined>(currentSkillPath);
+
   const {
     status,
     content,
@@ -202,23 +209,33 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
     resolvePermission,
     abort,
   } = useAIGeneration({
-    onComplete: async () => {
-      console.log('AI skill generation complete - file created by Agent SDK');
+    onComplete: async (finalContent, finalToolCalls) => {
+      console.log('[AISkillSidebar] AI skill generation complete');
+      console.log('[AISkillSidebar] finalToolCalls:', finalToolCalls);
 
-      // Extract created skill path from tool calls
-      const writeToolCall = toolCalls.find(t => t.name === 'Write');
+      // Extract created skill path from tool calls (use finalToolCalls to avoid stale closure)
+      const writeToolCall = finalToolCalls.find(t => t.name === 'Write');
+      console.log('[AISkillSidebar] writeToolCall:', writeToolCall);
+
       if (writeToolCall?.input?.file_path) {
         const filePath = writeToolCall.input.file_path as string;
         // Extract skill name from path (e.g., /path/to/skills/skill-name/SKILL.md -> skill-name)
         const pathParts = filePath.replace(/\\/g, '/').split('/');
         const skillsIndex = pathParts.findIndex(p => p === 'skills');
+        console.log('[AISkillSidebar] filePath:', filePath, 'pathParts:', pathParts, 'skillsIndex:', skillsIndex);
+
         if (skillsIndex !== -1 && pathParts.length > skillsIndex + 1) {
           const skillName = pathParts[skillsIndex + 1];
+          console.log('[AISkillSidebar] Skill created:', skillName, 'at path:', filePath);
+          // Store in ref for immediate access in saveCurrentConversation
+          createdSkillNameRef.current = skillName;
+          console.log('[AISkillSidebar] Set createdSkillNameRef.current to:', createdSkillNameRef.current);
           onSkillCreated({ name: skillName, path: filePath });
           return;
         }
       }
 
+      console.log('[AISkillSidebar] No Write tool found or could not extract skill name');
       onSkillCreated();
     },
     onError: (errorMessage) => {
@@ -228,15 +245,30 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
   /**
    * Load conversation history on mount or when skill changes
+   * NOTE: We don't clear conversation when transitioning from "new skill" to "edit skill" mode
+   * after AI creates a skill, because the user's conversation should be preserved.
    */
   useEffect(() => {
+    // Check if this is a transition from new skill creation to edit mode
+    // (previous path was undefined, current path is now defined = skill was just created)
+    const isTransitionFromCreation = prevSkillPathRef.current === undefined && currentSkillPath !== undefined;
+
     if (isOpen) {
-      // Reset current conversation when skill changes
-      setMessages([]);
-      setCurrentConversationId(null);
-      reset();
+      // Only clear conversation when:
+      // 1. Skill path didn't change (just opening the sidebar), OR
+      // 2. User switched to a different existing skill (not from creation)
+      if (!isTransitionFromCreation) {
+        // Reset current conversation when skill changes
+        setMessages([]);
+        setCurrentConversationId(null);
+        createdSkillNameRef.current = null;
+        reset();
+      }
       loadConversations();
     }
+
+    // Update the ref to track skill path changes
+    prevSkillPathRef.current = currentSkillPath;
   }, [isOpen, currentSkillPath]);
 
   /**
@@ -278,16 +310,22 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
   /**
    * Save current conversation to storage
+   * If a new skill was just created, associate the conversation with that skill
    */
   const saveCurrentConversation = useCallback(async (
     msgs: InternalMessage[],
-    conversationId: string | null
+    conversationId: string | null,
+    newSkillName?: string | null
   ): Promise<string | null> => {
     if (msgs.length === 0) return null;
 
     const now = new Date().toISOString();
     const firstUserMessage = msgs.find(m => m.role === 'user');
     const title = firstUserMessage ? generateTitle(firstUserMessage.content) : 'New Conversation';
+
+    // Use the newly created skill name if provided, otherwise use current skill name
+    const effectiveSkillName = newSkillName || currentSkillName;
+    console.log('[AISkillSidebar] saveCurrentConversation - newSkillName:', newSkillName, 'currentSkillName:', currentSkillName, 'effectiveSkillName:', effectiveSkillName);
 
     const conversation: AIConversation = {
       id: conversationId || generateId(),
@@ -297,9 +335,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         ? (conversations.find(c => c.id === conversationId)?.createdAt || now)
         : now,
       updatedAt: now,
-      skillName: currentSkillName,
+      skillName: effectiveSkillName,
       skillPath: currentSkillPath,
     };
+
+    console.log('[AISkillSidebar] Saving conversation with skillName:', conversation.skillName);
 
     try {
       const response = await window.electronAPI.saveAIConversation(conversation);
@@ -346,6 +386,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   const handleNewConversation = useCallback(() => {
     setMessages([]);
     setCurrentConversationId(null);
+    createdSkillNameRef.current = null; // Reset created skill name ref
     reset();
     setShowHistoryMenu(false);
   }, [reset]);
@@ -522,15 +563,23 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   const handleSubmitAnswers = useCallback(async () => {
     if (pendingQuestions.length === 0) return;
 
-    // Build answer text
+    // Build answer text with full option details for better context
     const answerParts: string[] = [];
     pendingQuestions.forEach((q, qIndex) => {
-      const selectedLabels = Array.from(q.selectedOptions)
-        .map(optIndex => q.options[optIndex]?.label)
+      const selectedOptions = Array.from(q.selectedOptions)
+        .map(optIndex => q.options[optIndex])
         .filter(Boolean);
 
-      if (selectedLabels.length > 0) {
-        answerParts.push(`**${q.header || `Question ${qIndex + 1}`}:** ${selectedLabels.join(', ')}`);
+      if (selectedOptions.length > 0) {
+        const header = q.header || `Question ${qIndex + 1}`;
+        const optionsText = selectedOptions.map(opt => {
+          // Include both label and description for better understanding
+          if (opt.description) {
+            return `${opt.label} (${opt.description})`;
+          }
+          return opt.label;
+        }).join(', ');
+        answerParts.push(`**${header}:** ${optionsText}`);
       }
     });
 
@@ -581,16 +630,63 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
     const fullPrompt = `[Previous conversation]\n${conversationContext}\n\n[User's answers]\n${answerText}\n\nNow proceed to create the skill based on these answers.`;
 
-    await generate(fullPrompt, currentSkillContent ? 'modify' : 'new', skillContext);
+    // Determine mode: new skill if no skillPath, otherwise modify
+    const mode = currentSkillPath ? 'modify' : 'new';
+    await generate(fullPrompt, mode, skillContext);
   }, [pendingQuestions, messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath]);
 
   /**
-   * Skip answering questions (provide text input instead)
+   * Skip answering questions (continue without answering)
    */
-  const handleSkipQuestions = useCallback(() => {
+  const handleSkipQuestions = useCallback(async () => {
     setPendingQuestions([]);
     setIsWaitingForAnswers(false);
-  }, []);
+
+    // Add user message indicating skip
+    const userMessage: InternalMessage = {
+      id: generateId(),
+      role: 'user',
+      content: '[Skipped questions - proceed without answering]',
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+
+    // Add placeholder for streaming assistant message
+    const assistantMessageId = generateId();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isStreaming: true,
+        toolCalls: [],
+      },
+    ]);
+
+    // Continue conversation - tell AI to proceed without the questions
+    const conversationContext = messages
+      .filter((m) => !m.isStreaming)
+      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n\n');
+
+    const skillContext: any = {
+      targetPath: config?.applicationSkillsDirectory,
+    };
+
+    if (currentSkillContent) {
+      skillContext.content = currentSkillContent;
+      skillContext.name = currentSkillName;
+      skillContext.skillPath = currentSkillPath;
+    }
+
+    const fullPrompt = `[Previous conversation]\n${conversationContext}\n\n[User skipped the questions]\nPlease proceed with the best approach based on your judgment.`;
+
+    // Determine mode: new skill if no skillPath, otherwise modify
+    const mode = currentSkillPath ? 'modify' : 'new';
+    await generate(fullPrompt, mode, skillContext);
+  }, [messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath]);
 
   /**
    * Handle resolving a permission request
@@ -619,7 +715,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
    * Finalize streaming message and save conversation when complete
    */
   useEffect(() => {
-    if (isComplete && content) {
+    // Check for completion - either content OR toolCalls should be present
+    // (AI might use tools without returning text content)
+    if (isComplete && (content || toolCalls.length > 0)) {
+      console.log('[AISkillSidebar] isComplete effect triggered, createdSkillNameRef.current:', createdSkillNameRef.current);
+      console.log('[AISkillSidebar] content length:', content.length, 'toolCalls:', toolCalls.length);
       setMessages((prev) => {
         const streamingMsgIndex = prev.findIndex((m) => m.isStreaming);
         if (streamingMsgIndex >= 0) {
@@ -632,9 +732,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           };
 
           // Save conversation with finalized messages (including toolCalls)
+          // Pass createdSkillNameRef.current to associate conversation with newly created skill
           const finalMessages = updated.filter(m => !m.isStreaming);
+          console.log('[AISkillSidebar] Saving conversation with skillName:', createdSkillNameRef.current);
           if (finalMessages.length > 0) {
-            saveCurrentConversation(finalMessages, currentConversationId).then(newId => {
+            saveCurrentConversation(finalMessages, currentConversationId, createdSkillNameRef.current).then(newId => {
               if (newId && !currentConversationId) {
                 setCurrentConversationId(newId);
               }
@@ -651,14 +753,21 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
   /**
    * Handle sending a message
+   * Automatically adds /skill-creator prefix to invoke the skill-creator skill
    */
   const handleSend = useCallback(async () => {
     if (!inputValue.trim() || isStreaming) return;
 
+    // Auto-add /skill-creator prefix if not already present
+    const userContent = inputValue.trim();
+    const promptWithPrefix = userContent.startsWith('/skill-creator')
+      ? userContent
+      : `/skill-creator ${userContent}`;
+
     const userMessage: InternalMessage = {
       id: generateId(),
       role: 'user',
-      content: inputValue.trim(),
+      content: userContent, // Display original input to user
       timestamp: new Date(),
     };
 
@@ -697,12 +806,14 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       skillContext.skillPath = currentSkillPath;
     }
 
-    // Include conversation context in prompt
+    // Include conversation context in prompt (use promptWithPrefix for actual AI call)
     const fullPrompt = conversationContext
-      ? `[Previous conversation]\n${conversationContext}\n\n[Current request]\n${userMessage.content}`
-      : userMessage.content;
+      ? `[Previous conversation]\n${conversationContext}\n\n[Current request]\n${promptWithPrefix}`
+      : promptWithPrefix;
 
-    await generate(fullPrompt, currentSkillContent ? 'modify' : 'new', skillContext);
+    // Determine mode: new skill if no skillPath, otherwise modify
+    const mode = currentSkillPath ? 'modify' : 'new';
+    await generate(fullPrompt, mode, skillContext);
   }, [inputValue, isStreaming, messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath]);
 
   /**
@@ -744,6 +855,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   const handleClearConversation = useCallback(() => {
     setMessages([]);
     setCurrentConversationId(null);
+    createdSkillNameRef.current = null; // Reset created skill name ref
     reset();
   }, [reset]);
 
@@ -923,7 +1035,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
               className={`max-w-[95%] rounded-lg px-2.5 py-1.5 ${
                 message.role === 'user'
                   ? 'bg-purple-600 text-white'
-                  : 'bg-white border border-slate-200 text-slate-800 shadow-sm'
+                  : `bg-white border text-slate-800 shadow-sm ${
+                      message.isStreaming
+                        ? 'border-purple-300 animate-pulse-shadow'
+                        : 'border-slate-200'
+                    }`
               }`}
             >
               {/* Tool calls - compact inline display */}
@@ -1131,10 +1247,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
               {/* Message content */}
               <div className="text-xs whitespace-pre-wrap break-words font-mono leading-relaxed">
-                {message.content || (message.isStreaming && <span className="animate-pulse">{t('aiSidebar.thinking')}</span>)}
-                {message.isStreaming && message.content && (
-                  <span className="inline-block w-1.5 h-3 bg-purple-600 animate-pulse ml-0.5">|</span>
-                )}
+                {message.content || (message.isStreaming && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="animate-pulse text-purple-600">{t('aiSidebar.thinking')}</span>
+                  </span>
+                ))}
               </div>
             </div>
           </div>

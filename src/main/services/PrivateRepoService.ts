@@ -27,12 +27,49 @@ export class PrivateRepoService {
    * @throws Error with user-friendly message if decryption fails
    */
   private static decryptPAT(patEncrypted: string): string {
+    // Check if PAT appears to be plaintext (manually entered in config)
+    const plaintextPatPatterns = ['ghp_', 'gho_', 'github_pat_', 'glpat-'];
+    if (plaintextPatPatterns.some(pattern => patEncrypted.startsWith(pattern))) {
+      // Return the plaintext PAT directly - it will be encrypted when saved
+      logger.info('PAT is in plaintext format - returning as-is for use', 'PrivateRepoService');
+      return patEncrypted;
+    }
+
     try {
       return safeStorage.decryptString(Buffer.from(patEncrypted, 'base64'));
     } catch (decryptError) {
       logger.error('Failed to decrypt PAT - credentials may be corrupted or from a different machine', 'PrivateRepoService', decryptError);
       throw new Error('Credentials could not be decrypted. This may happen if the app was installed on a different machine or the config was modified manually. Please remove and re-add this repository with your PAT.');
     }
+  }
+
+  /**
+   * Decrypt PAT and auto-encrypt if it was stored in plaintext
+   * This method handles the migration of plaintext PATs to encrypted format
+   * @param repo - The repository object containing the PAT
+   * @returns Decrypted PAT string
+   */
+  private static async decryptAndFixPAT(repo: PrivateRepo): Promise<string> {
+    const plaintextPatPatterns = ['ghp_', 'gho_', 'github_pat_', 'glpat-'];
+    const isPlaintext = plaintextPatPatterns.some(pattern => repo.patEncrypted.startsWith(pattern));
+
+    if (isPlaintext) {
+      logger.info('Auto-encrypting plaintext PAT for repo', 'PrivateRepoService', { repoId: repo.id });
+      const plaintextPat = repo.patEncrypted;
+
+      // Encrypt and save
+      const encryptedPat = safeStorage.encryptString(plaintextPat).toString('base64');
+      const index = this.config!.repositories.findIndex((r) => r.id === repo.id);
+      if (index !== -1) {
+        this.config!.repositories[index].patEncrypted = encryptedPat;
+        await this.saveConfig();
+        logger.info('Successfully auto-encrypted plaintext PAT', 'PrivateRepoService', { repoId: repo.id });
+      }
+
+      return plaintextPat;
+    }
+
+    return this.decryptPAT(repo.patEncrypted);
   }
 
   /**
@@ -256,9 +293,23 @@ export class PrivateRepoService {
         throw new Error('Repository not found');
       }
 
+      // If patEncrypted is being updated, encrypt it before storing
+      const processedUpdates = { ...updates };
+      if (updates.patEncrypted) {
+        // Check if the provided PAT is already encrypted (base64 format)
+        // If it looks like a plaintext PAT, encrypt it
+        const plaintextPatPatterns = ['ghp_', 'gho_', 'github_pat_', 'glpat-'];
+        if (plaintextPatPatterns.some(pattern => updates.patEncrypted!.startsWith(pattern))) {
+          // This is a plaintext PAT, encrypt it
+          processedUpdates.patEncrypted = safeStorage.encryptString(updates.patEncrypted).toString('base64');
+          logger.debug('Encrypted plaintext PAT during repo update', 'PrivateRepoService');
+        }
+        // Otherwise assume it's already encrypted and use as-is
+      }
+
       this.config!.repositories[index] = PrivateRepoModel.update(
         this.config!.repositories[index],
-        updates
+        processedUpdates
       );
 
       await this.saveConfig();
@@ -360,10 +411,10 @@ export class PrivateRepoService {
         throw new Error('Repository not found');
       }
 
-      // Decrypt PAT with proper error handling
+      // Decrypt PAT (auto-fixes plaintext PATs)
       let pat: string;
       try {
-        pat = safeStorage.decryptString(Buffer.from(repo.patEncrypted, 'base64'));
+        pat = await this.decryptAndFixPAT(repo);
       } catch (decryptError) {
         logger.error('Failed to decrypt PAT - credentials may need to be re-entered', 'PrivateRepoService', decryptError);
         return {
@@ -464,8 +515,8 @@ export class PrivateRepoService {
         throw new Error('Repository not found');
       }
 
-      // Decrypt PAT
-      const pat = this.decryptPAT(repo.patEncrypted);
+      // Decrypt PAT (auto-fixes plaintext PATs)
+      const pat = await this.decryptAndFixPAT(repo);
 
       // Get appropriate provider
       const provider = repo.provider || 'github';
@@ -594,8 +645,8 @@ export class PrivateRepoService {
         throw new Error('Repository not found');
       }
 
-      // Decrypt PAT
-      const pat = this.decryptPAT(repo.patEncrypted);
+      // Decrypt PAT (auto-fixes plaintext PATs)
+      const pat = await this.decryptAndFixPAT(repo);
 
       // Get appropriate provider
       const provider = repo.provider || 'github';
@@ -850,8 +901,8 @@ export class PrivateRepoService {
         throw new Error('Repository not found');
       }
 
-      // Decrypt PAT
-      const pat = this.decryptPAT(repo.patEncrypted);
+      // Decrypt PAT (auto-fixes plaintext PATs)
+      const pat = await this.decryptAndFixPAT(repo);
 
       // Get appropriate provider
       const provider = repo.provider || 'github';
@@ -903,8 +954,8 @@ export class PrivateRepoService {
         throw new Error('Repository not found');
       }
 
-      // Decrypt PAT
-      const pat = this.decryptPAT(repo.patEncrypted);
+      // Decrypt PAT (auto-fixes plaintext PATs)
+      const pat = await this.decryptAndFixPAT(repo);
 
       // Get appropriate provider
       const provider = repo.provider || 'github';

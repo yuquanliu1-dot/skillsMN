@@ -278,6 +278,8 @@
     "removeRepositoryConfirm": "Remove \"{{name}}\"?",
     "removeRepositoryNote": "Note: Locally installed skills from this repository will be preserved and can still be used.",
     "removeRepositoryReAdd": "You can re-add this repository later if needed.",
+    "removeDirectory": "Remove directory",
+    "displayNamePlaceholder": "My Team Skills",
 
     "settingsSaved": "Settings saved successfully",
     "failedToSave": "Failed to save settings",
@@ -305,6 +307,7 @@
     "groupUpdated": "Group updated successfully",
     "groupDeleted": "Group deleted successfully",
     "skillsInGroup": "{{count}} skills",
+    "tagsInGroup": "{{count}} tags",
     "selectGroup": "Select a group",
     "assignToGroup": "Assign to Group",
     "removeFromGroup": "Remove from Group",

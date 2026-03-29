@@ -278,6 +278,8 @@
     "removeRepositoryConfirm": "移除 \"{{name}}\"？",
     "removeRepositoryNote": "注意：此仓库中本地安装的技能将被保留，仍可使用。",
     "removeRepositoryReAdd": "如果需要，您可以稍后重新添加此仓库。",
+    "removeDirectory": "移除目录",
+    "displayNamePlaceholder": "我的团队技能",
 
     "settingsSaved": "设置已保存",
     "failedToSave": "保存设置失败",
@@ -305,6 +307,7 @@
     "groupUpdated": "分组更新成功",
     "groupDeleted": "分组删除成功",
     "skillsInGroup": "{{count}} 个技能",
+    "tagsInGroup": "{{count}} 个标签",
     "selectGroup": "选择分组",
     "assignToGroup": "分配到分组",
     "removeFromGroup": "从分组移除",

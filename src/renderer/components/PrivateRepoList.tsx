@@ -50,9 +50,10 @@ interface PrivateRepoListProps {
   onSkillClick?: (skill: PrivateSkill) => void;
   onNavigateToSettings?: () => void;
   onTagAssigned?: () => void;
+  onLocalSkillsRefresh?: () => void; // Called when local skills should be refreshed (e.g., after install)
 }
 
-export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNavigateToSettings, onTagAssigned }: PrivateRepoListProps): JSX.Element {
+export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNavigateToSettings, onTagAssigned, onLocalSkillsRefresh }: PrivateRepoListProps): JSX.Element {
   const { t } = useTranslation();
   const [repositories, setRepositories] = useState<PrivateRepo[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
@@ -661,7 +662,10 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
                       key={skill.path}
                       skill={skill}
                       repo={selectedRepo!}
-                      onInstallComplete={() => loadSkills(selectedRepo!.id)}
+                      onInstallComplete={() => {
+                        loadSkills(selectedRepo!.id);
+                        onLocalSkillsRefresh?.(); // Refresh local skills to show the new badge
+                      }}
                       onSkillClick={onSkillClick}
                       onNavigateToSettings={onNavigateToSettings}
                       onTagAssigned={handleTagAssigned}

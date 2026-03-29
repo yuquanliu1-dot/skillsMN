@@ -55,6 +55,7 @@ export interface ElectronAPI {
   getSkillFileTree: (skillPath: string) => Promise<IPCResponse<SkillFileTreeNode>>;
   readSkillFile: (filePath: string) => Promise<IPCResponse<SkillFileContent>>;
   writeSkillFile: (filePath: string, content: string) => Promise<IPCResponse<void>>;
+  ensureSourceMetadata: (skillPath: string) => Promise<IPCResponse<void>>;
 
   // Dialog Operations
   selectDirectory: () => Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>>;

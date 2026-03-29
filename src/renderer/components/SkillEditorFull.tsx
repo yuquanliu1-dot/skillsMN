@@ -136,6 +136,12 @@ interface SkillEditorFullProps {
   onSkillModified?: (filePath?: string) => void;
   /** Version comparison status for conflict detection */
   versionStatus?: VersionComparison;
+  /** Trigger to reset uncommitted changes state - increment to reset */
+  uncommittedResetTrigger?: number;
+  /** Whether this skill has uncommitted changes (managed by parent) */
+  hasUncommittedChanges?: boolean;
+  /** Callback to set uncommitted changes state */
+  onSetHasUncommittedChanges?: (value: boolean) => void;
 }
 
 export default function SkillEditorFull({
@@ -160,6 +166,9 @@ export default function SkillEditorFull({
   onCommitChanges,
   onSkillModified,
   versionStatus,
+  uncommittedResetTrigger,
+  hasUncommittedChanges: externalHasUncommittedChanges,
+  onSetHasUncommittedChanges,
 }: SkillEditorFullProps): JSX.Element {
   const { t } = useTranslation();
 
@@ -175,6 +184,23 @@ export default function SkillEditorFull({
   const [externalChangeDetected, setExternalChangeDetected] = useState(false);
   const [showExternalModificationDialog, setShowExternalModificationDialog] = useState(false);
   const [pendingSaveContent, setPendingSaveContent] = useState<string | null>(null);
+
+  // Track uncommitted changes for private repo skills (persists after auto-save)
+  // Use external state if provided (from parent), otherwise use internal state
+  const [internalHasUncommittedChanges, setInternalHasUncommittedChanges] = useState(false);
+  const hasUncommittedChanges = externalHasUncommittedChanges ?? internalHasUncommittedChanges;
+  const setHasUncommittedChanges = (value: boolean) => {
+    setInternalHasUncommittedChanges(value);
+    onSetHasUncommittedChanges?.(value);
+  };
+
+  // Reset uncommitted changes when parent signals successful commit
+  useEffect(() => {
+    if (uncommittedResetTrigger && uncommittedResetTrigger > 0) {
+      setInternalHasUncommittedChanges(false);
+      onSetHasUncommittedChanges?.(false);
+    }
+  }, [uncommittedResetTrigger, onSetHasUncommittedChanges]);
 
   // File tree state
   const [isFileTreeVisible, setIsFileTreeVisible] = useState<boolean>(true); // Default visible
@@ -467,6 +493,11 @@ export default function SkillEditorFull({
       ));
       setAutoSaveStatus('pending');
 
+      // Track uncommitted changes for private repo skills
+      if (skill?.sourceMetadata?.type === 'private-repo') {
+        setHasUncommittedChanges(true);
+      }
+
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
       }
@@ -478,7 +509,7 @@ export default function SkillEditorFull({
         }, config.autoSaveDelay);
       }
     }
-  }, [config.autoSaveEnabled, config.autoSaveDelay, isNewSkill, activeTabId, activeTab]);
+  }, [config.autoSaveEnabled, config.autoSaveDelay, isNewSkill, activeTabId, activeTab, skill?.sourceMetadata?.type]);
 
   /**
    * Auto-save handler (only for existing skills, main file only)
@@ -875,8 +906,8 @@ export default function SkillEditorFull({
             </button>
           )}
 
-          {/* Upload to Repository button */}
-          {isEditing && onUploadSkill && skill && (
+          {/* Upload to Repository button - for local skills and registry skills (cannot commit to public registry) */}
+          {isEditing && onUploadSkill && skill && (!skill.sourceMetadata || skill.sourceMetadata.type === 'local' || skill.sourceMetadata.type === 'registry') && (
             <button
               onClick={() => onUploadSkill(skill)}
               className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-green-600 hover:bg-green-700 text-white transition-colors"
@@ -888,10 +919,13 @@ export default function SkillEditorFull({
             </button>
           )}
 
-          {/* Commit Changes button */}
-          {isEditing && onCommitChanges && skill?.sourceMetadata && skill.sourceMetadata.type !== 'local' && hasUnsavedChanges && (
+          {/* Commit Changes button - only for private repo skills */}
+          {isEditing && onCommitChanges && skill?.sourceMetadata && skill.sourceMetadata.type === 'private-repo' && hasUncommittedChanges && (
             <button
-              onClick={() => onCommitChanges(skill)}
+              onClick={() => {
+                onCommitChanges(skill);
+                // Note: hasUncommittedChanges will be reset by parent after successful commit
+              }}
               className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 versionStatus?.hasUpdate
                   ? 'bg-amber-500 hover:bg-amber-600 text-white'

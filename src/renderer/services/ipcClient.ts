@@ -155,6 +155,16 @@ export const ipcClient = {
     }
   },
 
+  async ensureSourceMetadata(skillPath: string): Promise<void> {
+    if (!isElectron()) {
+      throw new Error('Cannot ensure source metadata in browser mode');
+    }
+    const response = await window.electronAPI.ensureSourceMetadata(skillPath);
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Unknown error');
+    }
+  },
+
   // ============================================================================
   // Configuration Operations
   // ============================================================================

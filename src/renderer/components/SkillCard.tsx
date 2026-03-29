@@ -16,7 +16,7 @@ interface SkillCardProps {
   onEdit?: (skill: Skill) => void;
   onDelete?: (skill: Skill) => void;
   onCopy?: (skill: Skill) => void;
-  onOpenFolder?: (skill: Skill) => void;
+  onOpenFolder?: (skill: Skill) => void | Promise<void>;
   onSelect?: (skill: Skill) => void;
   isSelected?: boolean;
   versionStatus?: VersionComparison;
@@ -86,10 +86,15 @@ export default function SkillCard({
     onDelete?.(skill);
   };
 
-  const handleOpenFolder = (e: React.MouseEvent) => {
+  const handleOpenFolder = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    onOpenFolder?.(skill);
+    try {
+      await onOpenFolder?.(skill);
+    } catch (error) {
+      // Error is already handled by the parent component
+      console.error('Failed to open folder:', error);
+    }
   };
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -236,13 +241,6 @@ export default function SkillCard({
                 </span>
               )}
 
-              {/* Update Badge */}
-              {hasUpdate && updateProgress !== 'success' && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex-shrink-0 border-0 animate-pulse">
-                  {t('skillCard.update')}
-                </span>
-              )}
-
               {/* Upload Badge (for private repo skills with newer local version) */}
               {canUpload && uploadProgress !== 'success' && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex-shrink-0 border-0 animate-pulse">
@@ -260,8 +258,8 @@ export default function SkillCard({
 
           {/* Right: Actions */}
           <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Edit Button */}
-            {onEdit && (
+            {/* Edit Button - hidden when update button is visible */}
+            {onEdit && !(hasUpdate && onUpdate && updateProgress !== 'success') && (
               <button
                 onClick={handleEdit}
                 className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
@@ -274,12 +272,12 @@ export default function SkillCard({
               </button>
             )}
 
-            {/* Update Button */}
+            {/* Update Button - with pulse animation */}
             {hasUpdate && onUpdate && updateProgress !== 'success' && (
               <button
                 onClick={handleUpdateClick}
                 disabled={updateProgress === 'updating'}
-                className="btn text-xs px-3 py-1 bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700 disabled:opacity-50"
+                className="btn text-xs px-3 py-1 bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700 disabled:opacity-50 animate-pulse"
               >
                 {updateProgress === 'updating' ? '...' : t('skillCard.update')}
               </button>

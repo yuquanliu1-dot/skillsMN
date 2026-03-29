@@ -129,6 +129,7 @@ export const IPC_CHANNELS = {
   SKILL_FILE_TREE: 'skill:file-tree',
   SKILL_FILE_READ: 'skill:file-read',
   SKILL_FILE_WRITE: 'skill:file-write',
+  SKILL_ENSURE_SOURCE_METADATA: 'skill:ensure-source-metadata',
 
   // Configuration operations
   CONFIG_LOAD: 'config:load',
