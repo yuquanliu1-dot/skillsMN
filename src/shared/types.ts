@@ -468,6 +468,8 @@ export interface VersionComparison {
   commitsAhead?: number;
   /** List of commits between local and remote (only when hasUpdate is true) */
   commits?: CommitInfo[];
+  /** Warning message if metadata save failed (update detection may be inaccurate on next check) */
+  warning?: string;
 }
 
 export interface UIState {

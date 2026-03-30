@@ -13,6 +13,7 @@ import { logger } from '../utils/Logger';
 import { PathValidator } from './PathValidator';
 import { ConfigService } from './ConfigService';
 import { GitHubService } from './GitHubService';
+import { SkillInstaller } from './SkillInstaller';
 import { decryptPAT } from '../utils/encryption';
 import { SkillModel } from '../models/Skill';
 import { SkillDirectoryModel } from '../models/SkillDirectory';
@@ -26,6 +27,8 @@ import { compareVersions } from '../utils/versionUtils';
 export class SkillService {
   private frontmatterCache: Map<string, { data: any; timestamp: number }> = new Map();
   private readonly CACHE_TTL = 60000; // 1 minute cache TTL
+  // Track skills that have already attempted to save commitHash to avoid repeated write attempts
+  private commitHashSaveAttempted: Set<string> = new Set();
 
   constructor(
     private pathValidator: PathValidator,
@@ -614,6 +617,21 @@ ${content}`;
 
       // If no commit hash stored, save the current commit hash for future checks
       if (!sourceMetadata.commitHash) {
+        // Check if we've already attempted to save commitHash for this skill
+        // This prevents repeated write attempts if the file write fails
+        if (this.commitHashSaveAttempted.has(skill.path)) {
+          logger.debug('Already attempted to save commitHash for this skill, skipping repeated write', 'SkillService', {
+            skillPath: skill.path,
+          });
+          // Use the fetched commitSHA for comparison (treating it as the "installed" version)
+          return {
+            hasUpdate: false,
+            canUpload: false,
+            localVersion: skill.version,
+            remoteSHA: latestCommitSHA,
+          };
+        }
+
         logger.info('No commit hash stored for registry skill, saving current commit hash for future update checks', 'SkillService', {
           skillPath: skill.path,
           commitHash: latestCommitSHA
@@ -634,10 +652,22 @@ ${content}`;
             commitHash: latestCommitSHA
           });
         } catch (writeError) {
-          logger.warn('Failed to save commit hash to source metadata', 'SkillService', {
+          const errorMsg = writeError instanceof Error ? writeError.message : 'Unknown error';
+          logger.error('Failed to save commit hash to source metadata - update detection may be inaccurate', 'SkillService', {
             skillPath: skill.path,
-            error: writeError instanceof Error ? writeError.message : 'Unknown error'
+            error: errorMsg
           });
+          // Mark this skill as having attempted save to prevent repeated write attempts
+          this.commitHashSaveAttempted.add(skill.path);
+
+          // Return with warning - the save failed but we shouldn't block the update check
+          return {
+            hasUpdate: false,
+            canUpload: false,
+            localVersion: skill.version,
+            remoteSHA: latestCommitSHA,
+            warning: `Failed to save commit hash: ${errorMsg}. Update detection may show false positives until this is resolved.`,
+          };
         }
 
         // Since this is the first check with no prior commit hash,
@@ -1144,6 +1174,216 @@ ${content}`;
         try {
           await fs.promises.rm(tempBackupPath, { recursive: true });
         } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error (skill restored from backup)',
+      };
+    }
+  }
+
+  /**
+   * Update a registry-installed skill to the latest version
+   * Downloads the latest version from GitHub and replaces the local copy
+   * Creates a temporary backup for atomicity and optional permanent backup
+   *
+   * @param skillPath - Path to the skill directory to update
+   * @param createBackup - Whether to create a permanent backup before update
+   * @returns Object with success status, new path if successful, or error message
+   */
+  async updateRegistrySkill(
+    skillPath: string,
+    createBackup: boolean = true
+  ): Promise<{ success: boolean; newPath?: string; error?: string }> {
+    logger.info('Updating skill from registry', 'SkillService', {
+      skillPath,
+      createBackup,
+    });
+
+    // SAFETY: Always create a temporary backup for atomicity
+    const tempBackupPath = `${skillPath}-temp-backup-${Date.now()}`;
+    let permanentBackupPath: string | null = null;
+
+    try {
+      // Get current skill metadata
+      const skill = await this.getSkill(skillPath);
+
+      // Check if skill has source metadata
+      if (!skill.metadata.sourceMetadata || skill.metadata.sourceMetadata.type !== 'registry') {
+        throw new Error('Skill was not installed from the registry');
+      }
+
+      const sourceMetadata = skill.metadata.sourceMetadata;
+      const [owner, repo] = sourceMetadata.source.split('/');
+
+      if (!owner || !repo) {
+        throw new Error(`Invalid source format: ${sourceMetadata.source}`);
+      }
+
+      // Get application directory for installation
+      const config = await this.getConfig();
+      const appDirectory = SkillService.getApplicationSkillsDirectory(config);
+
+      // STEP 1: Always create temporary backup (for atomicity/safety)
+      logger.info('Creating temporary backup for atomicity', 'SkillService', {
+        tempBackupPath,
+      });
+      await fs.promises.mkdir(tempBackupPath, { recursive: true });
+      await fs.promises.cp(skillPath, tempBackupPath, { recursive: true });
+
+      // STEP 2: Create permanent backup if requested
+      if (createBackup) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        permanentBackupPath = `${skillPath}-backup-${timestamp}`;
+
+        await fs.promises.mkdir(permanentBackupPath, { recursive: true });
+        await fs.promises.cp(skillPath, permanentBackupPath, { recursive: true });
+
+        logger.info('Created permanent backup before update', 'SkillService', {
+          originalPath: skillPath,
+          permanentBackupPath,
+        });
+      }
+
+      // STEP 3: Remove existing skill directory
+      await fs.promises.rm(skillPath, { recursive: true });
+
+      // STEP 4: Re-download and install latest version using SkillInstaller
+      const installer = new SkillInstaller();
+      const result = await installer.installFromRegistry(
+        {
+          source: sourceMetadata.source,
+          skillId: sourceMetadata.skillId,
+          targetToolId: 'project',
+        },
+        appDirectory
+      );
+
+      if (result.success && result.skillPath) {
+        // Check if the new path is different from the original
+        // If so, we need to move it to the original path
+        let finalPath = result.skillPath;
+
+        if (result.skillPath !== skillPath) {
+          // Move the newly installed skill to the original path
+          await fs.promises.mkdir(path.dirname(skillPath), { recursive: true });
+          await fs.promises.rename(result.skillPath, skillPath);
+          finalPath = skillPath;
+        }
+
+        // Get the latest commit SHA for the updated metadata
+        let latestCommitSHA: string | undefined;
+        try {
+          const commits = await GitHubService.getDirectoryCommits(
+            owner,
+            repo,
+            '', // No PAT needed for public repos
+            sourceMetadata.skillId,
+            'main'
+          );
+          if (commits && commits.length > 0) {
+            latestCommitSHA = commits[0].sha;
+          }
+        } catch (commitError) {
+          logger.warn('Failed to get latest commit SHA for updated skill', 'SkillService', {
+            error: commitError instanceof Error ? commitError.message : commitError,
+          });
+        }
+
+        // Update source metadata with new commit hash
+        const metadataPath = path.join(finalPath, SOURCE_METADATA_FILE);
+        const updatedMetadata = {
+          ...sourceMetadata,
+          commitHash: latestCommitSHA,
+          installedAt: new Date().toISOString(),
+        };
+        await fs.promises.writeFile(metadataPath, JSON.stringify(updatedMetadata, null, 2), 'utf-8');
+
+        // STEP 5a: Success - clean up temporary backup, keep permanent backup
+        logger.info('Registry skill updated successfully, cleaning up temporary backup', 'SkillService', {
+          skillPath: finalPath,
+          permanentBackupPath,
+        });
+
+        await fs.promises.rm(tempBackupPath, { recursive: true }).catch(() => {});
+
+        return {
+          success: true,
+          newPath: finalPath,
+        };
+      } else {
+        // STEP 5b: Download failed - restore from temporary backup
+        logger.warn('Registry update failed, restoring from temporary backup', 'SkillService', {
+          skillPath,
+          tempBackupPath,
+          error: result.error,
+        });
+
+        try {
+          await fs.promises.mkdir(skillPath, { recursive: true });
+          await fs.promises.cp(tempBackupPath, skillPath, { recursive: true });
+          logger.info('Successfully restored skill from temporary backup', 'SkillService', {
+            skillPath,
+            tempBackupPath,
+          });
+        } catch (restoreError) {
+          logger.error('CRITICAL: Failed to restore from temporary backup', 'SkillService', {
+            tempBackupPath,
+            restoreError,
+          });
+          return {
+            success: false,
+            error: `Update failed: ${result.error}. CRITICAL: Restoration also failed: ${restoreError instanceof Error ? restoreError.message : 'Unknown error'}. Temporary backup may still exist at: ${tempBackupPath}`,
+          };
+        } finally {
+          await fs.promises.rm(tempBackupPath, { recursive: true }).catch(() => {});
+        }
+
+        return {
+          success: false,
+          error: result.error || 'Update failed (skill restored from backup)',
+        };
+      }
+    } catch (error) {
+      logger.error('Failed to update registry skill', 'SkillService', error);
+
+      // ATOMICITY: Always attempt to restore from temporary backup on any error
+      try {
+        await fs.promises.access(tempBackupPath);
+
+        logger.info('Attempting to restore from temporary backup after error', 'SkillService', {
+          skillPath,
+          tempBackupPath,
+        });
+
+        // Check if skill directory still exists
+        try {
+          await fs.promises.access(skillPath);
+          await fs.promises.rm(skillPath, { recursive: true });
+        } catch {
+          // Directory doesn't exist, that's fine
+        }
+
+        // Restore from backup
+        await fs.promises.mkdir(skillPath, { recursive: true });
+        await fs.promises.cp(tempBackupPath, skillPath, { recursive: true });
+        logger.info('Successfully restored skill from temporary backup after error', 'SkillService');
+      } catch (restoreError) {
+        logger.error('CRITICAL: Failed to restore from temporary backup after error', 'SkillService', {
+          tempBackupPath,
+          restoreError,
+        });
+        return {
+          success: false,
+          error: `${error instanceof Error ? error.message : 'Unknown error'}. CRITICAL: Restoration failed. Temporary backup may still exist at: ${tempBackupPath}`,
+        };
+      } finally {
+        try {
+          await fs.promises.rm(tempBackupPath, { recursive: true });
+        } catch {
           // Ignore cleanup errors
         }
       }
