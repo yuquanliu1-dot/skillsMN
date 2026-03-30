@@ -133,8 +133,11 @@ export class SkillService {
 
   /**
    * Scan a directory for skills
+   * @param dirPath - Directory path to scan
+   * @param source - Source type for the skills
+   * @returns Array of Skill objects found in the directory
    */
-  private async scanDirectory(dirPath: string, source: 'project' | 'global' | 'application'): Promise<Skill[]> {
+  public async scanDirectory(dirPath: string, source: 'project' | 'global' | 'application'): Promise<Skill[]> {
     logger.debug(`Scanning directory: ${dirPath}`, 'SkillService', { source });
 
     try {

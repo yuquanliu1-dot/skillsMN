@@ -89,15 +89,16 @@ export class MigrationService {
         return [];
       }
 
-      // Use SkillService to scan
-      const skills = await this.skillService.listAllSkills({
-        projectDirectories: [],
-        defaultInstallDirectory: 'project',
-        autoRefresh: false,
+      // Directly scan the specified directory using SkillService's public method
+      // Note: We use 'project' as source since these are external skills being migrated
+      const skills = await this.skillService.scanDirectory(dirPath, 'project');
+
+      logger.debug('Scanned directory for skills', 'MigrationService', {
+        dirPath,
+        skillCount: skills.length,
       });
 
-      // Filter to only skills from this directory
-      return skills.filter(skill => skill.path.startsWith(dirPath));
+      return skills;
     } catch (error) {
       logger.error('Failed to scan directory for skills', 'MigrationService', {
         dirPath,
