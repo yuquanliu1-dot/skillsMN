@@ -71,19 +71,18 @@ export function registerMigrationHandlers(
   // Handler for migration:detect-skills
   ipcMain.handle(
     IPC_CHANNELS.MIGRATION_DETECT_SKILLS,
-    async (): Promise<IPCResponse<{ global: Skill[]; project: Skill[] }>> => {
+    async (): Promise<IPCResponse<Skill[]>> => {
       try {
         logger.debug('Detecting existing skills for migration', 'MigrationHandlers');
 
         // Get configuration
         const config = await configService!.load();
 
-        // Detect skills
+        // Detect skills from project directories only
         const skills = await migrationService!.detectExistingSkills(config);
 
         logger.info('Skills detected for migration', 'MigrationHandlers', {
-          globalCount: skills.global.length,
-          projectCount: skills.project.length,
+          count: skills.length,
         });
 
         return { success: true, data: skills };

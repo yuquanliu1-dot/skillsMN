@@ -138,8 +138,7 @@ export default function App(): JSX.Element {
     content: string;
   } | null>(null);
   const [showMigrationDialog, setShowMigrationDialog] = useState(false);
-  const [migrationGlobalSkills, setMigrationGlobalSkills] = useState<Skill[]>([]);
-  const [migrationProjectSkills, setMigrationProjectSkills] = useState<Skill[]>([]);
+  const [migrationSkills, setMigrationSkills] = useState<Skill[]>([]);
   const [viewingSkill, setViewingSkill] = useState<Skill | null>(null);
 
   /**
@@ -154,19 +153,13 @@ export default function App(): JSX.Element {
         const config = await ipcClient.loadConfig();
         dispatch({ type: 'SET_CONFIG', payload: config });
 
-        // Check if migration is needed (before setup check)
-        if (!config.migrationPreferenceAsked) {
-          const migrationNeeded = await window.electronAPI.checkMigrationNeeded();
-          if (migrationNeeded.success && migrationNeeded.data) {
-            const skillsResponse = await window.electronAPI.detectExistingSkills();
-            if (skillsResponse.success && skillsResponse.data) {
-              setMigrationGlobalSkills(skillsResponse.data.global);
-              setMigrationProjectSkills(skillsResponse.data.project);
-              setShowMigrationDialog(true);
-              dispatch({ type: 'SET_LOADING', payload: false });
-              return;
-            }
-          }
+        // Check if there are skills in project directories that could be migrated
+        const skillsResponse = await window.electronAPI.detectExistingSkills();
+        if (skillsResponse.success && skillsResponse.data && skillsResponse.data.length > 0) {
+          setMigrationSkills(skillsResponse.data);
+          setShowMigrationDialog(true);
+          dispatch({ type: 'SET_LOADING', payload: false });
+          return;
         }
 
         // Check if setup is needed (setupCompleted flag)
@@ -510,8 +503,7 @@ export default function App(): JSX.Element {
       const response = await window.electronAPI.checkDirectoryForSkills(directoryPath);
       if (response.success && response.data && response.data.length > 0) {
         // Skills found - show migration dialog
-        setMigrationProjectSkills(response.data);
-        setMigrationGlobalSkills([]);
+        setMigrationSkills(response.data);
         setShowMigrationDialog(true);
       }
     } catch (error) {
@@ -820,8 +812,7 @@ export default function App(): JSX.Element {
     return (
       <MigrationDialog
         isOpen={showMigrationDialog}
-        globalSkills={migrationGlobalSkills}
-        projectSkills={migrationProjectSkills}
+        skills={migrationSkills}
         onMigrate={handleMigrationComplete}
         onSkip={handleMigrationSkip}
       />

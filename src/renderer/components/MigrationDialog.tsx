@@ -1,7 +1,7 @@
 /**
  * MigrationDialog Component
  *
- * Dialog for migrating existing skills from old locations to application directory
+ * Dialog for migrating existing skills from project directories to application directory
  */
 
 import { useState, useEffect } from 'react';
@@ -9,16 +9,14 @@ import type { Skill, MigrationOptions, MigrationProgress } from '../../shared/ty
 
 interface MigrationDialogProps {
   isOpen: boolean;
-  globalSkills: Skill[];
-  projectSkills: Skill[];
+  skills: Skill[];
   onMigrate: (skills: Skill[], options: MigrationOptions) => Promise<void>;
   onSkip: () => void;
 }
 
 export default function MigrationDialog({
   isOpen,
-  globalSkills,
-  projectSkills,
+  skills,
   onMigrate,
   onSkip,
 }: MigrationDialogProps): JSX.Element | null {
@@ -28,8 +26,7 @@ export default function MigrationDialog({
   const [progress, setProgress] = useState<MigrationProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const totalSkills = globalSkills.length + projectSkills.length;
-  const allSkills = [...globalSkills, ...projectSkills];
+  const totalSkills = skills.length;
 
   // Listen for migration progress updates
   useEffect(() => {
@@ -55,7 +52,7 @@ export default function MigrationDialog({
         deleteOriginals: moveOrCopy === 'move' && deleteOriginals,
       };
 
-      await onMigrate(allSkills, options);
+      await onMigrate(skills, options);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Migration failed');
       setIsMigrating(false);
@@ -69,7 +66,7 @@ export default function MigrationDialog({
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">Migrate Existing Skills</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Skills found in old locations need to be migrated to the new centralized application directory.
+            Skills found in project directories can be migrated to the centralized application directory.
           </p>
         </div>
 
@@ -77,24 +74,14 @@ export default function MigrationDialog({
         <div className="px-6 py-4 space-y-6">
           {/* Skills found */}
           <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Found existing skills in:</h3>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Found existing skills:</h3>
             <div className="space-y-2">
-              {globalSkills.length > 0 && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                  </svg>
-                  <span>Global directory: <strong>{globalSkills.length} skills</strong></span>
-                </div>
-              )}
-              {projectSkills.length > 0 && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0h8v12H6V4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Project directories: <strong>{projectSkills.length} skills</strong></span>
-                </div>
-              )}
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0h8v12H6V4z" clipRule="evenodd" />
+                </svg>
+                <span>Project directories: <strong>{totalSkills} skills</strong></span>
+              </div>
             </div>
           </div>
 

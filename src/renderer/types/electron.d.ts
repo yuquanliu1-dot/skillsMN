@@ -217,10 +217,7 @@ export interface ElectronAPI {
 
   // Migration Operations (Feature - Skill Storage Architecture Refactoring)
   checkMigrationNeeded: () => Promise<IPCResponse<boolean>>;
-  detectExistingSkills: () => Promise<IPCResponse<{
-    global: Skill[];
-    project: Skill[];
-  }>>;
+  detectExistingSkills: () => Promise<IPCResponse<Skill[]>>;
   startMigration: (params: {
     skills: Skill[];
     options: import('../../shared/types').MigrationOptions;

@@ -1,14 +1,13 @@
 /**
  * Migration Service
  *
- * Handles migration of skills from old locations (global/project directories)
+ * Handles migration of skills from project directories
  * to the centralized application directory
  */
 
 import fs from 'fs';
 import fsExtra from 'fs-extra';
 import path from 'path';
-import os from 'os';
 import { logger } from '../utils/Logger';
 import { SkillService } from './SkillService';
 import { Configuration, Skill, MigrationOptions, MigrationProgress, MigrationResult } from '../../shared/types';
@@ -23,9 +22,9 @@ export class MigrationService {
 
   /**
    * Check if migration is needed
-   * Looks for skills in old locations (global and project directories)
+   * Looks for skills in configured project directories
    * @param config - Current configuration
-   * @returns True if skills exist in old locations
+   * @returns True if skills exist in project directories
    */
   async needsMigration(config: Configuration): Promise<boolean> {
     // If migration already completed or preference asked, don't check
@@ -37,11 +36,7 @@ export class MigrationService {
       return false;
     }
 
-    // Check global directory
-    const globalDir = SkillDirectoryModel.getGlobalDirectory();
-    const globalSkills = await this.scanDirectoryForSkills(globalDir);
-
-    // Check project directories
+    // Check project directories only
     let projectSkillsCount = 0;
     for (const projectDir of config.projectDirectories) {
       const fullDir = SkillDirectoryModel.getProjectDirectory(projectDir);
@@ -49,10 +44,9 @@ export class MigrationService {
       projectSkillsCount += skills.length;
     }
 
-    const needsMigration = globalSkills.length > 0 || projectSkillsCount > 0;
+    const needsMigration = projectSkillsCount > 0;
 
     logger.info('Migration check completed', 'MigrationService', {
-      globalSkills: globalSkills.length,
       projectSkills: projectSkillsCount,
       needsMigration,
     });
@@ -61,23 +55,14 @@ export class MigrationService {
   }
 
   /**
-   * Detect existing skills in old locations
+   * Detect existing skills in project directories
    * @param config - Current configuration
-   * @returns Object with arrays of global and project skills
+   * @returns Array of skills found in project directories
    */
-  async detectExistingSkills(config: Configuration): Promise<{
-    global: Skill[];
-    project: Skill[];
-  }> {
-    logger.info('Detecting existing skills', 'MigrationService');
+  async detectExistingSkills(config: Configuration): Promise<Skill[]> {
+    logger.info('Detecting existing skills in project directories', 'MigrationService');
 
-    const globalSkills: Skill[] = [];
     const projectSkills: Skill[] = [];
-
-    // Scan global directory
-    const globalDir = SkillDirectoryModel.getGlobalDirectory();
-    const global = await this.scanDirectoryForSkills(globalDir);
-    globalSkills.push(...global);
 
     // Scan project directories
     for (const projectDir of config.projectDirectories) {
@@ -87,14 +72,10 @@ export class MigrationService {
     }
 
     logger.info('Skill detection completed', 'MigrationService', {
-      globalCount: globalSkills.length,
       projectCount: projectSkills.length,
     });
 
-    return {
-      global: globalSkills,
-      project: projectSkills,
-    };
+    return projectSkills;
   }
 
   /**
