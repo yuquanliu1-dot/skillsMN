@@ -946,7 +946,7 @@ export default function SkillEditorFull({
             onClick={() => setIsAIPanelVisible(!isAIPanelVisible)}
             className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
               isAIPanelVisible
-                ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
             title={isAIPanelVisible ? t('editor.hideAI', 'Hide AI Assistant') : t('editor.showAI', 'Show AI Assistant')}
@@ -981,7 +981,7 @@ export default function SkillEditorFull({
                   setError(t('editor.failedToOpenTerminal', 'Failed to open terminal'));
                 }
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
               title={t('editor.openClaudeInTerminal', 'Open Claude Code in terminal to test this skill')}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1274,12 +1274,12 @@ export default function SkillEditorFull({
           >
             {/* Resize Handle - Draggable divider */}
             <div
-              className="w-1 bg-gray-200 hover:bg-purple-400 cursor-col-resize flex-shrink-0 group transition-colors"
+              className="w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize flex-shrink-0 group transition-colors"
               onMouseDown={handleResizeStart}
             >
               {/* Visual indicator on hover */}
               <div className="absolute inset-y-0 -left-1 w-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="h-full w-1 bg-purple-400 rounded-full" />
+                <div className="h-full w-1 bg-blue-400 rounded-full" />
               </div>
             </div>
 

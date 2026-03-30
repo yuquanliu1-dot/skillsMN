@@ -89,7 +89,7 @@ export function AIAssistantPopover({
 
   const isRewriteMode = mode === 'rewrite';
   const title = isRewriteMode ? 'AI Rewrite' : 'AI Insert';
-  const iconBg = isRewriteMode ? 'from-purple-50 to-blue-50' : 'from-green-50 to-teal-50';
+  const iconBg = isRewriteMode ? 'from-blue-50 to-indigo-50' : 'from-green-50 to-teal-50';
   const placeholder = isRewriteMode
     ? 'e.g., Make it more concise, Fix grammar, Change tone to formal...'
     : 'e.g., Add code examples, Insert troubleshooting section, Add usage tips...';
@@ -124,16 +124,16 @@ export function AIAssistantPopover({
               {isProcessing ? (
                 <div className="flex items-center gap-2">
                   <div className="relative">
-                    <svg className={`w-5 h-5 ${isRewriteMode ? 'text-purple-600' : 'text-green-600'} animate-pulse`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-5 h-5 ${isRewriteMode ? 'text-blue-600' : 'text-green-600'} animate-pulse`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                     </svg>
-                    <div className={`absolute inset-0 ${isRewriteMode ? 'bg-purple-400' : 'bg-green-400'} rounded-full animate-ping opacity-75`}></div>
+                    <div className={`absolute inset-0 ${isRewriteMode ? 'bg-blue-400' : 'bg-green-400'} rounded-full animate-ping opacity-75`}></div>
                   </div>
-                  <span className={`text-sm font-medium ${isRewriteMode ? 'text-purple-700' : 'text-green-700'}`}>AI is thinking...</span>
+                  <span className={`text-sm font-medium ${isRewriteMode ? 'text-blue-700' : 'text-green-700'}`}>AI is thinking...</span>
                 </div>
               ) : (
                 <>
-                  <svg className={`w-5 h-5 ${isRewriteMode ? 'text-purple-600' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-5 h-5 ${isRewriteMode ? 'text-blue-600' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h14a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   <span className="text-sm font-semibold text-gray-900">{title}</span>
@@ -174,7 +174,7 @@ export function AIAssistantPopover({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={placeholder}
-            className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-sm resize-none"
+            className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm resize-none"
             rows={3}
             disabled={isProcessing}
           />
@@ -197,7 +197,7 @@ export function AIAssistantPopover({
               <button
                 type="submit"
                 disabled={!prompt.trim() || isProcessing}
-                className={`px-4 py-1.5 text-sm ${isRewriteMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg shadow-sm transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+                className={`px-4 py-1.5 text-sm ${isRewriteMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg shadow-sm transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
               >
                 {isProcessing ? (
                   <>
