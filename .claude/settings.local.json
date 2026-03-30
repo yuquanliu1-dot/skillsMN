@@ -45,7 +45,10 @@
       "Read(//d/skillsMN/$APPDATA/**)",
       "Read(//d/skillsMN/$LOCALAPPDATA/**)",
       "Read(//d/skillsMN/Roaming/**)",
-      "Read(//d/skillsMN/Local/**)"
+      "Read(//d/skillsMN/Local/**)",
+      "Bash(node:*)",
+      "Bash(ls:*)",
+      "Bash(cp:*)"
     ]
   }
 }
