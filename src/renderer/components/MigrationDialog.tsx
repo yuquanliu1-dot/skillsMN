@@ -2,6 +2,7 @@
  * MigrationDialog Component
  *
  * Dialog for migrating existing skills from project directories to application directory
+ * Only supports MOVE mode - automatically deletes source files after successful migration
  */
 
 import { useState, useEffect } from 'react';
@@ -20,8 +21,6 @@ export default function MigrationDialog({
   onMigrate,
   onSkip,
 }: MigrationDialogProps): JSX.Element | null {
-  const [moveOrCopy, setMoveOrCopy] = useState<'move' | 'copy'>('copy');
-  const [deleteOriginals, setDeleteOriginals] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
   const [progress, setProgress] = useState<MigrationProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +35,11 @@ export default function MigrationDialog({
       setProgress(progressData);
     };
 
-    // Remove any existing listener first
     window.electronAPI.onMigrationProgress?.(handleProgress);
+
+    return () => {
+      window.electronAPI.removeMigrationProgressListener?.();
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -47,9 +49,10 @@ export default function MigrationDialog({
       setIsMigrating(true);
       setError(null);
 
+      // Always use MOVE mode with deleteOriginals=true
       const options: MigrationOptions = {
-        moveOrCopy,
-        deleteOriginals: moveOrCopy === 'move' && deleteOriginals,
+        moveOrCopy: 'move',
+        deleteOriginals: true,
       };
 
       await onMigrate(skills, options);
@@ -61,89 +64,20 @@ export default function MigrationDialog({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Migrate Existing Skills</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Migrate Skills</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Skills found in project directories can be migrated to the centralized application directory.
+            Found <strong>{totalSkills} skill{totalSkills !== 1 ? 's' : ''}</strong> in the added directory.
           </p>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4 space-y-6">
-          {/* Skills found */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Found existing skills:</h3>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0h8v12H6V4z" clipRule="evenodd" />
-                </svg>
-                <span>Project directories: <strong>{totalSkills} skills</strong></span>
-              </div>
-            </div>
-          </div>
-
-          {/* Migration options */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Migration options:</h3>
-            <div className="space-y-3">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="moveOrCopy"
-                  value="copy"
-                  checked={moveOrCopy === 'copy'}
-                  onChange={() => {
-                    setMoveOrCopy('copy');
-                    setDeleteOriginals(false);
-                  }}
-                  disabled={isMigrating}
-                  className="mt-0.5"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-900">Copy skills (recommended)</span>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Keeps original files in place as backup
-                  </p>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="moveOrCopy"
-                  value="move"
-                  checked={moveOrCopy === 'move'}
-                  onChange={() => setMoveOrCopy('move')}
-                  disabled={isMigrating}
-                  className="mt-0.5"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-900">Move skills</span>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Transfers files to application directory
-                  </p>
-                </div>
-              </label>
-
-              {moveOrCopy === 'move' && (
-                <label className="flex items-center gap-3 ml-6 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={deleteOriginals}
-                    onChange={(e) => setDeleteOriginals(e.target.checked)}
-                    disabled={isMigrating}
-                    className="rounded"
-                  />
-                  <span className="text-sm text-gray-700">
-                    Delete original files after migration
-                  </span>
-                </label>
-              )}
-            </div>
-          </div>
+        <div className="px-6 py-4">
+          <p className="text-sm text-gray-700 mb-4">
+            Skills will be moved to the application directory. The original files will be deleted after successful migration.
+          </p>
 
           {/* Progress bar */}
           {isMigrating && progress && (
@@ -159,14 +93,14 @@ export default function MigrationDialog({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {progress.currentIndex + 1} of {progress.totalSkills} skills - {progress.operation}
+                {progress.currentIndex + 1} of {progress.totalSkills} skills
               </p>
             </div>
           )}
 
           {/* Error message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-4">
               <div className="flex items-start gap-2">
                 <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -195,7 +129,7 @@ export default function MigrationDialog({
             disabled={isMigrating || totalSkills === 0}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isMigrating ? 'Migrating...' : `Migrate ${totalSkills} Skills`}
+            {isMigrating ? 'Moving...' : `Move ${totalSkills} Skill${totalSkills !== 1 ? 's' : ''}`}
           </button>
         </div>
       </div>
