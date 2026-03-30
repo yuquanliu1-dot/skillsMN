@@ -1233,8 +1233,91 @@ ${content}`;
             branch
           );
         } else if (conflictResolution === 'overwrite') {
-          // Remove existing directory
-          await fs.promises.rm(targetPath, { recursive: true });
+          // ATOMICITY: Create temporary backup before deletion
+          const tempBackupPath = `${targetPath}-temp-backup-${Date.now()}`;
+          logger.info('Creating temporary backup before overwrite', 'SkillService', {
+            targetPath,
+            tempBackupPath,
+          });
+
+          try {
+            await fs.promises.mkdir(tempBackupPath, { recursive: true });
+            await fs.promises.cp(targetPath, tempBackupPath, { recursive: true });
+
+            // Remove existing directory
+            await fs.promises.rm(targetPath, { recursive: true });
+
+            // Download and install
+            const result = await this.downloadAndInstallPrivateSkill(
+              owner,
+              repo,
+              skillPath,
+              pat,
+              targetPath,
+              sourceRepoId,
+              directoryCommitSHA,
+              branch
+            );
+
+            if (result.success) {
+              // Success - clean up temporary backup
+              try {
+                await fs.promises.rm(tempBackupPath, { recursive: true });
+                logger.info('Temporary backup cleaned up after successful overwrite', 'SkillService', {
+                  tempBackupPath,
+                });
+              } catch (cleanupError) {
+                logger.warn('Failed to clean up temporary backup', 'SkillService', {
+                  tempBackupPath,
+                  error: cleanupError,
+                });
+              }
+              return result;
+            } else {
+              // Download failed - restore from temporary backup
+              logger.warn('Download failed, restoring from temporary backup', 'SkillService', {
+                targetPath,
+                tempBackupPath,
+                error: result.error,
+              });
+
+              try {
+                await fs.promises.mkdir(targetPath, { recursive: true });
+                await fs.promises.cp(tempBackupPath, targetPath, { recursive: true });
+                logger.info('Successfully restored skill from temporary backup', 'SkillService', {
+                  targetPath,
+                  tempBackupPath,
+                });
+              } catch (restoreError) {
+                logger.error('CRITICAL: Failed to restore from temporary backup', 'SkillService', {
+                  tempBackupPath,
+                  restoreError,
+                });
+                return {
+                  success: false,
+                  error: `Download failed: ${result.error}. CRITICAL: Restoration also failed: ${restoreError instanceof Error ? restoreError.message : 'Unknown error'}. Temporary backup may still exist at: ${tempBackupPath}`,
+                };
+              } finally {
+                // Clean up temporary backup after restore attempt
+                try {
+                  await fs.promises.rm(tempBackupPath, { recursive: true });
+                } catch (e) {
+                  // Ignore cleanup errors
+                }
+              }
+
+              return {
+                success: false,
+                error: result.error || 'Download failed (skill restored from backup)',
+              };
+            }
+          } catch (backupError) {
+            logger.error('Failed to create temporary backup for overwrite', 'SkillService', backupError);
+            return {
+              success: false,
+              error: `Failed to create backup before overwrite: ${backupError instanceof Error ? backupError.message : 'Unknown error'}`,
+            };
+          }
         } else {
           // No resolution specified - return conflict error
           return {
@@ -1244,7 +1327,7 @@ ${content}`;
         }
       }
 
-      // Download and install
+      // No conflict - download and install
       return await this.downloadAndInstallPrivateSkill(
         owner,
         repo,
