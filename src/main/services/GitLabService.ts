@@ -147,6 +147,11 @@ export class GitLabService {
       }));
 
       if (!response.ok) {
+        // Handle 404 gracefully - repository may be empty or branch doesn't exist
+        if (response.status === 404) {
+          logger.debug('GitLab repository tree not found (404) - repository may be empty or branch does not exist', 'GitLabService', { owner, repo, branch });
+          return [];
+        }
         throw new Error(`Failed to fetch repository tree: ${response.status}`);
       }
 
