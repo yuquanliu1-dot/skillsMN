@@ -10,6 +10,34 @@ import type { Configuration, EditorMode, PrivateRepo, AIConfiguration, SkillEdit
 import { changeLanguage, availableLanguages, getCurrentLanguage } from '../i18n';
 import type { LanguageCode } from '../../shared/types';
 
+// Preset colors for skill groups (software development themed)
+const PRESET_COLORS = [
+  { value: '#3B82F6', name: '开发', description: 'Development' },
+  { value: '#10B981', name: '测试', description: 'Testing' },
+  { value: '#8B5CF6', name: '设计', description: 'Design' },
+  { value: '#F59E0B', name: '部署', description: 'Deployment' },
+  { value: '#EF4444', name: '紧急', description: 'Urgent/Bug' },
+  { value: '#06B6D4', name: '文档', description: 'Documentation' },
+  { value: '#84CC16', name: '规划', description: 'Planning' },
+  { value: '#6B7280', name: '其他', description: 'Other' },
+];
+
+// Preset icons for skill groups (software development lifecycle)
+const PRESET_ICONS = [
+  { value: '📋', name: '需求', description: 'Requirements' },
+  { value: '🎨', name: '设计', description: 'Design' },
+  { value: '💻', name: '开发', description: 'Development' },
+  { value: '🧪', name: '测试', description: 'Testing' },
+  { value: '🚀', name: '部署', description: 'Deployment' },
+  { value: '📚', name: '文档', description: 'Documentation' },
+  { value: '🐛', name: 'Bug', description: 'Bug Fixing' },
+  { value: '🔧', name: '配置', description: 'Configuration' },
+  { value: '🔒', name: '安全', description: 'Security' },
+  { value: '📊', name: '分析', description: 'Analytics' },
+  { value: '🤝', name: '协作', description: 'Collaboration' },
+  { value: '📦', name: '构建', description: 'Build/Package' },
+];
+
 interface SettingsProps {
   isOpen: boolean;
   onClose: () => void;
@@ -2008,32 +2036,52 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                       />
                     </div>
 
-                    {/* Color and Icon - Side by side */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                          {t('settings.groupColor')}
-                        </label>
-                        <input
-                          type="color"
-                          value={newGroupColor}
-                          onChange={(e) => setNewGroupColor(e.target.value)}
-                          className="w-full h-10 rounded border border-slate-300 cursor-pointer"
-                          disabled={isAddingGroup}
-                        />
+                    {/* Color Presets */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        {t('settings.groupColor')}
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {PRESET_COLORS.map((color) => (
+                          <button
+                            key={color.value}
+                            type="button"
+                            onClick={() => setNewGroupColor(color.value)}
+                            disabled={isAddingGroup}
+                            className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                              newGroupColor === color.value
+                                ? 'border-slate-900 scale-110 shadow-sm'
+                                : 'border-slate-200 hover:border-slate-400'
+                            }`}
+                            style={{ backgroundColor: color.value }}
+                            title={`${color.name} - ${color.description}`}
+                          />
+                        ))}
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                          {t('settings.groupIcon')}
-                        </label>
-                        <input
-                          type="text"
-                          value={newGroupIcon}
-                          onChange={(e) => setNewGroupIcon(e.target.value)}
-                          placeholder="📁"
-                          className="input w-full text-center text-xl"
-                          disabled={isAddingGroup}
-                        />
+                    </div>
+
+                    {/* Icon Presets */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        {t('settings.groupIcon')}
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {PRESET_ICONS.map((icon) => (
+                          <button
+                            key={icon.value}
+                            type="button"
+                            onClick={() => setNewGroupIcon(icon.value)}
+                            disabled={isAddingGroup}
+                            className={`w-9 h-9 text-lg rounded-lg border-2 transition-all ${
+                              newGroupIcon === icon.value
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                            }`}
+                            title={`${icon.name} - ${icon.description}`}
+                          >
+                            {icon.value}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -2168,30 +2216,51 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                               disabled={isUpdatingGroup}
                             />
                           </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="block text-xs font-medium text-slate-700 mb-1">
-                                {t('settings.groupColor')}
-                              </label>
-                              <input
-                                type="color"
-                                value={editGroupColor}
-                                onChange={(e) => setEditGroupColor(e.target.value)}
-                                className="w-full h-8 rounded border border-slate-300 cursor-pointer"
-                                disabled={isUpdatingGroup}
-                              />
+                          {/* Color Presets */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              {t('settings.groupColor')}
+                            </label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {PRESET_COLORS.map((color) => (
+                                <button
+                                  key={color.value}
+                                  type="button"
+                                  onClick={() => setEditGroupColor(color.value)}
+                                  disabled={isUpdatingGroup}
+                                  className={`w-7 h-7 rounded-lg border-2 transition-all ${
+                                    editGroupColor === color.value
+                                      ? 'border-slate-900 scale-110 shadow-sm'
+                                      : 'border-slate-200 hover:border-slate-400'
+                                  }`}
+                                  style={{ backgroundColor: color.value }}
+                                  title={`${color.name} - ${color.description}`}
+                                />
+                              ))}
                             </div>
-                            <div>
-                              <label className="block text-xs font-medium text-slate-700 mb-1">
-                                {t('settings.groupIcon')}
-                              </label>
-                              <input
-                                type="text"
-                                value={editGroupIcon}
-                                onChange={(e) => setEditGroupIcon(e.target.value)}
-                                className="input w-full text-sm text-center"
-                                disabled={isUpdatingGroup}
-                              />
+                          </div>
+                          {/* Icon Presets */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              {t('settings.groupIcon')}
+                            </label>
+                            <div className="flex flex-wrap gap-1">
+                              {PRESET_ICONS.map((icon) => (
+                                <button
+                                  key={icon.value}
+                                  type="button"
+                                  onClick={() => setEditGroupIcon(icon.value)}
+                                  disabled={isUpdatingGroup}
+                                  className={`w-8 h-8 text-base rounded-lg border-2 transition-all ${
+                                    editGroupIcon === icon.value
+                                      ? 'border-blue-500 bg-blue-50'
+                                      : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                                  }`}
+                                  title={`${icon.name} - ${icon.description}`}
+                                >
+                                  {icon.value}
+                                </button>
+                              ))}
                             </div>
                           </div>
                         </div>

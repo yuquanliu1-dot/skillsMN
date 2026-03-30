@@ -77,9 +77,33 @@ export class ConfigService {
 
   constructor() {
     // Store config in application directory (same as executable)
-    const appPath = app.isPackaged
-      ? path.dirname(app.getPath('exe'))
-      : process.cwd();
+    // In development, use the project root (where package.json is) instead of process.cwd()
+    // which can change based on how the app is launched
+    let appPath: string;
+    if (app.isPackaged) {
+      appPath = path.dirname(app.getPath('exe'));
+    } else {
+      // In development, find the project root by looking for package.json
+      // Start from the current file and go up until we find it
+      let currentDir = __dirname;
+      for (let i = 0; i < 10; i++) {
+        const packageJsonPath = path.join(currentDir, 'package.json');
+        if (fs.existsSync(packageJsonPath)) {
+          appPath = currentDir;
+          break;
+        }
+        const parentDir = path.dirname(currentDir);
+        if (parentDir === currentDir) {
+          // Reached root, fallback to cwd
+          appPath = process.cwd();
+          break;
+        }
+        currentDir = parentDir;
+      }
+      if (!appPath!) {
+        appPath = process.cwd();
+      }
+    }
     this.configPath = path.join(appPath, CONFIG_FILE_NAME);
     logger.info(`Configuration path: ${this.configPath}`, 'ConfigService');
   }
@@ -128,10 +152,14 @@ export class ConfigService {
     } catch (error) {
       ErrorHandler.log(error, 'ConfigService.load');
 
-      // If config file is corrupted, return defaults
-      logger.warn('Configuration file corrupted, returning defaults', 'ConfigService');
+      // If config file is corrupted or can't be read, return defaults
+      // BUT do NOT cache them to prevent overwriting real config on next save
+      logger.warn('Configuration file load failed, returning defaults (not cached)', 'ConfigService', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       const defaultConfig = createDefaultConfig();
-      this.config = defaultConfig;
+      // Don't cache defaults on error - this prevents save() from overwriting real config
+      // this.config = defaultConfig; // REMOVED
       return defaultConfig;
     }
   }
@@ -210,8 +238,9 @@ export class ConfigService {
    */
   async save(updates: Partial<BaseConfiguration> & { skillGroups?: SkillGroupsConfig; proxy?: import('../../shared/types').ProxyConfig }): Promise<AppConfiguration> {
     try {
-      // Load existing config or create default
-      const existing = this.config ?? (await this.load());
+      // Always load from disk to ensure we have the latest config
+      // This prevents losing data if this.config was cleared or corrupted
+      const existing = await this.load();
 
       // Merge updates with existing
       const merged = ConfigurationModel.merge(existing, updates);
@@ -220,14 +249,32 @@ export class ConfigService {
       const validated = ConfigurationModel.validate(merged);
 
       // Build new config preserving AI, private repos, skill groups, and proxy
+      // Use existing (from disk) instead of this.config to avoid losing data
       const newConfig: AppConfiguration = {
         ...validated,
-        version: this.config?.version || CONFIG_VERSION,
-        ai: this.config?.ai || getDefaultAIConfig(),
-        privateRepos: this.config?.privateRepos || getDefaultPrivateReposConfig(),
-        skillGroups: updates.skillGroups !== undefined ? updates.skillGroups : this.config?.skillGroups,
-        proxy: updates.proxy !== undefined ? updates.proxy : this.config?.proxy,
+        version: existing.version || CONFIG_VERSION,
+        ai: existing.ai || getDefaultAIConfig(),
+        privateRepos: existing.privateRepos || getDefaultPrivateReposConfig(),
+        skillGroups: updates.skillGroups !== undefined ? updates.skillGroups : existing.skillGroups,
+        proxy: updates.proxy !== undefined ? updates.proxy : existing.proxy,
       };
+
+      // Safeguard: Detect potential data loss
+      // If existing had project directories but new config doesn't, and the update
+      // didn't explicitly clear them, something went wrong
+      if (
+        existing.projectDirectories.length > 0 &&
+        newConfig.projectDirectories.length === 0 &&
+        updates.projectDirectories === undefined
+      ) {
+        logger.error('Prevented potential config data loss - existing project directories would be lost', 'ConfigService', {
+          existingDirectories: existing.projectDirectories,
+        });
+        throw new ConfigurationError(
+          'Configuration save aborted: would lose existing project directories',
+          'config'
+        );
+      }
 
       // Write to disk (encrypt API key before saving)
       const configToSave = {

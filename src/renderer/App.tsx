@@ -212,12 +212,14 @@ export default function App(): JSX.Element {
 
   /**
    * Load skills when config is available
+   * Skills are stored in applicationSkillsDirectory, not projectDirectories
+   * So we load skills regardless of whether projectDirectories is set
    */
   useEffect(() => {
-    if (state.config?.projectDirectories && state.config.projectDirectories.length > 0) {
+    if (state.config && !showSetup && !showMigrationDialog) {
       loadSkills();
     }
-  }, [state.config?.projectDirectories]);
+  }, [state.config, showSetup, showMigrationDialog]);
 
   /**
    * Global keyboard shortcuts
@@ -227,7 +229,7 @@ export default function App(): JSX.Element {
       // Ctrl+N: Create new skill
       if ((event.ctrlKey || event.metaKey) && event.key === 'n' && !event.shiftKey) {
         event.preventDefault();
-        if (!showSetup && state.config?.projectDirectories && state.config.projectDirectories.length > 0) {
+        if (!showSetup && state.config) {
           setShowCreateDialog(true);
         }
       }
@@ -242,7 +244,7 @@ export default function App(): JSX.Element {
       // Ctrl+R: Refresh skill list
       if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
         event.preventDefault();
-        if (!showSetup && state.config?.projectDirectories && state.config.projectDirectories.length > 0) {
+        if (!showSetup && state.config) {
           loadSkills();
           showToast('Skills refreshed', 'success');
         }
