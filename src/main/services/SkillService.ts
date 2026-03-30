@@ -981,6 +981,11 @@ ${content}`;
       createBackup,
     });
 
+    // SAFETY: Always create a temporary backup for atomicity
+    // This ensures we can restore if anything goes wrong
+    const tempBackupPath = `${skillPath}-temp-backup-${Date.now()}`;
+    let permanentBackupPath: string | null = null;
+
     try {
       // Get current skill metadata
       const skill = await this.getSkill(skillPath);
@@ -1004,25 +1009,31 @@ ${content}`;
       // Decrypt PAT
       const pat = decryptPAT(repo.patEncrypted);
 
-      // Create backup if requested
-      let backupPath: string | null = null;
+      // STEP 1: Always create temporary backup (for atomicity/safety)
+      logger.info('Creating temporary backup for atomicity', 'SkillService', {
+        tempBackupPath,
+      });
+      await fs.promises.mkdir(tempBackupPath, { recursive: true });
+      await fs.promises.cp(skillPath, tempBackupPath, { recursive: true });
+
+      // STEP 2: Create permanent backup if requested (separate from temp backup)
       if (createBackup) {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        backupPath = `${skillPath}-backup-${timestamp}`;
+        permanentBackupPath = `${skillPath}-backup-${timestamp}`;
 
-        await fs.promises.mkdir(backupPath, { recursive: true });
-        await fs.promises.cp(skillPath, backupPath, { recursive: true });
+        await fs.promises.mkdir(permanentBackupPath, { recursive: true });
+        await fs.promises.cp(skillPath, permanentBackupPath, { recursive: true });
 
-        logger.info('Created backup before update', 'SkillService', {
+        logger.info('Created permanent backup before update', 'SkillService', {
           originalPath: skillPath,
-          backupPath,
+          permanentBackupPath,
         });
       }
 
-      // Remove existing skill directory
+      // STEP 3: Remove existing skill directory
       await fs.promises.rm(skillPath, { recursive: true });
 
-      // Re-download and install latest version
+      // STEP 4: Re-download and install latest version
       const result = await this.installPrivateSkill(
         repo.owner,
         repo.repo,
@@ -1036,46 +1047,110 @@ ${content}`;
       );
 
       if (result.success) {
-        logger.info('Skill updated successfully', 'SkillService', {
+        // STEP 5a: Success - clean up temporary backup, keep permanent backup
+        logger.info('Skill updated successfully, cleaning up temporary backup', 'SkillService', {
           skillPath,
           newPath: result.newPath,
         });
+
+        try {
+          await fs.promises.rm(tempBackupPath, { recursive: true });
+          logger.info('Temporary backup cleaned up', 'SkillService', { tempBackupPath });
+        } catch (cleanupError) {
+          // Non-critical: log but don't fail
+          logger.warn('Failed to clean up temporary backup', 'SkillService', {
+            tempBackupPath,
+            error: cleanupError,
+          });
+        }
+
         return result;
       } else {
-        // Update failed - attempt to restore from backup
-        if (backupPath) {
-          logger.warn('Update failed, restoring from backup', 'SkillService', {
-            skillPath,
-            backupPath,
-            error: result.error,
-          });
+        // STEP 5b: Download failed - restore from temporary backup
+        logger.warn('Update failed, restoring from temporary backup', 'SkillService', {
+          skillPath,
+          tempBackupPath,
+          error: result.error,
+        });
 
+        try {
+          await fs.promises.mkdir(skillPath, { recursive: true });
+          await fs.promises.cp(tempBackupPath, skillPath, { recursive: true });
+          logger.info('Successfully restored skill from temporary backup', 'SkillService', {
+            skillPath,
+            tempBackupPath,
+          });
+        } catch (restoreError) {
+          logger.error('CRITICAL: Failed to restore from temporary backup', 'SkillService', {
+            tempBackupPath,
+            restoreError,
+          });
+          return {
+            success: false,
+            error: `Update failed: ${result.error}. CRITICAL: Restoration also failed: ${restoreError instanceof Error ? restoreError.message : 'Unknown error'}. Temporary backup may still exist at: ${tempBackupPath}`,
+          };
+        } finally {
+          // Clean up temporary backup after restore attempt
           try {
-            await fs.promises.mkdir(skillPath, { recursive: true });
-            await fs.promises.cp(backupPath, skillPath, { recursive: true });
-            logger.info('Successfully restored skill from backup', 'SkillService', {
-              skillPath,
-              backupPath,
-            });
-          } catch (restoreError) {
-            logger.error('Failed to restore from backup', 'SkillService', restoreError);
-            return {
-              success: false,
-              error: `Update failed: ${result.error}. Backup restoration also failed: ${restoreError instanceof Error ? restoreError.message : 'Unknown error'}`,
-            };
+            await fs.promises.rm(tempBackupPath, { recursive: true });
+          } catch (e) {
+            // Ignore cleanup errors
           }
         }
 
         return {
           success: false,
-          error: result.error || 'Update failed',
+          error: result.error || 'Update failed (skill restored from backup)',
         };
       }
     } catch (error) {
       logger.error('Failed to update skill', 'SkillService', error);
+
+      // ATOMICITY: Always attempt to restore from temporary backup on any error
+      try {
+        // Check if temp backup exists
+        await fs.promises.access(tempBackupPath);
+
+        logger.info('Attempting to restore from temporary backup after error', 'SkillService', {
+          skillPath,
+          tempBackupPath,
+        });
+
+        // Check if skill directory still exists (might have been deleted)
+        try {
+          await fs.promises.access(skillPath);
+          // Directory exists, might be partially deleted - remove it first
+          await fs.promises.rm(skillPath, { recursive: true });
+        } catch {
+          // Directory doesn't exist, that's fine
+        }
+
+        // Restore from backup
+        await fs.promises.mkdir(skillPath, { recursive: true });
+        await fs.promises.cp(tempBackupPath, skillPath, { recursive: true });
+        logger.info('Successfully restored skill from temporary backup after error', 'SkillService');
+      } catch (restoreError) {
+        logger.error('CRITICAL: Failed to restore from temporary backup after error', 'SkillService', {
+          tempBackupPath,
+          restoreError,
+        });
+        // Return error with info about temp backup location
+        return {
+          success: false,
+          error: `${error instanceof Error ? error.message : 'Unknown error'}. CRITICAL: Restoration failed. Temporary backup may still exist at: ${tempBackupPath}`,
+        };
+      } finally {
+        // Clean up temporary backup
+        try {
+          await fs.promises.rm(tempBackupPath, { recursive: true });
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : 'Unknown error (skill restored from backup)',
       };
     }
   }
