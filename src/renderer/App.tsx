@@ -423,18 +423,15 @@ export default function App(): JSX.Element {
 
   /**
    * Handle migration completion
+   * Does NOT persist migration flags - allows future directories to trigger migration
    */
   const handleMigrationComplete = async (skills: Skill[], options: MigrationOptions): Promise<void> => {
     try {
       const result = await window.electronAPI.startMigration({ skills, options });
 
       if (result.success && result.data) {
-        // Update config to mark migration as completed
-        const config = await ipcClient.saveConfig({
-          migrationCompleted: true,
-          migrationPreferenceAsked: true,
-        });
-        dispatch({ type: 'SET_CONFIG', payload: config });
+        // Note: We do NOT persist migrationCompleted or migrationPreferenceAsked flags
+        // This allows future directory additions to trigger migration checks
 
         setShowMigrationDialog(false);
         showToast(`Successfully migrated ${result.data.migratedCount} skills!`, 'success');
@@ -443,7 +440,8 @@ export default function App(): JSX.Element {
         await loadSkills();
 
         // Start file watcher if not already running (after setup flow)
-        if (config.autoRefresh !== false) {
+        const config = state.config;
+        if (config && config.autoRefresh !== false) {
           try {
             await ipcClient.startWatching();
             ipcClient.removeFSChangeListener();
@@ -467,16 +465,17 @@ export default function App(): JSX.Element {
 
   /**
    * Handle migration skip
+   * Does NOT persist migration flags - allows future directories to trigger migration
    */
   const handleMigrationSkip = async (): Promise<void> => {
-    const config = await ipcClient.saveConfig({
-      migrationPreferenceAsked: true,
-    });
-    dispatch({ type: 'SET_CONFIG', payload: config });
+    // Note: We do NOT persist migrationPreferenceAsked flag
+    // This allows future directory additions to trigger migration checks
+
     setShowMigrationDialog(false);
 
     // Start file watcher if not already running (after setup flow)
-    if (config.autoRefresh !== false) {
+    const config = state.config;
+    if (config && config.autoRefresh !== false) {
       try {
         await ipcClient.startWatching();
         ipcClient.removeFSChangeListener();
@@ -493,15 +492,10 @@ export default function App(): JSX.Element {
 
   /**
    * Handle project directory added - check for migration
-   */
+   * Always checks for skills,   */
   const handleProjectDirectoryAdded = async (directoryPath: string): Promise<void> => {
     try {
-      // Check if migration was already asked
-      if (state.config?.migrationPreferenceAsked) {
-        return;
-      }
-
-      // Check if the directory has skills
+      // Always check if the directory has skills (no persistent flag check)
       const response = await window.electronAPI.checkDirectoryForSkills(directoryPath);
       if (response.success && response.data && response.data.length > 0) {
         // Skills found - show migration dialog
