@@ -641,8 +641,20 @@ export class GitLabService {
           );
 
           if (!response.ok) {
+            // Get error response to check if file doesn't exist
+            let errorData: any = {};
+            try {
+              errorData = await response.json();
+            } catch {
+              // Ignore JSON parse errors
+            }
+
             // Try creating the file if update fails (file might not exist)
-            if (response.status === 404) {
+            // GitLab returns 400 with "A file with this name doesn't exist" for missing files
+            const isFileNotFoundError = response.status === 404 ||
+              (response.status === 400 && errorData.message?.includes("doesn't exist"));
+
+            if (isFileNotFoundError) {
               const createResponse = await retryWithBackoff(
                 async () => {
                   const res = await fetchWithTimeout(
@@ -674,11 +686,15 @@ export class GitLabService {
                 uploadedCount++;
                 logger.debug(`Created file: ${fullPath}`, 'GitLabService');
               } else {
-                const errorData = await createResponse.json();
-                errors.push(`Failed to create ${relativePath}: ${errorData.message || 'Unknown error'}`);
+                let createErrorData: any = {};
+                try {
+                  createErrorData = await createResponse.json();
+                } catch {
+                  // Ignore JSON parse errors
+                }
+                errors.push(`Failed to create ${relativePath}: ${createErrorData.message || 'Unknown error'}`);
               }
             } else {
-              const errorData = await response.json();
               errors.push(`Failed to update ${relativePath}: ${errorData.message || 'Unknown error'}`);
             }
           } else {
