@@ -657,9 +657,18 @@ export class GitLabService {
             }
 
             // Try creating the file if update fails (file might not exist)
-            // GitLab returns 400 with "A file with this name doesn't exist" for missing files
-            const isFileNotFoundError = response.status === 404 ||
-              (response.status === 400 && errorData.message?.includes("doesn't exist"));
+            // GitLab API returns various error formats for file not found:
+            // - 404 status code (most common)
+            // - 400 with messages like: "A file with this name doesn't exist", "File could not be found"
+            const errorMsg = (errorData.message || '').toLowerCase();
+            const isFileNotFoundError =
+              response.status === 404 ||
+              (response.status === 400 && (
+                errorMsg.includes("doesn't exist") ||
+                errorMsg.includes("does not exist") ||
+                errorMsg.includes("could not be found") ||
+                errorMsg.includes("not found")
+              ));
 
             if (isFileNotFoundError) {
               const createResponse = await retryWithBackoff(
