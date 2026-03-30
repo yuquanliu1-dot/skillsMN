@@ -165,10 +165,10 @@ export function registerConfigHandlers(): void {
         if (platform === 'win32') {
           // Windows: Try Windows Terminal first, fallback to cmd
           try {
-            // Use PowerShell to launch Windows Terminal (more reliable for App Execution Aliases)
-            // PowerShell's Start-Process properly handles App Execution Aliases like wt.exe
+            // Use PowerShell to launch Windows Terminal with cmd wrapper
+            // The cmd /k wrapper ensures npm-installed commands like 'claude' are found in PATH
             await execAsync(
-              `powershell -NoProfile -Command "Start-Process wt -ArgumentList '-d','${workingDirectory}','--','claude'"`,
+              `powershell -NoProfile -Command "Start-Process wt -ArgumentList '-d','${workingDirectory}','--','cmd','/k','claude'"`,
               {
                 timeout: 10000,
                 windowsHide: true,
