@@ -22,6 +22,8 @@ interface AISkillSidebarProps {
   currentSkillName?: string;
   /** Full path to the current skill directory (for modify mode - ensures writes go to this directory) */
   currentSkillPath?: string;
+  /** Callback when AI streaming state changes */
+  onStreamingChange?: (isStreaming: boolean) => void;
 }
 
 /**
@@ -74,52 +76,43 @@ function generateTitle(content: string): string {
 }
 
 /**
- * Recommended prompts aligned with skill-creator capabilities:
- * - Create new skills from scratch
- * - Modify and improve existing skills
- * - Run evals to test a skill
- * - Benchmark skill performance with variance analysis
- * - Optimize skill description for better triggering accuracy
+ * Get recommended prompts with internationalization
  */
-const RECOMMENDED_PROMPTS = [
+const getRecommendedPrompts = (t: (key: string, options?: any) => string) => [
   {
-    category: 'Create',
+    category: t('aiSidebar.promptCategories.create'),
     items: [
-      { label: 'New skill', prompt: 'Create a new skill for ' },
-      { label: 'From description', prompt: 'Create a skill that ' },
+      { label: t('aiSidebar.promptsList.newSkill'), prompt: t('aiSidebar.promptsList.newSkillPrompt') },
     ],
   },
   {
-    category: 'Modify & Improve',
+    category: t('aiSidebar.promptCategories.modifyImprove'),
     items: [
-      { label: 'Enhance skill', prompt: 'Improve this skill by ' },
-      { label: 'Add feature', prompt: 'Add a new feature to this skill: ' },
-      { label: 'Fix issue', prompt: 'Fix the following issue in this skill: ' },
-      { label: 'Refactor', prompt: 'Refactor this skill to ' },
+      { label: t('aiSidebar.promptsList.enhanceSkill'), prompt: t('aiSidebar.promptsList.enhanceSkillPrompt') },
+      { label: t('aiSidebar.promptsList.fixIssue'), prompt: t('aiSidebar.promptsList.fixIssuePrompt') },
     ],
   },
   {
-    category: 'Evaluate',
+    category: t('aiSidebar.promptCategories.evaluate'),
     items: [
-      { label: 'Run evals', prompt: 'Run evaluations to test this skill' },
-      { label: 'Test triggers', prompt: 'Test if the trigger conditions work correctly for ' },
-      { label: 'Edge cases', prompt: 'Test this skill against edge cases: ' },
+      { label: t('aiSidebar.promptsList.runEvals'), prompt: t('aiSidebar.promptsList.runEvalsPrompt') },
+      { label: t('aiSidebar.promptsList.testTriggers'), prompt: t('aiSidebar.promptsList.testTriggersPrompt') },
+      { label: t('aiSidebar.promptsList.edgeCases'), prompt: t('aiSidebar.promptsList.edgeCasesPrompt') },
     ],
   },
   {
-    category: 'Benchmark',
+    category: t('aiSidebar.promptCategories.benchmark'),
     items: [
-      { label: 'Performance', prompt: 'Benchmark this skill\'s performance' },
-      { label: 'Variance analysis', prompt: 'Analyze performance variance across different scenarios: ' },
-      { label: 'Compare', prompt: 'Compare this skill\'s performance with ' },
+      { label: t('aiSidebar.promptsList.performance'), prompt: t('aiSidebar.promptsList.performancePrompt') },
+      { label: t('aiSidebar.promptsList.varianceAnalysis'), prompt: t('aiSidebar.promptsList.varianceAnalysisPrompt') },
+      { label: t('aiSidebar.promptsList.compare'), prompt: t('aiSidebar.promptsList.comparePrompt') },
     ],
   },
   {
-    category: 'Optimize Triggering',
+    category: t('aiSidebar.promptCategories.optimizeTriggering'),
     items: [
-      { label: 'Improve description', prompt: 'Optimize the skill description for better triggering accuracy' },
-      { label: 'Better triggers', prompt: 'Improve the trigger conditions to match more user intents' },
-      { label: 'Reduce false positives', prompt: 'Optimize triggers to reduce false positive matches' },
+      { label: t('aiSidebar.promptsList.improveDescription'), prompt: t('aiSidebar.promptsList.improveDescriptionPrompt') },
+      { label: t('aiSidebar.promptsList.betterTriggers'), prompt: t('aiSidebar.promptsList.betterTriggersPrompt') },
     ],
   },
 ];
@@ -164,6 +157,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   currentSkillContent,
   currentSkillName,
   currentSkillPath,
+  onStreamingChange,
 }) => {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<InternalMessage[]>([]);
@@ -171,6 +165,15 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const [showPromptMenu, setShowPromptMenu] = useState(false);
   const [showHistoryMenu, setShowHistoryMenu] = useState(false);
+
+  // Attached files for skill creation
+  const [attachedFiles, setAttachedFiles] = useState<Array<{
+    id: string;
+    name: string;
+    content: string;
+    type: string;
+  }>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pending questions from AskUserQuestion tool
   const [pendingQuestions, setPendingQuestions] = useState<PendingQuestion[]>([]);
@@ -401,6 +404,60 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   }, []);
 
   /**
+   * Handle file selection for attachments
+   */
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      try {
+        const content = await readFileContent(file);
+        const fileId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        setAttachedFiles((prev) => [
+          ...prev,
+          {
+            id: fileId,
+            name: file.name,
+            content,
+            type: file.type || 'text/plain',
+          },
+        ]);
+      } catch (error) {
+        console.error('Failed to read file:', file.name, error);
+      }
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, []);
+
+  /**
+   * Read file content as text
+   */
+  const readFileContent = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = () => {
+        reject(new Error('Failed to read file'));
+      };
+      reader.readAsText(file);
+    });
+  };
+
+  /**
+   * Remove an attached file
+   */
+  const handleRemoveFile = useCallback((fileId: string) => {
+    setAttachedFiles((prev) => prev.filter((f) => f.id !== fileId));
+  }, []);
+
+  /**
    * Toggle tool call expansion
    */
   const toggleToolExpansion = useCallback((toolKey: string) => {
@@ -440,6 +497,13 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, content]);
+
+  /**
+   * Notify parent when streaming state changes
+   */
+  useEffect(() => {
+    onStreamingChange?.(isStreaming);
+  }, [isStreaming, onStreamingChange]);
 
   /**
    * Focus input when sidebar opens
@@ -764,16 +828,27 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       ? userContent
       : `/skill-creator ${userContent}`;
 
+    // Build display content with file references
+    let displayContent = userContent;
+    if (attachedFiles.length > 0) {
+      const fileNames = attachedFiles.map(f => f.name).join(', ');
+      displayContent = `${userContent}\n\n📎 ${t('aiSidebar.attachedFiles')}: ${fileNames}`;
+    }
+
     const userMessage: InternalMessage = {
       id: generateId(),
       role: 'user',
-      content: userContent, // Display original input to user
+      content: displayContent, // Display content with file references
       timestamp: new Date(),
     };
 
     // Add user message
     setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
+
+    // Store files to include in prompt and clear state
+    const filesToInclude = [...attachedFiles];
+    setAttachedFiles([]);
 
     // Add placeholder for streaming assistant message
     const assistantMessageId = generateId();
@@ -806,15 +881,26 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       skillContext.skillPath = currentSkillPath;
     }
 
-    // Include conversation context in prompt (use promptWithPrefix for actual AI call)
-    const fullPrompt = conversationContext
-      ? `[Previous conversation]\n${conversationContext}\n\n[Current request]\n${promptWithPrefix}`
-      : promptWithPrefix;
+    // Build prompt with attached files
+    let fullPrompt: string;
+    if (filesToInclude.length > 0) {
+      const filesContext = filesToInclude.map(f =>
+        `--- File: ${f.name} ---\n${f.content}\n--- End of ${f.name} ---`
+      ).join('\n\n');
+
+      fullPrompt = conversationContext
+        ? `[Previous conversation]\n${conversationContext}\n\n[Attached reference files]\n${filesContext}\n\n[Current request]\n${promptWithPrefix}`
+        : `[Attached reference files]\n${filesContext}\n\n[Current request]\n${promptWithPrefix}`;
+    } else {
+      fullPrompt = conversationContext
+        ? `[Previous conversation]\n${conversationContext}\n\n[Current request]\n${promptWithPrefix}`
+        : promptWithPrefix;
+    }
 
     // Determine mode: new skill if no skillPath, otherwise modify
     const mode = currentSkillPath ? 'modify' : 'new';
     await generate(fullPrompt, mode, skillContext);
-  }, [inputValue, isStreaming, messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath]);
+  }, [inputValue, isStreaming, messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath, attachedFiles, t]);
 
   /**
    * Handle stop generation
@@ -1012,17 +1098,29 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1.5 bg-slate-50">
         {messages.length === 0 && (
-          <div className="text-center text-slate-400 py-8">
-            <svg className="w-10 h-10 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-              />
-            </svg>
-            <p className="text-[10px]">{t('aiSidebar.startConversation')}</p>
-            <p className="text-[9px] mt-0.5 text-slate-300">{t('aiSidebar.aiHelp')}</p>
+          <div className="h-full flex items-center justify-center">
+            <div className="text-slate-500 py-4 px-3 max-w-[90%]">
+              <p className="text-[11px] font-medium text-slate-600 mb-2">{t('aiSidebar.welcomeTitle')}</p>
+              <p className="text-[10px] mb-2">{t('aiSidebar.welcomePrompt')}</p>
+              <ul className="text-[10px] space-y-1 mb-2 pl-1">
+                <li className="flex items-start gap-1.5">
+                  <span className="text-purple-400 mt-0.5">·</span>
+                  <span>"{t('aiSidebar.welcomeOption1')}"</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-purple-400 mt-0.5">·</span>
+                  <span>"{t('aiSidebar.welcomeOption2')}"</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-purple-400 mt-0.5">·</span>
+                  <span>"{t('aiSidebar.welcomeOption3')}"</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-purple-400 mt-0.5">·</span>
+                  <span>"{t('aiSidebar.welcomeOption4')}"</span>
+                </li>
+              </ul>
+            </div>
           </div>
         )}
 
@@ -1368,8 +1466,9 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         {/* Recommended prompts dropdown */}
         <div className="relative mb-1.5" ref={promptMenuRef}>
           <button
-            onClick={() => setShowPromptMenu(!showPromptMenu)}
-            className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
+            onClick={() => !isStreaming && setShowPromptMenu(!showPromptMenu)}
+            disabled={isStreaming}
+            className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-slate-500 disabled:hover:bg-transparent"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -1385,9 +1484,19 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             </svg>
           </button>
 
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".md,.txt,.json,.yaml,.yml,.xml,.html,.css,.js,.ts,.tsx,.jsx,.py,.java,.go,.rs,.c,.cpp,.h,.sh,.bat,.env,.example,.sample,.template"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
           {showPromptMenu && (
             <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-              {RECOMMENDED_PROMPTS.map((category, catIndex) => (
+              {getRecommendedPrompts(t).map((category, catIndex) => (
                 <div key={catIndex}>
                   <div className="px-2 py-1 text-[9px] font-medium text-slate-400 bg-slate-50 border-b border-slate-100 sticky top-0">
                     {category.category}
@@ -1409,6 +1518,31 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           )}
         </div>
 
+        {/* Attached files display */}
+        {attachedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-1.5">
+            {attachedFiles.map((file) => (
+              <div
+                key={file.id}
+                className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-50 border border-purple-200 rounded text-[9px] text-purple-700"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="max-w-[80px] truncate">{file.name}</span>
+                <button
+                  onClick={() => handleRemoveFile(file.id)}
+                  className="ml-0.5 text-purple-400 hover:text-purple-600"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="relative">
           <textarea
             ref={inputRef}
@@ -1422,6 +1556,17 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             rows={4}
             maxLength={2000}
           />
+          {/* Attachment button - top right corner */}
+          <button
+            onClick={() => !isStreaming && fileInputRef.current?.click()}
+            disabled={isStreaming}
+            className="absolute top-1 right-1.5 p-0.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title={t('aiSidebar.attachFile')}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            </svg>
+          </button>
           <div className="absolute bottom-1 right-1.5 text-[9px] text-slate-400">{inputValue.length}/2000</div>
         </div>
 

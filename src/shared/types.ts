@@ -248,6 +248,8 @@ export interface SkillEditorConfig {
   tabSize: number;
   /** Word wrap enabled */
   wordWrap: boolean;
+  /** AI Panel width in pixels (default: 420) */
+  aiPanelWidth?: number;
 }
 
 /**

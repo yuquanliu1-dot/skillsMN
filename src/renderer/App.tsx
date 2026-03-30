@@ -915,19 +915,19 @@ export default function App(): JSX.Element {
           config={state.config?.skillEditor}
           appConfig={state.config}
           onSkillCreated={async (skillInfo) => {
-            // Reload skills first
-            const skills = await loadSkills();
-
             if (skillInfo?.path) {
               // Extract skill directory path from SKILL.md path
               const skillDirPath = skillInfo.path.replace(/[\\\/]SKILL\.md$/i, '');
 
-              // Ensure source metadata exists for AI-created skills
+              // Ensure source metadata exists for AI-created skills BEFORE reloading skills
               try {
                 await ipcClient.ensureSourceMetadata(skillDirPath);
               } catch (error) {
                 console.warn('Failed to ensure source metadata:', error);
               }
+
+              // Reload skills AFTER metadata is created
+              const skills = await loadSkills();
 
               // Find the newly created skill from the refreshed list
               const newSkill = skills?.find(s => s.path === skillDirPath);

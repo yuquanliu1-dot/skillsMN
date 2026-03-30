@@ -1054,13 +1054,17 @@ export class GitHubService {
   ): Promise<any[]> {
     try {
       const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits?path=${encodeURIComponent(directoryPath)}&sha=${branch}&per_page=10`;
-      const response = await fetchWithProxy(url, {
-        headers: {
-          'Authorization': `token ${pat}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'skillsMN-App',
-        },
-      });
+      const headers: Record<string, string> = {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'skillsMN-App',
+      };
+
+      // Only add Authorization header if PAT is provided (for private repos or higher rate limits)
+      if (pat && pat.trim()) {
+        headers['Authorization'] = `token ${pat}`;
+      }
+
+      const response = await fetchWithProxy(url, { headers });
 
       if (!response.ok) {
         logger.warn(`Failed to fetch commits for ${directoryPath}`, 'GitHubService', {

@@ -210,6 +210,15 @@ export default function SkillEditorFull({
 
   // AI Assistant visibility state
   const [isAIPanelVisible, setIsAIPanelVisible] = useState<boolean>(true);
+  // AI Panel width state (with persistence)
+  const [aiPanelWidth, setAIPanelWidth] = useState<number>(() => {
+    // Load from localStorage for immediate use
+    const saved = localStorage.getItem('aiPanelWidth');
+    return saved ? parseInt(saved, 10) : (config?.aiPanelWidth || 420);
+  });
+  const isResizingAI = useRef(false);
+  const resizeStartX = useRef(0);
+  const resizeStartWidth = useRef(0);
 
   // AI Rewrite/Insert popover state
   const [isAIRewritePopoverOpen, setIsAIRewritePopoverOpen] = useState<boolean>(false);
@@ -221,6 +230,9 @@ export default function SkillEditorFull({
 
   // AI generation hook for rewrite/insert
   const { status: aiStatus, content: aiContent, generate, reset: resetAI } = useAIGeneration();
+
+  // Track AI streaming state from AISkillSidebar (for close warning)
+  const [isAIStreaming, setIsAIStreaming] = useState<boolean>(false);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -625,6 +637,21 @@ export default function SkillEditorFull({
   }, [handleSave]);
 
   /**
+   * Handle close with warning if AI is streaming
+   */
+  const handleCloseWithWarning = useCallback(() => {
+    if (isAIStreaming) {
+      const confirmed = window.confirm(
+        t('editor.aiStreamingWarning', 'AI is currently executing a task. Closing now will interrupt the task and lose the conversation. Continue anyway?')
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+    onClose();
+  }, [isAIStreaming, onClose, t]);
+
+  /**
    * Keyboard shortcuts
    */
   useEffect(() => {
@@ -711,7 +738,65 @@ export default function SkillEditorFull({
     // Refresh the file tree to show any new/modified files
     setFileTreeRefreshKey(prev => prev + 1);
     onSkillModified?.(filePath);
-  }, [skill, tabs, reloadSkillContent, onSkillModified]);
+  }, [skill, tabs, reloadSkillContent, onSkillModified])
+
+  /**
+   * Save AI Panel width to configuration
+   */
+  const saveAIPanelWidth = useCallback(async (width: number) => {
+    try {
+      await ipcClient.saveConfig({
+        skillEditor: {
+          fontSize: config.fontSize,
+          theme: config.theme,
+          autoSaveEnabled: config.autoSaveEnabled,
+          autoSaveDelay: config.autoSaveDelay,
+          showMinimap: config.showMinimap,
+          lineNumbers: config.lineNumbers,
+          fontFamily: config.fontFamily,
+          tabSize: config.tabSize,
+          wordWrap: config.wordWrap,
+          aiPanelWidth: width,
+        },
+      });
+    } catch (err) {
+      console.error('Failed to save AI panel width:', err);
+    }
+  }, [config])
+
+  /**
+   * Handle AI Panel resize start
+   */
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizingAI.current = true;
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = aiPanelWidth;
+
+    let currentWidth = aiPanelWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isResizingAI.current) return;
+
+      const deltaX = resizeStartX.current - moveEvent.clientX;
+      const newWidth = Math.max(300, Math.min(800, resizeStartWidth.current + deltaX));
+      currentWidth = newWidth;
+      setAIPanelWidth(newWidth);
+      localStorage.setItem('aiPanelWidth', newWidth.toString());
+    };
+
+    const handleMouseUp = () => {
+      isResizingAI.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+
+      // Save to config for persistence (use currentWidth to get the final value)
+      saveAIPanelWidth(currentWidth);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [aiPanelWidth, saveAIPanelWidth]);
 
   /**
    * Handle AI Rewrite confirmation
@@ -974,9 +1059,13 @@ export default function SkillEditorFull({
 
           {/* Close button - moved to right */}
           <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-            title={t('common.close')}
+            onClick={handleCloseWithWarning}
+            className={`p-2 rounded-md transition-colors ${
+              isAIStreaming
+                ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            }`}
+            title={isAIStreaming ? t('editor.closeWithAITask', 'Close (AI task in progress)') : t('common.close')}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1179,17 +1268,35 @@ export default function SkillEditorFull({
 
         {/* Third Column - AI Assistant (collapsible) */}
         {isAIPanelVisible && (
-          <div className="w-[420px] flex-shrink-0 border-l border-gray-200">
-            <AISkillSidebar
-              isOpen={true}
-              onClose={() => setIsAIPanelVisible(false)}
-              onSkillCreated={handleSkillCreated}
-              onSkillModified={handleSkillModified}
-              config={appConfig}
-              currentSkillContent={activeTab?.content || ''}
-              currentSkillName={isNewSkill ? undefined : skill?.name}
-              currentSkillPath={isNewSkill ? undefined : skill?.path}
-            />
+          <div
+            className="flex-shrink-0 border-l border-gray-200 flex"
+            style={{ width: `${aiPanelWidth}px` }}
+          >
+            {/* Resize Handle - Draggable divider */}
+            <div
+              className="w-1 bg-gray-200 hover:bg-purple-400 cursor-col-resize flex-shrink-0 group transition-colors"
+              onMouseDown={handleResizeStart}
+            >
+              {/* Visual indicator on hover */}
+              <div className="absolute inset-y-0 -left-1 w-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="h-full w-1 bg-purple-400 rounded-full" />
+              </div>
+            </div>
+
+            {/* AI Panel Content */}
+            <div className="flex-1 overflow-hidden">
+              <AISkillSidebar
+                isOpen={true}
+                onClose={() => setIsAIPanelVisible(false)}
+                onSkillCreated={handleSkillCreated}
+                onSkillModified={handleSkillModified}
+                config={appConfig}
+                currentSkillContent={activeTab?.content || ''}
+                currentSkillName={isNewSkill ? undefined : skill?.name}
+                currentSkillPath={isNewSkill ? undefined : skill?.path}
+                onStreamingChange={setIsAIStreaming}
+              />
+            </div>
           </div>
         )}
       </div>
