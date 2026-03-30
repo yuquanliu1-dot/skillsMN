@@ -435,6 +435,22 @@ export type FilterSource = 'all' | 'local' | 'registry' | 'private-repo';
 export type SortBy = 'name' | 'modified';
 
 /**
+ * Commit information for update display
+ */
+export interface CommitInfo {
+  /** Commit SHA */
+  sha: string;
+  /** Short SHA (first 7 characters) */
+  shortSha: string;
+  /** Commit message */
+  message: string;
+  /** Author name */
+  author: string;
+  /** Commit date */
+  date: string;
+}
+
+/**
  * Version comparison result for skill updates
  */
 export interface VersionComparison {
@@ -448,6 +464,10 @@ export interface VersionComparison {
   remoteVersion?: string;
   /** Remote commit SHA for update tracking */
   remoteSHA?: string;
+  /** Number of commits ahead */
+  commitsAhead?: number;
+  /** List of commits between local and remote (only when hasUpdate is true) */
+  commits?: CommitInfo[];
 }
 
 export interface UIState {

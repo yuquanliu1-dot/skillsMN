@@ -692,6 +692,37 @@ ${content}`;
         }
       }
 
+      // Extract new commits (commits after the local commit SHA)
+      let newCommits: import('../../shared/types').CommitInfo[] = [];
+      let commitsAhead = 0;
+
+      if (hasUpdate && commits.length > 0) {
+        // Find the index of the local commit in the commits array
+        const localCommitIndex = commits.findIndex((c: any) => c.sha === sourceMetadata.commitHash);
+
+        if (localCommitIndex > 0) {
+          // Get all commits before the local commit (these are newer)
+          commitsAhead = localCommitIndex;
+          newCommits = commits.slice(0, localCommitIndex).map((c: any) => ({
+            sha: c.sha,
+            shortSha: c.sha.substring(0, 7),
+            message: c.commit?.message?.split('\n')[0] || 'No message',
+            author: c.commit?.author?.name || 'Unknown',
+            date: c.commit?.author?.date || '',
+          }));
+        } else if (localCommitIndex === -1) {
+          // Local commit not found in recent commits, show all fetched commits
+          commitsAhead = commits.length;
+          newCommits = commits.map((c: any) => ({
+            sha: c.sha,
+            shortSha: c.sha.substring(0, 7),
+            message: c.commit?.message?.split('\n')[0] || 'No message',
+            author: c.commit?.author?.name || 'Unknown',
+            date: c.commit?.author?.date || '',
+          }));
+        }
+      }
+
       if (hasUpdate) {
         logger.info(`Update available for registry skill: ${skill.name}`, 'SkillService', {
           skillPath: skill.path,
@@ -699,6 +730,7 @@ ${content}`;
           remoteVersion,
           localSHA: sourceMetadata.commitHash,
           remoteSHA: latestCommitSHA,
+          commitsAhead,
         });
       }
 
@@ -708,6 +740,8 @@ ${content}`;
         localVersion: skill.version,
         remoteVersion,
         remoteSHA: latestCommitSHA,
+        commitsAhead,
+        commits: newCommits,
       };
     } catch (error) {
       logger.error(`Failed to check registry skill updates: ${skill.name}`, 'SkillService', error);
@@ -877,12 +911,45 @@ ${content}`;
           });
         }
 
+        // Extract new commits (commits after the local commit SHA)
+        let newCommits: import('../../shared/types').CommitInfo[] = [];
+        let commitsAhead = 0;
+
+        if (hasUpdate && commits.length > 0) {
+          // Find the index of the local commit in the commits array
+          const localCommitIndex = commits.findIndex((c: any) => c.sha === sourceMetadata.commitHash);
+
+          if (localCommitIndex > 0) {
+            // Get all commits before the local commit (these are newer)
+            commitsAhead = localCommitIndex;
+            newCommits = commits.slice(0, localCommitIndex).map((c: any) => ({
+              sha: c.sha,
+              shortSha: c.sha.substring(0, 7),
+              message: c.commit?.message?.split('\n')[0] || 'No message',
+              author: c.commit?.author?.name || 'Unknown',
+              date: c.commit?.author?.date || '',
+            }));
+          } else if (localCommitIndex === -1) {
+            // Local commit not found in recent commits, show all fetched commits
+            commitsAhead = commits.length;
+            newCommits = commits.map((c: any) => ({
+              sha: c.sha,
+              shortSha: c.sha.substring(0, 7),
+              message: c.commit?.message?.split('\n')[0] || 'No message',
+              author: c.commit?.author?.name || 'Unknown',
+              date: c.commit?.author?.date || '',
+            }));
+          }
+        }
+
         return {
           hasUpdate,
           canUpload,
           localVersion: skill.version,
           remoteVersion,
           remoteSHA: latestCommitSHA,
+          commitsAhead,
+          commits: newCommits,
         };
     } catch (error) {
       logger.error(`Failed to check private repo skill updates: ${skill.name}`, 'SkillService', error);

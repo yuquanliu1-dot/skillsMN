@@ -29,7 +29,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
 
   const { query, results, isLoading, error, setQuery } = useRegistrySearch();
   const [hasSearched, setHasSearched] = useState(false);
-  const [sortBy, setSortBy] = useState<SortBy>('name');
+  const [sortBy, setSortBy] = useState<SortBy>('installs');
 
   // Determine target directory for installation
   // Always install to the centralized application directory

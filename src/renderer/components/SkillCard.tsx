@@ -444,6 +444,48 @@ export default function SkillCard({
                 <div className="text-slate-900 dark:text-slate-100 text-sm font-mono">{skill.path}</div>
               </div>
 
+              {/* Version info */}
+              {versionStatus && (
+                <div className="flex gap-4 text-sm">
+                  {versionStatus.localVersion && (
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400">{t('skillCard.localVersion')}: </span>
+                      <span className="text-slate-900 dark:text-slate-100 font-medium">{versionStatus.localVersion}</span>
+                    </div>
+                  )}
+                  {versionStatus.remoteVersion && (
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400">{t('skillCard.remoteVersion')}: </span>
+                      <span className="text-green-600 dark:text-green-400 font-medium">{versionStatus.remoteVersion}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Commits list */}
+              {versionStatus?.commits && versionStatus.commits.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    {t('skillCard.newCommits')} ({versionStatus.commitsAhead || versionStatus.commits.length})
+                  </label>
+                  <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-600 rounded divide-y divide-slate-200 dark:divide-slate-600">
+                    {versionStatus.commits.map((commit, index) => (
+                      <div key={commit.sha} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <div className="flex items-start gap-2">
+                          <code className="text-xs text-blue-600 dark:text-blue-400 font-mono flex-shrink-0">{commit.shortSha}</code>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-slate-900 dark:text-slate-100 truncate" title={commit.message}>{commit.message}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              {commit.author} • {commit.date ? new Date(commit.date).toLocaleDateString() : ''}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <label className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
                 <input
                   type="checkbox"
