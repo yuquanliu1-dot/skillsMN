@@ -178,9 +178,6 @@
     "directoryRemoved": "Project directory removed",
     "directoryAlreadyAdded": "This directory is already added",
 
-    "editorDefaultMode": "Editor Default Mode",
-    "editMode": "Edit Mode",
-    "previewMode": "Preview Mode",
     "autoRefresh": "Auto-refresh skill list on file changes",
 
     "keyboardShortcuts": "Keyboard Shortcuts",

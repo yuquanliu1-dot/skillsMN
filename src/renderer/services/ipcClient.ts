@@ -175,7 +175,6 @@ export const ipcClient = {
       return {
         projectDirectories: [],
         defaultInstallDirectory: 'project',
-        editorDefaultMode: 'edit',
         autoRefresh: true,
       };
     }

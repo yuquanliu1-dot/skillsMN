@@ -179,9 +179,6 @@
     "directoryRemoved": "项目目录已移除",
     "directoryAlreadyAdded": "此目录已添加",
 
-    "editorDefaultMode": "编辑器默认模式",
-    "editMode": "编辑模式",
-    "previewMode": "预览模式",
     "autoRefresh": "文件更改时自动刷新技能列表",
 
     "keyboardShortcuts": "键盘快捷键",

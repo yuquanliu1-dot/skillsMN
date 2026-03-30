@@ -165,14 +165,15 @@ export function registerConfigHandlers(): void {
         if (platform === 'win32') {
           // Windows: Try Windows Terminal first, fallback to cmd
           try {
-            // Windows Terminal (wt) provides better experience
-            await execAsync(`wt -d "${workingDirectory}" -- claude`, {
+            // Windows Terminal (wt) is an App Execution Alias that cannot be invoked directly
+            // Use cmd /c start wrapper to properly launch it
+            await execAsync(`cmd /c start "" wt -d "${workingDirectory}" -- claude`, {
               timeout: 10000,
               windowsHide: true,
             });
           } catch {
             // Fallback to cmd if Windows Terminal is not available
-            await execAsync(`start cmd /K "cd /d "${workingDirectory}" && claude"`, {
+            await execAsync(`cmd /c start cmd /K "cd /d "${workingDirectory}" && claude"`, {
               timeout: 10000,
               windowsHide: true,
             });

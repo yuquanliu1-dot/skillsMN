@@ -224,8 +224,11 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
 
         // Update based on source type
         if (skill.sourceMetadata.type === 'registry') {
-          // TODO: Implement registry skill update
-          throw new Error('Registry skill updates not yet implemented');
+          const result = await skillService!.updateRegistrySkill(skillPath, createBackup);
+          if (!result.success) {
+            throw new Error(result.error || 'Update failed');
+          }
+          return { success: true, data: { newPath: result.newPath || skillPath } };
         } else if (skill.sourceMetadata.type === 'private-repo') {
           const result = await skillService!.updatePrivateSkill(skillPath, createBackup);
           if (!result.success) {

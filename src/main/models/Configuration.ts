@@ -7,12 +7,10 @@
 import {
   BaseConfiguration,
   InstallDirectory,
-  EditorMode,
   SkillEditorConfig,
 } from '../../shared/types';
 import {
   DEFAULT_INSTALL_DIRECTORY,
-  DEFAULT_EDITOR_MODE,
   DEFAULT_AUTO_REFRESH,
 } from '../../shared/constants';
 import * as path from 'path';
@@ -40,7 +38,6 @@ export class ConfigurationModel {
     return {
       projectDirectories: [],
       defaultInstallDirectory: DEFAULT_INSTALL_DIRECTORY,
-      editorDefaultMode: DEFAULT_EDITOR_MODE,
       autoRefresh: DEFAULT_AUTO_REFRESH,
       skillEditor: DEFAULT_SKILL_EDITOR_CONFIG,
     };
@@ -74,15 +71,6 @@ export class ConfigurationModel {
       throw new Error('Default install directory must be "project" or "global"');
     }
 
-    // Validate editorDefaultMode
-    const validEditorModes: EditorMode[] = ['edit', 'preview'];
-    if (
-      config.editorDefaultMode &&
-      !validEditorModes.includes(config.editorDefaultMode)
-    ) {
-      throw new Error('Editor default mode must be "edit" or "preview"');
-    }
-
     // Validate autoRefresh
     if (
       config.autoRefresh !== undefined &&
@@ -100,7 +88,6 @@ export class ConfigurationModel {
     return {
       projectDirectories: config.projectDirectories ?? [],
       defaultInstallDirectory: config.defaultInstallDirectory ?? DEFAULT_INSTALL_DIRECTORY,
-      editorDefaultMode: config.editorDefaultMode ?? DEFAULT_EDITOR_MODE,
       autoRefresh: config.autoRefresh ?? DEFAULT_AUTO_REFRESH,
       skillEditor: config.skillEditor ?? DEFAULT_SKILL_EDITOR_CONFIG,
       applicationSkillsDirectory: config.applicationSkillsDirectory,
@@ -138,7 +125,6 @@ export class ConfigurationModel {
       projectDirectories: updates.projectDirectories ?? existing.projectDirectories,
       defaultInstallDirectory:
         updates.defaultInstallDirectory ?? existing.defaultInstallDirectory,
-      editorDefaultMode: updates.editorDefaultMode ?? existing.editorDefaultMode,
       autoRefresh: updates.autoRefresh ?? existing.autoRefresh,
       skillEditor: updates.skillEditor ?? existing.skillEditor ?? DEFAULT_SKILL_EDITOR_CONFIG,
       applicationSkillsDirectory: updates.applicationSkillsDirectory ?? existing.applicationSkillsDirectory,

@@ -295,13 +295,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_CHECK_UPDATES);
   },
 
-  updatePrivateSkill: (params: {
-    skillPath: string;
-    createBackup?: boolean;
-  }): Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_UPDATE_SKILL, params);
-  },
-
   getPrivateRepoSkillContent: (repoId: string, skillPath: string): Promise<IPCResponse<string>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_GET_SKILL_CONTENT, { repoId, skillPath });
   },

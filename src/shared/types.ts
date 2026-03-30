@@ -227,7 +227,6 @@ export interface MigrationResult {
 // ============================================================================
 
 export type InstallDirectory = 'project' | 'global';
-export type EditorMode = 'edit' | 'preview';
 
 export interface SkillEditorConfig {
   /** Editor font size */
@@ -265,8 +264,6 @@ export interface BaseConfiguration {
   projectDirectories: string[];
   /** Default location for new skills */
   defaultInstallDirectory: InstallDirectory;
-  /** Default behavior when opening skills */
-  editorDefaultMode: EditorMode;
   /** Auto-refresh skill list on file changes */
   autoRefresh: boolean;
   /** Skill editor configuration */

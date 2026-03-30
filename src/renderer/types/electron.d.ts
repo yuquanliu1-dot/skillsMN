@@ -142,10 +142,6 @@ export interface ElectronAPI {
     conflictResolution?: 'overwrite' | 'rename' | 'skip';
   }) => Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>>;
   checkPrivateSkillUpdates: () => Promise<IPCResponse<Map<string, { hasUpdate: boolean }>>>;
-  updatePrivateSkill: (params: {
-    skillPath: string;
-    createBackup?: boolean;
-  }) => Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>>;
 
   // GitHub Operations (Feature 004 - Public Skill Discovery)
   searchGitHub: (

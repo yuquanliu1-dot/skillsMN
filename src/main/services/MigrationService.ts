@@ -93,7 +93,6 @@ export class MigrationService {
       const skills = await this.skillService.listAllSkills({
         projectDirectories: [],
         defaultInstallDirectory: 'project',
-        editorDefaultMode: 'edit',
         autoRefresh: false,
       });
 

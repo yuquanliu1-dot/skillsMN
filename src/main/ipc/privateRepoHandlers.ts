@@ -422,39 +422,6 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
     }
   );
 
-  // Handler for private-repo:update-skill
-  ipcMain.handle(
-    IPC_CHANNELS.PRIVATE_REPO_UPDATE_SKILL,
-    async (
-      _event,
-      { skillPath, createBackup }: { skillPath: string; createBackup?: boolean }
-    ): Promise<IPCResponse<{ success: boolean; newPath?: string; error?: string }>> => {
-      try {
-        logger.debug('Updating skill from private repository', 'PrivateRepoHandlers', { skillPath });
-
-        const result = await PrivateRepoService.updateSkill(skillPath, createBackup);
-
-        if (result.success) {
-          logger.info('Updated skill from private repo', 'PrivateRepoHandlers', {
-            skillPath,
-            newPath: result.newPath,
-          });
-        }
-
-        return { success: true, data: result };
-      } catch (error) {
-        logger.error('Failed to update skill from private repo', 'PrivateRepoHandlers', error);
-        return {
-          success: false,
-          error: {
-            code: 'UPDATE_SKILL_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
-          },
-        };
-      }
-    }
-  );
-
   // Handler for private-repo:get-skill-content
   ipcMain.handle(
     'private-repo:get-skill-content',

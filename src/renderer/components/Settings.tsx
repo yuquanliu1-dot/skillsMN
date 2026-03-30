@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Configuration, EditorMode, PrivateRepo, AIConfiguration, SkillEditorConfig, SkillGroup, ProxyConfig } from '../../shared/types';
+import type { Configuration, PrivateRepo, AIConfiguration, SkillEditorConfig, SkillGroup, ProxyConfig } from '../../shared/types';
 import { changeLanguage, availableLanguages, getCurrentLanguage } from '../i18n';
 import type { LanguageCode } from '../../shared/types';
 
@@ -50,7 +50,6 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   const { t } = useTranslation();
   console.log('[Settings] Component rendering', { isOpen, activeTab: undefined });
 
-  const [editorDefaultMode, setEditorDefaultMode] = useState<EditorMode>('edit');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +127,6 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
    */
   useEffect(() => {
     if (isOpen && config) {
-      setEditorDefaultMode(config.editorDefaultMode);
       setAutoRefresh(config.autoRefresh);
       setProjectDirectories(config.projectDirectories || []);
 
@@ -291,7 +289,6 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
     try {
       await onSave({
-        editorDefaultMode,
         autoRefresh,
         skillEditor: skillEditorConfig,
         proxy: proxyConfig,
@@ -969,26 +966,6 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
           {/* Content Area with Scroll */}
           <div className="flex-1 overflow-y-auto p-6">
         <form onSubmit={handleSubmit} style={{ display: activeTab === 'general' ? 'block' : 'none' }}>
-          {/* Editor Default Mode */}
-          <div className="mb-3">
-            <label
-              htmlFor="editor-default-mode"
-              className="block text-sm font-medium text-slate-700 mb-1.5"
-            >
-              {t('settings.editorDefaultMode')}
-            </label>
-            <select
-              id="editor-default-mode"
-              value={editorDefaultMode}
-              onChange={(e) => setEditorDefaultMode(e.target.value as EditorMode)}
-              className="select w-full"
-              disabled={isSaving}
-            >
-              <option value="edit">{t('settings.editMode')}</option>
-              <option value="preview">{t('settings.previewMode')}</option>
-            </select>
-          </div>
-
           {/* Auto Refresh */}
           <div className="mb-4">
             <label className="flex items-center gap-2.5 cursor-pointer">

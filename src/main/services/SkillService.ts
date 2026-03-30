@@ -583,6 +583,100 @@ ${content}`;
   }
 
   /**
+   * Compare local and remote versions to determine update/upload status
+   * Unified version comparison logic used by both registry and private repo checks
+   *
+   * @param localVersion - Local skill version (may be undefined)
+   * @param remoteVersion - Remote skill version (may be undefined)
+   * @param commitChanged - Whether the commit SHA has changed
+   * @param supportsUpload - Whether upload is supported (private repos only)
+   * @returns Object with hasUpdate, canUpload, and effective comparison result
+   */
+  private compareVersionsForUpdate(
+    localVersion: string | undefined,
+    remoteVersion: string | undefined,
+    commitChanged: boolean,
+    supportsUpload: boolean
+  ): { hasUpdate: boolean; canUpload: boolean } {
+    // If we have both versions, use version comparison
+    if (localVersion && remoteVersion) {
+      const versionComparison = compareVersions(localVersion, remoteVersion);
+
+      if (versionComparison < 0) {
+        // Local < Remote: update available
+        return { hasUpdate: true, canUpload: false };
+      } else if (versionComparison > 0) {
+        // Local > Remote: can upload (only for private repos)
+        return { hasUpdate: false, canUpload: supportsUpload };
+      } else {
+        // Versions equal: fall back to commit-based detection
+        return { hasUpdate: commitChanged, canUpload: false };
+      }
+    }
+
+    // No version info available, use commit-based detection
+    return { hasUpdate: commitChanged, canUpload: false };
+  }
+
+  /**
+   * Extract new commits from commit history
+   * Returns commits that are newer than the local commit
+   *
+   * @param commits - Array of commits from GitHub API
+   * @param localCommitSHA - The local commit SHA to compare against
+   * @returns Object with newCommits array and commitsAhead count
+   */
+  private extractNewCommits(
+    commits: any[],
+    localCommitSHA: string
+  ): { newCommits: import('../../shared/types').CommitInfo[]; commitsAhead: number } {
+    if (!commits || commits.length === 0) {
+      return { newCommits: [], commitsAhead: 0 };
+    }
+
+    const localCommitIndex = commits.findIndex((c: any) => c.sha === localCommitSHA);
+
+    if (localCommitIndex > 0) {
+      // Get all commits before the local commit (these are newer)
+      return {
+        commitsAhead: localCommitIndex,
+        newCommits: commits.slice(0, localCommitIndex).map((c: any) => ({
+          sha: c.sha,
+          shortSha: c.sha.substring(0, 7),
+          message: c.commit?.message?.split('\n')[0] || 'No message',
+          author: c.commit?.author?.name || 'Unknown',
+          date: c.commit?.author?.date || '',
+        })),
+      };
+    } else if (localCommitIndex === -1) {
+      // Local commit not found in recent commits, show all fetched commits
+      return {
+        commitsAhead: commits.length,
+        newCommits: commits.map((c: any) => ({
+          sha: c.sha,
+          shortSha: c.sha.substring(0, 7),
+          message: c.commit?.message?.split('\n')[0] || 'No message',
+          author: c.commit?.author?.name || 'Unknown',
+          date: c.commit?.author?.date || '',
+        })),
+      };
+    }
+
+    return { newCommits: [], commitsAhead: 0 };
+  }
+
+  /**
+   * Extract version string from SKILL.md content
+   *
+   * @param content - The SKILL.md file content
+   * @returns Version string or undefined if not found
+   */
+  private extractVersionFromContent(content: string): string | undefined {
+    const versionMatch = content.match(/^version:\s*["']?([^"'\n]+)["']?\s*$/m);
+    return versionMatch ? versionMatch[1].trim() : undefined;
+  }
+
+  /**
    * Check for updates to a registry-installed skill
    * Compares local version with remote version and commit SHA
    * If commitHash is missing, fetches and saves it for future checks
@@ -682,12 +776,9 @@ ${content}`;
 
       const commitChanged = latestCommitSHA !== sourceMetadata.commitHash;
 
-      // Default to commit-based detection if version comparison is not possible
-      let hasUpdate = commitChanged;
+      // Try to fetch remote version for comparison (always attempt, not just on commit change)
       let remoteVersion: string | undefined;
-
-      // Try to fetch remote version for comparison
-      if (commitChanged && skill.version) {
+      if (skill.version) {
         try {
           const remoteContent = await GitHubService.getPrivateRepoSkillContent(
             owner,
@@ -696,62 +787,35 @@ ${content}`;
             '', // No PAT needed for public repos
             'main'
           );
+          remoteVersion = this.extractVersionFromContent(remoteContent);
 
-          // Extract version from remote content's frontmatter
-          const versionMatch = remoteContent.match(/^version:\s*["']?([^"'\n]+)["']?\s*$/m);
-          if (versionMatch) {
-            remoteVersion = versionMatch[1].trim();
-
-            // Compare versions: only show update if remote version is newer
-            const versionComparison = compareVersions(skill.version, remoteVersion);
-            hasUpdate = versionComparison < 0; // Remote is newer
-
-            logger.debug('Registry skill version comparison', 'SkillService', {
+          if (remoteVersion) {
+            logger.debug('Registry skill version fetched', 'SkillService', {
               skill: skill.name,
               localVersion: skill.version,
               remoteVersion,
-              hasUpdate,
             });
           }
         } catch (versionError) {
-          // Fall back to commit-based detection if version fetch fails
-          logger.debug('Failed to fetch remote version, using commit-based detection', 'SkillService', {
+          logger.debug('Failed to fetch remote version, will use commit-based detection', 'SkillService', {
             skill: skill.name,
             error: versionError instanceof Error ? versionError.message : versionError,
           });
         }
       }
 
-      // Extract new commits (commits after the local commit SHA)
-      let newCommits: import('../../shared/types').CommitInfo[] = [];
-      let commitsAhead = 0;
+      // Use unified version comparison logic (registry skills don't support upload)
+      const { hasUpdate, canUpload } = this.compareVersionsForUpdate(
+        skill.version,
+        remoteVersion,
+        commitChanged,
+        false // Registry skills don't support upload
+      );
 
-      if (hasUpdate && commits.length > 0) {
-        // Find the index of the local commit in the commits array
-        const localCommitIndex = commits.findIndex((c: any) => c.sha === sourceMetadata.commitHash);
-
-        if (localCommitIndex > 0) {
-          // Get all commits before the local commit (these are newer)
-          commitsAhead = localCommitIndex;
-          newCommits = commits.slice(0, localCommitIndex).map((c: any) => ({
-            sha: c.sha,
-            shortSha: c.sha.substring(0, 7),
-            message: c.commit?.message?.split('\n')[0] || 'No message',
-            author: c.commit?.author?.name || 'Unknown',
-            date: c.commit?.author?.date || '',
-          }));
-        } else if (localCommitIndex === -1) {
-          // Local commit not found in recent commits, show all fetched commits
-          commitsAhead = commits.length;
-          newCommits = commits.map((c: any) => ({
-            sha: c.sha,
-            shortSha: c.sha.substring(0, 7),
-            message: c.commit?.message?.split('\n')[0] || 'No message',
-            author: c.commit?.author?.name || 'Unknown',
-            date: c.commit?.author?.date || '',
-          }));
-        }
-      }
+      // Extract new commits if update is available
+      const { newCommits, commitsAhead } = hasUpdate
+        ? this.extractNewCommits(commits, sourceMetadata.commitHash)
+        : { newCommits: [], commitsAhead: 0 };
 
       if (hasUpdate) {
         logger.info(`Update available for registry skill: ${skill.name}`, 'SkillService', {
@@ -766,7 +830,7 @@ ${content}`;
 
       return {
         hasUpdate,
-        canUpload: false, // Registry skills don't support upload
+        canUpload,
         localVersion: skill.version,
         remoteVersion,
         remoteSHA: latestCommitSHA,
@@ -864,123 +928,75 @@ ${content}`;
 
       const commitChanged = latestCommitSHA !== sourceMetadata.commitHash;
 
-        // Default to commit-based detection
-        let hasUpdate = commitChanged;
-        let canUpload = false;
-        let remoteVersion: string | undefined;
+      // Try to fetch remote version for comparison
+      let remoteVersion: string | undefined;
+      if (skill.version) {
+        try {
+          const remoteContent = await GitHubService.getPrivateRepoSkillContent(
+            owner,
+            repoName,
+            `${sourceMetadata.skillPath}/${SKILL_FILE_NAME}`,
+            pat,
+            branch
+          );
+          remoteVersion = this.extractVersionFromContent(remoteContent);
 
-        // Try to fetch remote version for comparison
-        if (skill.version) {
-          try {
-            const remoteContent = await GitHubService.getPrivateRepoSkillContent(
-              owner,
-              repoName,
-              `${sourceMetadata.skillPath}/${SKILL_FILE_NAME}`,
-              pat,
-              branch
-            );
-
-            // Extract version from remote content's frontmatter
-            const versionMatch = remoteContent.match(/^version:\s*["']?([^"'\n]+)["']?\s*$/m);
-            if (versionMatch) {
-              remoteVersion = versionMatch[1].trim();
-
-              // Compare versions
-              const versionComparison = compareVersions(skill.version, remoteVersion);
-
-              if (versionComparison < 0) {
-                // Local < Remote: show update
-                hasUpdate = true;
-                canUpload = false;
-              } else if (versionComparison > 0) {
-                // Local > Remote: show upload
-                hasUpdate = false;
-                canUpload = true;
-              } else {
-                // Versions equal: use commit-based detection
-                hasUpdate = commitChanged;
-                canUpload = false;
-              }
-
-              logger.debug('Private repo skill version comparison', 'SkillService', {
-                skill: skill.name,
-                localVersion: skill.version,
-                remoteVersion,
-                versionComparison,
-                hasUpdate,
-                canUpload,
-              });
-            }
-          } catch (versionError) {
-            // Fall back to commit-based detection if version fetch fails
-            logger.debug('Failed to fetch remote version, using commit-based detection', 'SkillService', {
+          if (remoteVersion) {
+            logger.debug('Private repo skill version fetched', 'SkillService', {
               skill: skill.name,
-              error: versionError instanceof Error ? versionError.message : versionError,
+              localVersion: skill.version,
+              remoteVersion,
             });
           }
-        } else if (commitChanged) {
-          // No local version, use commit-based detection
-          hasUpdate = true;
-        }
-
-        if (hasUpdate) {
-          logger.info(`Update available for private repo skill: ${skill.name}`, 'SkillService', {
-            skillPath: skill.path,
-            localVersion: skill.version,
-            remoteVersion,
-            localSHA: sourceMetadata.commitHash,
-            remoteSHA: latestCommitSHA,
+        } catch (versionError) {
+          logger.debug('Failed to fetch remote version, will use commit-based detection', 'SkillService', {
+            skill: skill.name,
+            error: versionError instanceof Error ? versionError.message : versionError,
           });
         }
+      }
 
-        if (canUpload) {
-          logger.info(`Local version newer for private repo skill: ${skill.name}`, 'SkillService', {
-            skillPath: skill.path,
-            localVersion: skill.version,
-            remoteVersion,
-          });
-        }
+      // Use unified version comparison logic (private repos support upload)
+      const { hasUpdate, canUpload } = this.compareVersionsForUpdate(
+        skill.version,
+        remoteVersion,
+        commitChanged,
+        true // Private repos support upload
+      );
 
-        // Extract new commits (commits after the local commit SHA)
-        let newCommits: import('../../shared/types').CommitInfo[] = [];
-        let commitsAhead = 0;
+      // Extract new commits if update is available
+      const { newCommits, commitsAhead } = hasUpdate
+        ? this.extractNewCommits(commits, sourceMetadata.commitHash)
+        : { newCommits: [], commitsAhead: 0 };
 
-        if (hasUpdate && commits.length > 0) {
-          // Find the index of the local commit in the commits array
-          const localCommitIndex = commits.findIndex((c: any) => c.sha === sourceMetadata.commitHash);
-
-          if (localCommitIndex > 0) {
-            // Get all commits before the local commit (these are newer)
-            commitsAhead = localCommitIndex;
-            newCommits = commits.slice(0, localCommitIndex).map((c: any) => ({
-              sha: c.sha,
-              shortSha: c.sha.substring(0, 7),
-              message: c.commit?.message?.split('\n')[0] || 'No message',
-              author: c.commit?.author?.name || 'Unknown',
-              date: c.commit?.author?.date || '',
-            }));
-          } else if (localCommitIndex === -1) {
-            // Local commit not found in recent commits, show all fetched commits
-            commitsAhead = commits.length;
-            newCommits = commits.map((c: any) => ({
-              sha: c.sha,
-              shortSha: c.sha.substring(0, 7),
-              message: c.commit?.message?.split('\n')[0] || 'No message',
-              author: c.commit?.author?.name || 'Unknown',
-              date: c.commit?.author?.date || '',
-            }));
-          }
-        }
-
-        return {
-          hasUpdate,
-          canUpload,
+      if (hasUpdate) {
+        logger.info(`Update available for private repo skill: ${skill.name}`, 'SkillService', {
+          skillPath: skill.path,
           localVersion: skill.version,
           remoteVersion,
+          localSHA: sourceMetadata.commitHash,
           remoteSHA: latestCommitSHA,
           commitsAhead,
-          commits: newCommits,
-        };
+        });
+      }
+
+      if (canUpload) {
+        logger.info(`Local version newer for private repo skill: ${skill.name}`, 'SkillService', {
+          skillPath: skill.path,
+          localVersion: skill.version,
+          remoteVersion,
+        });
+      }
+
+      return {
+        hasUpdate,
+        canUpload,
+        localVersion: skill.version,
+        remoteVersion,
+        remoteSHA: latestCommitSHA,
+        commitsAhead,
+        commits: newCommits,
+      };
     } catch (error) {
       logger.error(`Failed to check private repo skill updates: ${skill.name}`, 'SkillService', error);
       return null;

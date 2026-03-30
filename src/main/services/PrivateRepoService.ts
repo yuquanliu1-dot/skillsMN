@@ -857,41 +857,6 @@ export class PrivateRepoService {
   }
 
   /**
-   * Update an installed skill from its source repository
-   * Downloads latest version and optionally creates backup
-   * @param skillPath - Local path to installed skill
-   * @param createBackup - Whether to backup before updating (default: true)
-   * @returns Object with success status, new path if successful, or error message
-   * @example
-   * const result = await PrivateRepoService.updateSkill(
-   *   '/path/to/skill',
-   *   true // create backup
-   * );
-   * if (result.success) {
-   *   console.log('Updated successfully');
-   * }
-   */
-  static async updateSkill(
-    skillPath: string,
-    createBackup?: boolean
-  ): Promise<{ success: boolean; newPath?: string; error?: string }> {
-    try {
-      // This would require tracking which repo a skill came from
-      // For now, return not implemented
-      return {
-        success: false,
-        error: 'Skill update tracking not yet implemented',
-      };
-    } catch (error) {
-      logger.error('Failed to update skill', 'PrivateRepoService', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  }
-
-  /**
    * Get skill content from a private repository
    */
   static async getSkillContent(repoId: string, skillPath: string): Promise<string> {

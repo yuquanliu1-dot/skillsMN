@@ -31,9 +31,6 @@ export const CONFIG_VERSION = 1;
 /** Default install directory for new skills */
 export const DEFAULT_INSTALL_DIRECTORY = 'project';
 
-/** Default editor mode */
-export const DEFAULT_EDITOR_MODE = 'edit';
-
 /** Default auto-refresh setting */
 export const DEFAULT_AUTO_REFRESH = true;
 
@@ -41,7 +38,6 @@ export const DEFAULT_AUTO_REFRESH = true;
 export const DEFAULT_CONFIG = {
   projectDirectories: [],
   defaultInstallDirectory: DEFAULT_INSTALL_DIRECTORY,
-  editorDefaultMode: DEFAULT_EDITOR_MODE,
   autoRefresh: DEFAULT_AUTO_REFRESH,
 } as const;
 
@@ -183,7 +179,6 @@ export const IPC_CHANNELS = {
   PRIVATE_REPO_SEARCH_SKILLS: 'private-repo:search-skills',
   PRIVATE_REPO_INSTALL_SKILL: 'private-repo:install-skill',
   PRIVATE_REPO_CHECK_UPDATES: 'private-repo:check-updates',
-  PRIVATE_REPO_UPDATE_SKILL: 'private-repo:update-skill',
   PRIVATE_REPO_GET_SKILL_METADATA: 'private-repo:get-skill-metadata',
   PRIVATE_REPO_GET_SKILL_CONTENT: 'private-repo:get-skill-content',
   PRIVATE_REPO_UPLOAD_SKILL: 'private-repo:upload-skill',
