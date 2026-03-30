@@ -163,12 +163,20 @@ export function registerConfigHandlers(): void {
         const platform = process.platform;
 
         if (platform === 'win32') {
-          // Windows: Use start to open a new cmd window
-          // /K keeps the window open after command execution
-          await execAsync(`start cmd /K "cd /d "${workingDirectory}" && claude"`, {
-            timeout: 10000,
-            windowsHide: true,
-          });
+          // Windows: Try Windows Terminal first, fallback to cmd
+          try {
+            // Windows Terminal (wt) provides better experience
+            await execAsync(`wt -d "${workingDirectory}" -- claude`, {
+              timeout: 10000,
+              windowsHide: true,
+            });
+          } catch {
+            // Fallback to cmd if Windows Terminal is not available
+            await execAsync(`start cmd /K "cd /d "${workingDirectory}" && claude"`, {
+              timeout: 10000,
+              windowsHide: true,
+            });
+          }
         } else if (platform === 'darwin') {
           // macOS: Use open -a Terminal
           await execAsync(`open -a Terminal "${workingDirectory}"`, {

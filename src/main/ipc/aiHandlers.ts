@@ -52,6 +52,12 @@ export function registerAIHandlers(): void {
 
         // Process stream and send NormalizedMessages to renderer
         for await (const message of stream) {
+          // Check if window is still valid before sending
+          if (win.isDestroyed() || win.webContents.isDestroyed()) {
+            logger.debug('Window destroyed, stopping AI stream', 'AIHandlers');
+            break;
+          }
+
           // Send message to renderer via ai:message channel
           win.webContents.send('ai:message', message);
 
