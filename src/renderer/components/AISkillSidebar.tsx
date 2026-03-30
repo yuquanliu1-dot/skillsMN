@@ -968,11 +968,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="h-full bg-white flex flex-col">
-      {/* Header - Embedded style */}
-      <div className="bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 px-3 py-2 flex items-center justify-between flex-shrink-0">
+    <div className="h-full bg-slate-50 flex flex-col">
+      {/* Header - Clean blue style matching main app */}
+      <div className="bg-white border-b border-slate-200 px-3 py-2.5 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+          <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center">
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -983,18 +983,18 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             </svg>
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white">{t('aiSidebar.title')}</h2>
-            <p className="text-[10px] text-white/80">{t('aiSidebar.subtitle')}</p>
+            <h2 className="text-sm font-semibold text-slate-800">{t('aiSidebar.title')}</h2>
+            <p className="text-[10px] text-slate-500">{t('aiSidebar.subtitle')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {/* New Conversation Button */}
           <button
             onClick={handleNewConversation}
-            className="p-1 rounded text-white/70 hover:text-white hover:bg-white/20 transition-colors"
+            className="p-1.5 rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
             title={t('aiSidebar.newConversation')}
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
           </button>
@@ -1003,12 +1003,12 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           <div className="relative" ref={historyMenuRef}>
             <button
               onClick={() => setShowHistoryMenu(!showHistoryMenu)}
-              className={`p-1 rounded transition-colors ${
-                showHistoryMenu ? 'text-white bg-white/30' : 'text-white/70 hover:text-white hover:bg-white/20'
+              className={`p-1.5 rounded-md transition-colors ${
+                showHistoryMenu ? 'text-blue-600 bg-blue-50' : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
               }`}
               title={t('aiSidebar.history')}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
@@ -1029,8 +1029,8 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                       <div
                         key={conv.id}
                         onClick={() => handleLoadConversation(conv)}
-                        className={`p-2 cursor-pointer hover:bg-purple-50 transition-colors ${
-                          currentConversationId === conv.id ? 'bg-purple-50' : ''
+                        className={`p-2 cursor-pointer hover:bg-blue-50 transition-colors ${
+                          currentConversationId === conv.id ? 'bg-blue-50' : ''
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -1062,10 +1062,10 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           {messages.length > 0 && (
             <button
               onClick={handleClearConversation}
-              className="p-1 rounded text-white/70 hover:text-white hover:bg-white/20 transition-colors"
+              className="p-1.5 rounded-md text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors"
               title={t('aiSidebar.clearConversation')}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1080,9 +1080,9 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
       {/* Context indicator */}
       {currentSkillName && (
-        <div className="px-3 py-1 bg-blue-50 border-b border-blue-100 flex-shrink-0">
-          <div className="flex items-center gap-1.5 text-[10px] text-blue-700">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="px-3 py-1.5 bg-blue-50 border-b border-blue-100 flex-shrink-0">
+          <div className="flex items-center gap-1.5 text-[11px] text-blue-700">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -1096,30 +1096,30 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       )}
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1.5 bg-slate-50">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-white">
         {messages.length === 0 && (
           <div className="h-full flex items-center justify-center">
-            <div className="text-slate-500 py-4 px-3 max-w-[90%]">
-              <p className="text-[11px] font-medium text-slate-600 mb-2">{t('aiSidebar.welcomeTitle')}</p>
-              <p className="text-[10px] mb-2">{t('aiSidebar.welcomePrompt')}</p>
-              <ul className="text-[10px] space-y-1 mb-2 pl-1">
-                <li className="flex items-start gap-1.5">
-                  <span className="text-purple-400 mt-0.5">·</span>
-                  <span>"{t('aiSidebar.welcomeOption1')}"</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-purple-400 mt-0.5">·</span>
-                  <span>"{t('aiSidebar.welcomeOption2')}"</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-purple-400 mt-0.5">·</span>
-                  <span>"{t('aiSidebar.welcomeOption3')}"</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-purple-400 mt-0.5">·</span>
-                  <span>"{t('aiSidebar.welcomeOption4')}"</span>
-                </li>
-              </ul>
+            <div className="text-center py-6 px-4 max-w-[90%]">
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-slate-700 mb-1.5">{t('aiSidebar.welcomeTitle')}</p>
+              <p className="text-xs text-slate-500 mb-3">{t('aiSidebar.welcomePrompt')}</p>
+              <div className="space-y-1.5 text-left">
+                {[
+                  t('aiSidebar.welcomeOption1'),
+                  t('aiSidebar.welcomeOption2'),
+                  t('aiSidebar.welcomeOption3'),
+                  t('aiSidebar.welcomeOption4'),
+                ].map((option, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded-lg">
+                    <span className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[10px] font-medium">{i + 1}</span>
+                    <span>"{option}"</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -1130,19 +1130,19 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
               data-testid={message.role === 'assistant' ? 'ai-response-content' : undefined}
-              className={`max-w-[95%] rounded-lg px-2.5 py-1.5 ${
+              className={`max-w-[92%] rounded-xl px-3 py-2 ${
                 message.role === 'user'
-                  ? 'bg-purple-600 text-white'
-                  : `bg-white border text-slate-800 shadow-sm ${
+                  ? 'bg-blue-500 text-white'
+                  : `bg-slate-50 border text-slate-800 ${
                       message.isStreaming
-                        ? 'border-purple-300 animate-pulse-shadow'
+                        ? 'border-blue-200 shadow-sm'
                         : 'border-slate-200'
                     }`
               }`}
             >
               {/* Tool calls - compact inline display */}
               {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-1.5">
+                <div className="flex flex-wrap gap-1.5 mb-2">
                   {message.toolCalls.map((tool, index) => {
                     const toolKey = `${message.id}-${index}`;
                     const isExpanded = expandedTools.has(toolKey);
@@ -1150,11 +1150,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                       <button
                         key={index}
                         onClick={() => toggleToolExpansion(toolKey)}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-[10px] transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-md text-[11px] transition-colors"
                         title={isExpanded ? t('aiSidebar.clickToCollapse') : t('aiSidebar.clickToExpand')}
                       >
                         <svg
-                          className="w-3 h-3 text-blue-600"
+                          className="w-3.5 h-3.5 text-blue-500"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -1174,12 +1174,12 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                         </svg>
                         <span className="font-medium text-slate-700">{tool.name}</span>
                         {tool.input?.file_path && (
-                          <span className="text-slate-500 truncate max-w-[80px]">
+                          <span className="text-slate-400 truncate max-w-[80px]">
                             {tool.input.file_path.split('/').pop()}
                           </span>
                         )}
                         <svg
-                          className={`w-2.5 h-2.5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          className={`w-3 h-3 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -1194,7 +1194,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
               {/* Expanded tool details */}
               {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && expandedTools.size > 0 && (
-                <div className="mb-2 space-y-1">
+                <div className="mb-2 space-y-1.5">
                   {message.toolCalls.map((tool, index) => {
                     const toolKey = `${message.id}-${index}`;
                     const isExpanded = expandedTools.has(toolKey);
@@ -1209,16 +1209,16 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                       switch (toolName) {
                         case 'Write':
                           return (
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                               {input.file_path && (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-slate-400">📁</span>
-                                  <span className="text-blue-600 font-medium break-all">{input.file_path}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center text-[10px]">📁</span>
+                                  <span className="text-blue-600 font-medium break-all text-[11px]">{input.file_path}</span>
                                 </div>
                               )}
                               {input.content && (
-                                <div className="bg-slate-100 rounded p-1.5 max-h-24 overflow-y-auto">
-                                  <pre className="text-slate-600 whitespace-pre-wrap break-words text-[10px]">
+                                <div className="bg-slate-100 rounded-md p-2 max-h-24 overflow-y-auto">
+                                  <pre className="text-slate-600 whitespace-pre-wrap break-words text-[10px] leading-relaxed">
                                     {input.content.length > 500 ? input.content.substring(0, 500) + '...' : input.content}
                                   </pre>
                                 </div>
@@ -1228,27 +1228,27 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
                         case 'Read':
                           return (
-                            <div className="flex items-center gap-1">
-                              <span className="text-slate-400">📖</span>
-                              <span className="text-blue-600 font-medium break-all">{input.file_path}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-5 h-5 bg-green-100 rounded flex items-center justify-center text-[10px]">📖</span>
+                              <span className="text-blue-600 font-medium break-all text-[11px]">{input.file_path}</span>
                             </div>
                           );
 
                         case 'Edit':
                           return (
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1">
-                                <span className="text-slate-400">✏️</span>
-                                <span className="text-blue-600 font-medium break-all">{input.file_path}</span>
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-5 h-5 bg-amber-100 rounded flex items-center justify-center text-[10px]">✏️</span>
+                                <span className="text-blue-600 font-medium break-all text-[11px]">{input.file_path}</span>
                               </div>
                               {input.old_string && (
-                                <div className="text-[10px]">
+                                <div className="text-[10px] bg-red-50 px-2 py-1 rounded">
                                   <span className="text-red-500">- </span>
                                   <span className="text-slate-500 line-through">{input.old_string.substring(0, 100)}{input.old_string.length > 100 ? '...' : ''}</span>
                                 </div>
                               )}
                               {input.new_string && (
-                                <div className="text-[10px]">
+                                <div className="text-[10px] bg-green-50 px-2 py-1 rounded">
                                   <span className="text-green-500">+ </span>
                                   <span className="text-slate-600">{input.new_string.substring(0, 100)}{input.new_string.length > 100 ? '...' : ''}</span>
                                 </div>
@@ -1258,9 +1258,9 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
                         case 'Bash':
                           return (
-                            <div className="flex items-start gap-1">
-                              <span className="text-slate-400">$</span>
-                              <code className="text-green-600 bg-green-50 px-1 rounded text-[10px] break-all">
+                            <div className="flex items-start gap-1.5">
+                              <span className="w-5 h-5 bg-slate-200 rounded flex items-center justify-center text-[10px] text-slate-600">$</span>
+                              <code className="text-green-600 bg-green-50 px-2 py-1 rounded text-[10px] break-all font-mono">
                                 {input.command}
                               </code>
                             </div>
@@ -1268,22 +1268,22 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
                         case 'Skill':
                           return (
-                            <div className="flex items-center gap-1">
-                              <span className="text-slate-400">🎯</span>
-                              <span className="text-purple-600 font-medium">{input.skill}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center text-[10px]">🎯</span>
+                              <span className="text-blue-600 font-medium text-[11px]">{input.skill}</span>
                               {input.args && <span className="text-slate-400 text-[10px]">{input.args}</span>}
                             </div>
                           );
 
                         case 'AskUserQuestion':
                           return (
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1 text-amber-600">
-                                <span>❓</span>
-                                <span className="font-medium">Asking user...</span>
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-1.5 text-amber-600">
+                                <span className="w-5 h-5 bg-amber-100 rounded flex items-center justify-center text-[10px]">❓</span>
+                                <span className="font-medium text-[11px]">Asking user...</span>
                               </div>
                               {input.questions && Array.isArray(input.questions) && input.questions.length > 0 && (
-                                <div className="text-[10px] text-slate-600 pl-4">
+                                <div className="text-[10px] text-slate-600 pl-6">
                                   {input.questions.map((q: any, i: number) => (
                                     <div key={i}>• {q.question || q.header || 'Question'}</div>
                                   ))}
@@ -1294,20 +1294,20 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
                         case 'Grep':
                           return (
-                            <div className="space-y-0.5 text-[10px]">
-                              <div className="flex items-center gap-1">
-                                <span className="text-slate-400">🔍</span>
-                                <code className="text-blue-600">{input.pattern}</code>
+                            <div className="space-y-1 text-[10px]">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center text-[10px]">🔍</span>
+                                <code className="text-blue-600 font-mono">{input.pattern}</code>
                               </div>
-                              {input.path && <span className="text-slate-400 pl-4">in: {input.path}</span>}
+                              {input.path && <span className="text-slate-400 pl-6">in: {input.path}</span>}
                             </div>
                           );
 
                         case 'Glob':
                           return (
-                            <div className="flex items-center gap-1">
-                              <span className="text-slate-400">📄</span>
-                              <code className="text-blue-600">{input.pattern}</code>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-5 h-5 bg-slate-100 rounded flex items-center justify-center text-[10px]">📄</span>
+                              <code className="text-blue-600 font-mono text-[11px]">{input.pattern}</code>
                             </div>
                           );
 
@@ -1316,9 +1316,9 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                           const keys = Object.keys(input);
                           if (keys.length === 0) return <span className="text-slate-400">No parameters</span>;
                           return (
-                            <div className="space-y-0.5 text-[10px]">
+                            <div className="space-y-1 text-[10px]">
                               {keys.slice(0, 3).map(key => (
-                                <div key={key} className="flex gap-1">
+                                <div key={key} className="flex gap-1.5">
                                   <span className="text-slate-500">{key}:</span>
                                   <span className="text-slate-700 truncate max-w-[200px]">
                                     {typeof input[key] === 'string' ? input[key] : JSON.stringify(input[key])}
@@ -1334,7 +1334,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                     return (
                       <div
                         key={`detail-${index}`}
-                        className="bg-slate-50 border border-slate-200 rounded p-2 text-xs"
+                        className="bg-white border border-slate-200 rounded-lg p-2.5 text-xs"
                       >
                         {formatToolInput(tool.name, tool.input)}
                       </div>
@@ -1344,10 +1344,14 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
               )}
 
               {/* Message content */}
-              <div className="text-xs whitespace-pre-wrap break-words font-mono leading-relaxed">
+              <div className="text-xs whitespace-pre-wrap break-words leading-relaxed">
                 {message.content || (message.isStreaming && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="animate-pulse text-purple-600">{t('aiSidebar.thinking')}</span>
+                  <span className="inline-flex items-center gap-1.5 text-blue-500">
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="animate-pulse">{t('aiSidebar.thinking')}</span>
                   </span>
                 ))}
               </div>
@@ -1357,9 +1361,14 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
         {/* Error display - hide "cancelled" errors as they're expected when waiting for user input */}
         {error && !error.includes('cancelled') && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
-            <div className="font-medium mb-0.5">{t('aiSidebar.error')}</div>
-            <div>{error}</div>
+          <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-xs text-red-700 mx-2">
+            <div className="flex items-center gap-2 font-medium mb-1">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              {t('aiSidebar.error')}
+            </div>
+            <div className="pl-6">{error}</div>
           </div>
         )}
 
@@ -1374,7 +1383,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
         {/* Pending Questions UI - AskUserQuestion interaction */}
         {isWaitingForAnswers && pendingQuestions.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-3 mx-2">
             <div className="flex items-center gap-2 text-amber-700 font-medium text-xs">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1383,7 +1392,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             </div>
 
             {pendingQuestions.map((q, qIndex) => (
-              <div key={qIndex} className="bg-white rounded-lg border border-amber-100 p-2 space-y-2">
+              <div key={qIndex} className="bg-white rounded-lg border border-amber-100 p-2.5 space-y-2">
                 {/* Question header */}
                 <div className="text-xs">
                   {q.header && (
@@ -1396,24 +1405,24 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                 </div>
 
                 {/* Options */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {q.options.map((opt, optIndex) => {
                     const isSelected = q.selectedOptions.has(optIndex);
                     return (
                       <button
                         key={optIndex}
                         onClick={() => handleSelectOption(qIndex, optIndex)}
-                        className={`w-full text-left px-2 py-1.5 rounded text-xs transition-all ${
+                        className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-all ${
                           isSelected
-                            ? 'bg-amber-100 border-amber-300 text-amber-800 border'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 border hover:bg-slate-100 hover:border-slate-300'
+                            ? 'bg-blue-50 border-blue-300 text-blue-800 border-2'
+                            : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
                         }`}
                       >
-                        <div className="flex items-start gap-1.5">
+                        <div className="flex items-start gap-2">
                           {/* Selection indicator */}
-                          <span className={`flex-shrink-0 w-3.5 h-3.5 rounded ${q.multiSelect ? 'rounded' : 'rounded-full'} border flex items-center justify-center ${
+                          <span className={`flex-shrink-0 w-4 h-4 rounded ${q.multiSelect ? 'rounded' : 'rounded-full'} border-2 flex items-center justify-center mt-0.5 ${
                             isSelected
-                              ? 'bg-amber-500 border-amber-500'
+                              ? 'bg-blue-500 border-blue-500'
                               : 'border-slate-300 bg-white'
                           }`}>
                             {isSelected && (
@@ -1441,7 +1450,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
               <button
                 onClick={handleSubmitAnswers}
                 disabled={pendingQuestions.some(q => q.selectedOptions.size === 0)}
-                className="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                className="flex-1 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1450,7 +1459,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
               </button>
               <button
                 onClick={handleSkipQuestions}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium transition-colors"
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium transition-colors"
               >
                 {t('aiSidebar.skipQuestions')}
               </button>
@@ -1462,20 +1471,20 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       </div>
 
       {/* Input area */}
-      <div className="p-2 bg-white border-t border-slate-200 flex-shrink-0">
+      <div className="p-3 bg-white border-t border-slate-200 flex-shrink-0">
         {/* Recommended prompts dropdown */}
-        <div className="relative mb-1.5" ref={promptMenuRef}>
+        <div className="relative mb-2" ref={promptMenuRef}>
           <button
             onClick={() => !isStreaming && setShowPromptMenu(!showPromptMenu)}
             disabled={isStreaming}
-            className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-slate-500 disabled:hover:bg-transparent"
+            className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-slate-500 disabled:hover:bg-transparent"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             <span>{t('aiSidebar.prompts')}</span>
             <svg
-              className={`w-2.5 h-2.5 transition-transform ${showPromptMenu ? 'rotate-180' : ''}`}
+              className={`w-3 h-3 transition-transform ${showPromptMenu ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1495,17 +1504,17 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           />
 
           {showPromptMenu && (
-            <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+            <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
               {getRecommendedPrompts(t).map((category, catIndex) => (
                 <div key={catIndex}>
-                  <div className="px-2 py-1 text-[9px] font-medium text-slate-400 bg-slate-50 border-b border-slate-100 sticky top-0">
+                  <div className="px-3 py-1.5 text-[10px] font-medium text-slate-400 bg-slate-50 border-b border-slate-100 sticky top-0">
                     {category.category}
                   </div>
                   {category.items.map((item, itemIndex) => (
                     <button
                       key={itemIndex}
                       onClick={() => handleSelectPrompt(item.prompt)}
-                      className="block w-full text-left px-2 py-1 text-[10px] text-slate-600 hover:bg-purple-50 hover:text-purple-700 transition-colors whitespace-nowrap"
+                      className="block w-full text-left px-3 py-2 text-[11px] text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors whitespace-nowrap"
                       title={item.prompt}
                     >
                       <span className="font-medium">{item.label}</span>
@@ -1520,21 +1529,21 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
         {/* Attached files display */}
         {attachedFiles.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-1.5">
+          <div className="flex flex-wrap gap-1.5 mb-2">
             {attachedFiles.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-50 border border-purple-200 rounded text-[9px] text-purple-700"
+                className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded-md text-[10px] text-blue-700"
               >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span className="max-w-[80px] truncate">{file.name}</span>
+                <span className="max-w-[100px] truncate font-medium">{file.name}</span>
                 <button
                   onClick={() => handleRemoveFile(file.id)}
-                  className="ml-0.5 text-purple-400 hover:text-purple-600"
+                  className="ml-0.5 text-blue-400 hover:text-blue-600"
                 >
-                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -1552,36 +1561,36 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             onKeyDown={handleKeyDown}
             disabled={isStreaming}
             placeholder={t('aiSidebar.inputPlaceholder')}
-            className="w-full px-2 py-1.5 pr-10 border border-slate-300 rounded resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed text-[10px] bg-white text-slate-900 placeholder-slate-400"
-            rows={4}
+            className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed text-xs bg-white text-slate-900 placeholder-slate-400"
+            rows={3}
             maxLength={2000}
           />
           {/* Attachment button - top right corner */}
           <button
             onClick={() => !isStreaming && fileInputRef.current?.click()}
             disabled={isStreaming}
-            className="absolute top-1 right-1.5 p-0.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title={t('aiSidebar.attachFile')}
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
             </svg>
           </button>
-          <div className="absolute bottom-1 right-1.5 text-[9px] text-slate-400">{inputValue.length}/2000</div>
+          <div className="absolute bottom-2 right-2 text-[10px] text-slate-400">{inputValue.length}/2000</div>
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center justify-between mt-1.5">
-          <div className="text-[9px] text-slate-400">
-            <kbd className="px-1 py-0.5 bg-slate-100 rounded text-[9px]">Enter</kbd> {t('aiSidebar.toSend')}
+        <div className="flex items-center justify-between mt-2">
+          <div className="text-[10px] text-slate-400">
+            <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">Enter</kbd> {t('aiSidebar.toSend')}
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex gap-2">
             {isStreaming ? (
               <button
                 onClick={handleStop}
-                className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded transition-colors flex items-center gap-1 text-[10px] font-medium"
+                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium"
               >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <rect x="6" y="6" width="12" height="12" rx="2" strokeWidth="2" />
                 </svg>
                 {t('aiSidebar.stop')}
@@ -1591,9 +1600,9 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                 onClick={handleSend}
                 data-testid="ai-send-button"
                 disabled={!inputValue.trim()}
-                className="px-2 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded transition-colors flex items-center gap-1 text-[10px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
                 {t('aiSidebar.send')}
