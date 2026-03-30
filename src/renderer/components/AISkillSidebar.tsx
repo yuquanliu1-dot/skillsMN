@@ -1135,7 +1135,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                   ? 'bg-blue-500 text-white'
                   : `bg-slate-50 border text-slate-800 ${
                       message.isStreaming
-                        ? 'border-blue-200 shadow-sm'
+                        ? 'border-blue-400 shadow-md animate-pulse'
                         : 'border-slate-200'
                     }`
               }`}
