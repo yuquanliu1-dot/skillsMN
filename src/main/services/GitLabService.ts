@@ -608,6 +608,13 @@ export class GitLabService {
           ? file.relativePath.slice(1)
           : file.relativePath;
         const fullPath = `${skillDirName}/${relativePath}`;
+        const encodedPath = encodeURIComponent(fullPath);
+
+        logger.debug(`Uploading file to GitLab`, 'GitLabService', {
+          relativePath,
+          fullPath,
+          encodedPath,
+        });
 
         try {
           const message = commitMessage || `Update ${relativePath} in ${skillName}`;
