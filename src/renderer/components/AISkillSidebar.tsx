@@ -67,6 +67,105 @@ function generateId(): string {
 }
 
 /**
+ * Message compression configuration
+ */
+const MESSAGE_COMPRESSION = {
+  /** Maximum number of messages to include in context */
+  MAX_MESSAGES: 20,
+  /** Maximum total characters for conversation context */
+  MAX_CONTEXT_CHARS: 15000,
+  /** Minimum messages to keep (most recent) */
+  MIN_KEEP_MESSAGES: 6,
+  /** Warning threshold for prompt size (in characters) */
+  WARNING_THRESHOLD_CHARS: 20000,
+  /** Hard limit for prompt size (in characters) */
+  HARD_LIMIT_CHARS: 50000,
+};
+
+/**
+ * Estimate token count from character count
+ * Rough approximation: ~4 characters per token for English text
+ */
+function estimateTokens(charCount: number): number {
+  return Math.ceil(charCount / 4);
+}
+
+/**
+ * Compress conversation history to fit within token limits
+ * Strategy: Keep most recent messages, truncate old messages if needed
+ */
+function compressMessages(messages: InternalMessage[]): InternalMessage[] {
+  if (messages.length === 0) return messages;
+
+  // Always filter out streaming messages first
+  const nonStreaming = messages.filter((m) => !m.isStreaming);
+
+  // If within limits, return as-is
+  if (nonStreaming.length <= MESSAGE_COMPRESSION.MAX_MESSAGES) {
+    const totalChars = nonStreaming.reduce((sum, m) => sum + m.content.length, 0);
+    if (totalChars <= MESSAGE_COMPRESSION.MAX_CONTEXT_CHARS) {
+      return nonStreaming;
+    }
+  }
+
+  // Keep most recent messages
+  const recentMessages = nonStreaming.slice(-MESSAGE_COMPRESSION.MAX_MESSAGES);
+
+  // Check if still over char limit
+  let totalChars = recentMessages.reduce((sum, m) => sum + m.content.length, 0);
+
+  if (totalChars <= MESSAGE_COMPRESSION.MAX_CONTEXT_CHARS) {
+    return recentMessages;
+  }
+
+  // Need to truncate - keep minimum recent messages and truncate older ones
+  const result: InternalMessage[] = [];
+  let currentChars = 0;
+
+  // Process from newest to oldest, then reverse
+  for (let i = recentMessages.length - 1; i >= 0; i--) {
+    const msg = recentMessages[i];
+    const msgLength = msg.content.length;
+
+    // Always keep the most recent MIN_KEEP_MESSAGES
+    if (result.length < MESSAGE_COMPRESSION.MIN_KEEP_MESSAGES) {
+      if (msgLength > 2000) {
+        // Truncate individual long messages
+        result.unshift({
+          ...msg,
+          content: msg.content.substring(0, 2000) + '\n...[truncated]',
+        });
+        currentChars += 2000;
+      } else {
+        result.unshift(msg);
+        currentChars += msgLength;
+      }
+    } else if (currentChars + msgLength <= MESSAGE_COMPRESSION.MAX_CONTEXT_CHARS) {
+      if (msgLength > 1500) {
+        // Truncate older long messages more aggressively
+        result.unshift({
+          ...msg,
+          content: msg.content.substring(0, 1500) + '\n...[truncated]',
+        });
+        currentChars += 1500;
+      } else {
+        result.unshift(msg);
+        currentChars += msgLength;
+      }
+    }
+    // If we can't fit more messages, stop
+  }
+
+  console.log('[AISkillSidebar] Compressed messages:', {
+    original: messages.length,
+    result: result.length,
+    totalChars: currentChars,
+  });
+
+  return result;
+}
+
+/**
  * Generate a title from the first user message
  */
 function generateTitle(content: string): string {
@@ -864,9 +963,10 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       },
     ]);
 
-    // Build context with conversation history and current skill
-    const conversationContext = messages
-      .filter((m) => !m.isStreaming)
+    // Build context with compressed conversation history
+    // Compress messages to fit within token limits
+    const compressedMessages = compressMessages(messages);
+    const conversationContext = compressedMessages
       .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
       .join('\n\n');
 
@@ -874,11 +974,16 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       targetPath: config?.applicationSkillsDirectory,
     };
 
-    // Include current skill content if available
-    if (currentSkillContent) {
+    // For modify mode: don't embed content - AI will use Read tool
+    // Only include content for non-modify scenarios (insert, replace, etc.)
+    if (currentSkillContent && !currentSkillPath) {
       skillContext.content = currentSkillContent;
       skillContext.name = currentSkillName;
+    }
+    // Always include skillPath for modify mode (AI will use Read tool)
+    if (currentSkillPath) {
       skillContext.skillPath = currentSkillPath;
+      skillContext.name = currentSkillName;
     }
 
     // Build prompt with attached files
@@ -896,6 +1001,29 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         ? `[Previous conversation]\n${conversationContext}\n\n[Current request]\n${promptWithPrefix}`
         : promptWithPrefix;
     }
+
+    // Check prompt size and warn if approaching limits
+    const promptChars = fullPrompt.length;
+    const estimatedTokens = estimateTokens(promptChars);
+
+    if (promptChars > MESSAGE_COMPRESSION.HARD_LIMIT_CHARS) {
+      // Hard limit exceeded - show error and don't send
+      alert(t('aiSidebar.promptTooLarge', `The prompt is too large (${estimatedTokens.toLocaleString()} estimated tokens). Please clear some conversation history or reduce attached files.`));
+      return;
+    }
+
+    if (promptChars > MESSAGE_COMPRESSION.MAX_CONTEXT_CHARS) {
+      // Warning limit exceeded - ask user to confirm
+      const proceed = window.confirm(
+        t('aiSidebar.promptLargeWarning', `The prompt is large (${estimatedTokens.toLocaleString()} estimated tokens). This may slow down the response or hit context limits. Continue anyway?`)
+      );
+      if (!proceed) {
+        return;
+      }
+      console.log('[AISkillSidebar] User proceeding with large prompt:', { promptChars, estimatedTokens });
+    }
+
+    console.log('[AISkillSidebar] Sending prompt:', { promptChars, estimatedTokens });
 
     // Determine mode: new skill if no skillPath, otherwise modify
     const mode = currentSkillPath ? 'modify' : 'new';

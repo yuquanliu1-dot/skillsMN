@@ -26,6 +26,18 @@ import { useAIGeneration } from '../hooks/useAIGeneration';
 loader.config({ monaco });
 
 /**
+ * Map theme name to Monaco Editor theme
+ * Monaco uses 'vs' for light and 'vs-dark' for dark theme
+ */
+const getMonacoTheme = (theme: 'light' | 'dark'): 'vs' | 'vs-dark' | 'hc-black' => {
+  const themeMap: Record<'light' | 'dark', 'vs' | 'vs-dark'> = {
+    light: 'vs',
+    dark: 'vs-dark',
+  };
+  return themeMap[theme];
+};
+
+/**
  * Editor Tab interface for multi-file editing
  */
 interface EditorTab {
@@ -726,13 +738,18 @@ export default function SkillEditorFull({
    * Handle AI skill modification callback
    */
   const handleSkillModified = useCallback((filePath?: string) => {
-    if (filePath && skill && filePath.includes(skill.path)) {
-      // Reload the affected tab if it's currently open
-      const affectedTab = tabs.find(t =>
-        t.isMainFile ? filePath.endsWith('SKILL.md') : t.path === filePath
-      );
-      if (affectedTab) {
-        reloadSkillContent();
+    // Normalize path separators before comparison (Windows uses \, AI may use /)
+    if (filePath && skill) {
+      const normalizedFilePath = filePath.replace(/\\/g, '/');
+      const normalizedSkillPath = skill.path.replace(/\\/g, '/');
+      if (normalizedFilePath.includes(normalizedSkillPath)) {
+        // Reload the affected tab if it's currently open
+        const affectedTab = tabs.find(t =>
+          t.isMainFile ? normalizedFilePath.endsWith('SKILL.md') : t.path === filePath
+        );
+        if (affectedTab) {
+          reloadSkillContent();
+        }
       }
     }
     // Refresh the file tree to show any new/modified files
@@ -1210,7 +1227,7 @@ export default function SkillEditorFull({
                 value={activeTab.content}
                 onChange={handleContentChange}
                 onMount={handleEditorDidMount}
-                theme={config.theme}
+                theme={getMonacoTheme(config.theme)}
                 options={{
                   fontSize: config.fontSize,
                   fontFamily: config.fontFamily,

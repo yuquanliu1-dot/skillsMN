@@ -907,7 +907,8 @@ export class AIService {
 
   private static buildUserPrompt(request: AIGenerationRequest): string {
     const { mode, prompt, skillContext } = request;
-    const content = skillContext?.content || '(no content)';
+    // For modify mode, we don't embed content - AI will use Read tool
+    const content = mode === 'modify' ? null : (skillContext?.content || '(no content)');
     // Use "New Skill" for new mode, actual name for others, or "Untitled" as fallback
     const skillName = mode === 'new' ? 'New Skill' : (skillContext?.name || 'Untitled');
     const targetPath = skillContext?.targetPath;
@@ -936,9 +937,14 @@ IMPORTANT:
     } else if (mode === 'modify' && skillPath) {
       contextSection = `
 
-## CRITICAL: Save Location
-Save to the EXACT same directory: ${skillPath}/SKILL.md
-Do NOT create a new directory. Do NOT change the location.`;
+## CRITICAL: File Location and Save Instructions
+The skill file is located at: ${skillPath}/SKILL.md
+
+IMPORTANT Instructions:
+1. First, use the Read tool to read the current content from: ${skillPath}/SKILL.md
+2. Make the requested modifications
+3. Save the changes to the EXACT same path: ${skillPath}/SKILL.md
+4. Do NOT create a new directory. Do NOT change the location.`;
     }
 
     // Prepend /skill-creator to invoke the skill-creator skill
@@ -949,7 +955,8 @@ Do NOT create a new directory. Do NOT change the location.`;
         return `${skillCreatorPrefix}Create a new skill with these requirements:\n\n${cleanPrompt}${contextSection}`;
 
       case 'modify':
-        return `${skillCreatorPrefix}Modify the skill "${skillName}" with these instructions:\n\n${cleanPrompt}\n\n--- Current Content ---\n${content}${contextSection}`;
+        // For modify mode: provide file path, AI will use Read tool to get content
+        return `${skillCreatorPrefix}Modify the skill "${skillName}" with these instructions:\n\n${cleanPrompt}${contextSection}`;
 
       case 'insert':
         return `${skillCreatorPrefix}Insert at position ${skillContext?.cursorPosition ?? 0}:\n\n${cleanPrompt}\n\n--- Current Content ---\n${content}`;

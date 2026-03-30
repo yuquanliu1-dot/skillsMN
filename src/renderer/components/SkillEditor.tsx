@@ -20,6 +20,18 @@ import { FileTreePanel } from './FileTreePanel';
 // Configure Monaco to use local installation instead of CDN
 loader.config({ monaco });
 
+/**
+ * Map theme name to Monaco Editor theme
+ * Monaco uses 'vs' for light and 'vs-dark' for dark theme
+ */
+const getMonacoTheme = (theme: 'light' | 'dark'): 'vs' | 'vs-dark' | 'hc-black' => {
+  const themeMap: Record<'light' | 'dark', 'vs' | 'vs-dark'> = {
+    light: 'vs',
+    dark: 'vs-dark',
+  };
+  return themeMap[theme];
+};
+
 interface SkillEditorProps {
   skill: Skill;
   onClose: () => void;
@@ -1101,7 +1113,7 @@ export default function SkillEditor({
                 value={content}
                 onChange={handleContentChange}
                 onMount={handleEditorDidMount}
-                theme={config.theme}
+                theme={getMonacoTheme(config.theme)}
                 options={{
                   fontSize: config.fontSize,
                   fontFamily: config.fontFamily,
@@ -1198,9 +1210,14 @@ export default function SkillEditor({
         }}
         onSkillModified={(filePath) => {
           // Refresh the editor if the modified file matches the current skill
-          if (filePath && skill.path && filePath.includes(skill.path)) {
-            console.log('[SkillEditor] Current skill was modified, reloading content...');
-            reloadSkillContent();
+          // Normalize path separators before comparison (Windows uses \, AI may use /)
+          if (filePath && skill.path) {
+            const normalizedFilePath = filePath.replace(/\\/g, '/');
+            const normalizedSkillPath = skill.path.replace(/\\/g, '/');
+            if (normalizedFilePath.includes(normalizedSkillPath)) {
+              console.log('[SkillEditor] Current skill was modified, reloading content...');
+              reloadSkillContent();
+            }
           }
         }}
         config={appConfig}

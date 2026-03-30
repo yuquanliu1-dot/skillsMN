@@ -20,6 +20,10 @@ export class FileWatcher {
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
   private readonly DEBOUNCE_MS = 200;
 
+  // Event queue for when main window is unavailable
+  private eventQueue: Array<{ eventType: FSEvent['type']; path: string }> = [];
+  private readonly MAX_QUEUE_SIZE = 100;
+
   constructor(pathValidator: PathValidator) {
     this.pathValidator = pathValidator;
   }
@@ -27,6 +31,7 @@ export class FileWatcher {
   /**
    * Set the main window reference for sending IPC events
    * Must be called before starting the watcher
+   * Automatically flushes any queued events after setting the window
    * @param window - BrowserWindow instance to send events to
    * @example
    * fileWatcher.setMainWindow(mainWindow);
@@ -34,6 +39,9 @@ export class FileWatcher {
   setMainWindow(window: BrowserWindow): void {
     this.mainWindow = window;
     logger.info('Main window reference set for file watcher', 'FileWatcher');
+
+    // Flush any queued events that accumulated while window was unavailable
+    this.flushEventQueue();
   }
 
   /**
@@ -169,10 +177,25 @@ export class FileWatcher {
 
   /**
    * Emit event to renderer process
+   * If main window is unavailable, queues the event for later delivery
    */
   private emitEvent(eventType: FSEvent['type'], path: string): void {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) {
-      logger.warn('Cannot emit event: main window not available', 'FileWatcher');
+      // Queue event instead of dropping it
+      if (this.eventQueue.length < this.MAX_QUEUE_SIZE) {
+        this.eventQueue.push({ eventType, path });
+        logger.info('Event queued, main window unavailable', 'FileWatcher', {
+          eventType,
+          path,
+          queueSize: this.eventQueue.length,
+        });
+      } else {
+        logger.warn('Event queue full, dropping event', 'FileWatcher', {
+          eventType,
+          path,
+          queueSize: this.eventQueue.length,
+        });
+      }
       return;
     }
 
@@ -193,6 +216,46 @@ export class FileWatcher {
     this.mainWindow.webContents.send(IPC_CHANNELS.FS_CHANGE, event);
 
     logger.debug('FS_CHANGE event sent successfully', 'FileWatcher');
+  }
+
+  /**
+   * Flush queued events to the renderer
+   * Called automatically when main window becomes available
+   */
+  flushEventQueue(): void {
+    if (this.eventQueue.length === 0) {
+      return;
+    }
+
+    if (!this.mainWindow || this.mainWindow.isDestroyed()) {
+      logger.warn('Cannot flush queue: main window not available', 'FileWatcher');
+      return;
+    }
+
+    logger.info('Flushing event queue', 'FileWatcher', {
+      queueSize: this.eventQueue.length,
+    });
+
+    // Process queued events
+    let flushed = 0;
+    while (this.eventQueue.length > 0 && this.mainWindow && !this.mainWindow.isDestroyed()) {
+      const item = this.eventQueue.shift()!;
+      const directory = this.pathValidator.getSkillSource(item.path);
+
+      const event: FSEvent = {
+        type: item.eventType,
+        path: item.path,
+        directory,
+      };
+
+      this.mainWindow.webContents.send(IPC_CHANNELS.FS_CHANGE, event);
+      flushed++;
+    }
+
+    logger.info('Event queue flushed', 'FileWatcher', {
+      flushed,
+      remaining: this.eventQueue.length,
+    });
   }
 
   /**
