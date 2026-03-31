@@ -907,8 +907,7 @@ export class AIService {
 
   private static buildUserPrompt(request: AIGenerationRequest): string {
     const { mode, prompt, skillContext } = request;
-    // For modify mode, we don't embed content - AI will use Read tool
-    const content = mode === 'modify' ? null : (skillContext?.content || '(no content)');
+    // All non-new modes use skillPath - AI will use Read tool to get content
     // Use "New Skill" for new mode, actual name for others, or "Untitled" as fallback
     const skillName = mode === 'new' ? 'New Skill' : (skillContext?.name || 'Untitled');
     const targetPath = skillContext?.targetPath;
@@ -934,7 +933,8 @@ IMPORTANT:
 - Do NOT use the global Claude skills directory
 - Use the path above which is the project's local skills directory
 - The file MUST be named "SKILL.md" (uppercase)`;
-    } else if (mode === 'modify' && skillPath) {
+    } else if (skillPath) {
+      // All non-new modes: provide skillPath, AI will use Read tool
       contextSection = `
 
 ## CRITICAL: File Location and Save Instructions
@@ -942,7 +942,7 @@ The skill file is located at: ${skillPath}/SKILL.md
 
 IMPORTANT Instructions:
 1. First, use the Read tool to read the current content from: ${skillPath}/SKILL.md
-2. Make the requested modifications
+2. Perform the requested operation
 3. Save the changes to the EXACT same path: ${skillPath}/SKILL.md
 4. Do NOT create a new directory. Do NOT change the location.`;
     }
@@ -955,23 +955,22 @@ IMPORTANT Instructions:
         return `${skillCreatorPrefix}Create a new skill with these requirements:\n\n${cleanPrompt}${contextSection}`;
 
       case 'modify':
-        // For modify mode: provide file path, AI will use Read tool to get content
         return `${skillCreatorPrefix}Modify the skill "${skillName}" with these instructions:\n\n${cleanPrompt}${contextSection}`;
 
       case 'insert':
-        return `${skillCreatorPrefix}Insert at position ${skillContext?.cursorPosition ?? 0}:\n\n${cleanPrompt}\n\n--- Current Content ---\n${content}`;
+        return `${skillCreatorPrefix}Insert content at position ${skillContext?.cursorPosition ?? 0} in the skill "${skillName}":\n\n${cleanPrompt}${contextSection}`;
 
       case 'replace':
-        return `${skillCreatorPrefix}Replace "${skillContext?.selectedText || ''}":\n\n${cleanPrompt}\n\n--- Current Content ---\n${content}`;
+        return `${skillCreatorPrefix}Replace the selected text in skill "${skillName}":\n\nSelected text: "${skillContext?.selectedText || ''}"\n\nInstructions: ${cleanPrompt}${contextSection}`;
 
       case 'evaluate':
-        return `${skillCreatorPrefix}Evaluate this skill (${skillName}):\n\nFocus: ${cleanPrompt || 'General'}\n\n--- Content ---\n${content}`;
+        return `${skillCreatorPrefix}Evaluate the skill "${skillName}":\n\nFocus: ${cleanPrompt || 'General'}${contextSection}`;
 
       case 'benchmark':
-        return `${skillCreatorPrefix}Benchmark this skill (${skillName}):\n\nFocus: ${cleanPrompt || 'General'}\n\n--- Content ---\n${content}`;
+        return `${skillCreatorPrefix}Benchmark the skill "${skillName}":\n\nFocus: ${cleanPrompt || 'General'}${contextSection}`;
 
       case 'optimize':
-        return `${skillCreatorPrefix}Optimize this skill for better triggering:\n\nFocus: ${cleanPrompt || 'Triggering accuracy'}\n\nSkill: ${skillName}\n\n--- Content ---\n${content}`;
+        return `${skillCreatorPrefix}Optimize the skill "${skillName}" for better triggering:\n\nFocus: ${cleanPrompt || 'Triggering accuracy'}${contextSection}`;
 
       default:
         return `${skillCreatorPrefix}${cleanPrompt}`;

@@ -64,22 +64,17 @@ export function validateAIGenerationRequest(request: AIGenerationRequest): strin
     return 'Prompt is required';
   }
 
-  if (request.prompt.length > 10000) {
-    return 'Prompt must be less than 10,000 characters';
-  }
-
   const validModes: AIGenerationMode[] = ['new', 'modify', 'insert', 'replace', 'evaluate', 'benchmark', 'optimize'];
   if (!validModes.includes(request.mode)) {
     return 'Invalid generation mode';
   }
 
-  // Modes that require existing skill content
-  const modesRequiringContent: AIGenerationMode[] = ['modify', 'insert', 'replace', 'evaluate', 'benchmark', 'optimize'];
+  // All non-new modes require skillPath (AI will use Read tool to get content)
+  const modesRequiringSkillPath: AIGenerationMode[] = ['modify', 'insert', 'replace', 'evaluate', 'benchmark', 'optimize'];
 
-  // For modes that modify/analyze existing content, check if context is provided
-  if (modesRequiringContent.includes(request.mode)) {
-    if (!request.skillContext?.content) {
-      return 'Skill content is required for this mode';
+  if (modesRequiringSkillPath.includes(request.mode)) {
+    if (!request.skillContext?.skillPath) {
+      return 'Skill path is required for this mode';
     }
   }
 

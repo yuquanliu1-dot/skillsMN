@@ -13,6 +13,7 @@ interface CopySkillDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (newName: string) => Promise<void>;
+  existingSkillNames?: string[]; // Names of existing skills for conflict detection
 }
 
 export default function CopySkillDialog({
@@ -20,21 +21,44 @@ export default function CopySkillDialog({
   isOpen,
   onClose,
   onConfirm,
+  existingSkillNames = [],
 }: CopySkillDialogProps): JSX.Element | null {
   const { t } = useTranslation();
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isCopying, setIsCopying] = useState(false);
 
+  /**
+   * Generate a unique name that doesn't conflict with existing skills
+   * Pattern: original-name-copy, original-name-copy-1, original-name-copy-2, etc.
+   */
+  const generateUniqueName = (baseName: string, existingNames: string[]): string => {
+    const existingSet = new Set(existingNames.map(n => n.toLowerCase()));
+
+    // Try the base name first
+    const baseCopyName = `${baseName}-copy`;
+    if (!existingSet.has(baseCopyName.toLowerCase())) {
+      return baseCopyName;
+    }
+
+    // Try incrementing numbers until we find an available name
+    let counter = 1;
+    while (existingSet.has(`${baseCopyName}-${counter}`.toLowerCase())) {
+      counter++;
+    }
+    return `${baseCopyName}-${counter}`;
+  };
+
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
-      // Suggest a default name based on original
-      setNewName(`${skill.name}-copy`);
+      // Generate a unique default name
+      const uniqueName = generateUniqueName(skill.name, existingSkillNames);
+      setNewName(uniqueName);
       setError(null);
       setIsCopying(false);
     }
-  }, [isOpen, skill.name]);
+  }, [isOpen, skill.name, existingSkillNames]);
 
   if (!isOpen) return null;
 

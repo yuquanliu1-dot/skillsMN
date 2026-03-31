@@ -18,6 +18,10 @@ interface AIAssistPanelProps {
   editorContent?: string;
   cursorPosition?: number;
   selectedText?: string;
+  /** Skill name for context */
+  skillName?: string;
+  /** Full path to the skill directory (for modify mode - AI will use Read tool) */
+  skillPath?: string;
 }
 
 export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
@@ -26,6 +30,8 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
   editorContent,
   cursorPosition,
   selectedText,
+  skillName,
+  skillPath,
 }) => {
   const [mode, setMode] = useState<AIGenerationMode>('new');
   const [prompt, setPrompt] = useState('');
@@ -76,11 +82,10 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
     // Build skill context based on mode
     const skillContext: AIGenerationRequest['skillContext'] = {};
 
-    // Modes that require existing skill content
-    const modesRequiringContent = ['modify', 'insert', 'replace', 'evaluate', 'benchmark', 'optimize'];
-
-    if (modesRequiringContent.includes(mode)) {
-      skillContext.content = editorContent;
+    // For all non-new modes: pass skillPath only, AI will use Read tool
+    if (mode !== 'new' && skillPath) {
+      skillContext.skillPath = skillPath;
+      skillContext.name = skillName;
     }
 
     if (mode === 'insert') {
@@ -92,7 +97,7 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
     }
 
     await generate(prompt, mode, skillContext)
-  }, [prompt, mode, editorContent, cursorPosition, selectedText, generate]);
+  }, [prompt, mode, cursorPosition, selectedText, skillPath, skillName, generate]);
 
   const handleApply = useCallback(() => {
     if (content) {

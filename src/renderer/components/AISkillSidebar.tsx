@@ -265,14 +265,12 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   const [showPromptMenu, setShowPromptMenu] = useState(false);
   const [showHistoryMenu, setShowHistoryMenu] = useState(false);
 
-  // Attached files for skill creation
+  // Attached files for skill creation - only store paths
   const [attachedFiles, setAttachedFiles] = useState<Array<{
     id: string;
     name: string;
-    content: string;
-    type: string;
+    path: string;
   }>>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pending questions from AskUserQuestion tool
   const [pendingQuestions, setPendingQuestions] = useState<PendingQuestion[]>([]);
@@ -503,51 +501,32 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   }, []);
 
   /**
-   * Handle file selection for attachments
+   * Handle file selection for attachments - uses Electron dialog to get file paths
    */
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const handleFileSelect = useCallback(async () => {
+    if (isStreaming) return;
 
-    for (const file of Array.from(files)) {
-      try {
-        const content = await readFileContent(file);
-        const fileId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        setAttachedFiles((prev) => [
-          ...prev,
-          {
-            id: fileId,
-            name: file.name,
-            content,
-            type: file.type || 'text/plain',
-          },
-        ]);
-      } catch (error) {
-        console.error('Failed to read file:', file.name, error);
+    try {
+      const response = await window.electronAPI.selectFiles({
+        multiple: true,
+        filters: [], // Allow all file types
+      });
+
+      if (response.success && response.data && !response.data.canceled) {
+        const { filePaths } = response.data;
+        if (filePaths && filePaths.length > 0) {
+          const newFiles = filePaths.map((filePath) => ({
+            id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            name: filePath.split(/[/\\]/).pop() || filePath,
+            path: filePath,
+          }));
+          setAttachedFiles((prev) => [...prev, ...newFiles]);
+        }
       }
+    } catch (error) {
+      console.error('Failed to select files:', error);
     }
-
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, []);
-
-  /**
-   * Read file content as text
-   */
-  const readFileContent = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        resolve(reader.result as string);
-      };
-      reader.onerror = () => {
-        reject(new Error('Failed to read file'));
-      };
-      reader.readAsText(file);
-    });
-  };
+  }, [isStreaming]);
 
   /**
    * Remove an attached file
@@ -974,28 +953,20 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       targetPath: config?.applicationSkillsDirectory,
     };
 
-    // For modify mode: don't embed content - AI will use Read tool
-    // Only include content for non-modify scenarios (insert, replace, etc.)
-    if (currentSkillContent && !currentSkillPath) {
-      skillContext.content = currentSkillContent;
-      skillContext.name = currentSkillName;
-    }
-    // Always include skillPath for modify mode (AI will use Read tool)
+    // For all non-new modes: pass skillPath only, AI will use Read tool
     if (currentSkillPath) {
       skillContext.skillPath = currentSkillPath;
       skillContext.name = currentSkillName;
     }
 
-    // Build prompt with attached files
+    // Build prompt with attached file paths (skill-creator will read them using Read tool)
     let fullPrompt: string;
     if (filesToInclude.length > 0) {
-      const filesContext = filesToInclude.map(f =>
-        `--- File: ${f.name} ---\n${f.content}\n--- End of ${f.name} ---`
-      ).join('\n\n');
+      const filesList = filesToInclude.map(f => `- ${f.path}`).join('\n');
 
       fullPrompt = conversationContext
-        ? `[Previous conversation]\n${conversationContext}\n\n[Attached reference files]\n${filesContext}\n\n[Current request]\n${promptWithPrefix}`
-        : `[Attached reference files]\n${filesContext}\n\n[Current request]\n${promptWithPrefix}`;
+        ? `[Previous conversation]\n${conversationContext}\n\n[Attached reference files - use Read tool to read these files]\n${filesList}\n\n[Current request]\n${promptWithPrefix}`
+        : `[Attached reference files - use Read tool to read these files]\n${filesList}\n\n[Current request]\n${promptWithPrefix}`;
     } else {
       fullPrompt = conversationContext
         ? `[Previous conversation]\n${conversationContext}\n\n[Current request]\n${promptWithPrefix}`
@@ -1621,16 +1592,6 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             </svg>
           </button>
 
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".md,.txt,.json,.yaml,.yml,.xml,.html,.css,.js,.ts,.tsx,.jsx,.py,.java,.go,.rs,.c,.cpp,.h,.sh,.bat,.env,.example,.sample,.template"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-
           {showPromptMenu && (
             <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
               {getRecommendedPrompts(t).map((category, catIndex) => (
@@ -1695,7 +1656,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           />
           {/* Attachment button - top right corner */}
           <button
-            onClick={() => !isStreaming && fileInputRef.current?.click()}
+            onClick={handleFileSelect}
             disabled={isStreaming}
             className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title={t('aiSidebar.attachFile')}

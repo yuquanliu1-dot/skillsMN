@@ -126,6 +126,40 @@ export function registerConfigHandlers(): void {
     }
   );
 
+  // Handler for dialog:select-files - Select files for AI assistant attachment
+  ipcMain.handle(
+    IPC_CHANNELS.DIALOG_SELECT_FILES,
+    async (): Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>> => {
+      try {
+        logger.debug('Opening file selection dialog', 'ConfigHandlers');
+        const result = await dialog.showOpenDialog({
+          properties: ['openFile', 'multiSelections'],
+          title: 'Select Files to Attach',
+          buttonLabel: 'Attach Files',
+          filters: [
+            { name: 'All Files', extensions: ['*'] },
+            { name: 'Documents', extensions: ['md', 'txt', 'json', 'yaml', 'yml', 'xml', 'pdf'] },
+            { name: 'Code', extensions: ['js', 'ts', 'tsx', 'jsx', 'py', 'java', 'go', 'rs', 'c', 'cpp', 'h', 'sh', 'bat'] },
+            { name: 'Web', extensions: ['html', 'css', 'vue', 'svelte'] },
+            { name: 'Config', extensions: ['env', 'example', 'sample', 'template', 'config'] },
+            { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'] },
+          ],
+        });
+
+        return {
+          success: true,
+          data: {
+            canceled: result.canceled,
+            filePaths: result.filePaths,
+          },
+        };
+      } catch (error) {
+        logger.error('Failed to open file dialog', 'ConfigHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
   // Handler for claude:check-install - Check if Claude CLI is installed
   ipcMain.handle(
     IPC_CHANNELS.CLAUDE_CHECK_INSTALL,

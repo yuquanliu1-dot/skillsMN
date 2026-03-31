@@ -59,6 +59,10 @@ export interface ElectronAPI {
 
   // Dialog Operations
   selectDirectory: () => Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>>;
+  selectFiles: (options?: {
+    multiple?: boolean;
+    filters?: string[];
+  }) => Promise<IPCResponse<{ canceled: boolean; filePaths: string[] }>>;
 
   // Configuration Operations
   loadConfig: () => Promise<IPCResponse<Configuration>>;

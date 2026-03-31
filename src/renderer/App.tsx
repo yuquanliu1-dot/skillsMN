@@ -999,6 +999,7 @@ export default function App(): JSX.Element {
           isOpen={copyingSkill !== null}
           onClose={() => setCopyingSkill(null)}
           onConfirm={handleCopySkill}
+          existingSkillNames={state.skills?.map(s => s.name) || []}
         />
       )}
 
