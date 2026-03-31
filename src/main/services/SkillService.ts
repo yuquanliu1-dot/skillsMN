@@ -1009,6 +1009,16 @@ ${content}`;
   /**
    * Update a skill from its source private repository
    * Downloads latest version with optional backup of existing version
+   *
+   * SAFETY FLOW (先下载验证，再替换):
+   * 1. 创建临时备份 (保护原数据)
+   * 2. 下载新技能到临时位置 (不覆盖原技能)
+   * 3. 验证新技能完整性
+   * 4. 创建永久备份 (可选)
+   * 5. 删除原技能
+   * 6. 移动新技能到目标位置
+   * 7. 清理临时文件
+   *
    * @param skillPath - Absolute path to installed skill
    * @param createBackup - Whether to create backup before updating (default: true)
    * @returns Object with success status, new path if successful, or error message
@@ -1030,13 +1040,13 @@ ${content}`;
       createBackup,
     });
 
-    // SAFETY: Always create a temporary backup for atomicity
-    // This ensures we can restore if anything goes wrong
-    const tempBackupPath = `${skillPath}-temp-backup-${Date.now()}`;
+    const timestamp = Date.now();
+    const tempBackupPath = `${skillPath}-temp-backup-${timestamp}`;
+    const tempDownloadPath = `${skillPath}-temp-download-${timestamp}`;
     let permanentBackupPath: string | null = null;
 
     try {
-      // Get current skill metadata
+      // STEP 1: Get current skill metadata FIRST (before any backup)
       const skill = await this.getSkill(skillPath);
 
       // Check if skill has source metadata
@@ -1058,156 +1068,256 @@ ${content}`;
       // Decrypt PAT
       const pat = decryptPAT(repo.patEncrypted);
 
-      // STEP 1: Always create temporary backup (for atomicity/safety)
-      logger.info('Creating temporary backup for atomicity', 'SkillService', {
-        tempBackupPath,
-      });
+      // STEP 2: Create temporary backup (protect original data)
+      logger.info('STEP 1: Creating temporary backup', 'SkillService', { tempBackupPath });
       await fs.promises.mkdir(tempBackupPath, { recursive: true });
       await fs.promises.cp(skillPath, tempBackupPath, { recursive: true });
 
-      // STEP 2: Create permanent backup if requested (separate from temp backup)
-      if (createBackup) {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        permanentBackupPath = `${skillPath}-backup-${timestamp}`;
+      // STEP 3: Download new skill to TEMPORARY location (NOT overwriting original)
+      logger.info('STEP 2: Downloading new skill to temporary location', 'SkillService', {
+        tempDownloadPath,
+        repo: `${repo.owner}/${repo.repo}`,
+        skillPath: sourceMetadata.skillPath,
+      });
 
-        await fs.promises.mkdir(permanentBackupPath, { recursive: true });
-        await fs.promises.cp(skillPath, permanentBackupPath, { recursive: true });
-
-        logger.info('Created permanent backup before update', 'SkillService', {
-          originalPath: skillPath,
-          permanentBackupPath,
-        });
-      }
-
-      // STEP 3: Remove existing skill directory
-      await fs.promises.rm(skillPath, { recursive: true });
-
-      // STEP 4: Re-download and install latest version
-      const result = await this.installPrivateSkill(
+      const downloadResult = await this.downloadPrivateSkillToPath(
         repo.owner,
         repo.repo,
         sourceMetadata.skillPath,
         pat,
-        'project', // Keep in same directory
+        tempDownloadPath,
         repo.id,
-        '', // directoryCommitSHA - will be fetched during install
-        'overwrite', // Already removed, so no conflict
         repo.defaultBranch || 'main'
       );
 
-      if (result.success) {
-        // STEP 5a: Success - clean up temporary backup, keep permanent backup
-        logger.info('Skill updated successfully, cleaning up temporary backup', 'SkillService', {
+      if (!downloadResult.success) {
+        // Download failed - original skill is UNTOUCHED, no need to restore
+        logger.warn('Download failed, original skill is untouched', 'SkillService', {
           skillPath,
-          newPath: result.newPath,
+          error: downloadResult.error,
         });
 
-        try {
-          await fs.promises.rm(tempBackupPath, { recursive: true });
-          logger.info('Temporary backup cleaned up', 'SkillService', { tempBackupPath });
-        } catch (cleanupError) {
-          // Non-critical: log but don't fail
-          logger.warn('Failed to clean up temporary backup', 'SkillService', {
-            tempBackupPath,
-            error: cleanupError,
-          });
-        }
+        // Clean up temp files (backup and partial download)
+        await this.safeRemove(tempBackupPath);
+        await this.safeRemove(tempDownloadPath);
 
-        return result;
-      } else {
-        // STEP 5b: Download failed - restore from temporary backup
-        logger.warn('Update failed, restoring from temporary backup', 'SkillService', {
+        return {
+          success: false,
+          error: downloadResult.error || 'Failed to download skill from repository',
+        };
+      }
+
+      // STEP 4: Verify new skill is valid (has SKILL.md)
+      logger.info('STEP 3: Verifying downloaded skill', 'SkillService', { tempDownloadPath });
+      const skillFile = path.join(tempDownloadPath, SKILL_FILE_NAME);
+      if (!fs.existsSync(skillFile)) {
+        // Verification failed - original skill is UNTOUCHED
+        logger.warn('Downloaded skill is invalid (missing SKILL.md), original skill is untouched', 'SkillService', {
+          tempDownloadPath,
+        });
+
+        await this.safeRemove(tempBackupPath);
+        await this.safeRemove(tempDownloadPath);
+
+        return {
+          success: false,
+          error: 'Downloaded skill is invalid: missing SKILL.md file',
+        };
+      }
+
+      // STEP 5: Create permanent backup if requested
+      if (createBackup) {
+        const backupTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        permanentBackupPath = `${skillPath}-backup-${backupTimestamp}`;
+
+        logger.info('STEP 4: Creating permanent backup', 'SkillService', { permanentBackupPath });
+        await fs.promises.mkdir(permanentBackupPath, { recursive: true });
+        await fs.promises.cp(tempBackupPath, permanentBackupPath, { recursive: true });
+
+        logger.info('Permanent backup created', 'SkillService', { permanentBackupPath });
+      }
+
+      // STEP 6: Remove original skill directory
+      logger.info('STEP 5: Removing original skill', 'SkillService', { skillPath });
+      await fs.promises.rm(skillPath, { recursive: true });
+
+      // STEP 7: Move new skill to target location
+      logger.info('STEP 6: Moving new skill to target location', 'SkillService', {
+        from: tempDownloadPath,
+        to: skillPath,
+      });
+      await fs.promises.rename(tempDownloadPath, skillPath);
+
+      // Update source metadata with new commit hash
+      await this.updateSourceMetadataWithCommit(skillPath, sourceMetadata, repo.owner, repo.repo, pat, repo.defaultBranch || 'main');
+
+      // STEP 8: Clean up temporary backup
+      logger.info('STEP 7: Cleaning up temporary files', 'SkillService', { tempBackupPath });
+      await this.safeRemove(tempBackupPath);
+
+      logger.info('Skill updated successfully', 'SkillService', {
+        skillPath,
+        permanentBackupPath,
+      });
+
+      return {
+        success: true,
+        newPath: skillPath,
+      };
+    } catch (error) {
+      logger.error('Failed to update skill', 'SkillService', error);
+
+      // Check if original skill still exists
+      const originalExists = fs.existsSync(skillPath);
+
+      if (!originalExists && fs.existsSync(tempBackupPath)) {
+        // Original was deleted but backup exists - restore it
+        logger.warn('Original skill was deleted, restoring from backup', 'SkillService', {
           skillPath,
           tempBackupPath,
-          error: result.error,
         });
 
         try {
           await fs.promises.mkdir(skillPath, { recursive: true });
           await fs.promises.cp(tempBackupPath, skillPath, { recursive: true });
-          logger.info('Successfully restored skill from temporary backup', 'SkillService', {
-            skillPath,
-            tempBackupPath,
-          });
+          logger.info('Successfully restored skill from backup', 'SkillService', { skillPath });
         } catch (restoreError) {
-          logger.error('CRITICAL: Failed to restore from temporary backup', 'SkillService', {
+          logger.error('CRITICAL: Failed to restore from backup', 'SkillService', {
             tempBackupPath,
             restoreError,
           });
           return {
             success: false,
-            error: `Update failed: ${result.error}. CRITICAL: Restoration also failed: ${restoreError instanceof Error ? restoreError.message : 'Unknown error'}. Temporary backup may still exist at: ${tempBackupPath}`,
+            error: `${error instanceof Error ? error.message : 'Unknown error'}. CRITICAL: Restoration failed. Backup may exist at: ${tempBackupPath}`,
           };
-        } finally {
-          // Clean up temporary backup after restore attempt
-          try {
-            await fs.promises.rm(tempBackupPath, { recursive: true });
-          } catch (e) {
-            // Ignore cleanup errors
-          }
-        }
-
-        return {
-          success: false,
-          error: result.error || 'Update failed (skill restored from backup)',
-        };
-      }
-    } catch (error) {
-      logger.error('Failed to update skill', 'SkillService', error);
-
-      // ATOMICITY: Always attempt to restore from temporary backup on any error
-      try {
-        // Check if temp backup exists
-        await fs.promises.access(tempBackupPath);
-
-        logger.info('Attempting to restore from temporary backup after error', 'SkillService', {
-          skillPath,
-          tempBackupPath,
-        });
-
-        // Check if skill directory still exists (might have been deleted)
-        try {
-          await fs.promises.access(skillPath);
-          // Directory exists, might be partially deleted - remove it first
-          await fs.promises.rm(skillPath, { recursive: true });
-        } catch {
-          // Directory doesn't exist, that's fine
-        }
-
-        // Restore from backup
-        await fs.promises.mkdir(skillPath, { recursive: true });
-        await fs.promises.cp(tempBackupPath, skillPath, { recursive: true });
-        logger.info('Successfully restored skill from temporary backup after error', 'SkillService');
-      } catch (restoreError) {
-        logger.error('CRITICAL: Failed to restore from temporary backup after error', 'SkillService', {
-          tempBackupPath,
-          restoreError,
-        });
-        // Return error with info about temp backup location
-        return {
-          success: false,
-          error: `${error instanceof Error ? error.message : 'Unknown error'}. CRITICAL: Restoration failed. Temporary backup may still exist at: ${tempBackupPath}`,
-        };
-      } finally {
-        // Clean up temporary backup
-        try {
-          await fs.promises.rm(tempBackupPath, { recursive: true });
-        } catch (e) {
-          // Ignore cleanup errors
         }
       }
+
+      // Clean up all temp files
+      await this.safeRemove(tempBackupPath);
+      await this.safeRemove(tempDownloadPath);
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error (skill restored from backup)',
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  /**
+   * Download a private skill to a specific path (without installing)
+   * Used by updatePrivateSkill for safe download-then-replace flow
+   */
+  private async downloadPrivateSkillToPath(
+    owner: string,
+    repo: string,
+    skillPath: string,
+    pat: string,
+    targetPath: string,
+    sourceRepoId: string,
+    branch: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Download directory files from GitHub
+      const files = await GitHubService.downloadPrivateDirectory(owner, repo, skillPath, pat, branch);
+
+      if (!files || files.size === 0) {
+        return { success: false, error: 'No files found in skill directory' };
+      }
+
+      // Create target directory
+      await fs.promises.mkdir(targetPath, { recursive: true });
+
+      // Write all files preserving directory structure
+      for (const [filePath, content] of files.entries()) {
+        const relativePath = path.relative(skillPath, filePath);
+        const fullPath = path.join(targetPath, relativePath);
+        const fullDir = path.dirname(fullPath);
+
+        // Ensure directory exists
+        await fs.promises.mkdir(fullDir, { recursive: true });
+
+        // Write file
+        await fs.promises.writeFile(fullPath, content, 'utf-8');
+      }
+
+      // Create source metadata file
+      const metadataPath = path.join(targetPath, SOURCE_METADATA_FILE);
+      const sourceMetadata = {
+        type: 'private-repo' as const,
+        repoId: sourceRepoId,
+        repoPath: `${owner}/${repo}`,
+        skillPath: skillPath,
+        installedAt: new Date().toISOString(),
+      };
+      await fs.promises.writeFile(metadataPath, JSON.stringify(sourceMetadata, null, 2), 'utf-8');
+
+      return { success: true };
+    } catch (error) {
+      // Clean up partial download
+      await this.safeRemove(targetPath);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Download failed',
+      };
+    }
+  }
+
+  /**
+   * Safely remove a directory, ignoring errors
+   */
+  private async safeRemove(dirPath: string): Promise<void> {
+    try {
+      if (fs.existsSync(dirPath)) {
+        await fs.promises.rm(dirPath, { recursive: true });
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+
+  /**
+   * Update source metadata file with latest commit hash
+   */
+  private async updateSourceMetadataWithCommit(
+    skillPath: string,
+    sourceMetadata: any,
+    owner: string,
+    repo: string,
+    pat: string,
+    branch: string
+  ): Promise<void> {
+    try {
+      const commits = await GitHubService.getDirectoryCommits(owner, repo, pat, sourceMetadata.skillPath, branch);
+      const latestCommitSHA = commits && commits.length > 0 ? commits[0].sha : undefined;
+
+      const metadataPath = path.join(skillPath, SOURCE_METADATA_FILE);
+      const updatedMetadata = {
+        ...sourceMetadata,
+        commitHash: latestCommitSHA,
+        installedAt: new Date().toISOString(),
+      };
+      await fs.promises.writeFile(metadataPath, JSON.stringify(updatedMetadata, null, 2), 'utf-8');
+    } catch (error) {
+      logger.warn('Failed to update commit hash in source metadata', 'SkillService', {
+        skillPath,
+        error: error instanceof Error ? error.message : error,
+      });
     }
   }
 
   /**
    * Update a registry-installed skill to the latest version
    * Downloads the latest version from GitHub and replaces the local copy
-   * Creates a temporary backup for atomicity and optional permanent backup
+   *
+   * SAFETY FLOW (先下载验证，再替换):
+   * 1. 创建临时备份 (保护原数据)
+   * 2. 下载新技能到临时位置 (不覆盖原技能)
+   * 3. 验证新技能完整性
+   * 4. 创建永久备份 (可选)
+   * 5. 删除原技能
+   * 6. 移动新技能到目标位置
+   * 7. 清理临时文件
    *
    * @param skillPath - Path to the skill directory to update
    * @param createBackup - Whether to create a permanent backup before update
@@ -1222,12 +1332,13 @@ ${content}`;
       createBackup,
     });
 
-    // SAFETY: Always create a temporary backup for atomicity
-    const tempBackupPath = `${skillPath}-temp-backup-${Date.now()}`;
+    const timestamp = Date.now();
+    const tempBackupPath = `${skillPath}-temp-backup-${timestamp}`;
+    const tempDownloadPath = `${skillPath}-temp-download-${timestamp}`;
     let permanentBackupPath: string | null = null;
 
     try {
-      // Get current skill metadata
+      // STEP 1: Get current skill metadata FIRST (before any backup)
       const skill = await this.getSkill(skillPath);
 
       // Check if skill has source metadata
@@ -1242,175 +1353,234 @@ ${content}`;
         throw new Error(`Invalid source format: ${sourceMetadata.source}`);
       }
 
-      // Get application directory for installation
-      const config = await this.getConfig();
-      const appDirectory = SkillService.getApplicationSkillsDirectory(config);
-
-      // STEP 1: Always create temporary backup (for atomicity/safety)
-      logger.info('Creating temporary backup for atomicity', 'SkillService', {
-        tempBackupPath,
-      });
+      // STEP 2: Create temporary backup (protect original data)
+      logger.info('STEP 1: Creating temporary backup', 'SkillService', { tempBackupPath });
       await fs.promises.mkdir(tempBackupPath, { recursive: true });
       await fs.promises.cp(skillPath, tempBackupPath, { recursive: true });
 
-      // STEP 2: Create permanent backup if requested
-      if (createBackup) {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        permanentBackupPath = `${skillPath}-backup-${timestamp}`;
+      // STEP 3: Download new skill to TEMPORARY location (NOT overwriting original)
+      logger.info('STEP 2: Downloading new skill from registry to temporary location', 'SkillService', {
+        tempDownloadPath,
+        source: `${owner}/${repo}`,
+        skillId: sourceMetadata.skillId,
+      });
 
-        await fs.promises.mkdir(permanentBackupPath, { recursive: true });
-        await fs.promises.cp(skillPath, permanentBackupPath, { recursive: true });
-
-        logger.info('Created permanent backup before update', 'SkillService', {
-          originalPath: skillPath,
-          permanentBackupPath,
-        });
-      }
-
-      // STEP 3: Remove existing skill directory
-      await fs.promises.rm(skillPath, { recursive: true });
-
-      // STEP 4: Re-download and install latest version using SkillInstaller
-      const installer = new SkillInstaller();
-      const result = await installer.installFromRegistry(
-        {
-          source: sourceMetadata.source,
-          skillId: sourceMetadata.skillId,
-          targetToolId: 'project',
-        },
-        appDirectory
+      const downloadResult = await this.downloadRegistrySkillToPath(
+        owner,
+        repo,
+        sourceMetadata.skillId,
+        tempDownloadPath,
+        sourceMetadata.source
       );
 
-      if (result.success && result.skillPath) {
-        // Check if the new path is different from the original
-        // If so, we need to move it to the original path
-        let finalPath = result.skillPath;
-
-        if (result.skillPath !== skillPath) {
-          // Move the newly installed skill to the original path
-          await fs.promises.mkdir(path.dirname(skillPath), { recursive: true });
-          await fs.promises.rename(result.skillPath, skillPath);
-          finalPath = skillPath;
-        }
-
-        // Get the latest commit SHA for the updated metadata
-        let latestCommitSHA: string | undefined;
-        try {
-          const commits = await GitHubService.getDirectoryCommits(
-            owner,
-            repo,
-            '', // No PAT needed for public repos
-            sourceMetadata.skillId,
-            'main'
-          );
-          if (commits && commits.length > 0) {
-            latestCommitSHA = commits[0].sha;
-          }
-        } catch (commitError) {
-          logger.warn('Failed to get latest commit SHA for updated skill', 'SkillService', {
-            error: commitError instanceof Error ? commitError.message : commitError,
-          });
-        }
-
-        // Update source metadata with new commit hash
-        const metadataPath = path.join(finalPath, SOURCE_METADATA_FILE);
-        const updatedMetadata = {
-          ...sourceMetadata,
-          commitHash: latestCommitSHA,
-          installedAt: new Date().toISOString(),
-        };
-        await fs.promises.writeFile(metadataPath, JSON.stringify(updatedMetadata, null, 2), 'utf-8');
-
-        // STEP 5a: Success - clean up temporary backup, keep permanent backup
-        logger.info('Registry skill updated successfully, cleaning up temporary backup', 'SkillService', {
-          skillPath: finalPath,
-          permanentBackupPath,
+      if (!downloadResult.success) {
+        // Download failed - original skill is UNTOUCHED, no need to restore
+        logger.warn('Download from registry failed, original skill is untouched', 'SkillService', {
+          skillPath,
+          error: downloadResult.error,
         });
 
-        await fs.promises.rm(tempBackupPath, { recursive: true }).catch(() => {});
+        // Clean up temp files
+        await this.safeRemove(tempBackupPath);
+        await this.safeRemove(tempDownloadPath);
 
         return {
-          success: true,
-          newPath: finalPath,
+          success: false,
+          error: downloadResult.error || 'Failed to download skill from registry',
         };
-      } else {
-        // STEP 5b: Download failed - restore from temporary backup
-        logger.warn('Registry update failed, restoring from temporary backup', 'SkillService', {
+      }
+
+      // STEP 4: Verify new skill is valid (has SKILL.md)
+      logger.info('STEP 3: Verifying downloaded skill', 'SkillService', { tempDownloadPath });
+      const skillFile = path.join(tempDownloadPath, SKILL_FILE_NAME);
+      if (!fs.existsSync(skillFile)) {
+        // Verification failed - original skill is UNTOUCHED
+        logger.warn('Downloaded skill is invalid (missing SKILL.md), original skill is untouched', 'SkillService', {
+          tempDownloadPath,
+        });
+
+        await this.safeRemove(tempBackupPath);
+        await this.safeRemove(tempDownloadPath);
+
+        return {
+          success: false,
+          error: 'Downloaded skill is invalid: missing SKILL.md file',
+        };
+      }
+
+      // STEP 5: Create permanent backup if requested
+      if (createBackup) {
+        const backupTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        permanentBackupPath = `${skillPath}-backup-${backupTimestamp}`;
+
+        logger.info('STEP 4: Creating permanent backup', 'SkillService', { permanentBackupPath });
+        await fs.promises.mkdir(permanentBackupPath, { recursive: true });
+        await fs.promises.cp(tempBackupPath, permanentBackupPath, { recursive: true });
+
+        logger.info('Permanent backup created', 'SkillService', { permanentBackupPath });
+      }
+
+      // STEP 6: Remove original skill directory
+      logger.info('STEP 5: Removing original skill', 'SkillService', { skillPath });
+      await fs.promises.rm(skillPath, { recursive: true });
+
+      // STEP 7: Move new skill to target location
+      logger.info('STEP 6: Moving new skill to target location', 'SkillService', {
+        from: tempDownloadPath,
+        to: skillPath,
+      });
+      await fs.promises.rename(tempDownloadPath, skillPath);
+
+      // STEP 8: Update source metadata with new commit hash
+      await this.updateRegistrySourceMetadata(skillPath, sourceMetadata, owner, repo);
+
+      // STEP 9: Clean up temporary backup
+      logger.info('STEP 7: Cleaning up temporary files', 'SkillService', { tempBackupPath });
+      await this.safeRemove(tempBackupPath);
+
+      logger.info('Registry skill updated successfully', 'SkillService', {
+        skillPath,
+        permanentBackupPath,
+      });
+
+      return {
+        success: true,
+        newPath: skillPath,
+      };
+    } catch (error) {
+      logger.error('Failed to update registry skill', 'SkillService', error);
+
+      // Check if original skill still exists
+      const originalExists = fs.existsSync(skillPath);
+
+      if (!originalExists && fs.existsSync(tempBackupPath)) {
+        // Original was deleted but backup exists - restore it
+        logger.warn('Original skill was deleted, restoring from backup', 'SkillService', {
           skillPath,
           tempBackupPath,
-          error: result.error,
         });
 
         try {
           await fs.promises.mkdir(skillPath, { recursive: true });
           await fs.promises.cp(tempBackupPath, skillPath, { recursive: true });
-          logger.info('Successfully restored skill from temporary backup', 'SkillService', {
-            skillPath,
-            tempBackupPath,
-          });
+          logger.info('Successfully restored skill from backup', 'SkillService', { skillPath });
         } catch (restoreError) {
-          logger.error('CRITICAL: Failed to restore from temporary backup', 'SkillService', {
+          logger.error('CRITICAL: Failed to restore from backup', 'SkillService', {
             tempBackupPath,
             restoreError,
           });
           return {
             success: false,
-            error: `Update failed: ${result.error}. CRITICAL: Restoration also failed: ${restoreError instanceof Error ? restoreError.message : 'Unknown error'}. Temporary backup may still exist at: ${tempBackupPath}`,
+            error: `${error instanceof Error ? error.message : 'Unknown error'}. CRITICAL: Restoration failed. Backup may exist at: ${tempBackupPath}`,
           };
-        } finally {
-          await fs.promises.rm(tempBackupPath, { recursive: true }).catch(() => {});
-        }
-
-        return {
-          success: false,
-          error: result.error || 'Update failed (skill restored from backup)',
-        };
-      }
-    } catch (error) {
-      logger.error('Failed to update registry skill', 'SkillService', error);
-
-      // ATOMICITY: Always attempt to restore from temporary backup on any error
-      try {
-        await fs.promises.access(tempBackupPath);
-
-        logger.info('Attempting to restore from temporary backup after error', 'SkillService', {
-          skillPath,
-          tempBackupPath,
-        });
-
-        // Check if skill directory still exists
-        try {
-          await fs.promises.access(skillPath);
-          await fs.promises.rm(skillPath, { recursive: true });
-        } catch {
-          // Directory doesn't exist, that's fine
-        }
-
-        // Restore from backup
-        await fs.promises.mkdir(skillPath, { recursive: true });
-        await fs.promises.cp(tempBackupPath, skillPath, { recursive: true });
-        logger.info('Successfully restored skill from temporary backup after error', 'SkillService');
-      } catch (restoreError) {
-        logger.error('CRITICAL: Failed to restore from temporary backup after error', 'SkillService', {
-          tempBackupPath,
-          restoreError,
-        });
-        return {
-          success: false,
-          error: `${error instanceof Error ? error.message : 'Unknown error'}. CRITICAL: Restoration failed. Temporary backup may still exist at: ${tempBackupPath}`,
-        };
-      } finally {
-        try {
-          await fs.promises.rm(tempBackupPath, { recursive: true });
-        } catch {
-          // Ignore cleanup errors
         }
       }
+
+      // Clean up all temp files
+      await this.safeRemove(tempBackupPath);
+      await this.safeRemove(tempDownloadPath);
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error (skill restored from backup)',
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  /**
+   * Download a registry skill to a specific path (without installing)
+   * Used by updateRegistrySkill for safe download-then-replace flow
+   */
+  private async downloadRegistrySkillToPath(
+    owner: string,
+    repo: string,
+    skillId: string,
+    targetPath: string,
+    source: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Download directory files from GitHub (public repo, no PAT needed)
+      const files = await GitHubService.downloadPrivateDirectory(
+        owner,
+        repo,
+        skillId,
+        '', // No PAT needed for public repos
+        'main' // Default branch for registry skills
+      );
+
+      if (!files || files.size === 0) {
+        return { success: false, error: 'No files found in skill directory' };
+      }
+
+      // Create target directory
+      await fs.promises.mkdir(targetPath, { recursive: true });
+
+      // Write all files preserving directory structure
+      for (const [filePath, content] of files.entries()) {
+        const relativePath = path.relative(skillId, filePath);
+        const fullPath = path.join(targetPath, relativePath);
+        const fullDir = path.dirname(fullPath);
+
+        // Ensure directory exists
+        await fs.promises.mkdir(fullDir, { recursive: true });
+
+        // Write file
+        await fs.promises.writeFile(fullPath, content, 'utf-8');
+      }
+
+      // Create source metadata file
+      const metadataPath = path.join(targetPath, SOURCE_METADATA_FILE);
+      const sourceMetadata = {
+        type: 'registry' as const,
+        registryUrl: 'https://github.com',
+        source: source,
+        skillId: skillId,
+        installedAt: new Date().toISOString(),
+      };
+      await fs.promises.writeFile(metadataPath, JSON.stringify(sourceMetadata, null, 2), 'utf-8');
+
+      return { success: true };
+    } catch (error) {
+      // Clean up partial download
+      await this.safeRemove(targetPath);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Download failed',
+      };
+    }
+  }
+
+  /**
+   * Update registry source metadata with latest commit hash
+   */
+  private async updateRegistrySourceMetadata(
+    skillPath: string,
+    sourceMetadata: any,
+    owner: string,
+    repo: string
+  ): Promise<void> {
+    try {
+      const commits = await GitHubService.getDirectoryCommits(
+        owner,
+        repo,
+        '', // No PAT needed for public repos
+        sourceMetadata.skillId,
+        'main'
+      );
+      const latestCommitSHA = commits && commits.length > 0 ? commits[0].sha : undefined;
+
+      const metadataPath = path.join(skillPath, SOURCE_METADATA_FILE);
+      const updatedMetadata = {
+        ...sourceMetadata,
+        commitHash: latestCommitSHA,
+        installedAt: new Date().toISOString(),
+      };
+      await fs.promises.writeFile(metadataPath, JSON.stringify(updatedMetadata, null, 2), 'utf-8');
+    } catch (error) {
+      logger.warn('Failed to update commit hash in source metadata', 'SkillService', {
+        skillPath,
+        error: error instanceof Error ? error.message : error,
+      });
     }
   }
 
