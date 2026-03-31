@@ -218,22 +218,12 @@ export class MigrationService {
       throw new Error(`Skill already exists in application directory: ${skillName}`);
     }
 
-    if (options.moveOrCopy === 'move') {
-      // Move skill
+    if (options.deleteOriginals) {
+      // Move skill (original will be removed)
       await fsExtra.move(skill.path, targetPath);
-
-      // Delete original if requested
-      if (options.deleteOriginals && await fsExtra.pathExists(skill.path)) {
-        await fsExtra.remove(skill.path);
-      }
     } else {
-      // Copy skill
+      // Copy skill (original will be kept)
       await fsExtra.copy(skill.path, targetPath);
-
-      // Delete original if requested (only for copy mode)
-      if (options.deleteOriginals) {
-        await fsExtra.remove(skill.path);
-      }
     }
   }
 

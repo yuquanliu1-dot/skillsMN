@@ -2,7 +2,7 @@
  * MigrationDialog Component
  *
  * Dialog for migrating existing skills from project directories to application directory
- * Only supports MOVE mode - automatically deletes source files after successful migration
+ * Supports MOVE mode with user-controlled deletion of source files
  */
 
 import { useState, useEffect } from 'react';
@@ -24,6 +24,7 @@ export default function MigrationDialog({
   const [isMigrating, setIsMigrating] = useState(false);
   const [progress, setProgress] = useState<MigrationProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteOriginals, setDeleteOriginals] = useState(false);
 
   const totalSkills = skills.length;
 
@@ -49,10 +50,10 @@ export default function MigrationDialog({
       setIsMigrating(true);
       setError(null);
 
-      // Always use MOVE mode with deleteOriginals=true
+      // deleteOriginals determines whether to move (delete) or copy (keep) original files
       const options: MigrationOptions = {
-        moveOrCopy: 'move',
-        deleteOriginals: true,
+        moveOrCopy: deleteOriginals ? 'move' : 'copy',
+        deleteOriginals: deleteOriginals,
       };
 
       await onMigrate(skills, options);
@@ -76,8 +77,35 @@ export default function MigrationDialog({
         {/* Content */}
         <div className="px-6 py-4">
           <p className="text-sm text-gray-700 mb-4">
-            Skills will be moved to the application directory. The original files will be deleted after successful migration.
+            Skills will be moved to the application directory.
           </p>
+
+          {/* Delete original option */}
+          <div className="mb-4">
+            <p className="text-sm font-medium text-gray-700 mb-2">After migration:</p>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="deleteOption"
+                  checked={deleteOriginals}
+                  onChange={() => setDeleteOriginals(true)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Delete original files</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="deleteOption"
+                  checked={!deleteOriginals}
+                  onChange={() => setDeleteOriginals(false)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Keep original files</span>
+              </label>
+            </div>
+          </div>
 
           {/* Progress bar */}
           {isMigrating && progress && (
