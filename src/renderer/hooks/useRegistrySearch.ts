@@ -15,6 +15,7 @@ export interface UseRegistrySearchResult {
   isLoading: boolean;
   error: string | null;
   setQuery: (query: string) => void;
+  refresh: () => void;
 }
 
 export function useRegistrySearch(debounceMs: number = 400): UseRegistrySearchResult {
@@ -74,11 +75,19 @@ export function useRegistrySearch(debounceMs: number = 400): UseRegistrySearchRe
     };
   }, [query, debounceMs]);
 
+  // Refresh function to re-run current search
+  const refresh = useCallback(() => {
+    if (query.trim()) {
+      debouncedSearch(query);
+    }
+  }, [query, debouncedSearch]);
+
   return {
     query,
     results,
     isLoading,
     error,
     setQuery,
+    refresh,
   };
 }

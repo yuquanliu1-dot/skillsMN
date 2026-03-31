@@ -4,7 +4,7 @@
  * IPC handlers for skill group operations
  */
 
-import { ipcMain } from 'electron';
+import { ipcMain, BrowserWindow } from 'electron';
 import { logger } from '../utils/Logger';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { SkillGroupService } from '../services/SkillGroupService';
@@ -17,6 +17,17 @@ let configService: {
   save: (config: any) => Promise<any>;
   saveSkillGroups: (skillGroups: SkillGroupsConfig) => Promise<void>;
 } | null = null;
+
+/**
+ * Send skills:refresh event to all renderer windows
+ */
+function notifySkillsRefresh(): void {
+  const windows = BrowserWindow.getAllWindows();
+  for (const win of windows) {
+    win.webContents.send(IPC_CHANNELS.SKILLS_REFRESH);
+  }
+  logger.debug('Sent skills:refresh event to all windows', 'SkillGroupHandlers');
+}
 
 /**
  * Convert error to IPCError format
@@ -99,6 +110,8 @@ export function registerSkillGroupHandlers(): void {
         const result = skillGroupService!.createGroup(data);
         if (result.success) {
           await saveConfigFromService();
+          // Notify all windows to refresh skills/groups
+          notifySkillsRefresh();
         }
         return result;
       } catch (error) {
@@ -118,6 +131,8 @@ export function registerSkillGroupHandlers(): void {
         const result = skillGroupService!.updateGroup(id, data);
         if (result.success) {
           await saveConfigFromService();
+          // Notify all windows to refresh skills/groups
+          notifySkillsRefresh();
         }
         return result;
       } catch (error) {
@@ -137,6 +152,8 @@ export function registerSkillGroupHandlers(): void {
         const result = skillGroupService!.deleteGroup(id);
         if (result.success) {
           await saveConfigFromService();
+          // Notify all windows to refresh skills/groups
+          notifySkillsRefresh();
         }
         return result;
       } catch (error) {
@@ -156,6 +173,8 @@ export function registerSkillGroupHandlers(): void {
         const result = skillGroupService!.addTagToGroup(groupId, tag);
         if (result.success) {
           await saveConfigFromService();
+          // Notify all windows to refresh skills/groups
+          notifySkillsRefresh();
         }
         return result;
       } catch (error) {
@@ -175,6 +194,8 @@ export function registerSkillGroupHandlers(): void {
         const result = skillGroupService!.removeTagFromGroup(groupId, tag);
         if (result.success) {
           await saveConfigFromService();
+          // Notify all windows to refresh skills/groups
+          notifySkillsRefresh();
         }
         return result;
       } catch (error) {
@@ -194,6 +215,8 @@ export function registerSkillGroupHandlers(): void {
         const result = skillGroupService!.reorderGroups(groupIds);
         if (result.success) {
           await saveConfigFromService();
+          // Notify all windows to refresh skills/groups
+          notifySkillsRefresh();
         }
         return result;
       } catch (error) {

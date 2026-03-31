@@ -68,6 +68,15 @@ export default function SkillList({
 
   useEffect(() => {
     loadSkillGroups();
+
+    // Subscribe to skills:refresh event to reload groups when they change
+    window.electronAPI.onSkillsRefresh(() => {
+      loadSkillGroups();
+    });
+
+    return () => {
+      window.electronAPI.removeSkillsRefreshListener();
+    };
   }, [loadSkillGroups]);
 
   // Handle tag assigned callback

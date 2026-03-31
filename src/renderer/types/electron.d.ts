@@ -241,6 +241,10 @@ export interface ElectronAPI {
   addTagToGroup: (groupId: string, tag: string) => Promise<IPCResponse<SkillGroup>>;
   removeTagFromGroup: (groupId: string, tag: string) => Promise<IPCResponse<SkillGroup>>;
   reorderSkillGroups: (groupIds: string[]) => Promise<IPCResponse<void>>;
+
+  // Skills Refresh Event
+  onSkillsRefresh: (callback: () => void) => void;
+  removeSkillsRefreshListener: () => void;
 }
 
 declare global {

@@ -218,6 +218,9 @@ export const IPC_CHANNELS = {
 
   // Terminal operations
   TERMINAL_OPEN_CLAUDE: 'terminal:open-claude',
+
+  // Skills refresh event (for cross-component state synchronization)
+  SKILLS_REFRESH: 'skills:refresh',
 } as const;
 
 // ============================================================================

@@ -546,6 +546,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   reorderSkillGroups: (groupIds: string[]): Promise<IPCResponse<void>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_REORDER, { groupIds });
   },
+
+  // ============================================================================
+  // Skills Refresh Event (for cross-component state synchronization)
+  // ============================================================================
+
+  onSkillsRefresh: (callback: () => void): void => {
+    ipcRenderer.on(IPC_CHANNELS.SKILLS_REFRESH, () => callback());
+  },
+
+  removeSkillsRefreshListener: (): void => {
+    ipcRenderer.removeAllListeners(IPC_CHANNELS.SKILLS_REFRESH);
+  },
 });
 
 // Log successful preload

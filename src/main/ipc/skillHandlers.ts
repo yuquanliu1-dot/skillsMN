@@ -4,7 +4,7 @@
  * IPC handlers for skill operations
  */
 
-import { ipcMain } from 'electron';
+import { ipcMain, BrowserWindow } from 'electron';
 import { logger } from '../utils/Logger';
 import {
   ErrorHandler,
@@ -23,7 +23,19 @@ import { getFileWatcher } from '../index';
 import { getConfigService } from './configHandlers';
 
 import { SymlinkService } from '../services/SymlinkService';
+
 let skillService: SkillService | null = null;
+
+/**
+ * Send skills:refresh event to all renderer windows
+ */
+function notifySkillsRefresh(): void {
+  const windows = BrowserWindow.getAllWindows();
+  for (const win of windows) {
+    win.webContents.send(IPC_CHANNELS.SKILLS_REFRESH);
+  }
+  logger.debug('Sent skills:refresh event to all windows', 'SkillHandlers');
+}
 
 /**
  * Convert error to IPCError format
@@ -161,6 +173,8 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
         logger.debug(`Deleting skill: ${path}`, 'SkillHandlers');
         await skillService!.deleteSkill(path);
         logger.info(`Skill deleted: ${path}`, 'SkillHandlers');
+        // Notify all windows to refresh skills
+        notifySkillsRefresh();
         return { success: true };
       } catch (error) {
         logger.error('Failed to delete skill', 'SkillHandlers', error);

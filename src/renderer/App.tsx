@@ -195,6 +195,12 @@ export default function App(): JSX.Element {
           console.log('⚠️ [App.tsx] AutoRefresh disabled, skipping file watcher');
         }
 
+        // Subscribe to skills:refresh event for cross-component synchronization
+        window.electronAPI.onSkillsRefresh(async () => {
+          console.log('🔔 [App.tsx] skills:refresh event received, reloading skills...');
+          await loadSkillsRef.current();
+        });
+
         dispatch({ type: 'SET_LOADING', payload: false });
       } catch (error) {
         dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
@@ -207,6 +213,7 @@ export default function App(): JSX.Element {
     // Cleanup on unmount
     return () => {
       ipcClient.removeFSChangeListener();
+      window.electronAPI.removeSkillsRefreshListener();
     };
   }, []);
 

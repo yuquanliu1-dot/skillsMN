@@ -339,15 +339,9 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   }, [isOpen, activeTab, loadAIConfig]);
 
   /**
-   * Load skill groups when Skill Groups tab is opened
+   * Load skill groups
    */
-  useEffect(() => {
-    if (isOpen && activeTab === 'skill-groups') {
-      loadSkillGroups();
-    }
-  }, [isOpen, activeTab]);
-
-  const loadSkillGroups = async () => {
+  const loadSkillGroups = useCallback(async () => {
     setIsLoadingGroups(true);
     setError(null);
     try {
@@ -364,7 +358,26 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
     } finally {
       setIsLoadingGroups(false);
     }
-  };
+  }, []);
+
+  /**
+   * Load skill groups when Skill Groups tab is opened
+   */
+  useEffect(() => {
+    if (isOpen && activeTab === 'skill-groups') {
+      loadSkillGroups();
+
+      // Subscribe to skills:refresh event to reload groups
+      window.electronAPI.onSkillsRefresh(() => {
+        loadSkillGroups();
+      });
+
+      return () => {
+        window.electronAPI.removeSkillsRefreshListener();
+      };
+    }
+    return undefined;
+  }, [isOpen, activeTab, loadSkillGroups]);
 
   /**
    * Handle add skill group

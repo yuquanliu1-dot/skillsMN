@@ -4,7 +4,7 @@
  * Full search interface for skills.sh registry with results display
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRegistrySearch } from '../hooks/useRegistrySearch';
 import { SearchIcon } from './icons/SearchIcon';
@@ -27,13 +27,29 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
   const { t } = useTranslation();
   console.log('🔍 RegistrySearchPanel render, onSkillClick exists:', !!onSkillClick);
 
-  const { query, results, isLoading, error, setQuery } = useRegistrySearch();
+  const { query, results, isLoading, error, setQuery, refresh } = useRegistrySearch();
   const [hasSearched, setHasSearched] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('installs');
 
   // Determine target directory for installation
   // Always install to the centralized application directory
   const targetDirectory = config?.applicationSkillsDirectory || '';
+
+  // Listen for skills:refresh event to update install status
+  useEffect(() => {
+    const handleSkillsRefresh = () => {
+      // Re-run search to update install status if we have an active search
+      if (hasSearched && query.trim()) {
+        refresh();
+      }
+    };
+
+    window.electronAPI.onSkillsRefresh(handleSkillsRefresh);
+
+    return () => {
+      window.electronAPI.removeSkillsRefreshListener();
+    };
+  }, [hasSearched, query, refresh]);
 
   const handleQueryChange = (value: string) => {
     setQuery(value);
