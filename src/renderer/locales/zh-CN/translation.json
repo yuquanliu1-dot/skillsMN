@@ -64,7 +64,7 @@
     "all": "全部",
     "local": "本地",
     "registry": "仓库",
-    "private": "私有",
+    "private": "共享",
     "name": "名称",
     "date": "日期",
     "installs": "安装量",
@@ -94,7 +94,7 @@
   "skillCard": {
     "local": "本地",
     "registry": "仓库",
-    "private": "私有",
+    "private": "共享",
     "update": "更新",
     "upload": "上传",
     "openFolder": "打开文件夹",
@@ -115,7 +115,7 @@
     "localModificationsOverwritten": "任何本地修改都将被覆盖。",
     "createBackup": "更新前创建备份",
     "backupDescription": "保存带有时间戳后缀的副本",
-    "uploadToPrivateRepo": "上传到私有仓库",
+    "uploadToPrivateRepo": "上传到共享仓库",
     "localVersionNewer": "本地版本 ({{local}}) 比远程版本 ({{remote}}) 更新。",
     "targetRepository": "目标仓库",
     "version": "版本",
@@ -171,7 +171,7 @@
     "storage": "技能目录",
     "skillView": "技能视图",
     "skillEditor": "技能编辑器",
-    "privateRepositories": "私有仓库",
+    "privateRepositories": "共享仓库",
     "aiConfiguration": "AI 配置",
 
     "directories": "技能存储目录",
@@ -229,7 +229,7 @@
     "skillEditorSettingsSaved": "技能编辑器设置已保存",
 
     "addRepository": "添加仓库",
-    "addPrivateRepository": "添加私有仓库",
+    "addPrivateRepository": "添加共享仓库",
     "provider": "提供商",
     "gitlabInstanceUrl": "GitLab 实例 URL（可选）",
     "gitlabInstanceUrlPlaceholder": "https://gitlab.company.com（GitLab.com 请留空）",
@@ -349,8 +349,8 @@
     "projectSkillsTip": "对于项目级技能，目录名称通常是",
     "addMultipleLater": "您稍后可以在设置中添加多个目录。",
 
-    "addPrivateRepository": "添加私有仓库",
-    "noPrivateReposYet": "还没有私有仓库",
+    "addPrivateRepository": "添加共享仓库",
+    "noPrivateReposYet": "还没有共享仓库",
     "skipAndAddLater": "您可以跳过此步骤，稍后在设置中添加仓库",
     "connectionVerified": "连接已验证",
 
@@ -407,8 +407,8 @@
         "action": "技能仓库可能已被移动或删除。请尝试搜索替代技能。"
       },
       "privateRepo": {
-        "title": "私有仓库",
-        "action": "此技能位于私有仓库中。请联系技能作者或搜索公开替代方案。"
+        "title": "共享仓库",
+        "action": "此技能位于共享仓库中。请联系技能作者或搜索公开替代方案。"
       },
       "networkError": {
         "title": "网络错误",

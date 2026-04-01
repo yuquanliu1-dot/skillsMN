@@ -63,7 +63,7 @@
     "all": "All",
     "local": "Local",
     "registry": "Registry",
-    "private": "Private",
+    "private": "Shared",
     "name": "Name",
     "date": "Date",
     "installs": "Installs",
@@ -93,7 +93,7 @@
   "skillCard": {
     "local": "Local",
     "registry": "Registry",
-    "private": "Private",
+    "private": "Shared",
     "update": "Update",
     "upload": "Upload",
     "openFolder": "Open folder",
