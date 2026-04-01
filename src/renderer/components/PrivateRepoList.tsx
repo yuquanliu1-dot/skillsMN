@@ -420,8 +420,8 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
             onClick={handleRefresh}
             disabled={isLoadingSkills || isRefreshing || !selectedRepoId}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Refresh skills list"
-            aria-label="Refresh skills list from repository"
+            title={t('privateRepos.refreshSkillsList')}
+            aria-label={t('privateRepos.refreshSkillsList')}
           >
             {isRefreshing ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
@@ -482,8 +482,8 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
                   aria-label="Sort by"
                   title="Sort skills"
                 >
-                  <option value="name">Name</option>
-                  <option value="modified">Date</option>
+                  <option value="name">{t('privateRepos.sortByName')}</option>
+                  <option value="modified">{t('privateRepos.sortByDate')}</option>
                 </select>
               </div>
             </>
@@ -518,19 +518,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
                 <p className="text-sm text-red-400 dark:text-red-400">{error}</p>
                 {isAuthError && (
                   <p className="text-xs text-red-300 dark:text-red-300 mt-1">
-                    Go to{' '}
-                    <button
-                      onClick={() => {
-                        // Navigate to Settings - this assumes there's a way to switch views
-                        // In a real app, you'd use React Router or context
-                        window.dispatchEvent(new CustomEvent('navigate-to-settings'));
-                      }}
-                      className="underline hover:text-red-200 dark:hover:text-red-200 focus:outline-none focus:ring-2 focus:ring-red-400 rounded"
-                      aria-label="Navigate to Settings to update PAT"
-                    >
-                      Settings
-                    </button>
-                    {' '}to update your PAT.
+                    {t('privateRepos.goToSettingsToUpdatePat')}
                   </p>
                 )}
               </div>
@@ -539,9 +527,9 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
               <button
                 onClick={() => selectedRepoId && loadSkills(selectedRepoId)}
                 className="btn btn-secondary text-xs ml-2"
-                aria-label="Retry loading skills"
+                aria-label={t('privateRepos.retry')}
               >
-                Retry
+                {t('privateRepos.retry')}
               </button>
             )}
           </div>
@@ -587,9 +575,9 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
               <button
                 onClick={() => selectedRepoId && loadSkills(selectedRepoId)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                aria-label="Retry loading skills"
+                aria-label={t('privateRepos.retry')}
               >
-                Retry
+                {t('privateRepos.retry')}
               </button>
             )}
           </div>

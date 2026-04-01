@@ -71,6 +71,7 @@
     "skillsCount": "{{count}} 个技能",
     "noSkills": "未找到技能。创建您的第一个技能开始使用。",
     "noMatchingSkills": "没有符合搜索条件的技能。",
+    "noDescription": "暂无描述",
     "filterByTag": "按标签筛选",
     "allTags": "所有标签",
     "newSkill": "新建技能",
@@ -177,6 +178,7 @@
     "addDirectory": "添加目录",
     "adding": "添加中...",
     "directoriesDescription": "这些目录将用于存储和链接您的技能。技能可以链接到任何配置的目录。",
+    "quickTip": "小提示",
     "tipProjectSkills": "对于项目级技能，目录名称通常是",
     "noDirectories": "未配置技能目录。添加一个目录来存储和链接您的技能。",
     "directoryAdded": "项目目录添加成功",
@@ -331,12 +333,12 @@
     "setupDescription": "让我们通过几个简单步骤完成设置",
     "step": "第 {{number}} 步",
     "skillsDirectory": "技能目录",
-    "privateRepos": "私有仓库",
-    "privateRepositories": "私有仓库",
+    "privateRepos": "共享技能",
+    "privateRepositories": "共享技能",
     "aiConfiguration": "AI 配置",
 
     "skillsDirectoryDescription": "选择一个目录用于技能存储和链接",
-    "privateReposDescription": "连接您的私有技能仓库",
+    "privateReposDescription": "连接您的共享技能仓库",
     "aiConfigDescription": "配置您的 AI 助手设置",
 
     "clickToSelectDirectory": "点击选择技能目录",
@@ -386,6 +388,14 @@
     "installed": "已安装",
     "installing": "安装中...",
     "installationFailed": "安装失败",
+    "repository": "仓库",
+    "skillName": "技能名称",
+    "pathInRepo": "仓库路径",
+    "latestCommit": "最新提交",
+    "installLocation": "安装位置",
+    "installLocationHint": "技能将安装到您的集中技能库，并可用于所有 Claude Code 项目。",
+    "installToLibrary": "安装到技能库",
+    "installSkill": "安装技能：{{name}}",
 
     "errors": {
       "gitNotInstalled": {
@@ -443,21 +453,26 @@
   },
 
   "privateRepos": {
-    "title": "私有仓库",
+    "title": "共享技能",
     "searchPlaceholder": "搜索技能...",
     "repository": "仓库：",
     "skillsCount": "{{count}} 个技能",
     "loadMore": "加载更多（剩余 {{count}} 个）",
     "showingOf": "显示 {{visible}} / {{total}} 个技能",
     "noRepositories": "未配置仓库",
-    "addInSettings": "在设置中添加私有仓库以开始使用。",
+    "addInSettings": "在设置中添加共享仓库以开始使用。",
     "errorLoadingSkills": "加载技能错误",
     "noSkillsAvailable": "没有可用的技能",
     "noSkillsFound": "未找到技能",
     "noSkillsInRepo": "此仓库不包含任何技能目录",
     "noSkillsForTag": "未找到标签为 \"{{tag}}\" 的技能",
     "authFailed": "认证失败。您的 PAT 可能已过期或被撤销。",
-    "goToSettingsToUpdatePat": "前往设置更新您的 PAT。"
+    "goToSettingsToUpdatePat": "前往设置更新您的 PAT。",
+    "refreshSkillsList": "刷新技能列表",
+    "sortByName": "名称",
+    "sortByDate": "日期",
+    "retry": "重试",
+    "settings": "设置"
   },
 
   "aiDialog": {
@@ -584,14 +599,6 @@
     "uploading": "上传中...",
     "uploadSuccess": "技能上传成功",
     "uploadFailed": "上传技能失败"
-  },
-
-  "privateRepos": {
-    "noRepositories": "未配置仓库",
-    "noRepositoriesHint": "请在设置中添加仓库",
-    "addInSettings": "请在设置 → 仓库中添加仓库。",
-    "errorLoadingSkills": "加载技能错误",
-    "noSkillsAvailable": "没有可用的技能"
   },
 
   "commit": {

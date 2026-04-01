@@ -22,20 +22,24 @@ const PRESET_COLORS = [
   { value: '#6B7280', name: '其他', description: 'Other' },
 ];
 
-// Preset icons for skill groups (software development lifecycle)
+// Preset icons for skill groups (tech-styled)
 const PRESET_ICONS = [
-  { value: '📋', name: '需求', description: 'Requirements' },
-  { value: '🎨', name: '设计', description: 'Design' },
-  { value: '💻', name: '开发', description: 'Development' },
-  { value: '🧪', name: '测试', description: 'Testing' },
+  { value: '⚡', name: '需求', description: 'Requirements' },
+  { value: '🎯', name: '设计', description: 'Design' },
+  { value: '⌨️', name: '开发', description: 'Development' },
+  { value: '🔬', name: '测试', description: 'Testing' },
   { value: '🚀', name: '部署', description: 'Deployment' },
-  { value: '📚', name: '文档', description: 'Documentation' },
-  { value: '🐛', name: 'Bug', description: 'Bug Fixing' },
-  { value: '🔧', name: '配置', description: 'Configuration' },
-  { value: '🔒', name: '安全', description: 'Security' },
-  { value: '📊', name: '分析', description: 'Analytics' },
-  { value: '🤝', name: '协作', description: 'Collaboration' },
-  { value: '📦', name: '构建', description: 'Build/Package' },
+  { value: '📘', name: '文档', description: 'Documentation' },
+  { value: '🐞', name: 'Bug', description: 'Bug Fixing' },
+  { value: '⚙️', name: '配置', description: 'Configuration' },
+  { value: '🛡️', name: '安全', description: 'Security' },
+  { value: '📈', name: '分析', description: 'Analytics' },
+  { value: '🔗', name: '集成', description: 'Integration' },
+  { value: '☁️', name: '云端', description: 'Cloud' },
+  { value: '🧠', name: 'AI', description: 'Artificial Intelligence' },
+  { value: '💾', name: '数据', description: 'Database' },
+  { value: '🔄', name: 'CI/CD', description: 'DevOps Pipeline' },
+  { value: '🌐', name: '网络', description: 'Network/Web' },
 ];
 
 interface SettingsProps {
@@ -401,7 +405,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
         setNewGroupName('');
         setNewGroupDescription('');
         setNewGroupColor('#3B82F6');
-        setNewGroupIcon('📁');
+        setNewGroupIcon('⌨️');
         setShowAddGroupForm(false);
         await loadSkillGroups();
       } else {
@@ -500,6 +504,28 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
       const message = err instanceof Error ? err.message : 'Failed to delete group';
       setError(message);
       console.error('Delete group error:', err);
+    }
+  };
+
+  /**
+   * Handle toggle group enabled status
+   */
+  const handleToggleGroupEnabled = async (groupId: string, enabled: boolean) => {
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await window.electronAPI.updateSkillGroup(groupId, { enabled });
+      if (response.success) {
+        setSuccess(enabled ? t('settings.groupEnabled') : t('settings.groupDisabled'));
+        await loadSkillGroups();
+      } else {
+        setError(response.error?.message || 'Failed to update group');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update group';
+      setError(message);
+      console.error('Toggle group enabled error:', err);
     }
   };
 
@@ -1606,13 +1632,13 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             <div>
               <h3 className="text-sm font-medium text-slate-700 mb-3">{t('settings.aiShortcuts')}</h3>
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm p-2 bg-purple-50 rounded">
-                  <span className="text-slate-600">{t('settings.aiRewrite')}</span>
-                  <kbd className="px-2.5 py-1 bg-purple-100 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+R</kbd>
+                <div className="flex items-center justify-between text-sm p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                  <span className="text-slate-600 dark:text-slate-300">{t('settings.aiRewrite')}</span>
+                  <kbd className="px-2.5 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs text-blue-700 dark:text-blue-300 font-mono">Ctrl+Alt+R</kbd>
                 </div>
-                <div className="flex items-center justify-between text-sm p-2 bg-purple-50 rounded">
-                  <span className="text-slate-600">{t('settings.aiInsert')}</span>
-                  <kbd className="px-2.5 py-1 bg-purple-100 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+I</kbd>
+                <div className="flex items-center justify-between text-sm p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                  <span className="text-slate-600 dark:text-slate-300">{t('settings.aiInsert')}</span>
+                  <kbd className="px-2.5 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs text-blue-700 dark:text-blue-300 font-mono">Ctrl+Alt+I</kbd>
                 </div>
               </div>
             </div>
@@ -1974,15 +2000,20 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
         {/* Skill Groups Tab */}
         {activeTab === 'skill-groups' && (
-          <div>
-            {/* Add Group Button */}
-            <div className="mb-3">
+          <div className="space-y-4">
+            {/* Header with Add Button */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {t('settings.skillGroupsDescription')}
+                </p>
+              </div>
               <button
                 onClick={() => setShowAddGroupForm(!showAddGroupForm)}
-                className="btn btn-primary btn-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                 disabled={isAddingGroup}
               >
-                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 {t('settings.addGroup')}
@@ -1991,21 +2022,23 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
             {/* Add Group Form */}
             {showAddGroupForm && (
-              <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <h3 className="text-sm font-medium text-slate-700 mb-3">{t('settings.addGroup')}</h3>
-                <form onSubmit={handleAddGroup}>
-                  <div className="space-y-3">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t('settings.addGroup')}</h3>
+                </div>
+                <form onSubmit={handleAddGroup} className="p-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                     {/* Group Name */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        {t('settings.groupName')} *
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                        {t('settings.groupName')} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={newGroupName}
                         onChange={(e) => setNewGroupName(e.target.value)}
                         placeholder={t('settings.groupNamePlaceholder')}
-                        className="input w-full"
+                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         disabled={isAddingGroup}
                         required
                       />
@@ -2013,7 +2046,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
                     {/* Description */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                         {t('settings.groupDescription')}
                       </label>
                       <input
@@ -2021,27 +2054,30 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                         value={newGroupDescription}
                         onChange={(e) => setNewGroupDescription(e.target.value)}
                         placeholder={t('settings.groupDescriptionPlaceholder')}
-                        className="input w-full"
+                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         disabled={isAddingGroup}
                       />
                     </div>
+                  </div>
 
+                  {/* Color and Icon Row */}
+                  <div className="grid grid-cols-2 gap-4">
                     {/* Color Presets */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                         {t('settings.groupColor')}
                       </label>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {PRESET_COLORS.map((color) => (
                           <button
                             key={color.value}
                             type="button"
                             onClick={() => setNewGroupColor(color.value)}
                             disabled={isAddingGroup}
-                            className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                            className={`w-7 h-7 rounded-lg border-2 transition-all ${
                               newGroupColor === color.value
-                                ? 'border-slate-900 scale-110 shadow-sm'
-                                : 'border-slate-200 hover:border-slate-400'
+                                ? 'border-slate-900 dark:border-white scale-110 shadow-sm'
+                                : 'border-slate-200 dark:border-slate-600 hover:border-slate-400'
                             }`}
                             style={{ backgroundColor: color.value }}
                             title={`${color.name} - ${color.description}`}
@@ -2052,20 +2088,20 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
                     {/* Icon Presets */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                         {t('settings.groupIcon')}
                       </label>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap gap-1">
                         {PRESET_ICONS.map((icon) => (
                           <button
                             key={icon.value}
                             type="button"
                             onClick={() => setNewGroupIcon(icon.value)}
                             disabled={isAddingGroup}
-                            className={`w-9 h-9 text-lg rounded-lg border-2 transition-all ${
+                            className={`w-8 h-8 text-base rounded-lg border-2 transition-all ${
                               newGroupIcon === icon.value
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                                : 'border-slate-200 dark:border-slate-600 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                             }`}
                             title={`${icon.name} - ${icon.description}`}
                           >
@@ -2076,7 +2112,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-2 mt-3">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
                     <button
                       type="button"
                       onClick={() => {
@@ -2084,19 +2120,27 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                         setNewGroupName('');
                         setNewGroupDescription('');
                         setNewGroupColor('#3B82F6');
-                        setNewGroupIcon('📁');
+                        setNewGroupIcon('⌨️');
                       }}
-                      className="btn btn-secondary btn-sm"
+                      className="px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
                       disabled={isAddingGroup}
                     >
                       {t('common.cancel')}
                     </button>
                     <button
                       type="submit"
-                      className="btn btn-primary btn-sm"
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
                       disabled={isAddingGroup || !newGroupName.trim()}
                     >
-                      {isAddingGroup ? t('common.creating') : t('common.create')}
+                      {isAddingGroup ? (
+                        <span className="flex items-center gap-1.5">
+                          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          {t('common.creating')}
+                        </span>
+                      ) : t('common.create')}
                     </button>
                   </div>
                 </form>
@@ -2105,235 +2149,263 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
             {/* Success message */}
             {success && activeTab === 'skill-groups' && (
-              <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md">
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-green-400 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <p className="text-sm text-green-400">{success}</p>
+                  <p className="text-sm text-green-700 dark:text-green-400">{success}</p>
                 </div>
               </div>
             )}
 
             {/* Error message */}
             {error && activeTab === 'skill-groups' && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md">
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-red-400 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
+                  <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-sm text-red-400">{error}</p>
+                  <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                 </div>
               </div>
             )}
 
             {/* Groups List */}
             {isLoadingGroups ? (
-              <div className="flex items-center justify-center py-6">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : skillGroups.length === 0 ? (
-              <div className="text-center py-6">
-                <svg
-                  className="mx-auto h-10 w-10 text-slate-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                <div className="mx-auto w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">{t('settings.noGroups')}</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('settings.noGroupsDescription')}</p>
+                <button
+                  onClick={() => setShowAddGroupForm(true)}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                  />
-                </svg>
-                <p className="mt-2 text-sm text-slate-600">{t('settings.noGroups')}</p>
-                <p className="mt-1 text-xs text-slate-500">{t('settings.noGroupsDescription')}</p>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  {t('settings.addGroup')}
+                </button>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {skillGroups.map((group) => (
                   <div
                     key={group.id}
-                    className="p-3 bg-slate-50 border border-slate-200 rounded-lg"
+                    className={`group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden ${
+                      group.enabled === false ? 'opacity-60' : ''
+                    }`}
                   >
                     {editingGroupId === group.id ? (
                       // Edit Form
-                      <div className="space-y-2.5">
-                        <h4 className="text-sm font-medium text-slate-900">{t('settings.editGroup')}</h4>
-                        <div className="space-y-2">
-                          <div>
-                            <label className="block text-xs font-medium text-slate-700 mb-1">
-                              {t('settings.groupName')}
-                            </label>
-                            <input
-                              type="text"
-                              value={editGroupName}
-                              onChange={(e) => setEditGroupName(e.target.value)}
-                              className="input w-full text-sm"
-                              disabled={isUpdatingGroup}
-                            />
+                      <div className="p-4">
+                        <div className="flex items-center gap-2 mb-4">
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                            style={{ backgroundColor: `${editGroupColor}20` }}
+                          >
+                            <span className="text-lg">{editGroupIcon}</span>
                           </div>
-                          <div>
-                            <label className="block text-xs font-medium text-slate-700 mb-1">
-                              {t('settings.groupDescription')}
-                            </label>
-                            <input
-                              type="text"
-                              value={editGroupDescription}
-                              onChange={(e) => setEditGroupDescription(e.target.value)}
-                              className="input w-full text-sm"
-                              disabled={isUpdatingGroup}
-                            />
+                          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{t('settings.editGroup')}</h4>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                {t('settings.groupName')}
+                              </label>
+                              <input
+                                type="text"
+                                value={editGroupName}
+                                onChange={(e) => setEditGroupName(e.target.value)}
+                                className="w-full px-2.5 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                disabled={isUpdatingGroup}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                {t('settings.groupDescription')}
+                              </label>
+                              <input
+                                type="text"
+                                value={editGroupDescription}
+                                onChange={(e) => setEditGroupDescription(e.target.value)}
+                                className="w-full px-2.5 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                disabled={isUpdatingGroup}
+                              />
+                            </div>
                           </div>
                           {/* Color Presets */}
                           <div>
-                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                               {t('settings.groupColor')}
                             </label>
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="flex flex-wrap gap-1">
                               {PRESET_COLORS.map((color) => (
                                 <button
                                   key={color.value}
                                   type="button"
                                   onClick={() => setEditGroupColor(color.value)}
                                   disabled={isUpdatingGroup}
-                                  className={`w-7 h-7 rounded-lg border-2 transition-all ${
+                                  className={`w-6 h-6 rounded-md border-2 transition-all ${
                                     editGroupColor === color.value
-                                      ? 'border-slate-900 scale-110 shadow-sm'
-                                      : 'border-slate-200 hover:border-slate-400'
+                                      ? 'border-slate-900 dark:border-white scale-110'
+                                      : 'border-transparent hover:border-slate-300'
                                   }`}
                                   style={{ backgroundColor: color.value }}
-                                  title={`${color.name} - ${color.description}`}
+                                  title={color.name}
                                 />
                               ))}
                             </div>
                           </div>
                           {/* Icon Presets */}
                           <div>
-                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                               {t('settings.groupIcon')}
                             </label>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-0.5">
                               {PRESET_ICONS.map((icon) => (
                                 <button
                                   key={icon.value}
                                   type="button"
                                   onClick={() => setEditGroupIcon(icon.value)}
                                   disabled={isUpdatingGroup}
-                                  className={`w-8 h-8 text-base rounded-lg border-2 transition-all ${
+                                  className={`w-7 h-7 text-sm rounded-md border transition-all ${
                                     editGroupIcon === icon.value
-                                      ? 'border-blue-500 bg-blue-50'
-                                      : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                                      : 'border-transparent hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                                   }`}
-                                  title={`${icon.name} - ${icon.description}`}
                                 >
                                   {icon.value}
                                 </button>
                               ))}
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleSaveEditGroup(group.id)}
-                            disabled={isUpdatingGroup}
-                            className="btn btn-primary btn-sm"
-                          >
-                            {isUpdatingGroup ? t('common.saving') : t('common.save')}
-                          </button>
-                          <button
-                            onClick={handleCancelEditGroup}
-                            disabled={isUpdatingGroup}
-                            className="btn btn-secondary btn-sm"
-                          >
-                            {t('common.cancel')}
-                          </button>
+                          <div className="flex items-center gap-2 pt-2">
+                            <button
+                              onClick={() => handleSaveEditGroup(group.id)}
+                              disabled={isUpdatingGroup}
+                              className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                              {isUpdatingGroup ? t('common.saving') : t('common.save')}
+                            </button>
+                            <button
+                              onClick={handleCancelEditGroup}
+                              disabled={isUpdatingGroup}
+                              className="px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                            >
+                              {t('common.cancel')}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ) : (
                       // Normal Display
-                      <div>
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="text-xl"
-                              style={{ color: group.color }}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {/* Icon */}
+                            <div
+                              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                              style={{ backgroundColor: `${group.color}15` }}
                             >
-                              {group.icon || '📁'}
-                            </span>
-                            <div>
-                              <h4
-                                className="text-sm font-medium"
-                                style={{ color: group.color }}
-                              >
-                                {group.name}
-                              </h4>
+                              <span className="text-xl" style={{ color: group.color }}>
+                                {group.icon || '📁'}
+                              </span>
+                            </div>
+                            {/* Info */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                  {group.name}
+                                </h4>
+                                {group.enabled === false && (
+                                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-full">
+                                    {t('settings.disabled')}
+                                  </span>
+                                )}
+                              </div>
                               {group.description && (
-                                <p className="text-xs text-slate-500">{group.description}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{group.description}</p>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {/* Enable/Disable Toggle */}
+                            <button
+                              onClick={() => handleToggleGroupEnabled(group.id, group.enabled === false)}
+                              className={`relative w-10 h-5 rounded-full transition-colors ${
+                                group.enabled !== false ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
+                              }`}
+                              title={group.enabled !== false ? t('settings.groupDisable') : t('settings.groupEnable')}
+                            >
+                              <span
+                                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                                  group.enabled !== false ? 'translate-x-5' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                            {/* Edit Button */}
                             <button
                               onClick={() => handleStartEditGroup(group)}
-                              className="btn btn-secondary btn-sm"
+                              className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                               title={t('settings.editGroup')}
                             >
-                              {t('common.edit')}
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
                             </button>
+                            {/* Delete Button */}
                             <button
                               onClick={() => handleDeleteGroup(group.id)}
-                              className="btn btn-secondary btn-sm text-red-600 hover:text-red-700"
+                              className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                               title={t('settings.deleteGroup')}
                             >
-                              {t('common.delete')}
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
                             </button>
                           </div>
                         </div>
 
-                        {/* Tags in group */}
-                        <div className="mt-2 pt-2 border-t border-slate-200">
-                          <span className="text-xs text-slate-500">
-                            {t('settings.tagsInGroup', { count: group.tags.length })}
-                          </span>
-                          {group.tags.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic mt-1">{t('settings.noTagsInGroup')}</p>
-                          ) : (
-                            <div className="flex flex-wrap gap-1 mt-1">
+                        {/* Tags Section */}
+                        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                            <span>{t('settings.tagsInGroup', { count: group.tags.length })}</span>
+                          </div>
+                          {group.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
                               {group.tags.map(tag => (
                                 <span
                                   key={tag}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full"
-                                  style={{ backgroundColor: `${group.color}20`, color: group.color }}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full"
+                                  style={{
+                                    backgroundColor: `${group.color}15`,
+                                    color: group.color,
+                                    border: `1px solid ${group.color}30`
+                                  }}
                                 >
                                   {tag}
                                   <button
                                     onClick={() => handleRemoveTagFromGroup(group.id, tag)}
-                                    className="hover:opacity-70"
+                                    className="ml-0.5 hover:opacity-70 transition-opacity"
                                     title={t('settings.removeFromGroup')}
                                   >
-                                    ×
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
                                   </button>
                                 </span>
                               ))}

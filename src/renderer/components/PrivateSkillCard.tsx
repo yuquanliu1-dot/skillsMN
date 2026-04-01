@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PrivateSkill, PrivateRepo } from '../../shared/types';
 import PrivateInstallDialog from './PrivateInstallDialog';
 import ConflictResolutionDialog from './ConflictResolutionDialog';
@@ -21,6 +22,7 @@ interface PrivateSkillCardProps {
 }
 
 export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSkillClick, onNavigateToSettings, onTagAssigned }: PrivateSkillCardProps): JSX.Element {
+  const { t } = useTranslation();
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [installProgress, setInstallProgress] = useState<'idle' | 'installing' | 'success' | 'error'>('idle');
@@ -183,14 +185,14 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
             </h4>
 
             {/* Source Badge */}
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex-shrink-0 border-0">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex-shrink-0 border-0">
               {repo.provider === 'gitlab' ? 'GitLab' : 'GitHub'}
             </span>
 
             {/* Installed Badge */}
             {isInstalled && !isCheckingStatus && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0">
-                Installed
+                {t('install.installed')}
               </span>
             )}
 
@@ -216,7 +218,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
                   ? 'bg-red-600 dark:bg-red-600 text-white hover:bg-red-700'
                   : 'bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700'
               }`}
-              aria-label={`Install skill: ${skill.name}`}
+              aria-label={t('install.installSkill', { name: skill.name })}
               aria-busy={installProgress === 'installing'}
               aria-live="polite"
             >
@@ -225,14 +227,14 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
                 </span>
               )}
-              {!isCheckingStatus && isInstalled && 'Install'}
-              {!isCheckingStatus && !isInstalled && installProgress === 'idle' && 'Install'}
+              {!isCheckingStatus && isInstalled && t('install.install')}
+              {!isCheckingStatus && !isInstalled && installProgress === 'idle' && t('install.install')}
               {!isCheckingStatus && !isInstalled && installProgress === 'installing' && (
                 <span className="flex items-center gap-1">
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
                 </span>
               )}
-              {!isCheckingStatus && !isInstalled && installProgress === 'error' && 'Retry'}
+              {!isCheckingStatus && !isInstalled && installProgress === 'error' && t('privateRepos.retry')}
             </button>
           </div>
         </div>
@@ -257,7 +259,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
             </p>
           ) : (
             <p className="text-xs text-slate-400 dark:text-slate-500 italic">
-              No description
+              {t('skills.noDescription')}
             </p>
           )}
         </div>

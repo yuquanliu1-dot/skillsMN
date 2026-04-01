@@ -70,6 +70,7 @@
     "skillsCount": "{{count}} skills",
     "noSkills": "No skills found. Create your first skill to get started.",
     "noMatchingSkills": "No skills match your search criteria.",
+    "noDescription": "No description",
     "filterByTag": "Filter by tag",
     "allTags": "All tags",
     "newSkill": "New Skill",
@@ -176,6 +177,7 @@
     "addDirectory": "Add Directory",
     "adding": "Adding...",
     "directoriesDescription": "These directories will be used to store and link your skills. Skills can be linked to any configured directory.",
+    "quickTip": "Quick Tip",
     "tipProjectSkills": "For project-level skills, the directory name is typically",
     "noDirectories": "No skills directories configured. Add a directory to store and link your skills.",
     "directoryAdded": "Project directory added successfully",
@@ -385,6 +387,14 @@
     "installed": "Installed",
     "installing": "Installing...",
     "installationFailed": "Installation Failed",
+    "repository": "Repository",
+    "skillName": "Skill Name",
+    "pathInRepo": "Path in Repository",
+    "latestCommit": "Latest Commit",
+    "installLocation": "Installation Location",
+    "installLocationHint": "Skill will be installed to your centralized skills library and will be available to all Claude Code projects.",
+    "installToLibrary": "Install to Library",
+    "installSkill": "Install skill: {{name}}",
 
     "errors": {
       "gitNotInstalled": {
@@ -456,7 +466,12 @@
     "noSkillsInRepo": "This repository does not contain any skill directories",
     "noSkillsForTag": "No skills found with tag \"{{tag}}\"",
     "authFailed": "Authentication failed. Your PAT may have expired or been revoked.",
-    "goToSettingsToUpdatePat": "Go to Settings to update your PAT."
+    "goToSettingsToUpdatePat": "Go to Settings to update your PAT.",
+    "refreshSkillsList": "Refresh skills list",
+    "sortByName": "Name",
+    "sortByDate": "Date",
+    "retry": "Retry",
+    "settings": "Settings"
   },
 
   "aiDialog": {
@@ -583,14 +598,6 @@
     "uploading": "Uploading...",
     "uploadSuccess": "Skill uploaded successfully",
     "uploadFailed": "Failed to upload skill"
-  },
-
-  "privateRepos": {
-    "noRepositories": "No repositories configured",
-    "noRepositoriesHint": "Please add a repository in Settings",
-    "addInSettings": "Please add a repository in Settings → Repositories.",
-    "errorLoadingSkills": "Error loading skills",
-    "noSkillsAvailable": "No skills available"
   },
 
   "commit": {
