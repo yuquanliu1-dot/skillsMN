@@ -14,11 +14,61 @@ const execAsync = promisify(exec);
 // Proxy settings from application config
 let proxyConfig: ProxyConfig | null = null;
 
+// Cached system proxy settings from Windows registry
+let cachedSystemProxySettings: { httpProxy?: string; httpsProxy?: string } | null = null;
+let systemProxyLoadAttempted = false;
+
+/**
+ * Load system proxy settings from Windows registry
+ * Uses get-proxy-settings package to read actual system proxy configuration
+ */
+async function loadSystemProxySettings(): Promise<void> {
+  if (systemProxyLoadAttempted) return;
+  systemProxyLoadAttempted = true;
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getProxySettings } = require('get-proxy-settings');
+    const settings = await getProxySettings();
+
+    if (settings?.https) {
+      cachedSystemProxySettings = {
+        httpsProxy: `http://${settings.https.host}:${settings.https.port}`,
+        httpProxy: settings.http ? `http://${settings.http.host}:${settings.http.port}` : undefined,
+      };
+      console.log('[GitOperations] Loaded system proxy settings from Windows registry', {
+        httpsProxy: cachedSystemProxySettings.httpsProxy,
+        httpProxy: cachedSystemProxySettings.httpProxy,
+      });
+    } else if (settings?.http) {
+      cachedSystemProxySettings = {
+        httpProxy: `http://${settings.http.host}:${settings.http.port}`,
+      };
+      console.log('[GitOperations] Loaded HTTP system proxy settings from Windows registry', {
+        httpProxy: cachedSystemProxySettings.httpProxy,
+      });
+    }
+  } catch (error) {
+    console.warn('[GitOperations] Failed to load system proxy settings from Windows registry', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
 /**
  * Set proxy configuration for git operations
  */
 export function setGitProxyConfig(config: ProxyConfig | undefined): void {
   proxyConfig = config || null;
+
+  // Reset cached system proxy when settings change
+  if (config?.enabled && config?.type === 'system') {
+    // Clear cache to force reload
+    cachedSystemProxySettings = null;
+    systemProxyLoadAttempted = false;
+    // Immediately preload system proxy settings (don't wait for first git command)
+    loadSystemProxySettings().catch(() => {});
+  }
 }
 
 /**
@@ -45,7 +95,34 @@ function getGitEnv(): NodeJS.ProcessEnv {
     return baseEnv;
   }
 
-  // If using system proxy, keep the existing env vars
+  // If using system proxy, check Windows registry cache first, then fallback to env vars
+  if (proxyConfig.type === 'system') {
+    // First check cached Windows registry proxy settings
+    if (cachedSystemProxySettings) {
+      if (cachedSystemProxySettings.httpsProxy) {
+        baseEnv.HTTPS_PROXY = cachedSystemProxySettings.httpsProxy;
+        baseEnv.https_proxy = cachedSystemProxySettings.httpsProxy;
+      }
+      if (cachedSystemProxySettings.httpProxy) {
+        baseEnv.HTTP_PROXY = cachedSystemProxySettings.httpProxy;
+        baseEnv.http_proxy = cachedSystemProxySettings.httpProxy;
+      }
+      console.log('[GitOperations] Using Windows system proxy for git command', {
+        httpsProxy: cachedSystemProxySettings.httpsProxy,
+        httpProxy: cachedSystemProxySettings.httpProxy,
+      });
+      return baseEnv;
+    }
+
+    // Trigger async load for next time (don't block current request)
+    if (!systemProxyLoadAttempted) {
+      loadSystemProxySettings().catch(() => {});
+    }
+
+    // Fallback to existing environment variables
+    return baseEnv;
+  }
+
   return baseEnv;
 }
 

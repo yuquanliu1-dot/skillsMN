@@ -12,6 +12,7 @@ import { createRegistrySource, SkillSource } from '../models/SkillSource';
 import { logger } from '../utils/Logger';
 import { SOURCE_METADATA_FILE } from '../../shared/constants';
 import type { InstallFromRegistryRequest, InstallProgressEvent, RegistryErrorCode } from '../../shared/types';
+import { getProxyAgent } from './GitHubService';
 
 /**
  * Parsed skill metadata from SKILL.md frontmatter
@@ -39,15 +40,18 @@ const FETCH_TIMEOUT_MS = 30000;
 const MAX_RETRIES = 3;
 
 /**
- * Fetch with timeout and retry
+ * Fetch with timeout, retry, and proxy support
  */
-async function fetchWithTimeout(url: string, options?: RequestInit, timeoutMs: number = FETCH_TIMEOUT_MS): Promise<Response> {
+async function fetchWithTimeout(url: string, options?: any, timeoutMs: number = FETCH_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    // Get proxy agent if configured
+    const proxyAgent = getProxyAgent(url);
     const response = await fetch(url, {
       ...options,
+      agent: proxyAgent,
       signal: controller.signal
     });
     return response;

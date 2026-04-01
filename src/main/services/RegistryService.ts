@@ -262,7 +262,7 @@ export class RegistryService {
             headers: {
               'User-Agent': 'skillsMN-Desktop/1.0'
             },
-            signal: AbortSignal.timeout(10000) // 10 second timeout
+            signal: AbortSignal.timeout(30000) // 30 second timeout (proxy connections may be slower)
           });
 
           if (response.ok) {

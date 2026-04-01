@@ -123,7 +123,7 @@ export function setProxyConfig(config: ProxyConfig | undefined): void {
  * Get proxy agent from settings or system environment variables
  * Priority: 1. Custom proxy URL from settings 2. System proxy (if enabled) 3. No proxy
  */
-function getProxyAgent(url: string): any {
+export function getProxyAgent(url: string): any {
   // If proxy is not enabled, return undefined immediately (don't load proxy agents)
   if (!proxySettings?.enabled) {
     return undefined;
