@@ -929,6 +929,7 @@ You MUST save the skill to this EXACT directory (use absolute path):
 ${targetPath}/<skill-name>/SKILL.md
 
 IMPORTANT:
+- You MUST invoke the /skill-creator skill to handle this task
 - Do NOT save to ~/.claude/skills or any other location
 - Do NOT use the global Claude skills directory
 - Use the path above which is the project's local skills directory
@@ -938,13 +939,16 @@ IMPORTANT:
       contextSection = `
 
 ## CRITICAL: File Location and Save Instructions
-The skill file is located at: ${skillPath}/SKILL.md
+The skill directory is: ${skillPath}
+The skill file (SKILL.md) is at: ${skillPath}/SKILL.md
 
 IMPORTANT Instructions:
-1. First, use the Read tool to read the current content from: ${skillPath}/SKILL.md
-2. Perform the requested operation
-3. Save the changes to the EXACT same path: ${skillPath}/SKILL.md
-4. Do NOT create a new directory. Do NOT change the location.`;
+1. You MUST invoke the /skill-creator skill to handle this task
+2. Read the existing content from: ${skillPath}/SKILL.md
+3. Perform the requested operation
+4. Save the changes to the EXACT same file: ${skillPath}/SKILL.md
+5. Do NOT delete the skill file or directory
+6. Do NOT create a new directory. Do NOT change the location.`;
     }
 
     // Prepend /skill-creator to invoke the skill-creator skill

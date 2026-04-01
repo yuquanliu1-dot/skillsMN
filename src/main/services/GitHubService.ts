@@ -28,6 +28,10 @@ let HttpProxyAgent: any = null;
 let proxyAgentsLoaded = false;
 let proxyAgentsWarningLogged = false;
 
+// System proxy settings cached from Windows registry
+let cachedSystemProxySettings: { httpProxy?: string; httpsProxy?: string } | null = null;
+let systemProxyLoadAttempted = false;
+
 // Lazy load proxy agents (only when needed)
 function loadProxyAgents(): void {
   if (proxyAgentsLoaded) return;
@@ -62,11 +66,57 @@ function loadProxyAgents(): void {
 let proxySettings: ProxyConfig | null = null;
 
 /**
+ * Load system proxy settings from Windows registry
+ * This uses the get-proxy-settings package to read actual system proxy configuration
+ */
+async function loadSystemProxySettings(): Promise<void> {
+  if (systemProxyLoadAttempted) return;
+  systemProxyLoadAttempted = true;
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getProxySettings } = require('get-proxy-settings');
+    const settings = await getProxySettings();
+
+    if (settings?.https) {
+      cachedSystemProxySettings = {
+        httpsProxy: `http://${settings.https.host}:${settings.https.port}`,
+        httpProxy: settings.http ? `http://${settings.http.host}:${settings.http.port}` : undefined,
+      };
+      logger.info('Loaded system proxy settings from Windows registry', 'GitHubService', {
+        httpsProxy: cachedSystemProxySettings.httpsProxy,
+        httpProxy: cachedSystemProxySettings.httpProxy,
+      });
+    } else if (settings?.http) {
+      cachedSystemProxySettings = {
+        httpProxy: `http://${settings.http.host}:${settings.http.port}`,
+      };
+      logger.info('Loaded HTTP system proxy settings from Windows registry', 'GitHubService', {
+        httpProxy: cachedSystemProxySettings.httpProxy,
+      });
+    }
+  } catch (error) {
+    logger.warn('Failed to load system proxy settings from Windows registry', 'GitHubService', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+/**
  * Set proxy configuration from settings
  */
 export function setProxyConfig(config: ProxyConfig | undefined): void {
   proxySettings = config || null;
   logger.debug('Proxy configuration updated', 'GitHubService', { config });
+
+  // Reset cached system proxy when settings change
+  if (config?.enabled && config?.type === 'system') {
+    // Clear cache to force reload
+    cachedSystemProxySettings = null;
+    systemProxyLoadAttempted = false;
+    // Immediately preload system proxy settings (don't wait for first request)
+    loadSystemProxySettings().catch(() => {});
+  }
 }
 
 /**
@@ -100,23 +150,51 @@ function getProxyAgent(url: string): any {
     return undefined;
   }
 
-  // Priority 2: System proxy
+  // Priority 2: System proxy - check cached Windows registry settings first, then fallback to env vars
   if (proxySettings.type === 'system') {
-    const proxyUrl = isHttps
+    // First check cached Windows registry proxy settings
+    if (cachedSystemProxySettings) {
+      const proxyUrl = isHttps
+        ? cachedSystemProxySettings.httpsProxy
+        : cachedSystemProxySettings.httpProxy;
+
+      if (proxyUrl) {
+        logger.debug(`Using Windows system proxy for ${url}`, 'GitHubService', { proxyUrl });
+        try {
+          if (isHttps && HttpsProxyAgent) {
+            return new HttpsProxyAgent(proxyUrl);
+          } else if (!isHttps && HttpProxyAgent) {
+            return new HttpProxyAgent(proxyUrl);
+          }
+        } catch (error) {
+          logger.warn('Failed to create proxy agent from Windows system proxy', 'GitHubService', error);
+        }
+      }
+    }
+
+    // Fallback to environment variables (for non-Windows or if registry read failed)
+    const envProxyUrl = isHttps
       ? (process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy)
       : (process.env.HTTP_PROXY || process.env.http_proxy);
 
-    if (proxyUrl) {
-      logger.debug(`Using system proxy for ${url}`, 'GitHubService', { proxyUrl });
+    if (envProxyUrl) {
+      logger.debug(`Using environment proxy for ${url}`, 'GitHubService', { proxyUrl: envProxyUrl });
       try {
         if (isHttps && HttpsProxyAgent) {
-          return new HttpsProxyAgent(proxyUrl);
+          return new HttpsProxyAgent(envProxyUrl);
         } else if (!isHttps && HttpProxyAgent) {
-          return new HttpProxyAgent(proxyUrl);
+          return new HttpProxyAgent(envProxyUrl);
         }
       } catch (error) {
-        logger.warn('Failed to create proxy agent from system proxy', 'GitHubService', error);
+        logger.warn('Failed to create proxy agent from environment proxy', 'GitHubService', error);
       }
+    }
+
+    // If no proxy found and haven't attempted to load from Windows registry yet, try to load it
+    if (!cachedSystemProxySettings && !systemProxyLoadAttempted) {
+      // Trigger async load for next time, but don't block current request
+      loadSystemProxySettings().catch(() => {});
+      logger.debug('Initiated system proxy settings load for next request', 'GitHubService');
     }
   }
 
@@ -124,11 +202,37 @@ function getProxyAgent(url: string): any {
 }
 
 /**
- * Fetch with system proxy support
+ * Fetch with system proxy support and timeout
  */
 async function fetchWithProxy(url: string, options: any = {}): Promise<any> {
-  const agent = getProxyAgent(url);
-  return fetch(url, { ...options, agent });
+  // Add default timeout of 30 seconds if not specified
+  const timeout = options.timeout || 30000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    // Get proxy agent if configured, otherwise use a fresh agent to avoid connection pooling issues
+    let agent = getProxyAgent(url);
+
+    // If no proxy agent, create a simple agent that disables connection pooling
+    // This helps prevent ECONNRESET errors from connection reuse
+    if (!agent && url.startsWith('https://')) {
+      const https = require('https');
+      agent = new https.Agent({
+        keepAlive: false, // Disable keep-alive to prevent connection reuse issues
+        timeout: 30000,
+      });
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      agent,
+      signal: options.signal || controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**

@@ -241,12 +241,6 @@ export default function SkillCard({
                 </span>
               )}
 
-              {/* Upload Badge (for private repo skills with newer local version) */}
-              {canUpload && uploadProgress !== 'success' && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex-shrink-0 border-0 animate-pulse">
-                  {t('skillCard.upload')}
-                </span>
-              )}
 
               {/* Success Badge */}
               {updateProgress === 'success' && (
@@ -288,7 +282,7 @@ export default function SkillCard({
               <button
                 onClick={handleUploadClick}
                 disabled={uploadProgress === 'uploading'}
-                className="btn text-xs px-3 py-1 bg-purple-600 dark:bg-purple-600 text-white hover:bg-purple-700 dark:hover:bg-purple-700 disabled:opacity-50"
+                className="btn text-xs px-3 py-1 bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700 disabled:opacity-50 animate-pulse"
               >
                 {uploadProgress === 'uploading' ? '...' : t('skillCard.upload')}
               </button>

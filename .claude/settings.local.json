@@ -48,7 +48,8 @@
       "Read(//d/skillsMN/Local/**)",
       "Bash(node:*)",
       "Bash(ls:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(gh issue:*)"
     ]
   }
 }

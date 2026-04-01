@@ -963,6 +963,10 @@ export default function App(): JSX.Element {
               });
             }
           }}
+          onSkillModified={() => {
+            // Refresh skill list when AI modifies a skill
+            loadSkills();
+          }}
         />
       )}
 

@@ -293,6 +293,9 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   // Track the previous skill path to detect actual skill changes vs. initial skill creation
   const prevSkillPathRef = useRef<string | undefined>(currentSkillPath);
 
+  // Track processed Write tool calls to prevent duplicate refresh triggers
+  const processedWriteToolsRef = useRef<Set<string>>(new Set());
+
   const {
     status,
     content,
@@ -660,17 +663,30 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   /**
    * Detect Write tool calls and notify parent to refresh editor
    * This allows the editor to refresh when the AI modifies the current skill file
+   * Uses ref to prevent duplicate triggers from the same Write tool call
    */
   useEffect(() => {
     if (toolCalls && toolCalls.length > 0 && onSkillModified) {
       const writeTool = toolCalls.find(t => t.name === 'Write');
       if (writeTool?.input?.file_path) {
         const filePath = writeTool.input.file_path as string;
-        console.log('[AISkillSidebar] Write tool detected, notifying parent to refresh:', filePath);
-        onSkillModified(filePath);
+
+        // Only notify once per unique file path
+        if (!processedWriteToolsRef.current.has(filePath)) {
+          processedWriteToolsRef.current.add(filePath);
+          console.log('[AISkillSidebar] Write tool detected, notifying parent to refresh:', filePath);
+          onSkillModified(filePath);
+        }
       }
     }
   }, [toolCalls, onSkillModified]);
+
+  // Clear processed Write tools when generation resets (new conversation)
+  useEffect(() => {
+    if (isIdle) {
+      processedWriteToolsRef.current.clear();
+    }
+  }, [isIdle]);
 
   /**
    * Handle selecting an option for a question
