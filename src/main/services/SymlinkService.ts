@@ -645,26 +645,50 @@ export class SymlinkService {
       skillConfig.targets[toolId] = targetConfig;
     }
 
-    // Update enabled state
+    // Update enabled state in memory
+    const previousEnabledState = targetConfig.enabled;
     targetConfig.enabled = enabled;
     targetConfig.lastModified = now;
     skillConfig.lastModified = now;
 
-    // Create or remove symlink
-    if (enabled) {
-      await this.createSymlink(skillPath, targetDirectory);
-    } else {
-      await this.removeSymlink(skillPath, targetDirectory);
-    }
-
-    // If all targets are disabled, remove the skill config
+    // If all targets are disabled, prepare to remove the skill config
     const hasEnabledTargets = Object.values(skillConfig.targets).some((t) => t.enabled);
-    if (!hasEnabledTargets) {
-      delete db.symlinks[skillName];
+    const shouldRemoveSkillConfig = !hasEnabledTargets;
+
+    // STEP 1: Save database FIRST (before file system operation)
+    // This ensures we have a consistent state even if file system operation fails
+    const dbToSave = { ...db };
+    if (shouldRemoveSkillConfig) {
+      delete dbToSave.symlinks[skillName];
     }
 
-    // Save database
-    await this.saveDatabaseV2(appSkillsDir, db);
+    try {
+      await this.saveDatabaseV2(appSkillsDir, dbToSave);
+    } catch (error) {
+      // Rollback in-memory state if database save fails
+      targetConfig.enabled = previousEnabledState;
+      logger.error('Failed to save database, rolling back in-memory state', 'SymlinkService', error);
+      throw error;
+    }
+
+    // STEP 2: Perform file system operation AFTER database is saved
+    try {
+      if (enabled) {
+        await this.createSymlink(skillPath, targetDirectory);
+      } else {
+        await this.removeSymlink(skillPath, targetDirectory);
+      }
+    } catch (error) {
+      // File system operation failed - this is acceptable since database is consistent
+      // The symlink will be reconciled on next app start via reconcileSymlinks()
+      logger.warn('File system operation failed after database save. Symlink will be reconciled on next app start.', 'SymlinkService', {
+        skillName,
+        toolId,
+        enabled,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Don't throw - database is consistent, symlink can be fixed later
+    }
 
     logger.info('Single target symlink updated', 'SymlinkService', {
       skillName,

@@ -11,6 +11,9 @@
     "next": "Next",
     "skip": "Skip",
     "retry": "Retry",
+    "generate": "Generate",
+    "stop": "Stop",
+    "apply": "Apply",
     "refresh": "Refresh",
     "search": "Search",
     "loading": "Loading...",
@@ -80,6 +83,7 @@
     "skillWillBeCreated": "A new directory will be created with a",
     "templateFile": "template file.",
     "savedToLibrary": "Skill will be saved to your centralized skills library.",
+    "savedToLibraryShort": "Skills are saved to your centralized skills library",
     "createdSuccessfully": "Skill created successfully!",
     "location": "Location",
     "ungrouped": "Ungrouped"
@@ -308,6 +312,9 @@
     "groupCreated": "Group created successfully",
     "groupUpdated": "Group updated successfully",
     "groupDeleted": "Group deleted successfully",
+    "groupEnabled": "Group enabled successfully",
+    "groupDisabled": "Group disabled successfully",
+    "disabled": "Disabled",
     "skillsInGroup": "{{count}} skills",
     "tagsInGroup": "{{count}} tags",
     "selectGroup": "Select a group",
@@ -375,6 +382,7 @@
     "installToAppDirectory": "This skill will be installed to the application's skill directory.",
     "configureSymlinkAfter": "You can configure symlink settings after installation.",
     "install": "Install",
+    "installed": "Installed",
     "installing": "Installing...",
     "installationFailed": "Installation Failed",
 
@@ -428,7 +436,9 @@
     "resultsCount": "{{count}} result found",
     "resultsCount_plural": "{{count}} results found",
     "previewSkill": "Preview Skill",
-    "install": "Install Skill"
+    "install": "Install Skill",
+    "selectSkill": "Select a Skill",
+    "multipleSkillsFound": "Multiple skills were found. Please select one to install."
   },
 
   "privateRepos": {
@@ -447,6 +457,18 @@
     "noSkillsForTag": "No skills found with tag \"{{tag}}\"",
     "authFailed": "Authentication failed. Your PAT may have expired or been revoked.",
     "goToSettingsToUpdatePat": "Go to Settings to update your PAT."
+  },
+
+  "aiDialog": {
+    "preview": "Preview",
+    "streaming": "Streaming...",
+    "complete": "Complete",
+    "generatedSkill": "Generated Skill",
+    "contentWillAppear": "Generated content will appear here",
+    "promptPlaceholder": "Describe the skill you want to create...",
+    "generateSkill": "Generate skill with AI",
+    "stopGeneration": "Stop generation",
+    "generateAgain": "Generate again"
   },
 
   "aiSidebar": {
@@ -515,7 +537,8 @@
     "history": "History",
     "conversationHistory": "Conversation History",
     "noConversations": "No conversations yet",
-    "deleteConversation": "Delete conversation",
+    "deleteConversation": "Delete Conversation",
+    "deleteConversationConfirm": "Are you sure you want to delete this conversation? This action cannot be undone.",
     "yesterday": "Yesterday",
     "daysAgo": "{{count}} days ago",
     "pleaseAnswer": "Please answer the following questions:",
@@ -555,11 +578,19 @@
     "skillName": "Skill Name",
     "targetPath": "Target Path",
     "commitMessage": "Commit Message",
-    "commitMessagePlaceholder": "Update skill: {{name}}",
+    "commitMessagePlaceholder": "Upload skill: {{name}}",
     "upload": "Upload",
     "uploading": "Uploading...",
     "uploadSuccess": "Skill uploaded successfully",
     "uploadFailed": "Failed to upload skill"
+  },
+
+  "privateRepos": {
+    "noRepositories": "No repositories configured",
+    "noRepositoriesHint": "Please add a repository in Settings",
+    "addInSettings": "Please add a repository in Settings → Repositories.",
+    "errorLoadingSkills": "Error loading skills",
+    "noSkillsAvailable": "No skills available"
   },
 
   "commit": {

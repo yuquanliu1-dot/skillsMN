@@ -22,7 +22,18 @@ export class FileWatcher {
 
   // Event queue for when main window is unavailable
   private eventQueue: Array<{ eventType: FSEvent['type']; path: string }> = [];
-  private readonly MAX_QUEUE_SIZE = 100;
+  private readonly MAX_QUEUE_SIZE = 500; // Increased from 100 to handle batch operations
+  private queueOverflowWarned = false; // Track if we've warned about overflow
+
+  /**
+   * Reset overflow warning flag when queue is emptied
+   */
+  private resetOverflowWarning(): void {
+    if (this.queueOverflowWarned) {
+      this.queueOverflowWarned = false;
+      logger.debug('Queue overflow warning reset', 'FileWatcher');
+    }
+  }
 
   constructor(pathValidator: PathValidator) {
     this.pathValidator = pathValidator;
@@ -189,12 +200,16 @@ export class FileWatcher {
           path,
           queueSize: this.eventQueue.length,
         });
+        this.queueOverflowWarned = false; // Reset warning flag when queue has space
       } else {
-        logger.warn('Event queue full, dropping event', 'FileWatcher', {
-          eventType,
-          path,
-          queueSize: this.eventQueue.length,
-        });
+        // Log warning about dropped events
+        if (!this.queueOverflowWarned) {
+          this.queueOverflowWarned = true;
+          logger.warn('Event queue full, events are being dropped. Consider refreshing manually.', 'FileWatcher', {
+            queueSize: this.eventQueue.length,
+            maxSize: this.MAX_QUEUE_SIZE,
+          });
+        }
       }
       return;
     }
@@ -256,6 +271,9 @@ export class FileWatcher {
       flushed,
       remaining: this.eventQueue.length,
     });
+
+    // Reset overflow warning flag since queue is now empty
+    this.resetOverflowWarning();
   }
 
   /**

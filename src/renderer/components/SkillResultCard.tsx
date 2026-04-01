@@ -4,7 +4,8 @@
  * Individual search result card with install functionality
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SearchSkillResult, SkillOption } from '../../shared/types';
 import { checkSkillInstalled, installFromRegistry, onInstallProgress } from '../services/registryClient';
 import { InstallDialog } from './InstallDialog';
@@ -22,6 +23,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
   onInstallComplete,
   onSkillClick
 }) => {
+  const { t } = useTranslation();
   const [showDialog, setShowDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
   const [installProgress, setInstallProgress] = useState<string>('');
@@ -32,20 +34,49 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
   const [multipleSkillsOptions, setMultipleSkillsOptions] = useState<SkillOption[]>([]);
   const [showSkillSelectionDialog, setShowSkillSelectionDialog] = useState(false);
 
+  // Use ref to track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+
   // Check if skill is already installed
-  useEffect(() => {
-    const checkInstalled = async () => {
-      try {
-        const status = await checkSkillInstalled(skill.skillId, targetDirectory);
+  const checkInstalledStatus = useCallback(async () => {
+    try {
+      const status = await checkSkillInstalled(skill.skillId, targetDirectory);
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
         setIsInstalled(status.installed);
         setInstalledAt(status.installedAt);
-      } catch (error) {
-        console.error('Failed to check installation status:', error);
       }
+    } catch (error) {
+      console.error('Failed to check installation status:', error);
+    }
+  }, [skill.skillId, targetDirectory]);
+
+  // Check install status when skill or directory changes
+  useEffect(() => {
+    checkInstalledStatus();
+  }, [checkInstalledStatus]);
+
+  // Listen for skills:refresh event to update install status when skills are deleted/modified elsewhere
+  useEffect(() => {
+    const handleSkillsRefresh = () => {
+      console.log('🔔 [SkillResultCard] skills:refresh received, re-checking install status for:', skill.name);
+      checkInstalledStatus();
     };
 
-    checkInstalled();
-  }, [skill.skillId, targetDirectory]);
+    window.electronAPI.onSkillsRefresh(handleSkillsRefresh);
+
+    return () => {
+      window.electronAPI.removeSkillsRefreshListener();
+    };
+  }, [checkInstalledStatus, skill.name]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const handleInstallClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click when clicking install button
@@ -145,11 +176,11 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
 
             {/* Installed Badge */}
             {isInstalled && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 flex-shrink-0">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Installed
+                {t('install.installed')}
               </span>
             )}
           </div>
@@ -174,9 +205,9 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
                   <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent" />
                 </span>
               ) : isInstalled ? (
-                'Installed'
+                t('install.installed')
               ) : (
-                'Install'
+                t('install.install')
               )}
             </button>
           </div>
@@ -193,7 +224,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            {skill.installs.toLocaleString()} installs
+            {skill.installs.toLocaleString()} {t('skills.installs')}
           </span>
         </div>
 
@@ -234,10 +265,10 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
           <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full border border-slate-200 dark:border-slate-700">
             <div className="p-4 border-b border-slate-200 dark:border-slate-700">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Select a Skill
+                {t('discover.selectSkill')}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Multiple skills were found. Please select one to install.
+                {t('discover.multipleSkillsFound')}
               </p>
             </div>
             <div className="p-4 max-h-80 overflow-y-auto space-y-2">
@@ -270,7 +301,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
                   onClick={() => setShowSkillSelectionDialog(false)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
