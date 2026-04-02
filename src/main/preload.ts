@@ -491,6 +491,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_CHECK_DIRECTORY, { directoryPath });
   },
 
+  getMigrationTargetDirectory: (): Promise<IPCResponse<string>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_GET_TARGET_DIRECTORY);
+  },
+
   // ============================================================================
   // AI Conversation History Operations
   // ============================================================================
@@ -545,6 +549,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   reorderSkillGroups: (groupIds: string[]): Promise<IPCResponse<void>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_REORDER, { groupIds });
+  },
+
+  initDefaultSkillGroups: (): Promise<IPCResponse<{ initialized: boolean; groups: SkillGroup[] }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_INIT_DEFAULTS);
+  },
+
+  resetDefaultSkillGroups: (): Promise<IPCResponse<SkillGroup[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_RESET_DEFAULTS);
+  },
+
+  getDefaultSkillGroups: (): Promise<IPCResponse<SkillGroup[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_GET_DEFAULTS);
   },
 
   // ============================================================================

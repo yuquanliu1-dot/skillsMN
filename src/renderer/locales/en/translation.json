@@ -92,8 +92,12 @@
 
   "skillCard": {
     "local": "Local",
+    "localHint": "Created locally",
     "registry": "Registry",
-    "private": "Shared",
+    "registryHint": "From {{source}}",
+    "shared": "Shared",
+    "sharedHint": "From {{repo}}",
+    "linkCount": "Linked to {{count}} target(s)",
     "update": "Update",
     "upload": "Upload",
     "openFolder": "Open folder",
@@ -146,6 +150,8 @@
     "overwrite": "Overwrite",
     "keepChanges": "Keep Changes",
     "aiAssistant": "AI Assistant",
+    "showAI": "Show AI Assistant",
+    "hideAI": "Hide AI Assistant",
     "aiRewrite": "AI Rewrite",
     "aiInsert": "AI Insert",
     "save": "Save",
@@ -161,7 +167,14 @@
     "openClaudeInTerminal": "Open Claude Code in terminal to test this skill",
     "failedToOpenTerminal": "Failed to open terminal",
     "aiStreamingWarning": "AI is currently executing a task. Closing now will interrupt the task and lose the conversation. Continue anyway?",
-    "closeWithAITask": "Close (AI task in progress)"
+    "closeWithAITask": "Close (AI task in progress)",
+    "find": "Find",
+    "replace": "Replace",
+    "gotoLine": "Go to Line",
+    "switchTab": "Switch tab",
+    "close": "Close",
+    "noFileOpen": "No file open",
+    "selectFileFromTree": "Select a file from the tree"
   },
 
   "settings": {
@@ -369,8 +382,9 @@
     "title": "Delete Skill",
     "cannotBeUndone": "This action cannot be undone easily",
     "confirmDelete": "Are you sure you want to delete",
+    "willMoveToRecycleBin": "Will be moved to Recycle Bin",
     "movedToRecycleBin": "Moved to Recycle Bin",
-    "recycleBinDescription": "The skill will be moved to your system recycle bin. You can restore it from there if needed.",
+    "recycleBinDescription": "After deletion, this skill will be moved to your system recycle bin. You can restore it from there if needed.",
     "source": "Source:",
     "resourcesWillBeDeleted": "{{count}} resource will be deleted",
     "resourcesWillBeDeleted_plural": "{{count}} resources will be deleted",
@@ -634,5 +648,107 @@
     "unknownError": "An unknown error occurred",
     "operationFailed": "Operation failed",
     "tryAgain": "Please try again"
+  },
+
+  "migration": {
+    "title": "Migrate Skills",
+    "foundSkills": "Found <strong>{{count}}</strong> skill(s) in the added directory.",
+    "skillsWillBeMoved": "Skills will be moved to the application directory.",
+    "sourceLabel": "Source:",
+    "targetLabel": "Target:",
+    "moreSkills": "{{count}} more skill(s)...",
+    "ifSkillExists": "If skill already exists:",
+    "rename": "Rename",
+    "renameDescription": "Add suffix to the new skill (e.g., code-review → code-review-2)",
+    "skip": "Skip",
+    "skipDescription": "Keep existing skill, skip the conflicting one",
+    "overwrite": "Overwrite",
+    "overwriteDescription": "Replace existing skill with the new one",
+    "afterMigration": "After migration:",
+    "deleteOriginalFiles": "Delete original files",
+    "keepOriginalFiles": "Keep original files",
+    "moving": "Moving...",
+    "moveSkills": "Move {{count}} Skill(s)",
+    "migrationFailed": "Migration failed",
+    "ofSkills": "{{current}} of {{total}} skills"
+  },
+
+  "fileTree": {
+    "title": "Files",
+    "show": "Show file tree",
+    "hide": "Hide file tree",
+    "noFiles": "No files found"
+  },
+
+  "aiAssistant": {
+    "show": "Show AI Assistant",
+    "hide": "Hide AI Assistant",
+    "rewrite": "AI Rewrite",
+    "insert": "AI Insert",
+    "inputPlaceholder": "e.g., Make it more concise...",
+    "submitHint": "Ctrl + Enter to submit"
+  },
+
+  "registrySearch": {
+    "title": "Discover Public Skills",
+    "searchPlaceholder": "Search for Claude Code skills on GitHub...",
+    "searching": "Searching...",
+    "loadingMore": "Loading more...",
+    "searchError": "Search Error",
+    "noSkillsFound": "No skills found",
+    "noResultsFor": "No results found for \"{{query}}\""
+  },
+
+  "aiAssistant": {
+    "selectedText": "Selected text",
+    "rewritePrompt": "How would you like to rewrite it?",
+    "insertPrompt": "What would you like to insert?",
+    "inputPlaceholder": "e.g., Make it more concise...",
+    "submitHint": "Ctrl + Enter to submit",
+    "rewrite": "Rewrite",
+    "insert": "Insert"
+  },
+
+  "skillGroups": {
+    "title": "Skill Groups",
+    "defaultGroupsTitle": "Default Groups",
+    "customGroupsTitle": "Custom Groups",
+    "defaultGroups": {
+      "plan": {
+        "name": "Plan",
+        "description": "Requirements analysis, project planning, and task breakdown skills"
+      },
+      "code": {
+        "name": "Code",
+        "description": "Code writing, review, refactoring, and development skills"
+      },
+      "build": {
+        "name": "Build",
+        "description": "Compilation, packaging, dependency management, and build skills"
+      },
+      "test": {
+        "name": "Test",
+        "description": "Unit testing, integration testing, and QA skills"
+      },
+      "release": {
+        "name": "Release",
+        "description": "Version release, changelog, and release management skills"
+      },
+      "deploy": {
+        "name": "Deploy",
+        "description": "Deployment, CI/CD, and environment configuration skills"
+      },
+      "operate": {
+        "name": "Operate",
+        "description": "Operations, maintenance, and system management skills"
+      },
+      "monitor": {
+        "name": "Monitor",
+        "description": "Monitoring, logging, alerting, and observability skills"
+      }
+    },
+    "resetToDefault": "Reset to Default Groups",
+    "resetConfirm": "This will restore all default groups. Custom groups will be preserved.",
+    "resetSuccess": "Default groups restored successfully"
   }
 }

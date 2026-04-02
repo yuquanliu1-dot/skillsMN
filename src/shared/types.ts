@@ -43,6 +43,8 @@ export interface Skill {
   symlinkConfig?: SkillSymlinkConfig;
   /** Whether skill is currently symlinked */
   isSymlinked?: boolean;
+  /** Number of symlink targets enabled for this skill */
+  symlinkTargetCount?: number;
 }
 
 export interface SkillDirectory {
@@ -189,11 +191,26 @@ export interface SymlinksDatabaseV2 {
 // Migration Types
 // ============================================================================
 
+/** Strategy for handling skill name conflicts during migration */
+export type ConflictStrategy = 'rename' | 'skip' | 'overwrite';
+
 export interface MigrationOptions {
   /** Whether to move or copy skills */
   moveOrCopy: 'move' | 'copy';
   /** Whether to delete original files after migration */
   deleteOriginals: boolean;
+  /** Strategy for handling name conflicts (default: 'rename') */
+  conflictStrategy?: ConflictStrategy;
+}
+
+/** Information about a skill name conflict */
+export interface SkillConflict {
+  /** Name of the conflicting skill */
+  skillName: string;
+  /** Source path of the skill being migrated */
+  sourcePath: string;
+  /** Target path where the skill already exists */
+  targetPath: string;
 }
 
 export interface MigrationProgress {
@@ -207,6 +224,10 @@ export interface MigrationProgress {
   percentage: number;
   /** Current operation */
   operation: 'detecting' | 'moving' | 'copying' | 'verifying' | 'completed' | 'failed';
+  /** Optional: renamed skill name if conflict was resolved by renaming */
+  renamedTo?: string;
+  /** Optional: conflict info if a conflict was encountered */
+  conflict?: SkillConflict;
 }
 
 export interface MigrationResult {
@@ -216,8 +237,18 @@ export interface MigrationResult {
   migratedCount: number;
   /** Number of skills that failed */
   failedCount: number;
+  /** Number of skills skipped due to conflicts */
+  skippedCount: number;
+  /** Number of skills renamed due to conflicts */
+  renamedCount: number;
+  /** Number of skills overwritten */
+  overwrittenCount: number;
   /** Array of failed skill names with error messages */
   failedSkills: Array<{ name: string; error: string }>;
+  /** Array of skipped skill names */
+  skippedSkills: Array<{ name: string; reason: string }>;
+  /** Array of renamed skills (original -> new name) */
+  renamedSkills: Array<{ originalName: string; newName: string }>;
   /** Total time taken in milliseconds */
   duration: number;
 }
@@ -1028,6 +1059,12 @@ export interface SkillGroup {
   icon?: string;
   /** List of tags assigned to this group */
   tags: string[];
+  /** Whether the group is enabled (disabled groups are hidden from skill list) */
+  enabled?: boolean;
+  /** Whether this is a system default group */
+  isDefault?: boolean;
+  /** Display order (lower values appear first) */
+  order?: number;
   /** Creation timestamp */
   createdAt: string;
   /** Last update timestamp */
@@ -1042,5 +1079,41 @@ export interface SkillGroupsConfig {
   version: number;
   /** List of skill groups */
   groups: SkillGroup[];
+  /** Whether default groups have been initialized */
+  defaultGroupsInitialized?: boolean;
+}
+
+/**
+ * Default group definition (loaded from bundled JSON)
+ */
+export interface DefaultGroupDefinition {
+  /** Unique group identifier */
+  id: string;
+  /** i18n key for name */
+  nameKey: string;
+  /** i18n key for description */
+  descriptionKey: string;
+  /** Group color (hex code) */
+  color: string;
+  /** Group icon (emoji) */
+  icon: string;
+  /** Tags to pre-assign */
+  tags?: string[];
+  /** Whether enabled by default */
+  enabled: boolean;
+  /** Whether this is a default group */
+  isDefault: true;
+  /** Display order */
+  order: number;
+}
+
+/**
+ * Default skill groups configuration file structure
+ */
+export interface DefaultGroupsConfig {
+  /** Configuration version */
+  version: number;
+  /** List of default group definitions */
+  groups: DefaultGroupDefinition[];
 }
 

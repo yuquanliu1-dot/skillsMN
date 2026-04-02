@@ -54,6 +54,7 @@ function getDefaultSkillGroupsConfig(): SkillGroupsConfig {
   return {
     version: 1,
     groups: [],
+    defaultGroupsInitialized: false,
   };
 }
 

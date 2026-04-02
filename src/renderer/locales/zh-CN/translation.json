@@ -63,7 +63,7 @@
     "sort": "排序",
     "all": "全部",
     "local": "本地",
-    "registry": "仓库",
+    "registry": "网络",
     "private": "共享",
     "name": "名称",
     "date": "日期",
@@ -93,8 +93,12 @@
 
   "skillCard": {
     "local": "本地",
-    "registry": "仓库",
-    "private": "共享",
+    "localHint": "本地创建的技能",
+    "registry": "网络",
+    "registryHint": "来源：{{source}} 网络",
+    "shared": "共享",
+    "sharedHint": "来源：{{repo}}",
+    "linkCount": "已链接到 {{count}} 个目标",
     "update": "更新",
     "upload": "上传",
     "openFolder": "打开文件夹",
@@ -147,6 +151,8 @@
     "overwrite": "覆盖",
     "keepChanges": "保留更改",
     "aiAssistant": "AI 助手",
+    "showAI": "显示 AI 助手",
+    "hideAI": "隐藏 AI 助手",
     "aiRewrite": "AI 重写",
     "aiInsert": "AI 插入",
     "save": "保存",
@@ -162,7 +168,14 @@
     "openClaudeInTerminal": "打开终端运行 Claude Code 来测试此技能",
     "failedToOpenTerminal": "无法打开终端",
     "aiStreamingWarning": "AI 正在执行任务。现在关闭将中断任务并丢失会话记录。确定要关闭吗？",
-    "closeWithAITask": "关闭 (AI 任务进行中)"
+    "closeWithAITask": "关闭 (AI 任务进行中)",
+    "find": "查找",
+    "replace": "替换",
+    "gotoLine": "跳转到行",
+    "switchTab": "切换标签页",
+    "close": "关闭",
+    "noFileOpen": "未打开文件",
+    "selectFileFromTree": "从文件树中选择一个文件"
   },
 
   "settings": {
@@ -370,8 +383,11 @@
     "title": "删除技能",
     "cannotBeUndone": "此操作不易撤销",
     "confirmDelete": "确定要删除",
+    "source": "来源",
+    "willMoveToRecycleBin": "将移至回收站",
+    "recycleBinDescription": "删除后技能将移至系统回收站，如需恢复可从回收站还原。",
     "movedToRecycleBin": "已移至回收站",
-    "recycleBinDescription": "技能将被移至系统回收站。如果需要，您可以从那里恢复。",
+    "deletionFailed": "删除失败",
     "source": "来源：",
     "resourcesWillBeDeleted": "将删除 {{count}} 个资源",
     "resourcesWillBeDeleted_plural": "将删除 {{count}} 个资源",
@@ -635,5 +651,107 @@
     "unknownError": "发生未知错误",
     "operationFailed": "操作失败",
     "tryAgain": "请重试"
+  },
+
+  "migration": {
+    "title": "迁移技能",
+    "foundSkills": "在添加的目录中找到 <strong>{{count}}</strong> 个技能。",
+    "skillsWillBeMoved": "技能将被移动到应用目录。",
+    "sourceLabel": "源目录：",
+    "targetLabel": "目的目录：",
+    "moreSkills": "还有 {{count}} 个技能...",
+    "ifSkillExists": "如果技能已存在：",
+    "rename": "重命名",
+    "renameDescription": "为新技能添加后缀（如：code-review → code-review-2）",
+    "skip": "跳过",
+    "skipDescription": "保留现有技能，跳过冲突的技能",
+    "overwrite": "覆盖",
+    "overwriteDescription": "用新技能替换现有技能",
+    "afterMigration": "迁移后：",
+    "deleteOriginalFiles": "删除原始文件",
+    "keepOriginalFiles": "保留原始文件",
+    "moving": "移动中...",
+    "moveSkills": "移动 {{count}} 个技能",
+    "migrationFailed": "迁移失败",
+    "ofSkills": "{{current}} / {{total}} 个技能"
+  },
+
+  "fileTree": {
+    "title": "文件",
+    "show": "显示文件树",
+    "hide": "隐藏文件树",
+    "noFiles": "未找到文件"
+  },
+
+  "aiAssistant": {
+    "show": "显示 AI 助手",
+    "hide": "隐藏 AI 助手",
+    "rewrite": "AI 重写",
+    "insert": "AI 插入",
+    "inputPlaceholder": "例如：使其更简洁...",
+    "submitHint": "Ctrl + Enter 提交"
+  },
+
+  "registrySearch": {
+    "title": "发现公开技能",
+    "searchPlaceholder": "在 GitHub 上搜索 Claude Code 技能...",
+    "searching": "搜索中...",
+    "loadingMore": "加载更多...",
+    "searchError": "搜索错误",
+    "noSkillsFound": "未找到技能",
+    "noResultsFor": "未找到 \"{{query}}\" 的结果"
+  },
+
+  "aiAssistant": {
+    "selectedText": "已选文本",
+    "rewritePrompt": "您希望如何重写？",
+    "insertPrompt": "您想插入什么内容？",
+    "inputPlaceholder": "例如：使其更简洁...",
+    "submitHint": "Ctrl + Enter 提交",
+    "rewrite": "重写",
+    "insert": "插入"
+  },
+
+  "skillGroups": {
+    "title": "技能分组",
+    "defaultGroupsTitle": "系统默认分组",
+    "customGroupsTitle": "自定义分组",
+    "defaultGroups": {
+      "plan": {
+        "name": "计划",
+        "description": "需求分析、项目规划、任务拆解相关技能"
+      },
+      "code": {
+        "name": "编码",
+        "description": "代码编写、审查、重构、开发相关技能"
+      },
+      "build": {
+        "name": "构建",
+        "description": "编译、打包、依赖管理、构建相关技能"
+      },
+      "test": {
+        "name": "测试",
+        "description": "单元测试、集成测试、质量保证相关技能"
+      },
+      "release": {
+        "name": "发布",
+        "description": "版本发布、变更日志、发布管理相关技能"
+      },
+      "deploy": {
+        "name": "部署",
+        "description": "部署配置、CI/CD、环境配置相关技能"
+      },
+      "operate": {
+        "name": "运维",
+        "description": "运维管理、系统管理相关技能"
+      },
+      "monitor": {
+        "name": "监控",
+        "description": "监控告警、日志分析、可观测性相关技能"
+      }
+    },
+    "resetToDefault": "恢复默认分组",
+    "resetConfirm": "将恢复所有系统默认分组，自定义分组将保留。",
+    "resetSuccess": "默认分组已恢复"
   }
 }

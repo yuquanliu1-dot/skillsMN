@@ -226,6 +226,62 @@ export function registerSkillGroupHandlers(): void {
     }
   );
 
+  // Handler for skill-group:init-defaults
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_GROUP_INIT_DEFAULTS,
+    async (): Promise<IPCResponse<{ initialized: boolean; groups: SkillGroup[] }>> => {
+      try {
+        logger.debug('Initializing default skill groups', 'SkillGroupHandlers');
+        await loadConfigIntoService();
+        const initialized = skillGroupService!.initializeDefaultGroups();
+        if (initialized) {
+          await saveConfigFromService();
+          notifySkillsRefresh();
+        }
+        const groups = skillGroupService!.getGroups();
+        return { success: true, data: { initialized, groups } };
+      } catch (error) {
+        logger.error('Failed to initialize default skill groups', 'SkillGroupHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for skill-group:reset-defaults
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_GROUP_RESET_DEFAULTS,
+    async (): Promise<IPCResponse<SkillGroup[]>> => {
+      try {
+        logger.debug('Resetting to default skill groups', 'SkillGroupHandlers');
+        await loadConfigIntoService();
+        const result = skillGroupService!.resetToDefaultGroups();
+        if (result.success) {
+          await saveConfigFromService();
+          notifySkillsRefresh();
+        }
+        return result;
+      } catch (error) {
+        logger.error('Failed to reset default skill groups', 'SkillGroupHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for skill-group:get-defaults
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_GROUP_GET_DEFAULTS,
+    async (): Promise<IPCResponse<SkillGroup[]>> => {
+      try {
+        logger.debug('Getting default skill groups', 'SkillGroupHandlers');
+        const defaultGroups = skillGroupService!.getDefaultGroupsList();
+        return { success: true, data: defaultGroups };
+      } catch (error) {
+        logger.error('Failed to get default skill groups', 'SkillGroupHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
   logger.info('Skill group IPC handlers registered', 'SkillGroupHandlers');
 }
 

@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "default-plan",
+      "nameKey": "skillGroups.defaultGroups.plan.name",
+      "descriptionKey": "skillGroups.defaultGroups.plan.description",
+      "color": "#8B5CF6",
+      "icon": "📋",
+      "tags": [],
+      "enabled": true,
+      "isDefault": true,
+      "order": 1
+    },
+    {
+      "id": "default-code",
+      "nameKey": "skillGroups.defaultGroups.code.name",
+      "descriptionKey": "skillGroups.defaultGroups.code.description",
+      "color": "#3B82F6",
+      "icon": "💻",
+      "tags": [],
+      "enabled": true,
+      "isDefault": true,
+      "order": 2
+    },
+    {
+      "id": "default-build",
+      "nameKey": "skillGroups.defaultGroups.build.name",
+      "descriptionKey": "skillGroups.defaultGroups.build.description",
+      "color": "#F59E0B",
+      "icon": "🔧",
+      "tags": [],
+      "enabled": true,
+      "isDefault": true,
+      "order": 3
+    },
+    {
+      "id": "default-test",
+      "nameKey": "skillGroups.defaultGroups.test.name",
+      "descriptionKey": "skillGroups.defaultGroups.test.description",
+      "color": "#10B981",
+      "icon": "🧪",
+      "tags": [],
+      "enabled": true,
+      "isDefault": true,
+      "order": 4
+    },
+    {
+      "id": "default-release",
+      "nameKey": "skillGroups.defaultGroups.release.name",
+      "descriptionKey": "skillGroups.defaultGroups.release.description",
+      "color": "#EC4899",
+      "icon": "🚀",
+      "tags": [],
+      "enabled": true,
+      "isDefault": true,
+      "order": 5
+    },
+    {
+      "id": "default-deploy",
+      "nameKey": "skillGroups.defaultGroups.deploy.name",
+      "descriptionKey": "skillGroups.defaultGroups.deploy.description",
+      "color": "#EF4444",
+      "icon": "🎯",
+      "tags": [],
+      "enabled": true,
+      "isDefault": true,
+      "order": 6
+    },
+    {
+      "id": "default-operate",
+      "nameKey": "skillGroups.defaultGroups.operate.name",
+      "descriptionKey": "skillGroups.defaultGroups.operate.description",
+      "color": "#06B6D4",
+      "icon": "⚙️",
+      "tags": [],
+      "enabled": true,
+      "isDefault": true,
+      "order": 7
+    },
+    {
+      "id": "default-monitor",
+      "nameKey": "skillGroups.defaultGroups.monitor.name",
+      "descriptionKey": "skillGroups.defaultGroups.monitor.description",
+      "color": "#6366F1",
+      "icon": "📊",
+      "tags": [],
+      "enabled": true,
+      "isDefault": true,
+      "order": 8
+    }
+  ]
+}

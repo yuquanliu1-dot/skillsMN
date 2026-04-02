@@ -225,6 +225,7 @@ export interface ElectronAPI {
   onMigrationProgress: (callback: (event: any, progress: import('../../shared/types').MigrationProgress) => void) => void;
   removeMigrationProgressListener: () => void;
   checkDirectoryForSkills: (directoryPath: string) => Promise<IPCResponse<Skill[]>>;
+  getMigrationTargetDirectory: () => Promise<IPCResponse<string>>;
 
   // AI Conversation History Operations
   saveAIConversation: (conversation: import('../../shared/types').AIConversation) => Promise<IPCResponse<import('../../shared/types').AIConversation>>;
@@ -241,6 +242,9 @@ export interface ElectronAPI {
   addTagToGroup: (groupId: string, tag: string) => Promise<IPCResponse<SkillGroup>>;
   removeTagFromGroup: (groupId: string, tag: string) => Promise<IPCResponse<SkillGroup>>;
   reorderSkillGroups: (groupIds: string[]) => Promise<IPCResponse<void>>;
+  initDefaultSkillGroups: () => Promise<IPCResponse<{ initialized: boolean; groups: SkillGroup[] }>>;
+  resetDefaultSkillGroups: () => Promise<IPCResponse<SkillGroup[]>>;
+  getDefaultSkillGroups: () => Promise<IPCResponse<SkillGroup[]>>;
 
   // Skills Refresh Event
   onSkillsRefresh: (callback: () => void) => void;

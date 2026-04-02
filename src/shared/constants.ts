@@ -205,6 +205,7 @@ export const IPC_CHANNELS = {
   MIGRATION_START: 'migration:start',
   MIGRATION_PROGRESS: 'migration:progress',
   MIGRATION_CHECK_DIRECTORY: 'migration:check-directory',
+  MIGRATION_GET_TARGET_DIRECTORY: 'migration:get-target-directory',
 
   // Skill Group operations
   SKILL_GROUP_LIST: 'skill-group:list',
@@ -215,6 +216,9 @@ export const IPC_CHANNELS = {
   SKILL_GROUP_ADD_TAG: 'skill-group:add-tag',
   SKILL_GROUP_REMOVE_TAG: 'skill-group:remove-tag',
   SKILL_GROUP_REORDER: 'skill-group:reorder',
+  SKILL_GROUP_INIT_DEFAULTS: 'skill-group:init-defaults',
+  SKILL_GROUP_RESET_DEFAULTS: 'skill-group:reset-defaults',
+  SKILL_GROUP_GET_DEFAULTS: 'skill-group:get-defaults',
 
   // Terminal operations
   TERMINAL_OPEN_CLAUDE: 'terminal:open-claude',

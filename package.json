@@ -22,6 +22,10 @@
       {
         "from": "resources/icons/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "src/main/data",
+        "to": "data"
       }
     ],
     "asarUnpack": [
