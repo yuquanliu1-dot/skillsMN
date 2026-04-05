@@ -19,187 +19,11 @@ import { createSearchResultFromGitHub } from '../models/SearchResult';
 import { PathValidator } from './PathValidator';
 import { toKebabCase } from '../utils/pathUtils';
 import type { ProxyConfig } from '../../shared/types';
+// Import shared proxy utilities and re-export for backward compatibility
+export { setProxyConfig, getProxyAgent, getProxySettings } from '../utils/proxy';
+import { getProxyAgent } from '../utils/proxy';
 
 const GITHUB_API_BASE = 'https://api.github.com';
-
-// Proxy agents loaded via require to avoid ESM module resolution issues
-let HttpsProxyAgent: any = null;
-let HttpProxyAgent: any = null;
-let proxyAgentsLoaded = false;
-let proxyAgentsWarningLogged = false;
-
-// System proxy settings cached from Windows registry
-let cachedSystemProxySettings: { httpProxy?: string; httpsProxy?: string } | null = null;
-let systemProxyLoadAttempted = false;
-
-// Lazy load proxy agents (only when needed)
-function loadProxyAgents(): void {
-  if (proxyAgentsLoaded) return;
-
-  proxyAgentsLoaded = true;
-  let loaded = false;
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    HttpsProxyAgent = require('https-proxy-agent');
-    loaded = true;
-  } catch {
-    // Module not available
-  }
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    HttpProxyAgent = require('http-proxy-agent');
-    loaded = true;
-  } catch {
-    // Module not available
-  }
-
-  // Only log warning once if proxy agents are needed but not available
-  if (!loaded && !proxyAgentsWarningLogged) {
-    proxyAgentsWarningLogged = true;
-    logger.warn('Proxy agents not available. Proxy functionality will be disabled.', 'GitHubService');
-  }
-}
-
-// Proxy configuration from settings
-let proxySettings: ProxyConfig | null = null;
-
-/**
- * Load system proxy settings from Windows registry
- * This uses the get-proxy-settings package to read actual system proxy configuration
- */
-async function loadSystemProxySettings(): Promise<void> {
-  if (systemProxyLoadAttempted) return;
-  systemProxyLoadAttempted = true;
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getProxySettings } = require('get-proxy-settings');
-    const settings = await getProxySettings();
-
-    if (settings?.https) {
-      cachedSystemProxySettings = {
-        httpsProxy: `http://${settings.https.host}:${settings.https.port}`,
-        httpProxy: settings.http ? `http://${settings.http.host}:${settings.http.port}` : undefined,
-      };
-      logger.info('Loaded system proxy settings from Windows registry', 'GitHubService', {
-        httpsProxy: cachedSystemProxySettings.httpsProxy,
-        httpProxy: cachedSystemProxySettings.httpProxy,
-      });
-    } else if (settings?.http) {
-      cachedSystemProxySettings = {
-        httpProxy: `http://${settings.http.host}:${settings.http.port}`,
-      };
-      logger.info('Loaded HTTP system proxy settings from Windows registry', 'GitHubService', {
-        httpProxy: cachedSystemProxySettings.httpProxy,
-      });
-    }
-  } catch (error) {
-    logger.warn('Failed to load system proxy settings from Windows registry', 'GitHubService', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-}
-
-/**
- * Set proxy configuration from settings
- */
-export function setProxyConfig(config: ProxyConfig | undefined): void {
-  proxySettings = config || null;
-  logger.debug('Proxy configuration updated', 'GitHubService', { config });
-
-  // Reset cached system proxy when settings change
-  if (config?.enabled && config?.type === 'system') {
-    // Clear cache to force reload
-    cachedSystemProxySettings = null;
-    systemProxyLoadAttempted = false;
-    // Immediately preload system proxy settings (don't wait for first request)
-    loadSystemProxySettings().catch(() => {});
-  }
-}
-
-/**
- * Get proxy agent from settings or system environment variables
- * Priority: 1. Custom proxy URL from settings 2. System proxy (if enabled) 3. No proxy
- */
-export function getProxyAgent(url: string): any {
-  // If proxy is not enabled, return undefined immediately (don't load proxy agents)
-  if (!proxySettings?.enabled) {
-    return undefined;
-  }
-
-  // Only load proxy agents when proxy is actually enabled
-  loadProxyAgents();
-
-  const parsedUrl = new URL(url);
-  const isHttps = parsedUrl.protocol === 'https:';
-
-  // Priority 1: Custom proxy URL
-  if (proxySettings.type === 'custom' && proxySettings.customUrl) {
-    logger.debug(`Using custom proxy for ${url}`, 'GitHubService', { proxyUrl: proxySettings.customUrl });
-    try {
-      if (isHttps && HttpsProxyAgent) {
-        return new HttpsProxyAgent(proxySettings.customUrl);
-      } else if (!isHttps && HttpProxyAgent) {
-        return new HttpProxyAgent(proxySettings.customUrl);
-      }
-    } catch (error) {
-      logger.warn('Failed to create proxy agent from custom URL', 'GitHubService', error);
-    }
-    return undefined;
-  }
-
-  // Priority 2: System proxy - check cached Windows registry settings first, then fallback to env vars
-  if (proxySettings.type === 'system') {
-    // First check cached Windows registry proxy settings
-    if (cachedSystemProxySettings) {
-      const proxyUrl = isHttps
-        ? cachedSystemProxySettings.httpsProxy
-        : cachedSystemProxySettings.httpProxy;
-
-      if (proxyUrl) {
-        logger.debug(`Using Windows system proxy for ${url}`, 'GitHubService', { proxyUrl });
-        try {
-          if (isHttps && HttpsProxyAgent) {
-            return new HttpsProxyAgent(proxyUrl);
-          } else if (!isHttps && HttpProxyAgent) {
-            return new HttpProxyAgent(proxyUrl);
-          }
-        } catch (error) {
-          logger.warn('Failed to create proxy agent from Windows system proxy', 'GitHubService', error);
-        }
-      }
-    }
-
-    // Fallback to environment variables (for non-Windows or if registry read failed)
-    const envProxyUrl = isHttps
-      ? (process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy)
-      : (process.env.HTTP_PROXY || process.env.http_proxy);
-
-    if (envProxyUrl) {
-      logger.debug(`Using environment proxy for ${url}`, 'GitHubService', { proxyUrl: envProxyUrl });
-      try {
-        if (isHttps && HttpsProxyAgent) {
-          return new HttpsProxyAgent(envProxyUrl);
-        } else if (!isHttps && HttpProxyAgent) {
-          return new HttpProxyAgent(envProxyUrl);
-        }
-      } catch (error) {
-        logger.warn('Failed to create proxy agent from environment proxy', 'GitHubService', error);
-      }
-    }
-
-    // If no proxy found and haven't attempted to load from Windows registry yet, try to load it
-    if (!cachedSystemProxySettings && !systemProxyLoadAttempted) {
-      // Trigger async load for next time, but don't block current request
-      loadSystemProxySettings().catch(() => {});
-      logger.debug('Initiated system proxy settings load for next request', 'GitHubService');
-    }
-  }
-
-  return undefined;
-}
 
 /**
  * Fetch with system proxy support and timeout
@@ -919,13 +743,15 @@ export class GitHubService {
   ): Promise<any[]> {
     try {
       const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
-      const response = await fetchWithProxy(url, {
-        headers: {
-          'Authorization': `token ${pat}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'skillsMN-App',
-        },
-      });
+      const headers: Record<string, string> = {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'skillsMN-App',
+      };
+      // Only add Authorization header if PAT is provided
+      if (pat) {
+        headers['Authorization'] = `token ${pat}`;
+      }
+      const response = await fetchWithProxy(url, { headers });
 
       if (!response.ok) {
         // Handle 404 gracefully - repository may be empty or branch doesn't exist
@@ -1529,6 +1355,11 @@ export class GitHubService {
     const errors: string[] = [];
     let uploadedCount = 0;
 
+    // Track uploaded files for potential rollback
+    const uploadedFiles: Array<{ fullPath: string; sha: string; isNewFile: boolean }> = [];
+    // Track original SHAs of files that were updated (for rollback restoration)
+    const originalFileShas: Map<string, string> = new Map();
+
     logger.info('GitHub directory upload parameters', 'GitHubService', {
       owner,
       repo,
@@ -1553,6 +1384,49 @@ export class GitHubService {
       return fetch(url, { ...options, signal: controller.signal, agent });
     };
 
+    // Helper function to rollback uploaded files
+    const rollbackUploads = async (failedFile: string): Promise<void> => {
+      logger.warn(`Rolling back ${uploadedFiles.length} uploaded files due to failure: ${failedFile}`, 'GitHubService');
+
+      for (const uploadedFile of uploadedFiles) {
+        try {
+          if (uploadedFile.isNewFile) {
+            // Delete newly created file
+            const deleteUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${uploadedFile.fullPath}`;
+            const response = await fetchWithTimeout(deleteUrl, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `token ${pat}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'User-Agent': 'skillsMN-App',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                message: `Rollback: Remove ${uploadedFile.fullPath} due to upload failure`,
+                sha: uploadedFile.sha,
+                branch,
+              }),
+            });
+
+            if (response.ok) {
+              logger.debug(`Rolled back (deleted) file: ${uploadedFile.fullPath}`, 'GitHubService');
+            } else {
+              const errorData = await response.json();
+              logger.error(`Failed to rollback file ${uploadedFile.fullPath}: ${errorData.message}`, 'GitHubService');
+            }
+          } else {
+            // For updated files, we can't easily restore the original content
+            // The original commit SHA is stored in originalFileShas, but restoring would require
+            // fetching the original content from git history, which is complex.
+            // For now, log a warning - the file was updated in place and remains updated.
+            logger.warn(`File ${uploadedFile.fullPath} was updated (not new), content change remains after rollback`, 'GitHubService');
+          }
+        } catch (rollbackError) {
+          logger.error(`Error during rollback of ${uploadedFile.fullPath}`, 'GitHubService', rollbackError);
+        }
+      }
+    };
+
     try {
       // Upload each file
       for (const file of files) {
@@ -1565,6 +1439,7 @@ export class GitHubService {
         try {
           // Check if file already exists to get its SHA for update
           let existingSha: string | undefined;
+          let isNewFile = true;
           try {
             const checkUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${fullPath}?ref=${branch}`;
             const checkResponse = await retryWithBackoff(
@@ -1589,6 +1464,9 @@ export class GitHubService {
             if (checkResponse.ok) {
               const existingFile = await checkResponse.json();
               existingSha = existingFile.sha;
+              isNewFile = false;
+              // Store original SHA for potential rollback reference
+              originalFileShas.set(fullPath, existingFile.sha);
             }
           } catch (checkError) {
             // File doesn't exist or error checking - continue with create
@@ -1627,20 +1505,47 @@ export class GitHubService {
           );
 
           if (response.ok) {
+            const responseData = await response.json();
             uploadedCount++;
+            // Track uploaded file for potential rollback
+            uploadedFiles.push({
+              fullPath,
+              sha: responseData.content.sha,
+              isNewFile,
+            });
             logger.debug(`Uploaded file: ${fullPath}`, 'GitHubService');
           } else {
             const errorData = await response.json();
-            errors.push(`Failed to upload ${relativePath}: ${errorData.message || response.statusText}`);
+            const errorMsg = `Failed to upload ${relativePath}: ${errorData.message || response.statusText}`;
+            errors.push(errorMsg);
+
+            // Rollback previously uploaded files
+            await rollbackUploads(relativePath);
+
+            return {
+              success: false,
+              error: `Upload failed: ${errorMsg}. Rolled back ${uploadedFiles.length} previously uploaded files.`,
+              errors,
+            };
           }
         } catch (fileError) {
           const errorMsg = fileError instanceof Error ? fileError.message : 'Unknown error';
           errors.push(`Failed to upload ${relativePath}: ${errorMsg}`);
+
+          // Rollback previously uploaded files
+          await rollbackUploads(relativePath);
+
+          return {
+            success: false,
+            error: `Upload failed: ${errorMsg}. Rolled back ${uploadedFiles.length} previously uploaded files.`,
+            errors,
+          };
         }
       }
 
       // Get the latest commit SHA after upload
       let commitSha: string | undefined;
+      let commitShaWarning: string | undefined;
       try {
         const commitResponse = await fetchWithTimeout(
           `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits?sha=${branch}&per_page=1`,
@@ -1662,7 +1567,9 @@ export class GitHubService {
           }
         }
       } catch (error) {
-        logger.warn('Failed to retrieve commit SHA after upload', 'GitHubService', { error });
+        // This is non-critical, but we should warn the user
+        commitShaWarning = 'Failed to retrieve commit SHA after upload. Update detection may not work correctly for this skill.';
+        logger.warn('Failed to retrieve commit SHA after upload - update detection may be affected', 'GitHubService', { error });
       }
 
       if (uploadedCount === files.length) {
@@ -1671,25 +1578,22 @@ export class GitHubService {
           totalFiles: files.length,
           commitSha,
         });
-        return { success: true, uploadedCount, commitSha };
-      } else if (uploadedCount > 0) {
-        logger.warn('Partial upload completed', 'GitHubService', {
-          uploadedCount,
-          totalFiles: files.length,
-          errors,
-          commitSha,
-        });
         return {
           success: true,
           uploadedCount,
           commitSha,
-          errors: errors.length > 0 ? errors : undefined,
+          ...(commitShaWarning && { warning: commitShaWarning }),
         };
       } else {
-        logger.error('All file uploads failed', 'GitHubService', { errors });
+        // This shouldn't happen with the new rollback logic, but handle it just in case
+        logger.error('Unexpected state: partial upload without rollback', 'GitHubService', {
+          uploadedCount,
+          totalFiles: files.length,
+          errors,
+        });
         return {
           success: false,
-          error: 'All file uploads failed',
+          error: 'Unexpected partial upload state',
           errors,
         };
       }
@@ -1699,6 +1603,70 @@ export class GitHubService {
       return {
         success: false,
         error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Get current authenticated user info from GitHub
+   * Uses the PAT to fetch the authenticated user's profile
+   * @param pat - Personal Access Token
+   * @returns User info including username, email, name, and avatar
+   */
+  static async getCurrentUser(pat: string): Promise<{
+    success: boolean;
+    user?: {
+      login: string;
+      name: string | null;
+      email: string | null;
+      avatarUrl: string | null;
+    };
+    error?: string;
+  }> {
+    try {
+      const url = `${GITHUB_API_BASE}/user`;
+      const response = await fetchWithProxy(url, {
+        headers: {
+          'Authorization': `token ${pat}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'skillsMN-App',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            success: false,
+            error: 'Authentication failed. Please check your PAT.',
+          };
+        }
+        return {
+          success: false,
+          error: `GitHub API error: ${response.status}`,
+        };
+      }
+
+      const data = await response.json();
+
+      logger.info('Retrieved GitHub user info', 'GitHubService', {
+        login: data.login,
+        name: data.name,
+      });
+
+      return {
+        success: true,
+        user: {
+          login: data.login,
+          name: data.name || null,
+          email: data.email || null,
+          avatarUrl: data.avatar_url || null,
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to get GitHub user info', 'GitHubService', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
