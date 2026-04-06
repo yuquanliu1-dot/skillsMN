@@ -96,6 +96,13 @@
     "ungrouped": "未分组"
   },
 
+  "tagGroup": {
+    "assignTag": "分配标签到分组",
+    "noGroup": "无分组",
+    "noGroups": "暂无分组",
+    "configureGroups": "配置分组"
+  },
+
   "skillCard": {
     "local": "本地",
     "localHint": "本地创建的技能",

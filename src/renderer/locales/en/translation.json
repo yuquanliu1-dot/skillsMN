@@ -95,6 +95,13 @@
     "ungrouped": "Ungrouped"
   },
 
+  "tagGroup": {
+    "assignTag": "Assign Tag to Group",
+    "noGroup": "No Group",
+    "noGroups": "No groups created yet",
+    "configureGroups": "Configure Groups"
+  },
+
   "skillCard": {
     "local": "Local",
     "localHint": "Created locally",
