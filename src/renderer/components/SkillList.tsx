@@ -23,7 +23,6 @@ interface SkillListProps {
   selectedSkillPath?: string | null;
   skillUpdates?: Record<string, VersionComparison>;
   onSkillUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
-  onSkillUpload?: (skill: Skill) => Promise<void>;
   onNavigateToSettings?: () => void;
   onTagAssigned?: () => void;
   onRefresh?: () => Promise<void>;
@@ -48,7 +47,6 @@ export default function SkillList({
   selectedSkillPath,
   skillUpdates = {},
   onSkillUpdate,
-  onSkillUpload,
   onNavigateToSettings,
   onTagAssigned,
   onRefresh,
@@ -429,7 +427,6 @@ export default function SkillList({
                           isSelected={skill.path === selectedSkillPath}
                           versionStatus={versionStatus}
                           onUpdate={handleSkillUpdate}
-                          onUpload={onSkillUpload}
                           onNavigateToSettings={onNavigateToSettings}
                           onTagAssigned={handleTagAssigned}
                         />

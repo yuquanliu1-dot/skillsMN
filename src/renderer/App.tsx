@@ -910,7 +910,6 @@ export default function App(): JSX.Element {
               selectedSkillPath={selectedSkillPath}
               skillUpdates={skillUpdates}
               onSkillUpdate={handleUpdateSkill}
-              onSkillUpload={handleUploadSkill}
               onNavigateToSettings={() => setShowSettings(true)}
               onTagAssigned={loadSkills}
               onRefresh={handleRefreshSkills}

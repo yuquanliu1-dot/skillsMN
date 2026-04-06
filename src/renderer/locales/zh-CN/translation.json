@@ -647,8 +647,14 @@
     "commitFailed": "提交更改失败",
     "versionConflict": "版本冲突",
     "versionConflictSuggestion": "建议先拉取远程更改以避免冲突。",
-    "willUpdate": "将更新",
-    "willUpdateDesc": "此技能将更新到仓库中的最新版本。"
+    "willCommit": "将提交",
+    "willCommitDesc": "将此技能本地更新提交到仓库。",
+    "commitChanges": "提交更改",
+    "skillName": "技能名称",
+    "repository": "仓库",
+    "commitMessageLabel": "提交信息",
+    "commitMessagePlaceholder2": "描述您的更改...",
+    "cancel": "取消"
   },
 
   "permissions": {

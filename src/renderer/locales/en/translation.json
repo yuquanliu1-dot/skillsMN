@@ -644,8 +644,14 @@
     "commitFailed": "Failed to commit changes",
     "versionConflict": "Version Conflict",
     "versionConflictSuggestion": "Consider pulling remote changes first to avoid conflicts.",
-    "willUpdate": "Will Update",
-    "willUpdateDesc": "This skill will be updated to the latest version from the repository."
+    "willCommit": "Will Commit",
+    "willCommitDesc": "Local changes will be committed to the repository.",
+    "commitChanges": "Commit Changes",
+    "skillName": "Skill Name",
+    "repository": "Repository",
+    "commitMessageLabel": "Commit Message",
+    "commitMessagePlaceholder2": "Describe your changes...",
+    "cancel": "Cancel"
   },
 
   "permissions": {

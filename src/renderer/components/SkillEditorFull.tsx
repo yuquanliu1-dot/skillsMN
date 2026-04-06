@@ -1040,7 +1040,8 @@ export default function SkillEditorFull({
           )}
 
           {/* Commit Changes button - only for private repo skills */}
-          {isEditing && onCommitChanges && skill?.sourceMetadata && skill.sourceMetadata.type === 'private-repo' && hasUncommittedChanges && (
+          {/* Show button if: has uncommitted changes (during editing) OR canUpload (detected on app restart) */}
+          {isEditing && onCommitChanges && skill?.sourceMetadata && skill.sourceMetadata.type === 'private-repo' && (hasUncommittedChanges || versionStatus?.canUpload) && (
             <button
               onClick={() => {
                 onCommitChanges(skill);

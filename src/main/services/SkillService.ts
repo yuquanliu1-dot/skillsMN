@@ -23,6 +23,7 @@ import { SKILL_FILE_NAME, SOURCE_METADATA_FILE } from '../../shared/constants';
 import { SymlinkService } from './SymlinkService';
 import { app } from 'electron';
 import { compareVersions } from '../utils/versionUtils';
+import { hasUnpushedCommits } from '../utils/gitOperations';
 
 export class SkillService {
   private frontmatterCache: Map<string, { data: any; timestamp: number }> = new Map();
@@ -1023,12 +1024,47 @@ ${content}`;
       }
 
       // Use unified version comparison logic (private repos support upload)
-      const { hasUpdate, canUpload } = this.compareVersionsForUpdate(
+      let { hasUpdate, canUpload } = this.compareVersionsForUpdate(
         skill.version,
         remoteVersion,
         commitChanged,
         true // Private repos support upload
       );
+
+      // Additionally check if local content differs from remote (persists across app restarts)
+      // This ensures the upload button shows even after app restart when user has local modifications
+      if (!canUpload && !hasUpdate) {
+        try {
+          // Read local SKILL.md content
+          const localSkillPath = path.join(skill.path, SKILL_FILE_NAME);
+          const localContent = await fs.promises.readFile(localSkillPath, 'utf-8');
+
+          // Fetch remote SKILL.md content
+          const remoteContent = await GitHubService.getPrivateRepoSkillContent(
+            owner,
+            repoName,
+            `${sourceMetadata.skillPath}/${SKILL_FILE_NAME}`,
+            pat,
+            branch
+          );
+
+          // Compare contents (normalize line endings for comparison)
+          const normalizedLocal = localContent.replace(/\r\n/g, '\n').trim();
+          const normalizedRemote = remoteContent.replace(/\r\n/g, '\n').trim();
+
+          if (normalizedLocal !== normalizedRemote) {
+            canUpload = true;
+            logger.info(`Local content differs from remote for private repo skill: ${skill.name}`, 'SkillService', {
+              skillPath: skill.path,
+            });
+          }
+        } catch (contentError) {
+          logger.debug('Failed to compare local/remote content, skipping', 'SkillService', {
+            skillPath: skill.path,
+            error: contentError instanceof Error ? contentError.message : 'Unknown error'
+          });
+        }
+      }
 
       // Extract new commits if update is available
       const { newCommits, commitsAhead } = hasUpdate

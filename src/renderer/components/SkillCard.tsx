@@ -22,7 +22,6 @@ interface SkillCardProps {
   isSelected?: boolean;
   versionStatus?: VersionComparison;
   onUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
-  onUpload?: (skill: Skill) => Promise<void>;
   onTagAssigned?: () => void;
   onNavigateToSettings?: () => void;
 }
@@ -38,16 +37,13 @@ export default function SkillCard({
   isSelected,
   versionStatus,
   onUpdate,
-  onUpload,
   onTagAssigned,
   onNavigateToSettings,
 }: SkillCardProps): JSX.Element {
   const { t } = useTranslation();
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [createBackup, setCreateBackup] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<'idle' | 'updating' | 'success' | 'error'>('idle');
-  const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isTruncated, setIsTruncated] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
@@ -57,7 +53,6 @@ export default function SkillCard({
   const [selectedTag, setSelectedTag] = useState<string>('');
 
   const hasUpdate = versionStatus?.hasUpdate || false;
-  const canUpload = versionStatus?.canUpload || false;
 
   useEffect(() => {
     if (descriptionRef.current && skill.description) {
@@ -135,34 +130,6 @@ export default function SkillCard({
     } catch (error) {
       setUpdateProgress('error');
       setErrorMessage(error instanceof Error ? error.message : 'Update failed');
-    }
-  };
-
-  const handleUploadClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setShowUploadDialog(true);
-    setUploadProgress('idle');
-    setErrorMessage(null);
-  };
-
-  const handleConfirmUpload = async () => {
-    if (!onUpload) return;
-
-    setUploadProgress('uploading');
-    setErrorMessage(null);
-
-    try {
-      await onUpload(skill);
-      setUploadProgress('success');
-      setShowUploadDialog(false);
-
-      setTimeout(() => {
-        setUploadProgress('idle');
-      }, 2000);
-    } catch (error) {
-      setUploadProgress('error');
-      setErrorMessage(error instanceof Error ? error.message : 'Upload failed');
     }
   };
 
@@ -290,17 +257,6 @@ export default function SkillCard({
                 className="btn text-xs px-3 py-1 bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700 disabled:opacity-50 animate-pulse"
               >
                 {updateProgress === 'updating' ? '...' : t('skillCard.update')}
-              </button>
-            )}
-
-            {/* Upload Button (for private repo skills with newer local version) */}
-            {canUpload && onUpload && uploadProgress !== 'success' && (
-              <button
-                onClick={handleUploadClick}
-                disabled={uploadProgress === 'uploading'}
-                className="btn text-xs px-3 py-1 bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700 disabled:opacity-50 animate-pulse"
-              >
-                {uploadProgress === 'uploading' ? '...' : t('skillCard.upload')}
               </button>
             )}
 
@@ -527,86 +483,6 @@ export default function SkillCard({
                 className="px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors"
               >
                 {t('skillCard.updateSkill')}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Upload Dialog - rendered via Portal to escape overflow-hidden */}
-      {showUploadDialog && createPortal(
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('skillCard.uploadSkill')}</h3>
-              <button
-                onClick={() => setShowUploadDialog(false)}
-                className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                aria-label={t('common.close')}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-4 space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 px-4 py-3 rounded text-sm">
-                <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="font-medium">{t('skillCard.uploadToPrivateRepo')}</p>
-                    <p className="text-xs mt-1">
-                      {t('skillCard.localVersionNewer', { local: skill.version || 'unknown', remote: versionStatus?.remoteVersion || 'unknown' })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('skills.skillName')}</label>
-                <div className="text-slate-900 dark:text-slate-100">{skill.name}</div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('skillCard.version')}</label>
-                <div className="text-slate-900 dark:text-slate-100">
-                  Local: {skill.version || 'unknown'} → Remote: {versionStatus?.remoteVersion || 'unknown'}
-                </div>
-              </div>
-
-              {skill.sourceMetadata?.type === 'private-repo' && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('skillCard.targetRepository')}</label>
-                  <div className="text-slate-900 dark:text-slate-100 text-sm font-mono">
-                    {skill.sourceMetadata.repoPath}/{skill.sourceMetadata.skillPath}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {errorMessage && (
-              <div className="px-4 pb-2">
-                <div className="text-red-600 dark:text-red-400 text-sm">{errorMessage}</div>
-              </div>
-            )}
-
-            <div className="border-t border-slate-200 dark:border-slate-700 p-4 flex gap-2 justify-end">
-              <button
-                onClick={() => setShowUploadDialog(false)}
-                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={handleConfirmUpload}
-                disabled={uploadProgress === 'uploading'}
-                className="px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {uploadProgress === 'uploading' ? t('common.uploading') : t('skillCard.uploadSkill')}
               </button>
             </div>
           </div>

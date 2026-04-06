@@ -409,6 +409,68 @@ export class GitOperations {
 }
 
 /**
+ * Check if a local git repository has unpushed commits
+ * Compares local HEAD with remote tracking branch
+ *
+ * @param repoDir - Path to the local git repository
+ * @returns Object with hasUnpushedCommits flag and count of unpushed commits
+ */
+export async function hasUnpushedCommits(repoDir: string): Promise<{ hasUnpushed: boolean; count: number }> {
+  try {
+    // Get the current branch name
+    const { stdout: branchName } = await execAsync('git rev-parse --abbrev-ref HEAD', {
+      cwd: repoDir,
+      timeout: 5000,
+      env: getGitEnv()
+    });
+
+    const branch = branchName.trim();
+
+    // Check if remote tracking branch exists
+    try {
+      await execAsync(`git rev-parse --verify origin/${branch}`, {
+        cwd: repoDir,
+        timeout: 5000,
+        env: getGitEnv()
+      });
+    } catch {
+      // No remote tracking branch - likely a new branch with no push yet
+      // Check if we have any commits at all
+      try {
+        const { stdout: commitCount } = await execAsync('git rev-list --count HEAD', {
+          cwd: repoDir,
+          timeout: 5000,
+          env: getGitEnv()
+        });
+        const count = parseInt(commitCount.trim(), 10);
+        return { hasUnpushed: count > 0, count };
+      } catch {
+        return { hasUnpushed: false, count: 0 };
+      }
+    }
+
+    // Count commits ahead of remote
+    const { stdout: aheadCount } = await execAsync(
+      `git rev-list --count origin/${branch}..HEAD`,
+      {
+        cwd: repoDir,
+        timeout: 5000,
+        env: getGitEnv()
+      }
+    );
+
+    const count = parseInt(aheadCount.trim(), 10);
+    return { hasUnpushed: count > 0, count };
+  } catch (error) {
+    console.warn('[GitOperations] Failed to check unpushed commits', {
+      repoDir,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    return { hasUnpushed: false, count: 0 };
+  }
+}
+
+/**
  * Singleton instance for convenience
  */
 export const gitOperations = new GitOperations();
