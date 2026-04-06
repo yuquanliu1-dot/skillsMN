@@ -209,11 +209,6 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
               {skill.name}
             </h4>
 
-            {/* Source Badge */}
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex-shrink-0 border-0">
-              {repo.provider === 'gitlab' ? 'GitLab' : 'GitHub'}
-            </span>
-
             {/* Installed Badge */}
             {isInstalled && !isCheckingStatus && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0">

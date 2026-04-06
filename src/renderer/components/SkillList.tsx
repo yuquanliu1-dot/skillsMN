@@ -76,12 +76,12 @@ export default function SkillList({
     loadSkillGroups();
 
     // Subscribe to skills:refresh event to reload groups when they change
-    window.electronAPI.onSkillsRefresh(() => {
+    const unsubscribe = window.electronAPI.onSkillsRefresh(() => {
       loadSkillGroups();
     });
 
     return () => {
-      window.electronAPI.removeSkillsRefreshListener();
+      unsubscribe();
     };
   }, [loadSkillGroups]);
 

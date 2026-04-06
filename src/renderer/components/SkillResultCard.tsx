@@ -63,10 +63,10 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
       checkInstalledStatus();
     };
 
-    window.electronAPI.onSkillsRefresh(handleSkillsRefresh);
+    const unsubscribe = window.electronAPI.onSkillsRefresh(handleSkillsRefresh);
 
     return () => {
-      window.electronAPI.removeSkillsRefreshListener();
+      unsubscribe();
     };
   }, [checkInstalledStatus, skill.name]);
 

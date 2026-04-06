@@ -384,12 +384,12 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
       loadSkillGroups();
 
       // Subscribe to skills:refresh event to reload groups
-      window.electronAPI.onSkillsRefresh(() => {
+      const unsubscribe = window.electronAPI.onSkillsRefresh(() => {
         loadSkillGroups();
       });
 
       return () => {
-        window.electronAPI.removeSkillsRefreshListener();
+        unsubscribe();
       };
     }
     return undefined;

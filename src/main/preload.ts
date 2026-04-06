@@ -575,8 +575,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Skills Refresh Event (for cross-component state synchronization)
   // ============================================================================
 
-  onSkillsRefresh: (callback: () => void): void => {
-    ipcRenderer.on(IPC_CHANNELS.SKILLS_REFRESH, () => callback());
+  onSkillsRefresh: (callback: () => void): (() => void) => {
+    const handler = (): void => callback();
+    ipcRenderer.on(IPC_CHANNELS.SKILLS_REFRESH, handler);
+    // Return unsubscribe function
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.SKILLS_REFRESH, handler);
+    };
   },
 
   removeSkillsRefreshListener: (): void => {

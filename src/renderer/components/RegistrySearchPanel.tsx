@@ -44,10 +44,10 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
       }
     };
 
-    window.electronAPI.onSkillsRefresh(handleSkillsRefresh);
+    const unsubscribe = window.electronAPI.onSkillsRefresh(handleSkillsRefresh);
 
     return () => {
-      window.electronAPI.removeSkillsRefreshListener();
+      unsubscribe();
     };
   }, [hasSearched, query, refresh]);
 

@@ -255,8 +255,8 @@ export interface ElectronAPI {
   getDefaultSkillGroups: () => Promise<IPCResponse<SkillGroup[]>>;
 
   // Skills Refresh Event
-  onSkillsRefresh: (callback: () => void) => void;
-  removeSkillsRefreshListener: () => void;
+  onSkillsRefresh: (callback: () => void) => () => void; // Returns unsubscribe function
+  removeSkillsRefreshListener: () => void; // Deprecated: use unsubscribe function
 
   // Contribution Stats Operations (激励徽章系统)
   getRepoContributionStats: (repoId: string) => Promise<IPCResponse<RepoContributionStats>>;
