@@ -17,6 +17,20 @@ interface TagGroupPopupProps {
   onNavigateToSettings?: () => void;
 }
 
+/**
+ * Helper function to translate group field if it's an i18n key
+ */
+function tGroupField(value: string | undefined, t: (key: string) => string): string {
+  if (!value) return '';
+  if (value.startsWith('skillGroups.') || value.includes('.')) {
+    const translated = t(value);
+    if (translated && translated !== value) {
+      return translated;
+    }
+  }
+  return value;
+}
+
 export default function TagGroupPopup({
   isOpen,
   tag,
@@ -160,7 +174,7 @@ export default function TagGroupPopup({
                       <span style={{ color: group.color || '#3B82F6' }}>
                         {group.icon || '📁'}
                       </span>
-                      <span className="truncate">{group.name}</span>
+                      <span className="truncate">{tGroupField(group.name, t)}</span>
                       {currentGroupId === group.id && (
                         <svg className="w-4 h-4 text-green-500 ml-auto" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />

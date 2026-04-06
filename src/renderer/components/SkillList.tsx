@@ -55,6 +55,21 @@ export default function SkillList({
   isRefreshing = false,
 }: SkillListProps): JSX.Element {
   const { t } = useTranslation();
+
+  /**
+   * Helper function to translate group field if it's an i18n key
+   */
+  const tGroupField = useCallback((value: string | undefined): string => {
+    if (!value) return '';
+    if (value.startsWith('skillGroups.') || value.includes('.')) {
+      const translated = t(value);
+      if (translated && translated !== value) {
+        return translated;
+      }
+    }
+    return value;
+  }, [t]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
@@ -370,11 +385,11 @@ export default function SkillList({
                       className="text-sm font-semibold"
                       style={{ color: group.color }}
                     >
-                      {group.name}
+                      {tGroupField(group.name)}
                     </h3>
-                    {group.description && (
+                    {tGroupField(group.description) && (
                       <span className="text-xs text-gray-500">
-                        · {group.description}
+                        · {tGroupField(group.description)}
                       </span>
                     )}
                     <span className="text-xs text-gray-400">

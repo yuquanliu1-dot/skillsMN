@@ -50,8 +50,39 @@ interface SettingsProps {
   onDirectoryAdded?: (directoryPath: string) => void;
 }
 
+/**
+ * Helper function to translate group field if it's an i18n key
+ * Default groups store i18n keys like "skillGroups.defaultGroups.plan.name"
+ */
+function tGroupField(value: string | undefined, t: (key: string) => string): string {
+  if (!value) return '';
+  // Check if it's an i18n key
+  if (value.startsWith('skillGroups.') || value.includes('.')) {
+    const translated = t(value);
+    // If translation exists and is different from the key, return it
+    if (translated && translated !== value) {
+      return translated;
+    }
+  }
+  return value;
+}
+
 export default function Settings({ isOpen, onClose, config, onSave, onDirectoryAdded }: SettingsProps): JSX.Element | null {
   const { t } = useTranslation();
+
+  /**
+   * Translate group name/description if it's an i18n key
+   * Default groups store i18n keys like "skillGroups.defaultGroups.plan.name"
+   */
+  const translateGroupField = (value: string | undefined): string => {
+    if (!value) return '';
+    // Check if it looks like an i18n key
+    if (value.startsWith('skillGroups.') || value.startsWith('settings.')) {
+      return t(value);
+    }
+    return value;
+  };
+
   console.log('[Settings] Component rendering', { isOpen, activeTab: undefined });
 
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -437,8 +468,8 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
    */
   const handleStartEditGroup = (group: SkillGroup) => {
     setEditingGroupId(group.id);
-    setEditGroupName(group.name);
-    setEditGroupDescription(group.description || '');
+    setEditGroupName(tGroupField(group.name, t));
+    setEditGroupDescription(tGroupField(group.description, t));
     setEditGroupColor(group.color || '#3B82F6');
     setEditGroupIcon(group.icon || '📁');
     setError(null);
@@ -2337,7 +2368,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                                  {group.name}
+                                  {tGroupField(group.name, t)}
                                 </h4>
                                 {group.enabled === false && (
                                   <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-full">
@@ -2345,8 +2376,8 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                                   </span>
                                 )}
                               </div>
-                              {group.description && (
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{group.description}</p>
+                              {tGroupField(group.description, t) && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{tGroupField(group.description, t)}</p>
                               )}
                             </div>
                           </div>

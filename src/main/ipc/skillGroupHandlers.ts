@@ -319,3 +319,35 @@ async function saveConfigFromService(): Promise<void> {
 export function getSkillGroupService(): SkillGroupService | null {
   return skillGroupService;
 }
+
+/**
+ * Auto-initialize default skill groups
+ * Should be called after config is loaded
+ */
+export async function autoInitializeDefaultGroups(): Promise<boolean> {
+  if (!skillGroupService || !configService) {
+    logger.warn('Skill group service or config service not initialized', 'SkillGroupHandlers');
+    return false;
+  }
+
+  try {
+    await loadConfigIntoService();
+    const config = skillGroupService.getConfig();
+    logger.debug('Current skill groups config', 'SkillGroupHandlers', {
+      groupCount: config.groups.length,
+      defaultGroupsInitialized: config.defaultGroupsInitialized,
+    });
+    const initialized = skillGroupService.initializeDefaultGroups();
+    if (initialized) {
+      await saveConfigFromService();
+      notifySkillsRefresh();
+      logger.info('Auto-initialized default skill groups', 'SkillGroupHandlers');
+    } else {
+      logger.debug('Default groups already initialized or no groups to add', 'SkillGroupHandlers');
+    }
+    return initialized;
+  } catch (error) {
+    logger.error('Failed to auto-initialize default groups', 'SkillGroupHandlers', error);
+    return false;
+  }
+}

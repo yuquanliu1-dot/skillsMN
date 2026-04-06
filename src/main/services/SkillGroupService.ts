@@ -6,9 +6,6 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import * as path from 'path';
-import * as fs from 'fs';
-import { app } from 'electron';
 import { logger } from '../utils/Logger';
 import {
   SkillGroup,
@@ -18,8 +15,100 @@ import {
   IPCResponse,
 } from '../../shared/types';
 
-// Default groups configuration bundled with the app
-const DEFAULT_GROUPS_FILE = 'defaultSkillGroups.json';
+// Default groups configuration embedded in code (DevOps phases)
+const DEFAULT_GROUPS_CONFIG: DefaultGroupsConfig = {
+  version: 1,
+  groups: [
+    {
+      id: 'default-plan',
+      nameKey: 'skillGroups.defaultGroups.plan.name',
+      descriptionKey: 'skillGroups.defaultGroups.plan.description',
+      color: '#8B5CF6',
+      icon: '📋',
+      tags: [],
+      enabled: true,
+      isDefault: true,
+      order: 1,
+    },
+    {
+      id: 'default-code',
+      nameKey: 'skillGroups.defaultGroups.code.name',
+      descriptionKey: 'skillGroups.defaultGroups.code.description',
+      color: '#3B82F6',
+      icon: '💻',
+      tags: [],
+      enabled: true,
+      isDefault: true,
+      order: 2,
+    },
+    {
+      id: 'default-build',
+      nameKey: 'skillGroups.defaultGroups.build.name',
+      descriptionKey: 'skillGroups.defaultGroups.build.description',
+      color: '#F59E0B',
+      icon: '🔧',
+      tags: [],
+      enabled: true,
+      isDefault: true,
+      order: 3,
+    },
+    {
+      id: 'default-test',
+      nameKey: 'skillGroups.defaultGroups.test.name',
+      descriptionKey: 'skillGroups.defaultGroups.test.description',
+      color: '#10B981',
+      icon: '🧪',
+      tags: [],
+      enabled: true,
+      isDefault: true,
+      order: 4,
+    },
+    {
+      id: 'default-release',
+      nameKey: 'skillGroups.defaultGroups.release.name',
+      descriptionKey: 'skillGroups.defaultGroups.release.description',
+      color: '#EC4899',
+      icon: '🚀',
+      tags: [],
+      enabled: true,
+      isDefault: true,
+      order: 5,
+    },
+    {
+      id: 'default-deploy',
+      nameKey: 'skillGroups.defaultGroups.deploy.name',
+      descriptionKey: 'skillGroups.defaultGroups.deploy.description',
+      color: '#EF4444',
+      icon: '🎯',
+      tags: [],
+      enabled: true,
+      isDefault: true,
+      order: 6,
+    },
+    {
+      id: 'default-operate',
+      nameKey: 'skillGroups.defaultGroups.operate.name',
+      descriptionKey: 'skillGroups.defaultGroups.operate.description',
+      color: '#06B6D4',
+      icon: '⚙️',
+      tags: [],
+      enabled: true,
+      isDefault: true,
+      order: 7,
+    },
+    {
+      id: 'default-monitor',
+      nameKey: 'skillGroups.defaultGroups.monitor.name',
+      descriptionKey: 'skillGroups.defaultGroups.monitor.description',
+      color: '#6366F1',
+      icon: '📊',
+      tags: [],
+      enabled: true,
+      isDefault: true,
+      order: 8,
+    },
+  ],
+};
 
 export class SkillGroupService {
   private config: SkillGroupsConfig;
@@ -31,33 +120,11 @@ export class SkillGroupService {
       groups: [],
       defaultGroupsInitialized: false,
     };
-    this.loadDefaultGroupsConfig();
-  }
-
-  /**
-   * Load default groups configuration from bundled JSON file
-   */
-  private loadDefaultGroupsConfig(): void {
-    try {
-      // Try to load from bundled resources
-      const resourcesPath = app.isPackaged
-        ? path.join(process.resourcesPath, 'data', DEFAULT_GROUPS_FILE)
-        : path.join(__dirname, '../data', DEFAULT_GROUPS_FILE);
-
-      if (fs.existsSync(resourcesPath)) {
-        const content = fs.readFileSync(resourcesPath, 'utf-8');
-        this.defaultGroupsConfig = JSON.parse(content);
-        logger.info('Loaded default groups config', 'SkillGroupService', {
-          groupCount: this.defaultGroupsConfig?.groups.length || 0,
-        });
-      } else {
-        logger.warn('Default groups config file not found', 'SkillGroupService', {
-          path: resourcesPath,
-        });
-      }
-    } catch (error) {
-      logger.error('Failed to load default groups config', 'SkillGroupService', { error });
-    }
+    // Use embedded default groups config
+    this.defaultGroupsConfig = DEFAULT_GROUPS_CONFIG;
+    logger.info('Loaded default groups config', 'SkillGroupService', {
+      groupCount: this.defaultGroupsConfig?.groups.length || 0,
+    });
   }
 
   /**
