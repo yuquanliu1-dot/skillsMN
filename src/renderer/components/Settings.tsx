@@ -634,18 +634,15 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
       if (response.success) {
         setAITestResult({ success: true, latency });
-        setSuccess('AI connection test successful');
       } else {
         setAITestResult({
           success: false,
           error: response.error?.message || 'Connection test failed'
         });
-        setError(response.error?.message || 'Connection test failed');
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Connection test failed';
       setAITestResult({ success: false, error: message });
-      setError(message);
       console.error('Test AI connection error:', err);
     } finally {
       setIsTestingAI(false);
