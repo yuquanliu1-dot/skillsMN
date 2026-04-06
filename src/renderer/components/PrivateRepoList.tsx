@@ -182,8 +182,20 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
    * Listen for private repo updates from Settings
    */
   useEffect(() => {
-    const handlePrivateRepoUpdate = (event: CustomEvent<{ repoId: string; patUpdated: boolean; isNew?: boolean }>) => {
+    const handlePrivateRepoUpdate = (event: CustomEvent<{ repoId: string; patUpdated: boolean; isNew?: boolean; removed?: boolean }>) => {
       console.log('[PrivateRepoList] Received private-repo-updated event:', event.detail);
+
+      // If a repo was removed, reload repositories and clear selection if needed
+      if (event.detail.removed) {
+        console.log('[PrivateRepoList] Repo removed, reloading repositories');
+        // Clear selection if the removed repo was selected
+        if (event.detail.repoId === selectedRepoId) {
+          setSelectedRepoId(null);
+          setSkills([]);
+        }
+        loadRepositories();
+        return;
+      }
 
       // If a new repo was added, reload the repositories list
       if (event.detail.isNew) {

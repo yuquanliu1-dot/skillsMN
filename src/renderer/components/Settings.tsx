@@ -771,6 +771,10 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
       if (response.success) {
         setSuccess('Repository removed successfully. Installed skills have been preserved.');
         await loadPrivateRepos();
+        // Notify PrivateRepoList to reload and clear selection if needed
+        window.dispatchEvent(new CustomEvent('private-repo-updated', {
+          detail: { repoId, removed: true }
+        }));
       } else {
         setError(response.error?.message || 'Failed to remove repository');
       }
