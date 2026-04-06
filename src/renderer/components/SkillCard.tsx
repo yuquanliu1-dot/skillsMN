@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { Skill, VersionComparison } from '../../shared/types';
 import TagGroupPopup from './TagGroupPopup';
@@ -416,8 +417,8 @@ export default function SkillCard({
         </div>
       </article>
 
-      {/* Update Dialog */}
-      {showUpdateDialog && (
+      {/* Update Dialog - rendered via Portal to escape overflow-hidden */}
+      {showUpdateDialog && createPortal(
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-xl">
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
@@ -529,11 +530,12 @@ export default function SkillCard({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Upload Dialog */}
-      {showUploadDialog && (
+      {/* Upload Dialog - rendered via Portal to escape overflow-hidden */}
+      {showUploadDialog && createPortal(
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-xl">
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
@@ -608,7 +610,8 @@ export default function SkillCard({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Tag Group Popup */}
