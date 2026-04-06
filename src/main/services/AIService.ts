@@ -1057,7 +1057,14 @@ IMPORTANT Instructions:
     }
 
     // Prepend /skill-creator to invoke the skill-creator skill
-    const skillCreatorPrefix = '/skill-creator\n\n';
+    // Include language detection instruction to respond in user's language
+    const skillCreatorPrefix = `/skill-creator
+
+IMPORTANT: Respond in the SAME language as the user's input.
+If the user writes in Chinese, respond in Chinese.
+If the user writes in English, respond in English.
+
+`;
 
     switch (mode) {
       case 'new':
