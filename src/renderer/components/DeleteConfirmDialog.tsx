@@ -188,7 +188,7 @@ export default function DeleteConfirmDialog({
               </svg>
               <div className="text-sm">
                 <p className="font-medium text-amber-800 dark:text-amber-200">
-                  {t('delete.movedToRecycleBin')}
+                  {t('delete.willMoveToRecycleBin')}
                 </p>
                 <p className="text-amber-700 dark:text-amber-300 mt-1">
                   {t('delete.recycleBinDescription')}
@@ -201,29 +201,20 @@ export default function DeleteConfirmDialog({
           <div className="flex items-center gap-2 flex-wrap">
             {/* Source badge */}
             <span className="text-xs text-slate-500 dark:text-slate-400">{t('delete.source')}</span>
-            {skill.sourceMetadata?.type === 'local' && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+            {/* Show "Local" badge if source is NOT registry or private-repo */}
+            {skill.sourceMetadata?.type !== 'registry' && skill.sourceMetadata?.type !== 'private-repo' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
                 {t('skillCard.local')}
               </span>
             )}
             {skill.sourceMetadata?.type === 'registry' && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
-                {skill.sourceMetadata.source}
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400">
+                {t('skillCard.registry')}
               </span>
             )}
             {skill.sourceMetadata?.type === 'private-repo' && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-                {t('skillCard.private')}
-              </span>
-            )}
-
-            {/* Resource count badge */}
-            {skill.resourceCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                {skill.resourceCount}
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                {t('skillCard.shared')}
               </span>
             )}
           </div>

@@ -32,7 +32,11 @@
     "no": "No",
     "ok": "OK",
     "settings": "Settings",
-    "language": "Language"
+    "language": "Language",
+    "browse": "Browse",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "optional": "Optional"
   },
 
   "sidebar": {
@@ -97,6 +101,7 @@
     "registryHint": "From {{source}}",
     "shared": "Shared",
     "sharedHint": "From {{repo}}",
+    "private": "Private",
     "linkCount": "Linked to {{count}} target(s)",
     "update": "Update",
     "upload": "Upload",
@@ -174,7 +179,10 @@
     "switchTab": "Switch tab",
     "close": "Close",
     "noFileOpen": "No file open",
-    "selectFileFromTree": "Select a file from the tree"
+    "selectFileFromTree": "Select a file from the tree",
+    "backToMain": "Back to Main",
+    "editingFile": "Editing file",
+    "unsavedChangesWarning": "You have unsaved changes. Are you sure you want to close?"
   },
 
   "settings": {
@@ -329,7 +337,10 @@
     "groupDeleted": "Group deleted successfully",
     "groupEnabled": "Group enabled successfully",
     "groupDisabled": "Group disabled successfully",
+    "groupEnable": "Enable",
+    "groupDisable": "Disable",
     "disabled": "Disabled",
+    "optional": "Optional",
     "skillsInGroup": "{{count}} skills",
     "tagsInGroup": "{{count}} tags",
     "selectGroup": "Select a group",
@@ -622,7 +633,11 @@
     "commit": "Commit",
     "committing": "Committing...",
     "commitSuccess": "Changes committed successfully",
-    "commitFailed": "Failed to commit changes"
+    "commitFailed": "Failed to commit changes",
+    "versionConflict": "Version Conflict",
+    "versionConflictSuggestion": "Consider pulling remote changes first to avoid conflicts.",
+    "willUpdate": "Will Update",
+    "willUpdateDesc": "This skill will be updated to the latest version from the repository."
   },
 
   "permissions": {
@@ -650,6 +665,48 @@
     "tryAgain": "Please try again"
   },
 
+  "import": {
+    "title": "Import Skills",
+    "button": "Import",
+    "fromLocal": "From Local Directory",
+    "fromUrl": "From Git URL",
+    "selectDirectory": "Select Source Directory",
+    "directoryPlaceholder": "Click Browse to select a directory...",
+    "scanning": "Scanning...",
+    "repoUrl": "Repository URL",
+    "pat": "Personal Access Token (optional)",
+    "patPlaceholder": "For private repositories",
+    "scanUrl": "Scan Repository",
+    "foundSkills": "Found {{count}} skill(s) in {{provider}} repository {{repo}}",
+    "selectSkills": "Select Skills to Import",
+    "conflict": "Exists",
+    "conflictStrategy": "If skill already exists:",
+    "rename": "Rename",
+    "renameDesc": "Add suffix to the new skill (e.g., skill → skill-2)",
+    "skip": "Skip",
+    "skipDesc": "Keep existing skill, skip the conflicting one",
+    "overwrite": "Overwrite",
+    "overwriteDesc": "Replace existing skill with the new one",
+    "afterImport": "After import:",
+    "deleteOriginals": "Delete original files",
+    "keepOriginals": "Keep original files",
+    "importing": "Importing...",
+    "import": "Import",
+    "importFailed": "Import Failed",
+    "complete": "Import Complete",
+    "imported": "Imported: {{count}}",
+    "skipped": "Skipped: {{count}}",
+    "failed": "Failed: {{count}}",
+    "ofSkills": "{{current}} of {{total}} skills",
+    "noSkillsFound": "No skills found",
+    "noSkillsInDirectory": "No valid skills found in this directory. Make sure the directory contains skill folders with SKILL.md files.",
+    "noSkillsInRepo": "No valid skills found in this repository. Make sure the repository contains skill folders with SKILL.md files.",
+    "selectDirectoryFirst": "Select a directory to scan for skills",
+    "enterUrlFirst": "Enter a repository URL and click Scan to search for skills",
+    "tip": "Tip",
+    "skillStructureTip": "A valid skill directory should contain a SKILL.md file that describes the skill's purpose and usage."
+  },
+
   "migration": {
     "title": "Migrate Skills",
     "foundSkills": "Found <strong>{{count}}</strong> skill(s) in the added directory.",
@@ -673,6 +730,30 @@
     "ofSkills": "{{current}} of {{total}} skills"
   },
 
+  "contribution": {
+    "title": "Your Contribution",
+    "points": "points",
+    "badges": "badges",
+    "currentLevel": "Current Level",
+    "nextLevel": "Next Level",
+    "pointsToNextLevel": "points to next level",
+    "totalSkills": "Total Skills",
+    "contributors": "Contributors",
+    "earnedBadges": "Earned Badges",
+    "nextBadges": "Next Badges",
+    "moreNeeded": "more needed",
+    "activeSkills": "Active Skills",
+    "commits": "commits"
+  },
+
+  "levels": {
+    "newcomer": "Newcomer",
+    "contributor": "Contributor",
+    "active": "Active",
+    "core": "Core",
+    "maintainer": "Maintainer"
+  },
+
   "fileTree": {
     "title": "Files",
     "show": "Show file tree",
@@ -686,7 +767,10 @@
     "rewrite": "AI Rewrite",
     "insert": "AI Insert",
     "inputPlaceholder": "e.g., Make it more concise...",
-    "submitHint": "Ctrl + Enter to submit"
+    "submitHint": "Ctrl + Enter to submit",
+    "selectedText": "Selected text",
+    "rewritePrompt": "How would you like to rewrite it?",
+    "insertPrompt": "What would you like to insert?"
   },
 
   "registrySearch": {
@@ -697,16 +781,6 @@
     "searchError": "Search Error",
     "noSkillsFound": "No skills found",
     "noResultsFor": "No results found for \"{{query}}\""
-  },
-
-  "aiAssistant": {
-    "selectedText": "Selected text",
-    "rewritePrompt": "How would you like to rewrite it?",
-    "insertPrompt": "What would you like to insert?",
-    "inputPlaceholder": "e.g., Make it more concise...",
-    "submitHint": "Ctrl + Enter to submit",
-    "rewrite": "Rewrite",
-    "insert": "Insert"
   },
 
   "skillGroups": {

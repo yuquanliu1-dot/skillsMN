@@ -15,8 +15,10 @@ import { registerPrivateRepoHandlers } from './ipc/privateRepoHandlers';
 import { registerRegistryHandlers } from './ipc/registryHandlers';
 import { registerSymlinkHandlers } from './ipc/symlinkHandlers';
 import { registerMigrationHandlers } from './ipc/migrationHandlers';
+import { registerImportHandlers, initImportService } from './ipc/importHandlers';
 import { registerAIConversationHandlers } from './ipc/aiConversationHandlers';
 import { registerSkillGroupHandlers, setConfigService } from './ipc/skillGroupHandlers';
+import { registerContributionStatsHandlers } from './ipc/contributionStatsHandlers';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
 import { SymlinkService } from './services/SymlinkService';
@@ -212,6 +214,15 @@ async function initialize(): Promise<void> {
     setConfigService(configService);
     registerSkillGroupHandlers();
     logger.info('Skill group handlers registered', 'Main');
+
+    // Register contribution stats handlers
+    registerContributionStatsHandlers();
+    logger.info('Contribution stats handlers registered', 'Main');
+
+    // Initialize and register import handlers
+    initImportService(skillService);
+    registerImportHandlers(mainWindow);
+    logger.info('Import handlers registered', 'Main');
 
     // Create main window
     await createWindow();

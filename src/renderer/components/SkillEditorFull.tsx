@@ -154,6 +154,8 @@ interface SkillEditorFullProps {
   hasUncommittedChanges?: boolean;
   /** Callback to set uncommitted changes state */
   onSetHasUncommittedChanges?: (value: boolean) => void;
+  /** Callback to show toast notification */
+  onShowToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 export default function SkillEditorFull({
@@ -181,6 +183,7 @@ export default function SkillEditorFull({
   uncommittedResetTrigger,
   hasUncommittedChanges: externalHasUncommittedChanges,
   onSetHasUncommittedChanges,
+  onShowToast,
 }: SkillEditorFullProps): JSX.Element {
   const { t } = useTranslation();
 
@@ -687,6 +690,21 @@ export default function SkillEditorFull({
         const nextIndex = (currentIndex + 1) % tabs.length;
         setActiveTabId(tabs[nextIndex].id);
       }
+      // Ctrl+F - Find
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        editorRef.current?.getAction('actions.find')?.run();
+      }
+      // Ctrl+H - Replace
+      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+        e.preventDefault();
+        editorRef.current?.getAction('actions.replace')?.run();
+      }
+      // Ctrl+G - Go to line
+      if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+        e.preventDefault();
+        editorRef.current?.getAction('editor.action.gotoLine')?.run();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -937,7 +955,7 @@ export default function SkillEditorFull({
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-600">{skill.sourceMetadata.source}</span>
                   )}
                   {skill?.sourceMetadata?.type === 'private-repo' && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-600">{t('skillCard.private')}</span>
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">{t('skillCard.private')}</span>
                   )}
                 </>
               )}
@@ -1243,6 +1261,10 @@ export default function SkillEditorFull({
                   bracketPairColorization: { enabled: true },
                   padding: { top: 16 },
                   readOnly: false,
+                  // Code folding
+                  folding: true,
+                  foldingStrategy: 'indentation',
+                  showFoldingControls: 'always',
                 }}
               />
             </div>
@@ -1263,7 +1285,7 @@ export default function SkillEditorFull({
 
           {/* Keyboard shortcuts hint */}
           <div className="border-t border-gray-200 px-4 py-2 bg-gray-50 flex items-center justify-between text-xs text-gray-500">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
                 <span>+</span>
@@ -1273,8 +1295,32 @@ export default function SkillEditorFull({
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
                 <span>+</span>
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">F</kbd>
+                <span>{t('editor.find')}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
+                <span>+</span>
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">H</kbd>
+                <span>{t('editor.replace')}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
+                <span>+</span>
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">G</kbd>
+                <span>{t('editor.gotoLine')}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
+                <span>+</span>
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">W</kbd>
+                <span>{t('editor.close')}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
+                <span>+</span>
                 <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Tab</kbd>
-                <span>{t('editor.switchTab', 'Switch tab')}</span>
+                <span>{t('editor.switchTab')}</span>
               </span>
               {!isNewSkill && skill && activeTab?.isMainFile && (
                 <span>{t('editor.modified')}: {new Date(skill.lastModified).toLocaleString()}</span>
@@ -1312,6 +1358,7 @@ export default function SkillEditorFull({
                 currentSkillName={isNewSkill ? undefined : skill?.name}
                 currentSkillPath={isNewSkill ? undefined : skill?.path}
                 onStreamingChange={setIsAIStreaming}
+                onShowToast={onShowToast}
               />
             </div>
           </div>

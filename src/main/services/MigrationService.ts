@@ -10,7 +10,7 @@ import fsExtra from 'fs-extra';
 import path from 'path';
 import { logger } from '../utils/Logger';
 import { SkillService } from './SkillService';
-import { Configuration, Skill, MigrationOptions, MigrationProgress, MigrationResult } from '../../shared/types';
+import { Configuration, Skill, MigrationOptions, MigrationProgress, MigrationResult, ConflictStrategy } from '../../shared/types';
 import { SkillDirectoryModel } from '../models/SkillDirectory';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { BrowserWindow } from 'electron';
@@ -132,7 +132,12 @@ export class MigrationService {
       success: true,
       migratedCount: 0,
       failedCount: 0,
+      skippedCount: 0,
+      renamedCount: 0,
+      overwrittenCount: 0,
       failedSkills: [],
+      skippedSkills: [],
+      renamedSkills: [],
       duration: 0,
     };
 
@@ -143,6 +148,8 @@ export class MigrationService {
     await SkillDirectoryModel.ensureDirectory(appDir);
 
     // Process each skill
+    const conflictStrategy = options.conflictStrategy || 'rename';
+
     for (let i = 0; i < skills.length; i++) {
       const skill = skills[i];
 
@@ -156,14 +163,46 @@ export class MigrationService {
           operation: options.moveOrCopy === 'move' ? 'moving' : 'copying',
         });
 
-        // Migrate skill
-        await this.migrateSkill(skill, appDir, options);
+        // Migrate skill with conflict handling
+        const migrationResult = await this.migrateSkill(skill, appDir, options, conflictStrategy);
 
-        result.migratedCount++;
-        logger.debug('Skill migrated successfully', 'MigrationService', {
-          skillName: skill.name,
-          progress: `${i + 1}/${skills.length}`,
-        });
+        // Update result based on migration outcome
+        if (migrationResult.skipped) {
+          result.skippedCount++;
+          result.skippedSkills.push({
+            name: skill.name,
+            reason: migrationResult.reason || 'Skipped due to conflict',
+          });
+          logger.debug('Skill skipped', 'MigrationService', {
+            skillName: skill.name,
+            reason: migrationResult.reason,
+          });
+        } else {
+          result.migratedCount++;
+          if (migrationResult.renamedTo) {
+            result.renamedCount++;
+            result.renamedSkills.push({
+              originalName: skill.name,
+              newName: migrationResult.renamedTo,
+            });
+            logger.debug('Skill migrated with rename', 'MigrationService', {
+              originalName: skill.name,
+              newName: migrationResult.renamedTo,
+              progress: `${i + 1}/${skills.length}`,
+            });
+          } else if (migrationResult.overwritten) {
+            result.overwrittenCount++;
+            logger.debug('Skill migrated with overwrite', 'MigrationService', {
+              skillName: skill.name,
+              progress: `${i + 1}/${skills.length}`,
+            });
+          } else {
+            logger.debug('Skill migrated successfully', 'MigrationService', {
+              skillName: skill.name,
+              progress: `${i + 1}/${skills.length}`,
+            });
+          }
+        }
       } catch (error) {
         result.failedCount++;
         result.failedSkills.push({
@@ -200,22 +239,56 @@ export class MigrationService {
   }
 
   /**
-   * Migrate a single skill
+   * Result of migrating a single skill
+   */
+  private migrateSkillResult: {
+    skipped?: boolean;
+    renamedTo?: string;
+    overwritten?: boolean;
+    reason?: string;
+  };
+
+  /**
+   * Migrate a single skill with conflict handling
    * @param skill - Skill to migrate
    * @param appDir - Application directory
    * @param options - Migration options
+   * @param conflictStrategy - Strategy for handling name conflicts
+   * @returns Migration result details
    */
   private async migrateSkill(
     skill: Skill,
     appDir: string,
-    options: MigrationOptions
-  ): Promise<void> {
+    options: MigrationOptions,
+    conflictStrategy: ConflictStrategy
+  ): Promise<{ skipped?: boolean; renamedTo?: string; overwritten?: boolean; reason?: string }> {
     const skillName = path.basename(skill.path);
-    const targetPath = path.join(appDir, skillName);
+    let targetPath = path.join(appDir, skillName);
+    let finalSkillName = skillName;
+    let overwritten = false;
 
     // Check if skill already exists in target
     if (await fsExtra.pathExists(targetPath)) {
-      throw new Error(`Skill already exists in application directory: ${skillName}`);
+      switch (conflictStrategy) {
+        case 'skip':
+          return {
+            skipped: true,
+            reason: `Skill already exists: ${skillName}`,
+          };
+
+        case 'overwrite':
+          // Remove existing skill before migration
+          await fsExtra.remove(targetPath);
+          overwritten = true;
+          break;
+
+        case 'rename':
+        default:
+          // Find a unique name by appending a number
+          finalSkillName = await this.findUniqueSkillName(appDir, skillName);
+          targetPath = path.join(appDir, finalSkillName);
+          break;
+      }
     }
 
     if (options.deleteOriginals) {
@@ -225,6 +298,29 @@ export class MigrationService {
       // Copy skill (original will be kept)
       await fsExtra.copy(skill.path, targetPath);
     }
+
+    return {
+      renamedTo: finalSkillName !== skillName ? finalSkillName : undefined,
+      overwritten,
+    };
+  }
+
+  /**
+   * Find a unique skill name by appending a number suffix
+   * @param appDir - Application directory
+   * @param baseName - Original skill name
+   * @returns Unique skill name
+   */
+  private async findUniqueSkillName(appDir: string, baseName: string): Promise<string> {
+    let counter = 2;
+    let newName = `${baseName}-${counter}`;
+
+    while (await fsExtra.pathExists(path.join(appDir, newName))) {
+      counter++;
+      newName = `${baseName}-${counter}`;
+    }
+
+    return newName;
   }
 
   /**

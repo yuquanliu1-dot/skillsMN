@@ -9,6 +9,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PrivateRepo, PrivateSkill, SkillGroup } from '../../shared/types';
 import PrivateSkillCard from './PrivateSkillCard';
+import ContributionBadge from './ContributionBadge';
 
 type SortBy = 'name' | 'modified';
 
@@ -537,7 +538,20 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
       )}
 
       {/* Skills List */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
+      <div className="flex-1 overflow-y-auto bg-gray-50 p-4 relative">
+        {/* 贡献徽章 - 右上角 */}
+        {selectedRepoId && !isLoadingSkills && !error && filteredAndSortedSkills.length > 0 && (
+          <div className="absolute top-4 right-4 z-10">
+            <ContributionBadge
+              repoId={selectedRepoId}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-contribution-panel', {
+                  detail: { repoId: selectedRepoId }
+                }));
+              }}
+            />
+          </div>
+        )}
         {isLoadingSkills ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

@@ -72,7 +72,9 @@ export class SkillDirectoryModel {
   }
 
   /**
-   * Get list of skill directories (subdirectories containing skill.md)
+   * Get list of skill directories (subdirectories containing SKILL.md)
+   * Recursively scans subdirectories and filters out nested skills
+   * (if a skill is a subdirectory of another skill, only the parent is kept)
    */
   static async getSkillDirectories(dirPath: string): Promise<string[]> {
     if (!fs.existsSync(dirPath)) {
@@ -81,27 +83,80 @@ export class SkillDirectoryModel {
     }
 
     try {
-      const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-      const skillDirs: string[] = [];
+      // Recursively find all directories containing SKILL.md
+      const allSkillDirs = await this.findSkillDirectoriesRecursive(dirPath);
 
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        if (entry.name.startsWith('.')) continue;
+      // Filter out nested skills (skills that are subdirectories of other skills)
+      const topLevelSkills = this.filterNestedSkills(allSkillDirs);
 
-        const skillPath = path.join(dirPath, entry.name);
-        const skillFile = path.join(skillPath, SKILL_FILE_NAME);
-
-        // Only include directories that contain SKILL.md
-        if (fs.existsSync(skillFile)) {
-          skillDirs.push(skillPath);
-        }
-      }
-
-      logger.debug(`Found ${skillDirs.length} skill directories`, 'SkillDirectoryModel', { dirPath });
-      return skillDirs;
+      logger.debug(`Found ${topLevelSkills.length} skill directories (from ${allSkillDirs.length} total, filtered nested)`, 'SkillDirectoryModel', { dirPath });
+      return topLevelSkills;
     } catch (error) {
       logger.error('Failed to read skill directories', 'SkillDirectoryModel', { dirPath, error });
       return [];
     }
+  }
+
+  /**
+   * Recursively find all directories containing SKILL.md
+   */
+  private static async findSkillDirectoriesRecursive(dirPath: string): Promise<string[]> {
+    const skillDirs: string[] = [];
+
+    const scanDir = async (currentPath: string): Promise<void> => {
+      try {
+        const entries = await fs.promises.readdir(currentPath, { withFileTypes: true });
+
+        for (const entry of entries) {
+          if (!entry.isDirectory()) continue;
+          if (entry.name.startsWith('.')) continue;
+
+          const subPath = path.join(currentPath, entry.name);
+          const skillFile = path.join(subPath, SKILL_FILE_NAME);
+
+          // If this directory contains SKILL.md, it's a skill directory
+          if (fs.existsSync(skillFile)) {
+            skillDirs.push(subPath);
+            // Don't recurse into skill directories - we'll filter nested skills later
+            // This prevents unnecessary deep scanning into skill contents
+          } else {
+            // Only recurse if this isn't already a skill directory
+            await scanDir(subPath);
+          }
+        }
+      } catch (error) {
+        // Ignore permission errors or inaccessible directories
+        logger.debug(`Could not scan directory: ${currentPath}`, 'SkillDirectoryModel', { error });
+      }
+    };
+
+    await scanDir(dirPath);
+    return skillDirs;
+  }
+
+  /**
+   * Filter out nested skills (skills that are subdirectories of other skills)
+   * When a directory is identified as a skill, its subdirectories are not searched
+   * for additional skills (prevents nested sub-skills from being listed)
+   */
+  private static filterNestedSkills(skillDirs: string[]): string[] {
+    // Sort by path length (shorter paths first = parent directories first)
+    const sorted = [...skillDirs].sort((a, b) => a.length - b.length);
+
+    const topLevelSkills: string[] = [];
+
+    for (const skillDir of sorted) {
+      // Check if this skill is a subdirectory of any already-added top-level skill
+      const isNested = topLevelSkills.some(parentPath =>
+        skillDir.startsWith(parentPath + path.sep) ||
+        skillDir.startsWith(parentPath + '/')
+      );
+
+      if (!isNested) {
+        topLevelSkills.push(skillDir);
+      }
+    }
+
+    return topLevelSkills;
   }
 }

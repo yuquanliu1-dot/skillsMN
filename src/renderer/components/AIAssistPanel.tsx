@@ -22,6 +22,8 @@ interface AIAssistPanelProps {
   skillName?: string;
   /** Full path to the skill directory (for modify mode - AI will use Read tool) */
   skillPath?: string;
+  /** Callback to show toast notification */
+  onShowToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
@@ -32,6 +34,7 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
   selectedText,
   skillName,
   skillPath,
+  onShowToast,
 }) => {
   const [mode, setMode] = useState<AIGenerationMode>('new');
   const [prompt, setPrompt] = useState('');
@@ -52,10 +55,14 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
     onComplete: (generatedContent) => {
       console.log('AI generation complete:', generatedContent.length);
       generationStartTime.current = null;
+      // Show completion notification to user
+      onShowToast?.('AI generation complete! Click "Apply" to use the result.', 'success');
     },
     onError: (errorMessage) => {
       console.error('AI generation error:', errorMessage);
       generationStartTime.current = null;
+      // Show error notification to user
+      onShowToast?.(`AI generation failed: ${errorMessage}`, 'error');
     },
   });
 
@@ -102,7 +109,12 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
   const handleApply = useCallback(() => {
     if (content) {
       onApply(content, mode)
-      onClose()
+      // Don't close for modes that may have follow-up tasks or need result review
+      // evaluate/benchmark/optimize modes may generate HTML reports and user needs to review results
+      const shouldClose = !['evaluate', 'benchmark', 'optimize'].includes(mode)
+      if (shouldClose) {
+        onClose()
+      }
     }
   }, [content, mode, onApply, onClose])
 

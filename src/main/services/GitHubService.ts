@@ -759,7 +759,9 @@ export class GitHubService {
           logger.debug('Repository tree not found (404) - repository may be empty or branch does not exist', 'GitHubService', { owner, repo, branch });
           return [];
         }
-        throw new Error(`Failed to fetch repository tree: ${response.status}`);
+        // Read error response body for better error messages
+        const errorBody = await response.text().catch(() => '');
+        throw new Error(`Failed to fetch repository tree: ${response.status}${errorBody ? ` - ${errorBody}` : ''}`);
       }
 
       const data: any = await response.json();
@@ -772,27 +774,47 @@ export class GitHubService {
 
   /**
    * Find skill directories in repository tree
+   * When a directory is identified as a skill (contains SKILL.md), its subdirectories
+   * are not searched for additional skills (prevents nested sub-skills from being listed)
    */
   static findSkillDirectories(tree: any[]): any[] {
     const skillFiles = tree.filter((item: any) => {
       return item.type === 'blob' && item.path.endsWith('SKILL.md');
     });
 
-    const skillDirectories = skillFiles.map((file: any) => {
+    // Build list of skill directories with their paths
+    const allSkillDirs: { path: string; name: string; skillFilePath: string; depth: number }[] = [];
+    for (const file of skillFiles) {
       const pathParts = file.path.split('/');
       pathParts.pop();
       const dirPath = pathParts.join('/');
       const depth = pathParts.length;
 
-      return {
+      allSkillDirs.push({
         path: dirPath,
         name: pathParts[pathParts.length - 1] || 'root',
         skillFilePath: file.path,
         depth,
-      };
-    });
+      });
+    }
 
-    return skillDirectories.filter((dir: any) => dir.depth <= 5);
+    // Sort by path length (shorter first) to process parent dirs before children
+    allSkillDirs.sort((a, b) => a.path.length - b.path.length);
+
+    // Filter out nested skills (skills that are subdirectories of other skills)
+    const topLevelSkills: typeof allSkillDirs = [];
+    for (const skillDir of allSkillDirs) {
+      // Check if this skill is a subdirectory of any already-added top-level skill
+      const isNested = topLevelSkills.some(parent =>
+        skillDir.path.startsWith(parent.path + '/')
+      );
+
+      if (!isNested) {
+        topLevelSkills.push(skillDir);
+      }
+    }
+
+    return topLevelSkills;
   }
 
   /**
@@ -1351,7 +1373,9 @@ export class GitHubService {
       ? `${instanceUrl}/api/v3`
       : 'https://api.github.com';
 
-    const REQUEST_TIMEOUT = 30000; // 30 seconds timeout
+    // Increased timeout for file uploads (2 minutes per file)
+    // Large files or slow networks need more time
+    const REQUEST_TIMEOUT = 120000; // 120 seconds timeout
     const errors: string[] = [];
     let uploadedCount = 0;
 

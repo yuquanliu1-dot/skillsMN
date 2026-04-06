@@ -45,6 +45,8 @@ interface SkillEditorProps {
   onUploadSkill?: (skill: Skill) => void;
   onCommitChanges?: (skill: Skill) => void;
   onSkillModified?: (filePath?: string) => void;
+  /** Callback to show toast notification */
+  onShowToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 export default function SkillEditor({
@@ -70,6 +72,7 @@ export default function SkillEditor({
   onUploadSkill,
   onCommitChanges,
   onSkillModified,
+  onShowToast,
 }: SkillEditorProps): JSX.Element {
   const { t } = useTranslation();
   const [content, setContent] = useState<string>('');
@@ -411,12 +414,18 @@ export default function SkillEditor({
       setIsSaving(true);
       setError(null);
 
-      await onSave(contentToSave, loadedLastModified);
+      const response = await onSave(contentToSave, loadedLastModified);
+
+      // Update loadedLastModified with the actual file modification time from the response
+      // This ensures we use the precise filesystem timestamp instead of Date.now()
+      if (response && response.lastModified) {
+        setLoadedLastModified(new Date(response.lastModified).getTime());
+      } else {
+        setLoadedLastModified(Date.now());
+      }
+
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
-
-      // Update loadedLastModified after successful save
-      setLoadedLastModified(Date.now());
 
       console.log('Skill auto-saved successfully');
     } catch (err: any) {
@@ -561,7 +570,7 @@ export default function SkillEditor({
           const errorMsg = 'Failed to parse skill name from generated content. Please ensure the content includes YAML frontmatter with a "name" field.';
           console.error(errorMsg);
           setError(errorMsg);
-          alert(errorMsg + '\n\nGenerated content:\n' + generatedContent.substring(0, 500));
+          onShowToast?.(errorMsg, 'error');
           return;
         }
 
@@ -577,13 +586,13 @@ export default function SkillEditor({
 
         // Notify parent to refresh and open the new skill
         setError(null);
-        alert(`✅ Skill "${skillName}" created successfully!\n\nLocation: .claude/skills/${skillName}/skill.md`);
+        onShowToast?.(`Skill "${skillName}" created successfully!`, 'success');
         onClose();
       } catch (error) {
         console.error('Failed to create skill:', error);
         const errorMsg = error instanceof Error ? error.message : 'Failed to create skill';
         setError(errorMsg);
-        alert('Failed to create skill: ' + errorMsg);
+        onShowToast?.(`Failed to create skill: ${errorMsg}`, 'error');
       }
       return;
     }
@@ -742,6 +751,24 @@ export default function SkillEditor({
           onClose();
         }
       }
+
+      // Ctrl+F - Find
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        editorRef.current?.getAction('actions.find')?.run();
+      }
+
+      // Ctrl+H - Replace
+      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+        e.preventDefault();
+        editorRef.current?.getAction('actions.replace')?.run();
+      }
+
+      // Ctrl+G - Go to line
+      if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+        e.preventDefault();
+        editorRef.current?.getAction('editor.action.gotoLine')?.run();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -891,7 +918,7 @@ export default function SkillEditor({
                 }
               }
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
             title={t('editor.openClaudeInTerminal', 'Open Claude Code in terminal to test this skill')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -904,7 +931,7 @@ export default function SkillEditor({
           {!readOnly && (
             <button
               onClick={() => setIsAISidebarOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-colors"
               title="Open AI Assistant sidebar for conversational skill editing"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1129,6 +1156,10 @@ export default function SkillEditor({
                   bracketPairColorization: { enabled: true },
                   padding: { top: 16 },
                   readOnly: readOnly,
+                  // Code folding
+                  folding: true,
+                  foldingStrategy: 'indentation',
+                  showFoldingControls: 'always',
                 }}
               />
             </div>
@@ -1138,12 +1169,30 @@ export default function SkillEditor({
 
       {/* Keyboard shortcuts hint */}
       <div className={`border-t ${borderColor} px-4 py-2 ${footerBg} flex items-center justify-between text-xs text-gray-500`}>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <span className="flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
             <span>+</span>
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">S</kbd>
             <span>{t('editor.save')}</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
+            <span>+</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">F</kbd>
+            <span>{t('editor.find', 'Find')}</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
+            <span>+</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">H</kbd>
+            <span>{t('editor.replace', 'Replace')}</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>
+            <span>+</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">G</kbd>
+            <span>{t('editor.gotoLine', 'Go to Line')}</span>
           </span>
           <span className="flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-700">Ctrl</kbd>

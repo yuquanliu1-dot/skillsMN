@@ -15,6 +15,7 @@ interface SkillListProps {
   onSkillClick?: (skill: Skill) => void;
   onSkillSelect?: (skill: Skill) => void;
   onCreateSkill?: () => void;
+  onImportSkill?: () => void;
   onEditSkill?: (skill: Skill) => void;
   onDeleteSkill?: (skill: Skill) => void;
   onCopySkill?: (skill: Skill) => void;
@@ -37,6 +38,7 @@ export default function SkillList({
   onSkillClick,
   onSkillSelect,
   onCreateSkill,
+  onImportSkill,
   onEditSkill,
   onDeleteSkill,
   onCopySkill,
@@ -124,20 +126,26 @@ export default function SkillList({
   }, [skills, filterSource, searchQuery, sortBy]);
 
   // Group skills by configured groups (based on tags)
+  // Disabled groups are filtered out and not displayed
   const groupedSkills = useMemo((): GroupedSkills[] => {
     const result: GroupedSkills[] = [];
     const assignedSkills = new Set<string>();
 
-    // Create a map of tag to group
+    // Create a map of tag to group (only for enabled groups)
     const tagToGroup = new Map<string, SkillGroup>();
     for (const group of skillGroups) {
+      // Skip disabled groups
+      if (group.enabled === false) continue;
       for (const tag of group.tags) {
         tagToGroup.set(tag.toLowerCase(), group);
       }
     }
 
-    // Group skills by their tags' group assignments
+    // Group skills by their tags' group assignments (only enabled groups)
     for (const group of skillGroups) {
+      // Skip disabled groups
+      if (group.enabled === false) continue;
+
       const groupSkills: Skill[] = [];
       for (const skill of filteredAndSortedSkills) {
         if (assignedSkills.has(skill.path)) continue;
@@ -243,6 +251,26 @@ export default function SkillList({
               <span>{t('skills.newSkill')}</span>
             </button>
           )}
+
+          {/* Import Skill Button */}
+          {onImportSkill && (
+            <button
+              data-testid="import-skill-button"
+              onClick={onImportSkill}
+              className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              aria-label={t('import.title')}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                />
+              </svg>
+              <span>{t('import.button')}</span>
+            </button>
+          )}
         </div>
 
         {/* Bottom row: Filters + Sort (with icons) */}
@@ -337,27 +365,31 @@ export default function SkillList({
                   </div>
                 )}
 
-                {/* Skill cards grid */}
+                {/* Skill cards grid - using content-visibility for performance */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {groupSkills.map((skill) => {
                     const versionStatus = skillUpdates[skill.path];
                     return (
-                      <SkillCard
+                      <div
                         key={skill.path}
-                        skill={skill}
-                        onClick={onSkillClick}
-                        onEdit={onEditSkill}
-                        onSelect={onSkillSelect}
-                        onDelete={onDeleteSkill}
-                        onCopy={onCopySkill}
-                        onOpenFolder={onOpenFolder}
-                        isSelected={skill.path === selectedSkillPath}
-                        versionStatus={versionStatus}
-                        onUpdate={handleSkillUpdate}
-                        onUpload={onSkillUpload}
-                        onNavigateToSettings={onNavigateToSettings}
-                        onTagAssigned={handleTagAssigned}
-                      />
+                        style={{ contentVisibility: 'auto', containIntrinsicSize: '0 200px' }}
+                      >
+                        <SkillCard
+                          skill={skill}
+                          onClick={onSkillClick}
+                          onEdit={onEditSkill}
+                          onSelect={onSkillSelect}
+                          onDelete={onDeleteSkill}
+                          onCopy={onCopySkill}
+                          onOpenFolder={onOpenFolder}
+                          isSelected={skill.path === selectedSkillPath}
+                          versionStatus={versionStatus}
+                          onUpdate={handleSkillUpdate}
+                          onUpload={onSkillUpload}
+                          onNavigateToSettings={onNavigateToSettings}
+                          onTagAssigned={handleTagAssigned}
+                        />
+                      </div>
                     );
                   })}
                 </div>

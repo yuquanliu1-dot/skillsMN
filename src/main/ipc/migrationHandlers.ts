@@ -159,4 +159,29 @@ export function registerMigrationHandlers(
       }
     }
   );
+
+  // Handler for migration:get-target-directory - Get the target directory for migration
+  ipcMain.handle(
+    IPC_CHANNELS.MIGRATION_GET_TARGET_DIRECTORY,
+    async (): Promise<IPCResponse<string>> => {
+      try {
+        logger.debug('Getting migration target directory', 'MigrationHandlers');
+
+        // Get configuration
+        const config = await configService!.load();
+
+        // Get target directory
+        const targetDirectory = migrationService!.getApplicationSkillsDirectory(config);
+
+        logger.debug('Migration target directory retrieved', 'MigrationHandlers', {
+          targetDirectory,
+        });
+
+        return { success: true, data: targetDirectory };
+      } catch (error) {
+        logger.error('Failed to get migration target directory', 'MigrationHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
 }

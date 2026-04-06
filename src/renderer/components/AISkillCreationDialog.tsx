@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import { ipcClient } from '../services/ipcClient';
 import type { Configuration } from '../../shared/types';
@@ -15,6 +16,8 @@ interface AISkillCreationDialogProps {
   onClose: () => void;
   onSkillCreated: () => void;
   config: Configuration | null;
+  /** Callback to show toast notification */
+  onShowToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
@@ -22,7 +25,9 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
   onClose,
   onSkillCreated,
   config,
+  onShowToast,
 }) => {
+  const { t } = useTranslation();
   const [prompt, setPrompt] = useState('');
 
   const {
@@ -127,9 +132,9 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
     } catch (error) {
       console.error('Failed to create skill:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to create skill';
-      alert('Failed to create skill: ' + errorMsg);
+      onShowToast?.(`Failed to create skill: ${errorMsg}`, 'error');
     }
-  }, [content, parseSkillNameFromFrontmatter, onClose, onSkillCreated]);
+  }, [content, parseSkillNameFromFrontmatter, onClose, onSkillCreated, onShowToast]);
 
   /**
    * Handle escape key to close
@@ -162,7 +167,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
     >
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,8 +175,8 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">AI Skill Creator</h2>
-              <p className="text-sm text-white/80">Powered by Claude</p>
+              <h2 className="text-xl font-bold text-white">{t('aiSidebar.title')}</h2>
+              <p className="text-sm text-white/80">{t('aiSidebar.subtitle')}</p>
             </div>
           </div>
           <button
@@ -193,7 +198,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
               <svg className="w-4 h-4 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>Skills are saved to your centralized skills library</span>
+              <span>{t('skills.savedToLibraryShort')}</span>
             </div>
           </div>
 
@@ -201,12 +206,12 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
           <div className="flex-1 flex flex-col overflow-hidden p-6 bg-slate-50 dark:bg-slate-900">
             {/* Header */}
             <div className="flex items-center justify-between mb-3 flex-shrink-0">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Preview</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('aiDialog.preview')}</label>
               <div className="flex items-center gap-3">
                 {isStreaming && (
-                  <div className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400">
-                    <div className="w-2 h-2 bg-purple-600 dark:bg-purple-400 rounded-full animate-pulse"></div>
-                    <span>Streaming...</span>
+                  <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                    <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></div>
+                    <span>{t('aiDialog.streaming')}</span>
                   </div>
                 )}
                 {isComplete && (
@@ -214,7 +219,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span>Complete</span>
+                    <span>{t('aiDialog.complete')}</span>
                   </div>
                 )}
               </div>
@@ -226,7 +231,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
               <div className="flex-1 overflow-y-auto p-4">
                 {error ? (
                   <div className="text-red-600 dark:text-red-400 text-sm">
-                    <div className="font-medium mb-1">Error</div>
+                    <div className="font-medium mb-1">{t('common.error')}</div>
                     <div>{error}</div>
                   </div>
                 ) : (
@@ -258,12 +263,12 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                       <div>
                         {toolCalls.length > 0 && (
                           <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 mt-2">
-                            Generated Skill
+                            {t('aiDialog.generatedSkill')}
                           </div>
                         )}
                         <pre className="text-sm font-mono whitespace-pre-wrap break-words text-slate-800 dark:text-slate-200">
                           {content}
-                          {isStreaming && <span className="inline-block w-2 h-4 bg-purple-600 dark:bg-purple-400 animate-pulse ml-1">|</span>}
+                          {isStreaming && <span className="inline-block w-2 h-4 bg-blue-600 dark:bg-blue-400 animate-pulse ml-1">|</span>}
                         </pre>
                       </div>
                     ) : toolCalls.length === 0 && (
@@ -272,7 +277,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                           <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7l2-4h10l2 4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
                           </svg>
-                          <p>Generated content will appear here</p>
+                          <p>{t('aiDialog.contentWillAppear')}</p>
                         </div>
                       </div>
                     )}
@@ -291,8 +296,8 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isStreaming}
-                placeholder="Describe the skill you want to create..."
-                className="w-full h-20 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+                placeholder={t('aiDialog.promptPlaceholder')}
+                className="w-full h-20 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
                 maxLength={2000}
               />
               <div data-testid="ai-char-count" className="absolute bottom-2 right-2 text-xs text-slate-400 dark:text-slate-500">
@@ -307,8 +312,8 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                   data-testid="ai-generate-button"
                   onClick={handleGenerate}
                   disabled={!prompt.trim()}
-                  className="flex-1 btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  title="Generate skill with AI"
+                  className="flex-1 btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  title={t('aiDialog.generateSkill')}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -320,7 +325,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                 <button
                   onClick={stop}
                   className="flex-1 btn bg-red-500 hover:bg-red-600 text-white flex items-center justify-center"
-                  title="Stop generation"
+                  title={t('aiDialog.stopGeneration')}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <rect x="6" y="6" width="12" height="12" rx="2" strokeWidth="2" />
@@ -332,8 +337,8 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                 <button
                   onClick={handleGenerate}
                   disabled={!prompt.trim()}
-                  className="flex-1 btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  title="Generate again"
+                  className="flex-1 btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  title={t('aiDialog.generateAgain')}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />

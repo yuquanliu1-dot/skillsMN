@@ -9,6 +9,9 @@
 import { safeStorage, app, BrowserWindow } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as https from 'https';
+import * as http from 'http';
+import { URL } from 'url';
 import { logger } from '../utils/Logger';
 import type { AIGenerationRequest } from '../models/AIGenerationRequest';
 import { validateAIGenerationRequest } from '../models/AIGenerationRequest';
@@ -530,8 +533,10 @@ export class AIService {
             type: 'preset',
             preset: 'claude_code',
           },
-          // Load CLAUDE.md from project, user, and local directories
-          settingSources: ['project', 'user', 'local'],
+          // Load CLAUDE.md from project and local directories only
+          // Note: 'user' is intentionally excluded to prevent user's global config
+          // (e.g., ~/.claude/config.json) from overriding the model setting
+          settingSources: ['project', 'local'],
           model: currentConfig.model,
           cwd: workingDirectory,
           // Tools preset for built-in tools
@@ -841,63 +846,135 @@ export class AIService {
   // Connection Testing
   // --------------------------------------------------------------------------
 
+  /**
+   * Test API connection using direct HTTP call
+   * This supports both Anthropic format (x-api-key) and Bearer token format (Authorization: Bearer)
+   * which is required by some Anthropic-compatible APIs like Minimax
+   */
   static async testConnection(): Promise<{ success: boolean; error?: string; latency?: number }> {
-    const originalApiKey = process.env.ANTHROPIC_API_KEY;
-    const originalBaseUrl = process.env.ANTHROPIC_BASE_URL;
-
     try {
       logger.info('Testing AI connection', 'AIService');
       const startTime = Date.now();
 
-      const { query } = await loadSDK();
-
-      if (currentConfig?.apiKey) {
-        process.env.ANTHROPIC_API_KEY = currentConfig.apiKey;
-      }
-      if (currentConfig?.baseUrl) {
-        process.env.ANTHROPIC_BASE_URL = currentConfig.baseUrl;
+      if (!currentConfig?.apiKey) {
+        return { success: false, error: 'API key is not configured' };
       }
 
       if (!currentConfig?.model) {
         return { success: false, error: 'AI model is not configured' };
       }
 
-      const execOptions = AIService.getExecutableOptions();
-      const stream = query({
-        prompt: 'Say "OK" if you can read this.',
-        options: {
-          model: currentConfig.model,
-          ...execOptions,
-          stderr: (msg: string) => {
-            logger.info('CLI stderr', 'AIService', { stderr: msg });
-          },
-        },
+      // Log the configuration being used for debugging
+      logger.info('Test connection configuration', 'AIService', {
+        model: currentConfig.model,
+        hasApiKey: !!currentConfig.apiKey,
+        baseUrl: currentConfig.baseUrl,
       });
 
-      for await (const item of stream) {
-        if (item.type === 'assistant') {
-          break;
+      // Use direct HTTP call for better compatibility with different API providers
+      const baseUrl = currentConfig.baseUrl || 'https://api.anthropic.com';
+      const apiUrl = `${baseUrl}/v1/messages`;
+
+      // Determine if this is a custom API that might need Bearer token auth
+      // Minimax and some other providers use Bearer token format
+      const isCustomApi = !baseUrl.includes('api.anthropic.com');
+
+      const requestBody = {
+        model: currentConfig.model,
+        max_tokens: 10,
+        messages: [
+          {
+            role: 'user',
+            content: 'Say "OK"'
+          }
+        ]
+      };
+
+      const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
+        const url = new URL(apiUrl);
+        const isHttps = url.protocol === 'https:';
+        const httpModule = isHttps ? https : http;
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+
+        // Use Bearer token for custom APIs (like Minimax), x-api-key for Anthropic
+        if (isCustomApi) {
+          headers['Authorization'] = `Bearer ${currentConfig.apiKey}`;
+          // Also add x-api-key as fallback for some providers
+          headers['x-api-key'] = currentConfig.apiKey;
+          // Anthropic version header
+          headers['anthropic-version'] = '2023-06-01';
+        } else {
+          headers['x-api-key'] = currentConfig.apiKey;
+          headers['anthropic-version'] = '2023-06-01';
         }
-      }
+
+        const options = {
+          hostname: url.hostname,
+          port: url.port || (isHttps ? 443 : 80),
+          path: url.pathname,
+          method: 'POST',
+          headers,
+        };
+
+        console.log('[Test Connection] Making request to:', apiUrl);
+        console.log('[Test Connection] Using auth:', isCustomApi ? 'Bearer + x-api-key' : 'x-api-key');
+
+        const req = httpModule.request(options, (res) => {
+          let data = '';
+
+          res.on('data', (chunk) => {
+            data += chunk;
+          });
+
+          res.on('end', () => {
+            console.log('[Test Connection] Response status:', res.statusCode);
+            console.log('[Test Connection] Response data:', data.substring(0, 500));
+
+            if (res.statusCode === 200 || res.statusCode === 201) {
+              resolve({ success: true });
+            } else {
+              let errorMsg = `HTTP ${res.statusCode}`;
+              try {
+                const errorJson = JSON.parse(data);
+                errorMsg = errorJson.error?.message || errorJson.error?.type || errorMsg;
+              } catch {
+                errorMsg = data.substring(0, 200) || errorMsg;
+              }
+              resolve({ success: false, error: errorMsg });
+            }
+          });
+        });
+
+        req.on('error', (error) => {
+          console.error('[Test Connection] Request error:', error);
+          resolve({ success: false, error: error.message });
+        });
+
+        req.setTimeout(30000, () => {
+          req.destroy();
+          resolve({ success: false, error: 'Connection timeout (30s)' });
+        });
+
+        req.write(JSON.stringify(requestBody));
+        req.end();
+      });
 
       const latency = Date.now() - startTime;
-      logger.info('AI connection test successful', 'AIService');
-      return { success: true, latency };
+
+      if (result.success) {
+        logger.info('AI connection test successful', 'AIService', { latency });
+        return { success: true, latency };
+      } else {
+        logger.error('AI connection test failed', 'AIService', result.error);
+        return { success: false, error: result.error };
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('AI connection test failed', 'AIService', error);
       return { success: false, error: errorMessage };
-    } finally {
-      if (originalApiKey !== undefined) {
-        process.env.ANTHROPIC_API_KEY = originalApiKey;
-      } else {
-        delete process.env.ANTHROPIC_API_KEY;
-      }
-      if (originalBaseUrl !== undefined) {
-        process.env.ANTHROPIC_BASE_URL = originalBaseUrl;
-      } else {
-        delete process.env.ANTHROPIC_BASE_URL;
-      }
     }
   }
 
@@ -928,6 +1005,20 @@ export class AIService {
 You MUST save the skill to this EXACT directory (use absolute path):
 ${targetPath}/<skill-name>/SKILL.md
 
+## CRITICAL: Requirement Clarity Check
+Before creating the skill, assess whether the requirements are CLEAR:
+- What the skill does (core functionality)
+- Who the target users are
+- What triggers the skill
+- Expected output/behavior
+
+If ANY aspect is UNCLEAR or AMBIGUOUS:
+1. USE the AskUserQuestion tool to clarify with the user FIRST
+2. WAIT for user responses
+3. Only create the skill after requirements are clear
+
+If requirements are sufficiently clear, proceed directly to creation.
+
 IMPORTANT:
 - You MUST invoke the /skill-creator skill to handle this task
 - Do NOT save to ~/.claude/skills or any other location
@@ -941,6 +1032,20 @@ IMPORTANT:
 ## CRITICAL: File Location and Save Instructions
 The skill directory is: ${skillPath}
 The skill file (SKILL.md) is at: ${skillPath}/SKILL.md
+
+## CRITICAL: Requirement Clarity Check
+Before modifying the skill, assess whether the requirements are CLEAR:
+- What the skill does (core functionality)
+- Who the target users are
+- What triggers the skill
+- Expected output/behavior
+
+If ANY aspect is UNCLEAR or AMBIGUOUS:
+1. USE the AskUserQuestion tool to clarify with the user FIRST
+2. WAIT for user responses
+3. Only create the skill after requirements are clear
+
+If requirements are sufficiently clear, proceed directly to creation.
 
 IMPORTANT Instructions:
 1. You MUST invoke the /skill-creator skill to handle this task

@@ -10,7 +10,8 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import { PermissionRequestPanel } from './PermissionRequestPanel';
-import type { Configuration, AIConversation, AIConversationMessage, PermissionDecision } from '../../shared/types';
+import ConfirmDialog from './ConfirmDialog';
+import type { Configuration, AIConversation, AIConversationMessage, PermissionDecision, AIGenerationMode } from '../../shared/types';
 
 interface AISkillSidebarProps {
   isOpen: boolean;
@@ -24,6 +25,8 @@ interface AISkillSidebarProps {
   currentSkillPath?: string;
   /** Callback when AI streaming state changes */
   onStreamingChange?: (isStreaming: boolean) => void;
+  /** Callback to show toast notification */
+  onShowToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 /**
@@ -131,11 +134,12 @@ function compressMessages(messages: InternalMessage[]): InternalMessage[] {
     if (result.length < MESSAGE_COMPRESSION.MIN_KEEP_MESSAGES) {
       if (msgLength > 2000) {
         // Truncate individual long messages
+        const truncatedContent = msg.content.substring(0, 2000) + '\n...[truncated]';
         result.unshift({
           ...msg,
-          content: msg.content.substring(0, 2000) + '\n...[truncated]',
+          content: truncatedContent,
         });
-        currentChars += 2000;
+        currentChars += truncatedContent.length;
       } else {
         result.unshift(msg);
         currentChars += msgLength;
@@ -143,11 +147,12 @@ function compressMessages(messages: InternalMessage[]): InternalMessage[] {
     } else if (currentChars + msgLength <= MESSAGE_COMPRESSION.MAX_CONTEXT_CHARS) {
       if (msgLength > 1500) {
         // Truncate older long messages more aggressively
+        const truncatedContent = msg.content.substring(0, 1500) + '\n...[truncated]';
         result.unshift({
           ...msg,
-          content: msg.content.substring(0, 1500) + '\n...[truncated]',
+          content: truncatedContent,
         });
-        currentChars += 1500;
+        currentChars += truncatedContent.length;
       } else {
         result.unshift(msg);
         currentChars += msgLength;
@@ -175,16 +180,29 @@ function generateTitle(content: string): string {
 }
 
 /**
+ * Preset prompt category keys for mode determination
+ */
+const PRESET_CATEGORY_KEYS = {
+  CREATE: 'create',
+  MODIFY_IMPROVE: 'modifyImprove',
+  EVALUATE: 'evaluate',
+  BENCHMARK: 'benchmark',
+  OPTIMIZE_TRIGGERING: 'optimizeTriggering',
+} as const;
+
+/**
  * Get recommended prompts with internationalization
  */
 const getRecommendedPrompts = (t: (key: string, options?: any) => string) => [
   {
+    categoryKey: PRESET_CATEGORY_KEYS.CREATE,
     category: t('aiSidebar.promptCategories.create'),
     items: [
       { label: t('aiSidebar.promptsList.newSkill'), prompt: t('aiSidebar.promptsList.newSkillPrompt') },
     ],
   },
   {
+    categoryKey: PRESET_CATEGORY_KEYS.MODIFY_IMPROVE,
     category: t('aiSidebar.promptCategories.modifyImprove'),
     items: [
       { label: t('aiSidebar.promptsList.enhanceSkill'), prompt: t('aiSidebar.promptsList.enhanceSkillPrompt') },
@@ -192,6 +210,7 @@ const getRecommendedPrompts = (t: (key: string, options?: any) => string) => [
     ],
   },
   {
+    categoryKey: PRESET_CATEGORY_KEYS.EVALUATE,
     category: t('aiSidebar.promptCategories.evaluate'),
     items: [
       { label: t('aiSidebar.promptsList.runEvals'), prompt: t('aiSidebar.promptsList.runEvalsPrompt') },
@@ -200,6 +219,7 @@ const getRecommendedPrompts = (t: (key: string, options?: any) => string) => [
     ],
   },
   {
+    categoryKey: PRESET_CATEGORY_KEYS.BENCHMARK,
     category: t('aiSidebar.promptCategories.benchmark'),
     items: [
       { label: t('aiSidebar.promptsList.performance'), prompt: t('aiSidebar.promptsList.performancePrompt') },
@@ -208,6 +228,7 @@ const getRecommendedPrompts = (t: (key: string, options?: any) => string) => [
     ],
   },
   {
+    categoryKey: PRESET_CATEGORY_KEYS.OPTIMIZE_TRIGGERING,
     category: t('aiSidebar.promptCategories.optimizeTriggering'),
     items: [
       { label: t('aiSidebar.promptsList.improveDescription'), prompt: t('aiSidebar.promptsList.improveDescriptionPrompt') },
@@ -257,6 +278,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   currentSkillName,
   currentSkillPath,
   onStreamingChange,
+  onShowToast,
 }) => {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<InternalMessage[]>([]);
@@ -264,6 +286,13 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const [showPromptMenu, setShowPromptMenu] = useState(false);
   const [showHistoryMenu, setShowHistoryMenu] = useState(false);
+
+  // Delete confirmation dialog state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
+
+  // Track selected preset prompt category for mode determination
+  const [selectedPresetCategory, setSelectedPresetCategory] = useState<string | null>(null);
 
   // Attached files for skill creation - only store paths
   const [attachedFiles, setAttachedFiles] = useState<Array<{
@@ -289,6 +318,14 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   // Track the created skill name to update conversation history
   // Use ref for immediate access in onComplete callback (state updates are async)
   const createdSkillNameRef = useRef<string | null>(null);
+
+  // Track currentConversationId to avoid race conditions when saving conversations
+  const currentConversationIdRef = useRef<string | null>(null);
+
+  // Update ref when currentConversationId changes
+  useEffect(() => {
+    currentConversationIdRef.current = currentConversationId;
+  }, [currentConversationId]);
 
   // Track the previous skill path to detect actual skill changes vs. initial skill creation
   const prevSkillPathRef = useRef<string | undefined>(currentSkillPath);
@@ -333,16 +370,24 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           // Store in ref for immediate access in saveCurrentConversation
           createdSkillNameRef.current = skillName;
           console.log('[AISkillSidebar] Set createdSkillNameRef.current to:', createdSkillNameRef.current);
+          // Show completion toast
+          onShowToast?.(`Skill "${skillName}" created successfully!`, 'success');
           onSkillCreated({ name: skillName, path: filePath });
           return;
         }
       }
 
       console.log('[AISkillSidebar] No Write tool found or could not extract skill name');
+      // Show completion toast for skill modification
+      if (currentSkillPath) {
+        onShowToast?.('Skill modified successfully!', 'success');
+      }
       onSkillCreated();
     },
     onError: (errorMessage) => {
       console.error('AI skill generation error:', errorMessage);
+      // Show error toast to notify user
+      onShowToast?.(`AI generation failed: ${errorMessage}`, 'error');
     },
   });
 
@@ -392,7 +437,10 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
   /**
    * Load all conversations from storage, filtered by current skill
+   * Limited to MAX_CONVERSATIONS to prevent memory/performance issues
    */
+  const MAX_CONVERSATIONS = 50;
+
   const loadConversations = useCallback(async () => {
     setIsLoadingHistory(true);
     try {
@@ -402,7 +450,14 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         const filtered = currentSkillName
           ? response.data.filter(c => c.skillName === currentSkillName)
           : response.data.filter(c => !c.skillName); // Show unassociated conversations when no skill is open
-        setConversations(filtered);
+
+        // Sort by updatedAt (most recent first) and limit to prevent performance issues
+        const sorted = filtered.sort((a, b) =>
+          new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+        );
+        const limited = sorted.slice(0, MAX_CONVERSATIONS);
+
+        setConversations(limited);
       }
     } catch (error) {
       console.error('Failed to load conversations:', error);
@@ -467,21 +522,34 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   }, [reset]);
 
   /**
-   * Delete a conversation
+   * Delete a conversation - show confirmation first
    */
-  const handleDeleteConversation = useCallback(async (conversationId: string, e: React.MouseEvent) => {
+  const handleDeleteConversation = useCallback((conversationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setConversationToDelete(conversationId);
+    setShowDeleteConfirm(true);
+  }, []);
+
+  /**
+   * Confirm and execute conversation deletion
+   */
+  const confirmDeleteConversation = useCallback(async () => {
+    if (!conversationToDelete) return;
+
     try {
-      await window.electronAPI.deleteAIConversation(conversationId);
+      await window.electronAPI.deleteAIConversation(conversationToDelete);
       await loadConversations();
-      if (currentConversationId === conversationId) {
+      if (currentConversationId === conversationToDelete) {
         setMessages([]);
         setCurrentConversationId(null);
       }
     } catch (error) {
       console.error('Failed to delete conversation:', error);
+    } finally {
+      setShowDeleteConfirm(false);
+      setConversationToDelete(null);
     }
-  }, [currentConversationId, loadConversations]);
+  }, [conversationToDelete, currentConversationId, loadConversations]);
 
   /**
    * Start a new conversation
@@ -497,8 +565,9 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   /**
    * Handle selecting a prompt from the menu
    */
-  const handleSelectPrompt = useCallback((prompt: string) => {
+  const handleSelectPrompt = useCallback((prompt: string, category?: string) => {
     setInputValue(prompt);
+    setSelectedPresetCategory(category || null);
     setShowPromptMenu(false);
     inputRef.current?.focus();
   }, []);
@@ -776,22 +845,18 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
       .join('\n\n');
 
-    const skillContext: any = {
-      targetPath: config?.applicationSkillsDirectory,
-    };
-
-    if (currentSkillContent) {
-      skillContext.content = currentSkillContent;
-      skillContext.name = currentSkillName;
-      skillContext.skillPath = currentSkillPath;
-    }
+    // For modify mode: pass skillPath only, AI will use Read tool
+    // For new mode: pass targetPath
+    const skillContext: any = currentSkillPath
+      ? { skillPath: currentSkillPath, name: currentSkillName }
+      : { targetPath: config?.applicationSkillsDirectory };
 
     const fullPrompt = `[Previous conversation]\n${conversationContext}\n\n[User's answers]\n${answerText}\n\nNow proceed to create the skill based on these answers.`;
 
     // Determine mode: new skill if no skillPath, otherwise modify
     const mode = currentSkillPath ? 'modify' : 'new';
     await generate(fullPrompt, mode, skillContext);
-  }, [pendingQuestions, messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath]);
+  }, [pendingQuestions, messages, generate, config, currentSkillName, currentSkillPath]);
 
   /**
    * Skip answering questions (continue without answering)
@@ -829,22 +894,18 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
       .join('\n\n');
 
-    const skillContext: any = {
-      targetPath: config?.applicationSkillsDirectory,
-    };
-
-    if (currentSkillContent) {
-      skillContext.content = currentSkillContent;
-      skillContext.name = currentSkillName;
-      skillContext.skillPath = currentSkillPath;
-    }
+    // For modify mode: pass skillPath only, AI will use Read tool
+    // For new mode: pass targetPath
+    const skillContext: any = currentSkillPath
+      ? { skillPath: currentSkillPath, name: currentSkillName }
+      : { targetPath: config?.applicationSkillsDirectory };
 
     const fullPrompt = `[Previous conversation]\n${conversationContext}\n\n[User skipped the questions]\nPlease proceed with the best approach based on your judgment.`;
 
     // Determine mode: new skill if no skillPath, otherwise modify
     const mode = currentSkillPath ? 'modify' : 'new';
     await generate(fullPrompt, mode, skillContext);
-  }, [messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath]);
+  }, [messages, generate, config, currentSkillName, currentSkillPath]);
 
   /**
    * Handle resolving a permission request
@@ -893,9 +954,13 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           // Pass createdSkillNameRef.current to associate conversation with newly created skill
           const finalMessages = updated.filter(m => !m.isStreaming);
           console.log('[AISkillSidebar] Saving conversation with skillName:', createdSkillNameRef.current);
+
+          // Capture the current conversation ID at the time of save to avoid race conditions
+          const conversationIdAtSaveTime = currentConversationIdRef.current;
           if (finalMessages.length > 0) {
-            saveCurrentConversation(finalMessages, currentConversationId, createdSkillNameRef.current).then(newId => {
-              if (newId && !currentConversationId) {
+            saveCurrentConversation(finalMessages, conversationIdAtSaveTime, createdSkillNameRef.current).then(newId => {
+              // Only update if we were creating a new conversation and the ID hasn't changed
+              if (newId && !conversationIdAtSaveTime && currentConversationIdRef.current === conversationIdAtSaveTime) {
                 setCurrentConversationId(newId);
               }
             });
@@ -907,7 +972,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       });
       reset();
     }
-  }, [isComplete, content, toolCalls, reset, saveCurrentConversation, currentConversationId]);
+  }, [isComplete, content, toolCalls, reset, saveCurrentConversation]);
 
   /**
    * Handle sending a message
@@ -995,7 +1060,10 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
     if (promptChars > MESSAGE_COMPRESSION.HARD_LIMIT_CHARS) {
       // Hard limit exceeded - show error and don't send
-      alert(t('aiSidebar.promptTooLarge', `The prompt is too large (${estimatedTokens.toLocaleString()} estimated tokens). Please clear some conversation history or reduce attached files.`));
+      onShowToast?.(
+        t('aiSidebar.promptTooLarge', `The prompt is too large (${estimatedTokens.toLocaleString()} estimated tokens). Please clear some conversation history or reduce attached files.`),
+        'error'
+      );
       return;
     }
 
@@ -1012,17 +1080,48 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
     console.log('[AISkillSidebar] Sending prompt:', { promptChars, estimatedTokens });
 
-    // Determine mode: new skill if no skillPath, otherwise modify
-    const mode = currentSkillPath ? 'modify' : 'new';
+    // Determine mode based on preset prompt category or skill path
+    let mode: import('../../shared/types').AIGenerationMode;
+    if (selectedPresetCategory) {
+      // Map preset category to AI mode
+      switch (selectedPresetCategory) {
+        case PRESET_CATEGORY_KEYS.CREATE:
+          mode = 'new';
+          break;
+        case PRESET_CATEGORY_KEYS.MODIFY_IMPROVE:
+          mode = 'modify';
+          break;
+        case PRESET_CATEGORY_KEYS.EVALUATE:
+          mode = 'evaluate';
+          break;
+        case PRESET_CATEGORY_KEYS.BENCHMARK:
+          mode = 'benchmark';
+          break;
+        case PRESET_CATEGORY_KEYS.OPTIMIZE_TRIGGERING:
+          mode = 'optimize';
+          break;
+        default:
+          // Fallback to path-based logic
+          mode = currentSkillPath ? 'modify' : 'new';
+      }
+    } else {
+      // No preset selected: use path-based logic
+      mode = currentSkillPath ? 'modify' : 'new';
+    }
+
+    // Clear the preset category after use
+    setSelectedPresetCategory(null);
+
     await generate(fullPrompt, mode, skillContext);
-  }, [inputValue, isStreaming, messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath, attachedFiles, t]);
+  }, [inputValue, isStreaming, messages, generate, config, currentSkillContent, currentSkillName, currentSkillPath, attachedFiles, selectedPresetCategory, t]);
 
   /**
    * Handle stop generation
+   * Saves the conversation with partial content when user stops generation
    */
   const handleStop = useCallback(async () => {
     await stop();
-    // Finalize the streaming message with current content
+    // Finalize the streaming message with current content and save
     setMessages((prev) => {
       const streamingMsgIndex = prev.findIndex((m) => m.isStreaming);
       if (streamingMsgIndex >= 0) {
@@ -1031,11 +1130,18 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           ...updated[streamingMsgIndex],
           isStreaming: false,
         };
+
+        // Save conversation with the finalized messages (including partial content)
+        const finalMessages = updated.filter(m => !m.isStreaming);
+        if (finalMessages.length > 0) {
+          saveCurrentConversation(finalMessages, currentConversationId, createdSkillNameRef.current);
+        }
+
         return updated;
       }
       return prev;
     });
-  }, [stop]);
+  }, [stop, saveCurrentConversation, currentConversationId]);
 
   /**
    * Handle key press in input
@@ -1083,6 +1189,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="h-full bg-slate-50 flex flex-col">
       {/* Header - Clean blue style matching main app */}
       <div className="bg-white border-b border-slate-200 px-3 py-2.5 flex items-center justify-between flex-shrink-0">
@@ -1384,7 +1491,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                         case 'Skill':
                           return (
                             <div className="flex items-center gap-1.5">
-                              <span className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center text-[10px]">🎯</span>
+                              <span className="w-5 h-5 bg-blue-100 dark:bg-blue-900/30 rounded flex items-center justify-center text-[10px]">🎯</span>
                               <span className="text-blue-600 font-medium text-[11px]">{input.skill}</span>
                               {input.args && <span className="text-slate-400 text-[10px]">{input.args}</span>}
                             </div>
@@ -1618,7 +1725,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                   {category.items.map((item, itemIndex) => (
                     <button
                       key={itemIndex}
-                      onClick={() => handleSelectPrompt(item.prompt)}
+                      onClick={() => handleSelectPrompt(item.prompt, category.categoryKey)}
                       className="block w-full text-left px-3 py-2 text-[11px] text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors whitespace-nowrap"
                       title={item.prompt}
                     >
@@ -1717,6 +1824,22 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         </div>
       </div>
     </div>
+
+    {/* Delete Conversation Confirmation Dialog */}
+    <ConfirmDialog
+      isOpen={showDeleteConfirm}
+      title={t('aiSidebar.deleteConversation')}
+      message={t('aiSidebar.deleteConversationConfirm')}
+      type="danger"
+      confirmText={t('common.delete')}
+      cancelText={t('common.cancel')}
+      onClose={() => {
+        setShowDeleteConfirm(false);
+        setConversationToDelete(null);
+      }}
+      onConfirm={confirmDeleteConversation}
+    />
+    </>
   );
 };
 

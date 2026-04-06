@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PrivateRepo, Skill } from '../../shared/types';
 import { ipcClient } from '../services/ipcClient';
 
@@ -21,6 +22,7 @@ export default function UploadToPrivateRepoDialog({
   onClose,
   onSuccess,
 }: UploadToPrivateRepoDialogProps): JSX.Element | null {
+  const { t } = useTranslation();
   const [repositories, setRepositories] = useState<PrivateRepo[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string>('');
   const [commitMessage, setCommitMessage] = useState('');
@@ -47,7 +49,7 @@ export default function UploadToPrivateRepoDialog({
         setSelectedRepoId(repos[0].id);
       }
     } catch (err) {
-      setError('Failed to load repositories');
+      setError(t('privateRepos.errorLoadingSkills'));
     } finally {
       setIsLoading(false);
     }
@@ -58,18 +60,18 @@ export default function UploadToPrivateRepoDialog({
       const skillData = await ipcClient.getSkill(skill.path);
       setSkillContent(skillData.content);
     } catch (err) {
-      setError('Failed to load skill content');
+      setError(t('errors.operationFailed'));
     }
   };
 
   const handleUpload = async () => {
     if (!selectedRepoId) {
-      setError('Please select a repository');
+      setError(t('upload.selectRepository'));
       return;
     }
 
     if (!skillContent) {
-      setError('Skill content not loaded');
+      setError(t('errors.operationFailed'));
       return;
     }
 
@@ -89,10 +91,10 @@ export default function UploadToPrivateRepoDialog({
         onSuccess();
         onClose();
       } else {
-        setError(response.error?.message || 'Upload failed');
+        setError(response.error?.message || t('upload.uploadFailed'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      setError(err instanceof Error ? err.message : t('upload.uploadFailed'));
     } finally {
       setIsUploading(false);
     }
@@ -104,12 +106,12 @@ export default function UploadToPrivateRepoDialog({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-md border border-gray-200 shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Upload to Private Repository</h3>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{t('upload.title')}</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label="Close dialog"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
+            aria-label={t('common.close')}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -118,21 +120,21 @@ export default function UploadToPrivateRepoDialog({
         </div>
 
         {/* Body */}
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 bg-white dark:bg-slate-800">
           {/* Skill Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Skill Name</label>
-            <div className="text-gray-900 font-medium">{skill.name}</div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">{t('upload.skillName')}</label>
+            <div className="text-gray-900 dark:text-slate-100 font-medium">{skill.name}</div>
           </div>
 
           {/* Repository Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Repository</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">{t('upload.selectRepository')}</label>
             {isLoading ? (
-              <div className="text-sm text-gray-500">Loading repositories...</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">{t('common.loading')}</div>
             ) : repositories.length === 0 ? (
-              <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-                No private repositories configured. Please add a repository in Settings → Repositories.
+              <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded px-3 py-2">
+                {t('privateRepos.noRepositories')} {t('privateRepos.addInSettings')}
               </div>
             ) : (
               <div className="space-y-2">
@@ -142,8 +144,8 @@ export default function UploadToPrivateRepoDialog({
                     className={`
                       flex items-center gap-3 p-3 border rounded cursor-pointer transition-colors
                       ${selectedRepoId === repo.id
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'}
                     `}
                   >
                     <input
@@ -152,7 +154,7 @@ export default function UploadToPrivateRepoDialog({
                       value={repo.id}
                       checked={selectedRepoId === repo.id}
                       onChange={(e) => setSelectedRepoId(e.target.value)}
-                      className="w-4 h-4 text-purple-600"
+                      className="w-4 h-4 text-blue-600"
                     />
                     <div className="flex-1">
                       <div className="font-medium text-gray-900">
@@ -173,39 +175,39 @@ export default function UploadToPrivateRepoDialog({
 
           {/* Commit Message (Optional) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Commit Message <span className="text-gray-400">(optional)</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+              {t('upload.commitMessage')} <span className="text-gray-400 dark:text-slate-500">({t('common.optional')})</span>
             </label>
             <textarea
               value={commitMessage}
               onChange={(e) => setCommitMessage(e.target.value)}
-              placeholder={`Upload skill: ${skill.name}`}
+              placeholder={t('upload.commitMessagePlaceholder', { name: skill.name })}
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500"
             />
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 px-3 py-2 rounded text-sm">
               {error}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 p-4 flex gap-2 justify-end">
+        <div className="border-t border-gray-200 dark:border-slate-700 p-4 flex gap-2 justify-end bg-white dark:bg-slate-800">
           <button
             onClick={onClose}
             disabled={isUploading}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleUpload}
             disabled={isUploading || !selectedRepoId || repositories.length === 0}
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             {isUploading ? (
               <>
@@ -213,14 +215,14 @@ export default function UploadToPrivateRepoDialog({
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                Uploading...
+                {t('common.uploading')}
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4V4m0 12l4 4m-4-4l-4 4" />
                 </svg>
-                Upload
+                {t('upload.upload')}
               </>
             )}
           </button>

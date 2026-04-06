@@ -242,12 +242,16 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
           if (!result.success) {
             throw new Error(result.error || 'Update failed');
           }
+          // Notify all windows to refresh skills after successful update
+          notifySkillsRefresh();
           return { success: true, data: { newPath: result.newPath || skillPath } };
         } else if (skill.sourceMetadata.type === 'private-repo') {
           const result = await skillService!.updatePrivateSkill(skillPath, createBackup);
           if (!result.success) {
             throw new Error(result.error || 'Update failed');
           }
+          // Notify all windows to refresh skills after successful update
+          notifySkillsRefresh();
           return { success: true, data: { newPath: result.newPath || skillPath } };
         } else {
           throw new Error('Cannot update locally created skills');

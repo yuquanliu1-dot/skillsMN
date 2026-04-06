@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AIGenerationState } from '../hooks/useAIGeneration';
 
 interface AIControlsProps {
@@ -32,6 +33,8 @@ export const AIControls: React.FC<AIControlsProps> = ({
   onRetry,
   onApply,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="ai-controls">
       <div className="control-group primary-controls">
@@ -47,7 +50,7 @@ export const AIControls: React.FC<AIControlsProps> = ({
               justifyContent: 'center',
               gap: '0.5rem',
               padding: '0.75rem 1.5rem',
-              background: canGenerate ? 'linear-gradient(135deg, #8B5CF6, #6366F1)' : '#D1D5DB',
+              background: canGenerate ? '#2563EB' : '#D1D5DB',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -60,7 +63,7 @@ export const AIControls: React.FC<AIControlsProps> = ({
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            <span>Generate</span>
+            <span>{t('common.generate')}</span>
           </button>
         )}
 
@@ -88,7 +91,7 @@ export const AIControls: React.FC<AIControlsProps> = ({
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <rect x="6" y="6" width="12" height="12" rx="2" strokeWidth="2" />
             </svg>
-            <span>Stop</span>
+            <span>{t('common.stop')}</span>
           </button>
         )}
       </div>
@@ -118,7 +121,7 @@ export const AIControls: React.FC<AIControlsProps> = ({
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          <span>Retry</span>
+          <span>{t('common.retry')}</span>
         </button>
 
         {isComplete && canApply && (
@@ -145,7 +148,7 @@ export const AIControls: React.FC<AIControlsProps> = ({
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <span>Apply</span>
+            <span>{t('common.apply')}</span>
           </button>
         )}
       </div>
@@ -194,14 +197,15 @@ const controlsStyles = `
   }
 
   .generate-button {
-    background: linear-gradient(135deg, #8B5CF6, #6366F1);
+    background: #2563EB;
     color: white;
     flex: 1;
     justify-content: center;
   }
 
   .generate-button:hover:not(:disabled) {
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    background: #1D4ED8;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
     transform: translateY(-1px);
   }
 

@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ipcClient } from '../services/ipcClient';
 import type { SkillFileTreeNode } from '../../shared/types';
 
@@ -187,6 +188,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
   onToggle,
   refreshKey,
 }) => {
+  const { t } = useTranslation();
   const [fileTree, setFileTree] = useState<SkillFileTreeNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -239,7 +241,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
         <button
           onClick={onToggle}
           className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded transition-colors"
-          title="Show file tree"
+          title={t('fileTree.show')}
         >
           <svg className="w-5 h-5 text-amber-500 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
             <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
@@ -247,7 +249,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
         </button>
       </div>
     );
-  } // ... rest of the component unchanged
+  }
 
   return (
     <div className="w-60 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col">
@@ -257,12 +259,12 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
           <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Files</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('fileTree.title')}</span>
         </div>
         <button
           onClick={onToggle}
           className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-          title="Hide file tree"
+          title={t('fileTree.hide')}
         >
           <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
@@ -296,7 +298,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
           </div>
         ) : (
           <div className="px-3 py-4 text-sm text-gray-500 text-center">
-            No files found
+            {t('fileTree.noFiles')}
           </div>
         )}
       </div>

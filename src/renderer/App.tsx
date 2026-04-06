@@ -25,6 +25,7 @@ import MigrationDialog from './components/MigrationDialog';
 import SkillPreviewDrawer from './components/SkillPreviewDrawer';
 import LocalSkillPreviewDrawer from './components/LocalSkillPreviewDrawer';
 import SkillEditorFull from './components/SkillEditorFull';
+import ImportDialog from './components/ImportDialog';
 
 type MainTab = 'local' | 'private-repos';
 
@@ -119,6 +120,7 @@ export default function App(): JSX.Element {
   const [uncommittedResetTrigger, setUncommittedResetTrigger] = useState(0);
   const [skillsWithUncommittedChanges, setSkillsWithUncommittedChanges] = useState<Set<string>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>('skills');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | null>(null);
@@ -139,6 +141,7 @@ export default function App(): JSX.Element {
   } | null>(null);
   const [showMigrationDialog, setShowMigrationDialog] = useState(false);
   const [migrationSkills, setMigrationSkills] = useState<Skill[]>([]);
+  const [migrationTargetDirectory, setMigrationTargetDirectory] = useState<string>('');
   const [viewingSkill, setViewingSkill] = useState<Skill | null>(null);
 
   /**
@@ -157,6 +160,11 @@ export default function App(): JSX.Element {
         const skillsResponse = await window.electronAPI.detectExistingSkills();
         if (skillsResponse.success && skillsResponse.data && skillsResponse.data.length > 0) {
           setMigrationSkills(skillsResponse.data);
+          // Get target directory for migration
+          const targetDirResponse = await window.electronAPI.getMigrationTargetDirectory();
+          if (targetDirResponse.success && targetDirResponse.data) {
+            setMigrationTargetDirectory(targetDirResponse.data);
+          }
           setShowMigrationDialog(true);
           dispatch({ type: 'SET_LOADING', payload: false });
           return;
@@ -296,6 +304,8 @@ export default function App(): JSX.Element {
       const skills = await ipcClient.listSkills(state.config);
       console.log(`✅ [loadSkills] Loaded ${skills.length} skills`);
       dispatch({ type: 'SET_SKILLS', payload: skills });
+      // Dispatch event to notify other components (e.g., PrivateSkillCard) that skills have been refreshed
+      window.dispatchEvent(new CustomEvent('local-skills-refreshed'));
       return skills;
     } catch (error) {
       console.error('❌ [loadSkills] Failed to load skills:', error);
@@ -441,7 +451,27 @@ export default function App(): JSX.Element {
         // This allows future directory additions to trigger migration checks
 
         setShowMigrationDialog(false);
-        showToast(`Successfully migrated ${result.data.migratedCount} skills!`, 'success');
+
+        // Build detailed result message
+        const parts: string[] = [];
+        if (result.data.migratedCount > 0) {
+          parts.push(`migrated ${result.data.migratedCount}`);
+        }
+        if (result.data.renamedCount > 0) {
+          parts.push(`renamed ${result.data.renamedCount}`);
+        }
+        if (result.data.skippedCount > 0) {
+          parts.push(`skipped ${result.data.skippedCount}`);
+        }
+        if (result.data.overwrittenCount > 0) {
+          parts.push(`overwritten ${result.data.overwrittenCount}`);
+        }
+
+        const message = parts.length > 0
+          ? `Migration complete: ${parts.join(', ')} skills`
+          : 'Migration complete';
+
+        showToast(message, result.data.failedCount > 0 ? 'warning' : 'success');
 
         // Reload skills
         await loadSkills();
@@ -507,6 +537,11 @@ export default function App(): JSX.Element {
       if (response.success && response.data && response.data.length > 0) {
         // Skills found - show migration dialog
         setMigrationSkills(response.data);
+        // Get target directory for migration
+        const targetDirResponse = await window.electronAPI.getMigrationTargetDirectory();
+        if (targetDirResponse.success && targetDirResponse.data) {
+          setMigrationTargetDirectory(targetDirResponse.data);
+        }
         setShowMigrationDialog(true);
       }
     } catch (error) {
@@ -816,6 +851,7 @@ export default function App(): JSX.Element {
       <MigrationDialog
         isOpen={showMigrationDialog}
         skills={migrationSkills}
+        targetDirectory={migrationTargetDirectory}
         onMigrate={handleMigrationComplete}
         onSkip={handleMigrationSkip}
       />
@@ -849,6 +885,7 @@ export default function App(): JSX.Element {
                 setEditingSkill(null);
                 setIsNewSkillMode(true);
               }}
+              onImportSkill={() => setShowImportDialog(true)}
               onEditSkill={(skill) => {
                 setEditingSkill(skill);
                 setIsNewSkillMode(false);
@@ -967,6 +1004,7 @@ export default function App(): JSX.Element {
             // Refresh skill list when AI modifies a skill
             loadSkills();
           }}
+          onShowToast={showToast}
         />
       )}
 
@@ -1068,6 +1106,16 @@ export default function App(): JSX.Element {
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {/* Import Dialog */}
+      <ImportDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImportComplete={() => {
+          loadSkills();
+          showToast('Skills imported successfully', 'success');
+        }}
+      />
 
       {/* Settings Modal */}
       <Settings

@@ -217,20 +217,35 @@ export default function SkillCard({
               {skill.name}
             </h4>
 
-              {/* Source Type Badge */}
-              {skill.sourceMetadata?.type === 'local' && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0" title="Created locally">
+              {/* Source Type Badge - Show "Local" badge if source is NOT registry, private-repo, or git-import */}
+              {skill.sourceMetadata?.type !== 'registry' && skill.sourceMetadata?.type !== 'private-repo' && skill.sourceMetadata?.type !== 'git-import' && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex-shrink-0 border-0" title={t('skillCard.localHint')}>
                   {t('skillCard.local')}
                 </span>
               )}
               {skill.sourceMetadata?.type === 'registry' && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 flex-shrink-0 border-0" title={`From ${skill.sourceMetadata.source}`}>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 flex-shrink-0 border-0" title={t('skillCard.registryHint', { source: skill.sourceMetadata.source })}>
                   {t('skillCard.registry')}
                 </span>
               )}
               {skill.sourceMetadata?.type === 'private-repo' && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex-shrink-0 border-0" title={`From ${skill.sourceMetadata.repoPath}`}>
-                  {t('skillCard.private')}
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex-shrink-0 border-0" title={t('skillCard.sharedHint', { repo: skill.sourceMetadata.repoPath })}>
+                  {t('skillCard.shared')}
+                </span>
+              )}
+              {skill.sourceMetadata?.type === 'git-import' && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 flex-shrink-0 border-0" title={`${skill.sourceMetadata.provider}: ${skill.sourceMetadata.repoPath}`}>
+                  {skill.sourceMetadata.provider === 'github' ? 'GitHub' : 'GitLab'}
+                </span>
+              )}
+
+              {/* Symlink Target Count Badge - Simple compact badge */}
+              {(skill.symlinkTargetCount ?? 0) > 0 && (
+                <span
+                  className="inline-flex items-center justify-center min-w-[18px] h-5 px-1 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex-shrink-0"
+                  title={t('skillCard.linkCount', { count: skill.symlinkTargetCount })}
+                >
+                  {skill.symlinkTargetCount}
                 </span>
               )}
 
@@ -357,10 +372,13 @@ export default function SkillCard({
                 ? `${skill.sourceMetadata.source}/${skill.sourceMetadata.skillId}`
                 : skill.sourceMetadata.type === 'private-repo'
                 ? `${skill.sourceMetadata.repoPath}/${skill.sourceMetadata.skillPath}`
+                : skill.sourceMetadata.type === 'git-import'
+                ? `${skill.sourceMetadata.repoPath}/${skill.sourceMetadata.skillPath}`
                 : ''
             }>
               {skill.sourceMetadata.type === 'registry' && `${skill.sourceMetadata.source}/${skill.sourceMetadata.skillId}`}
               {skill.sourceMetadata.type === 'private-repo' && `${skill.sourceMetadata.repoPath}/${skill.sourceMetadata.skillPath}`}
+              {skill.sourceMetadata.type === 'git-import' && `${skill.sourceMetadata.repoPath}/${skill.sourceMetadata.skillPath}`}
             </span>
           </div>
         )}
@@ -532,7 +550,7 @@ export default function SkillCard({
             </div>
 
             <div className="p-4 space-y-4">
-              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 text-purple-800 dark:text-purple-200 px-4 py-3 rounded text-sm">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 px-4 py-3 rounded text-sm">
                 <div className="flex items-start gap-2">
                   <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -584,7 +602,7 @@ export default function SkillCard({
               <button
                 onClick={handleConfirmUpload}
                 disabled={uploadProgress === 'uploading'}
-                className="px-4 py-2 bg-purple-600 dark:bg-purple-600 text-white rounded hover:bg-purple-700 dark:hover:bg-purple-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 {uploadProgress === 'uploading' ? t('common.uploading') : t('skillCard.uploadSkill')}
               </button>

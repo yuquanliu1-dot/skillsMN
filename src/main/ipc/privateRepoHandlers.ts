@@ -9,6 +9,7 @@ import { logger } from '../utils/Logger';
 import { PrivateRepoService } from '../services/PrivateRepoService';
 import { PathValidator } from '../services/PathValidator';
 import { getConfigService } from './configHandlers';
+import { ContributionStatsService } from '../services/ContributionStatsService';
 import { IPC_CHANNELS } from '../../shared/constants';
 import type { PrivateRepo, PrivateSkill, IPCResponse } from '../../shared/types';
 
@@ -45,6 +46,19 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
           url: repo.url,
           provider: repo.provider,
         });
+
+        // 自动从 PAT 获取用户信息用于贡献统计
+        try {
+          await ContributionStatsService.fetchAndSetUserInfoFromPAT(
+            repo.provider || 'github',
+            pat,
+            repo.instanceUrl
+          );
+          logger.debug('Auto-fetched user info for contribution tracking', 'PrivateRepoHandlers');
+        } catch (userError) {
+          // 非关键错误，不影响仓库添加
+          logger.warn('Failed to auto-fetch user info (non-critical)', 'PrivateRepoHandlers', userError);
+        }
 
         return { success: true, data: repo };
       } catch (error) {

@@ -37,7 +37,15 @@ import type {
   PermissionDecision,
   PendingPermissionRequest,
   SkillGroup,
+  RepoContributionStats,
+  UserBadge,
+  DetectedSkill,
+  ImportOptions,
+  ImportProgress,
+  ImportResult,
+  UrlScanResult,
 } from '../shared/types';
+import type { BadgeDefinition } from '../shared/types';
 import { IPC_CHANNELS } from '../shared/constants';
 
 // Expose protected methods to renderer process
@@ -573,6 +581,115 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   removeSkillsRefreshListener: (): void => {
     ipcRenderer.removeAllListeners(IPC_CHANNELS.SKILLS_REFRESH);
+  },
+
+  // ============================================================================
+  // Contribution Stats Operations (激励徽章系统)
+  // ============================================================================
+
+  getRepoContributionStats: (repoId: string): Promise<IPCResponse<RepoContributionStats>> => {
+    return ipcRenderer.invoke('contribution:getRepoStats', repoId);
+  },
+
+  getUserBadges: (repoId: string): Promise<IPCResponse<{
+    earned: UserBadge[];
+    nextBadges: Array<{ badge: BadgeDefinition; progress: number; remaining: number }>;
+  }>> => {
+    return ipcRenderer.invoke('contribution:getUserBadges', repoId);
+  },
+
+  recordSkillInstall: (skillPath: string, repoId: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke('contribution:recordInstall', skillPath, repoId);
+  },
+
+  setCurrentUserGitInfo: (username: string, email: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke('contribution:setGitInfo', username, email);
+  },
+
+  getCurrentUserGitInfo: (): Promise<IPCResponse<{ username?: string; email?: string } | undefined>> => {
+    return ipcRenderer.invoke('contribution:getGitInfo');
+  },
+
+  fetchUserInfoFromPAT: (repoId: string): Promise<IPCResponse<{
+    login: string;
+    name: string | null;
+    email: string | null;
+    avatarUrl: string | null;
+  }>> => {
+    return ipcRenderer.invoke('contribution:fetchUserInfoFromPAT', repoId);
+  },
+
+  clearContributionCache: (repoId?: string): Promise<IPCResponse<void>> => {
+    return ipcRenderer.invoke('contribution:clearCache', repoId);
+  },
+
+  getSkillInstallCount: (skillPath: string): Promise<IPCResponse<number>> => {
+    return ipcRenderer.invoke('contribution:getInstallCount', skillPath);
+  },
+
+  getLevelInfo: (level: string): Promise<IPCResponse<{
+    level: string;
+    nameKey: string;
+    minScore: number;
+    icon: string;
+    color: string;
+  }>> => {
+    return ipcRenderer.invoke('contribution:getLevelInfo', level);
+  },
+
+  getNextLevelInfo: (currentLevel: string): Promise<IPCResponse<{
+    level: string;
+    nameKey: string;
+    minScore: number;
+    icon: string;
+    color: string;
+  } | null>> => {
+    return ipcRenderer.invoke('contribution:getNextLevelInfo', currentLevel);
+  },
+
+  // ============================================================================
+  // Import Operations
+  // ============================================================================
+
+  scanDirectoryForImport: (dirPath: string): Promise<IPCResponse<DetectedSkill[]>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.IMPORT_SCAN_DIRECTORY, { dirPath });
+  },
+
+  scanUrlForImport: (url: string, pat?: string): Promise<UrlScanResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.IMPORT_SCAN_URL, { url, pat });
+  },
+
+  importLocalSkills: (params: {
+    skills: DetectedSkill[];
+    options: ImportOptions;
+  }): Promise<IPCResponse<ImportResult>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.IMPORT_LOCAL_SKILLS, params);
+  },
+
+  importSkillsFromUrl: (params: {
+    url: string;
+    skillPaths: string[];
+    pat?: string;
+    options: ImportOptions;
+  }): Promise<IPCResponse<ImportResult>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.IMPORT_URL_SKILLS, params);
+  },
+
+  onImportProgress: (callback: (event: any, progress: ImportProgress) => void): void => {
+    ipcRenderer.on(IPC_CHANNELS.IMPORT_PROGRESS, callback);
+  },
+
+  removeImportProgressListener: (): void => {
+    ipcRenderer.removeAllListeners(IPC_CHANNELS.IMPORT_PROGRESS);
+  },
+
+  // Contribution cache cleared event
+  onContributionCacheCleared: (callback: (event: any, data: { repoId?: string }) => void): void => {
+    ipcRenderer.on(IPC_CHANNELS.CONTRIBUTION_CACHE_CLEARED, callback);
+  },
+
+  removeContributionCacheClearedListener: (): void => {
+    ipcRenderer.removeAllListeners(IPC_CHANNELS.CONTRIBUTION_CACHE_CLEARED);
   },
 });
 

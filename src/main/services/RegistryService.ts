@@ -20,13 +20,16 @@ import { SearchSkillResult } from '../models/SearchSkillResult';
 import { gitOperations, GitErrorCode } from '../utils/gitOperations';
 import { SkillDiscovery } from '../utils/skillDiscovery';
 import type { ProxyConfig } from '../../shared/types';
-import { getProxyAgent, setProxyConfig as setGitHubProxyConfig } from './GitHubService';
+import { getProxyAgent, setProxyConfig } from '../utils/proxy';
+
+// Re-export getProxyAgent for use in this service
+export { getProxyAgent };
 
 /**
- * Set proxy configuration (delegates to GitHubService for consistency)
+ * Set proxy configuration
  */
 export function setRegistryProxyConfig(config: ProxyConfig | undefined): void {
-  setGitHubProxyConfig(config);
+  setProxyConfig(config);
 }
 
 /**

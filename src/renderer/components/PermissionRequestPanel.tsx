@@ -216,7 +216,7 @@ export const PermissionRequestPanel: React.FC<PermissionRequestPanelProps> = ({
                     ...prev,
                     [request.requestId]: e.target.checked,
                   }))}
-                  className="w-3.5 h-3.5 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                  className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span>{t('permissions.rememberChoice')}</span>
               </label>

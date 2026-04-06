@@ -4,7 +4,7 @@
  * Configuration panel for user preferences
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Configuration, PrivateRepo, AIConfiguration, SkillEditorConfig, SkillGroup, ProxyConfig } from '../../shared/types';
 import { changeLanguage, availableLanguages, getCurrentLanguage } from '../i18n';
@@ -127,9 +127,18 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   });
 
   /**
+   * Track previous isOpen state to detect dialog open
+   */
+  const prevIsOpenRef = useRef(isOpen);
+
+  /**
    * Load current settings when dialog opens
+   * Only reset tab when dialog first opens, not when config changes during editing
    */
   useEffect(() => {
+    const isDialogJustOpened = isOpen && !prevIsOpenRef.current;
+    prevIsOpenRef.current = isOpen;
+
     if (isOpen && config) {
       setAutoRefresh(config.autoRefresh);
       setProjectDirectories(config.projectDirectories || []);
@@ -159,7 +168,10 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
       setError(null);
       setSuccess(null);
-      setActiveTab('general');
+      // Only reset to general tab when dialog first opens, not on config changes
+      if (isDialogJustOpened) {
+        setActiveTab('general');
+      }
     }
   }, [isOpen, config]);
 

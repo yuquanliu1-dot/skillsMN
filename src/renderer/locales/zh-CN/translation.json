@@ -33,7 +33,11 @@
     "no": "否",
     "ok": "确定",
     "settings": "设置",
-    "language": "语言"
+    "language": "语言",
+    "browse": "浏览",
+    "selectAll": "全选",
+    "deselectAll": "取消全选",
+    "optional": "可选"
   },
 
   "sidebar": {
@@ -98,6 +102,7 @@
     "registryHint": "来源：{{source}} 网络",
     "shared": "共享",
     "sharedHint": "来源：{{repo}}",
+    "private": "私有",
     "linkCount": "已链接到 {{count}} 个目标",
     "update": "更新",
     "upload": "上传",
@@ -175,7 +180,10 @@
     "switchTab": "切换标签页",
     "close": "关闭",
     "noFileOpen": "未打开文件",
-    "selectFileFromTree": "从文件树中选择一个文件"
+    "selectFileFromTree": "从文件树中选择一个文件",
+    "backToMain": "返回主界面",
+    "editingFile": "正在编辑文件",
+    "unsavedChangesWarning": "您有未保存的更改。确定要关闭吗？"
   },
 
   "settings": {
@@ -330,7 +338,10 @@
     "groupDeleted": "分组删除成功",
     "groupEnabled": "分组已启用",
     "groupDisabled": "分组已停用",
+    "groupEnable": "启用",
+    "groupDisable": "停用",
     "disabled": "已停用",
+    "optional": "可选",
     "skillsInGroup": "{{count}} 个技能",
     "tagsInGroup": "{{count}} 个标签",
     "selectGroup": "选择分组",
@@ -625,7 +636,11 @@
     "commit": "提交",
     "committing": "提交中...",
     "commitSuccess": "更改已成功提交",
-    "commitFailed": "提交更改失败"
+    "commitFailed": "提交更改失败",
+    "versionConflict": "版本冲突",
+    "versionConflictSuggestion": "建议先拉取远程更改以避免冲突。",
+    "willUpdate": "将更新",
+    "willUpdateDesc": "此技能将更新到仓库中的最新版本。"
   },
 
   "permissions": {
@@ -653,6 +668,48 @@
     "tryAgain": "请重试"
   },
 
+  "import": {
+    "title": "导入技能",
+    "button": "导入",
+    "fromLocal": "从本地目录",
+    "fromUrl": "从 Git URL",
+    "selectDirectory": "选择源目录",
+    "directoryPlaceholder": "点击浏览选择目录...",
+    "scanning": "正在扫描...",
+    "repoUrl": "仓库 URL",
+    "pat": "个人访问令牌（可选）",
+    "patPlaceholder": "用于私有仓库",
+    "scanUrl": "扫描仓库",
+    "foundSkills": "在 {{provider}} 仓库 {{repo}} 中找到 {{count}} 个技能",
+    "selectSkills": "选择要导入的技能",
+    "conflict": "已存在",
+    "conflictStrategy": "如果技能已存在：",
+    "rename": "重命名",
+    "renameDesc": "为新技能添加后缀（如：skill → skill-2）",
+    "skip": "跳过",
+    "skipDesc": "保留现有技能，跳过冲突的技能",
+    "overwrite": "覆盖",
+    "overwriteDesc": "用新技能替换现有技能",
+    "afterImport": "导入后：",
+    "deleteOriginals": "删除原始文件",
+    "keepOriginals": "保留原始文件",
+    "importing": "导入中...",
+    "import": "导入",
+    "importFailed": "导入失败",
+    "complete": "导入完成",
+    "imported": "已导入：{{count}}",
+    "skipped": "已跳过：{{count}}",
+    "failed": "失败：{{count}}",
+    "ofSkills": "{{current}} / {{total}} 个技能",
+    "noSkillsFound": "未找到技能",
+    "noSkillsInDirectory": "此目录中未找到有效技能。请确保目录包含带有 SKILL.md 文件的技能文件夹。",
+    "noSkillsInRepo": "此仓库中未找到有效技能。请确保仓库包含带有 SKILL.md 文件的技能文件夹。",
+    "selectDirectoryFirst": "选择一个目录以扫描技能",
+    "enterUrlFirst": "输入仓库 URL 并点击扫描以搜索技能",
+    "tip": "提示",
+    "skillStructureTip": "有效的技能目录应包含描述技能用途和使用方法的 SKILL.md 文件。"
+  },
+
   "migration": {
     "title": "迁移技能",
     "foundSkills": "在添加的目录中找到 <strong>{{count}}</strong> 个技能。",
@@ -676,6 +733,30 @@
     "ofSkills": "{{current}} / {{total}} 个技能"
   },
 
+  "contribution": {
+    "title": "你的贡献",
+    "points": "积分",
+    "badges": "徽章",
+    "currentLevel": "当前等级",
+    "nextLevel": "下一等级",
+    "pointsToNextLevel": "分到下一等级",
+    "totalSkills": "技能总数",
+    "contributors": "贡献者",
+    "earnedBadges": "已获得徽章",
+    "nextBadges": "下一个徽章",
+    "moreNeeded": "还需",
+    "activeSkills": "活跃技能",
+    "commits": "次提交"
+  },
+
+  "levels": {
+    "newcomer": "新手",
+    "contributor": "贡献者",
+    "active": "活跃者",
+    "core": "核心成员",
+    "maintainer": "维护者"
+  },
+
   "fileTree": {
     "title": "文件",
     "show": "显示文件树",
@@ -689,7 +770,10 @@
     "rewrite": "AI 重写",
     "insert": "AI 插入",
     "inputPlaceholder": "例如：使其更简洁...",
-    "submitHint": "Ctrl + Enter 提交"
+    "submitHint": "Ctrl + Enter 提交",
+    "selectedText": "已选文本",
+    "rewritePrompt": "您希望如何重写？",
+    "insertPrompt": "您想插入什么内容？"
   },
 
   "registrySearch": {
@@ -700,16 +784,6 @@
     "searchError": "搜索错误",
     "noSkillsFound": "未找到技能",
     "noResultsFor": "未找到 \"{{query}}\" 的结果"
-  },
-
-  "aiAssistant": {
-    "selectedText": "已选文本",
-    "rewritePrompt": "您希望如何重写？",
-    "insertPrompt": "您想插入什么内容？",
-    "inputPlaceholder": "例如：使其更简洁...",
-    "submitHint": "Ctrl + Enter 提交",
-    "rewrite": "重写",
-    "insert": "插入"
   },
 
   "skillGroups": {

@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface AIAssistantPopoverProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function AIAssistantPopover({
   isProcessing,
   position,
 }: AIAssistantPopoverProps): JSX.Element | null {
+  const { t } = useTranslation();
   const [prompt, setPrompt] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -88,11 +90,9 @@ export function AIAssistantPopover({
       };
 
   const isRewriteMode = mode === 'rewrite';
-  const title = isRewriteMode ? 'AI Rewrite' : 'AI Insert';
+  const title = isRewriteMode ? t('editor.aiRewrite') : t('editor.aiInsert');
   const iconBg = isRewriteMode ? 'from-blue-50 to-indigo-50' : 'from-green-50 to-teal-50';
-  const placeholder = isRewriteMode
-    ? 'e.g., Make it more concise, Fix grammar, Change tone to formal...'
-    : 'e.g., Add code examples, Insert troubleshooting section, Add usage tips...';
+  const placeholder = t('aiAssistant.inputPlaceholder');
   const buttonIcon = isRewriteMode ? (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -129,7 +129,7 @@ export function AIAssistantPopover({
                     </svg>
                     <div className={`absolute inset-0 ${isRewriteMode ? 'bg-blue-400' : 'bg-green-400'} rounded-full animate-ping opacity-75`}></div>
                   </div>
-                  <span className={`text-sm font-medium ${isRewriteMode ? 'text-blue-700' : 'text-green-700'}`}>AI is thinking...</span>
+                  <span className={`text-sm font-medium ${isRewriteMode ? 'text-blue-700' : 'text-green-700'}`}>{t('aiSidebar.thinking')}</span>
                 </div>
               ) : (
                 <>
@@ -157,7 +157,7 @@ export function AIAssistantPopover({
         {/* Selected text preview (only for rewrite mode) */}
         {isRewriteMode && selectedText && (
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <div className="text-xs text-gray-500 mb-1.5 font-medium">Selected text:</div>
+            <div className="text-xs text-gray-500 mb-1.5 font-medium">{t('aiAssistant.selectedText')}:</div>
             <div className="text-sm text-gray-700 max-h-20 overflow-y-auto bg-white px-3 py-2 rounded-lg border border-gray-200 font-mono">
               {selectedText.length > 150 ? `${selectedText.substring(0, 150)}...` : selectedText}
             </div>
@@ -167,7 +167,7 @@ export function AIAssistantPopover({
         {/* Input form */}
         <form onSubmit={handleSubmit} className="p-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            {isRewriteMode ? 'How would you like to rewrite it?' : 'What would you like to insert?'}
+            {isRewriteMode ? t('aiAssistant.rewritePrompt') : t('aiAssistant.insertPrompt')}
           </label>
           <textarea
             ref={inputRef}
@@ -182,8 +182,7 @@ export function AIAssistantPopover({
           {/* Actions */}
           <div className="flex items-center justify-between mt-4">
             <div className="text-xs text-gray-400">
-              <kbd className="px-1.5 py-0.5 bg-gray-100 rounded">Ctrl</kbd>
-              +<kbd className="px-1.5 py-0.5 bg-gray-100 rounded">Enter</kbd> to submit
+              {t('aiAssistant.submitHint')}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -192,7 +191,7 @@ export function AIAssistantPopover({
                 disabled={isProcessing}
                 className="px-3 py-1.5 text-sm bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
@@ -203,14 +202,14 @@ export function AIAssistantPopover({
                   <>
                     <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.938l3-2.647l3-2.647z" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.938 3-2.647l3-2.647z" />
                     </svg>
-                    Processing
+                    {t('common.loading')}
                   </>
                 ) : (
                   <>
                     {buttonIcon}
-                    {isRewriteMode ? 'Rewrite' : 'Insert'}
+                    {isRewriteMode ? t('aiAssistant.rewrite') : t('aiAssistant.insert')}
                   </>
                 )}
               </button>

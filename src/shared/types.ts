@@ -1117,3 +1117,247 @@ export interface DefaultGroupsConfig {
   groups: DefaultGroupDefinition[];
 }
 
+// ============================================================================
+// Contribution & Badge Types (Feature: 激励徽章系统)
+// ============================================================================
+
+/**
+ * 贡献者等级
+ */
+export type ContributorLevel = 'newcomer' | 'contributor' | 'active' | 'core' | 'maintainer';
+
+/**
+ * 徽章条件类型
+ */
+export type BadgeConditionType = 'commits' | 'skills_created' | 'downloads' | 'days_active' | 'score';
+
+/**
+ * 徽章定义
+ */
+export interface BadgeDefinition {
+  /** 徽章唯一标识 */
+  id: string;
+  /** 徽章名称 (i18n key) */
+  nameKey: string;
+  /** 徽章描述 (i18n key) */
+  descriptionKey: string;
+  /** 图标 (emoji 或图标名) */
+  icon: string;
+  /** 颜色代码 */
+  color: string;
+  /** 获得条件 */
+  condition: {
+    type: BadgeConditionType;
+    value: number;
+  };
+  /** 等级 (1-5, 数字越大越稀有) */
+  tier: number;
+}
+
+/**
+ * 用户已获得的徽章
+ */
+export interface UserBadge {
+  /** 徽章 ID */
+  badgeId: string;
+  /** 获得时间 */
+  earnedAt: Date;
+  /** 获得时的数值 */
+  earnedValue: number;
+}
+
+/**
+ * 贡献者统计信息
+ */
+export interface ContributorStats {
+  /** 用户名 (来自 Git 提交者) */
+  username: string;
+  /** 显示名称 */
+  displayName?: string;
+  /** 头像 URL */
+  avatarUrl?: string;
+  /** 邮箱 (用于匹配用户) */
+  email?: string;
+  /** 提交次数 */
+  commitCount: number;
+  /** 添加的技能数量 */
+  skillsCreated: number;
+  /** 最后活跃时间 */
+  lastActiveAt: Date | null;
+  /** 贡献分数 (综合计算) */
+  contributionScore: number;
+  /** 已获得徽章 */
+  badges: UserBadge[];
+  /** 贡献等级 */
+  level: ContributorLevel;
+}
+
+/**
+ * Skill 活跃度统计
+ */
+export interface SkillActivityStats {
+  /** 技能路径 */
+  skillPath: string;
+  /** 技能名称 */
+  skillName: string;
+  /** 最后更新时间 */
+  lastUpdatedAt: Date | null;
+  /** 最后提交者 */
+  lastCommitAuthor: string;
+  /** 提交次数 */
+  commitCount: number;
+  /** 活跃度分数 */
+  activityScore: number;
+  /** 贡献者列表 (简化版) */
+  contributors: Array<{
+    username: string;
+    commitCount: number;
+  }>;
+}
+
+/**
+ * 仓库贡献统计
+ */
+export interface RepoContributionStats {
+  /** 仓库 ID */
+  repoId: string;
+  /** 仓库路径 (owner/repo) */
+  repoPath: string;
+  /** 统计更新时间 */
+  updatedAt: Date;
+  /** 总贡献者数量 */
+  totalContributors: number;
+  /** 总技能数 */
+  totalSkills: number;
+  /** 总提交数 */
+  totalCommits: number;
+  /** 当前用户贡献值 */
+  currentUserScore: number;
+  /** 当前用户排名级别 */
+  currentUserLevel: ContributorLevel;
+  /** 当前用户已获得徽章 */
+  currentUserBadges: UserBadge[];
+  /** 贡献者列表 (按贡献度排序，最多显示前20名) */
+  topContributors: ContributorStats[];
+  /** 技能活跃度列表 */
+  skillActivities: SkillActivityStats[];
+}
+
+/**
+ * 贡献统计配置 (存储在 config.json 中)
+ */
+export interface ContributionStatsConfig {
+  /** 配置版本 */
+  version: number;
+  /** 仓库统计缓存 */
+  repoStatsCache: Record<string, {
+    stats: RepoContributionStats;
+    cachedAt: Date;
+  }>;
+  /** 当前用户 Git 信息 (用于匹配贡献者) */
+  currentUserGitInfo?: {
+    username?: string;
+    email?: string;
+  };
+}
+
+// ============================================================================
+// Import Types
+// ============================================================================
+
+/**
+ * Skill detected during import scan
+ */
+export interface DetectedSkill {
+  /** Skill name */
+  name: string;
+  /** Path to skill directory (local) or skill path in repo (URL) */
+  path: string;
+  /** Source type */
+  source: 'local' | 'github' | 'gitlab';
+  /** Skill description from frontmatter */
+  description?: string;
+  /** Skill tags from frontmatter */
+  tags?: string[];
+  /** Whether this skill conflicts with an existing skill */
+  hasConflict: boolean;
+  /** Path to existing skill if there's a conflict */
+  existingPath?: string;
+}
+
+/**
+ * Options for import operations
+ */
+export interface ImportOptions {
+  /** Whether to delete original files after import (for local import) */
+  deleteOriginals?: boolean;
+  /** Strategy for handling conflicts */
+  conflictStrategy: 'rename' | 'skip' | 'overwrite';
+  /** Apply conflict strategy to all conflicts */
+  applyToAll?: boolean;
+}
+
+/**
+ * Progress information during import
+ */
+export interface ImportProgress {
+  /** Current skill being processed */
+  currentSkill: string;
+  /** Current skill index */
+  currentIndex: number;
+  /** Total skills to import */
+  totalSkills: number;
+  /** Percentage complete (0-100) */
+  percentage: number;
+  /** Current operation */
+  operation: 'scanning' | 'downloading' | 'copying' | 'moving' | 'completed' | 'failed';
+  /** Number of successfully imported skills */
+  successCount: number;
+  /** Number of failed imports */
+  failedCount: number;
+}
+
+/**
+ * Result of import operation
+ */
+export interface ImportResult {
+  /** Whether import was successful */
+  success: boolean;
+  /** Number of successfully imported skills */
+  importedCount: number;
+  /** Number of failed imports */
+  failedCount: number;
+  /** Number of skipped skills (due to conflicts) */
+  skippedCount: number;
+  /** Skills that were renamed due to conflicts */
+  renamedSkills: Array<{ originalName: string; newName: string }>;
+  /** Skills that failed to import */
+  failedSkills: Array<{ name: string; error: string }>;
+  /** Total time taken in milliseconds */
+  duration: number;
+}
+
+/**
+ * Result of scanning a URL for skills
+ */
+export interface UrlScanResult {
+  /** Whether scan was successful */
+  success: boolean;
+  /** Repository provider */
+  provider: 'github' | 'gitlab';
+  /** Repository owner */
+  owner: string;
+  /** Repository name */
+  repo: string;
+  /** Default branch */
+  branch?: string;
+  /** Skills found in repository */
+  skills: DetectedSkill[];
+  /** Whether repository is private */
+  isPrivate: boolean;
+  /** Instance URL (for self-hosted GitLab) */
+  instanceUrl?: string;
+  /** Error message if scan failed */
+  error?: string;
+}
+

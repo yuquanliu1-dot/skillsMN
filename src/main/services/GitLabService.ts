@@ -10,6 +10,7 @@ import https from 'https';
 import { logger } from '../utils/Logger';
 import { retryWithBackoff } from '../utils/retry';
 import type { TreeItem, Commit, SkillMetadata } from './GitProvider';
+import { getProxyAgent } from '../utils/proxy';
 
 // HTTPS agent that ignores self-signed certificates for self-hosted GitLab instances
 const insecureAgent = new https.Agent({
@@ -27,11 +28,29 @@ const isInsecureInstance = (url: string): boolean => {
   }
 };
 
-// Get appropriate fetch options with HTTPS agent if needed
+/**
+ * Get appropriate fetch options with HTTPS agent and proxy support
+ * Priority: 1. Proxy agent (if configured) 2. Insecure agent (for self-hosted) 3. Default
+ */
 const getFetchOptions = (url: string, options: RequestInit = {}): RequestInit => {
+  // First check if we have a proxy agent configured
+  const proxyAgent = getProxyAgent(url);
+  if (proxyAgent) {
+    // For self-hosted instances with proxy, combine proxy with insecure agent
+    if (url.startsWith('https://') && isInsecureInstance(url)) {
+      // Create a new agent that combines proxy and insecure settings
+      // Note: The proxy agent should handle the connection, but we may need to
+      // disable certificate validation for self-hosted instances
+      return { ...options, agent: proxyAgent };
+    }
+    return { ...options, agent: proxyAgent };
+  }
+
+  // No proxy configured, use insecure agent for self-hosted instances
   if (url.startsWith('https://') && isInsecureInstance(url)) {
     return { ...options, agent: insecureAgent };
   }
+
   return options;
 };
 
@@ -169,13 +188,16 @@ export class GitLabService {
 
   /**
    * Find skill directories in repository tree
+   * When a directory is identified as a skill (contains SKILL.md), its subdirectories
+   * are not searched for additional skills (prevents nested sub-skills from being listed)
    */
   private static findSkillDirectories(tree: TreeItem[]): any[] {
     const skillFiles = tree.filter((item: TreeItem) => {
       return item.type === 'blob' && item.path.endsWith('SKILL.md');
     });
 
-    const skillDirectories = skillFiles.map((file: TreeItem) => {
+    // Get all skill directories first
+    const allSkillDirs = skillFiles.map((file: TreeItem) => {
       const pathParts = file.path.split('/');
       pathParts.pop();
       const dirPath = pathParts.join('/');
@@ -189,7 +211,20 @@ export class GitLabService {
       };
     });
 
-    return skillDirectories.filter((dir: any) => dir.depth <= 5);
+    // Filter out nested skills (skills that are subdirectories of other skills)
+    const topLevelSkills: typeof allSkillDirs = [];
+    for (const skillDir of allSkillDirs) {
+      // Check if this skill is a subdirectory of any already-added top-level skill
+      const isNested = topLevelSkills.some(parent =>
+        skillDir.path.startsWith(parent.path + '/')
+      );
+
+      if (!isNested) {
+        topLevelSkills.push(skillDir);
+      }
+    }
+
+    return topLevelSkills;
   }
 
   /**
@@ -409,7 +444,7 @@ export class GitLabService {
     const baseUrl = instanceUrl || 'https://gitlab.com';
     const fullPath = skillDirName.startsWith('/') ? `${skillDirName}/SKILL.md` : `${skillDirName}/SKILL.md`;
     const projectId = encodeURIComponent(`${owner}/${repo}`);
-    const REQUEST_TIMEOUT = 30000; // 30 seconds timeout
+    const REQUEST_TIMEOUT = 120000; // 120 seconds timeout for file uploads
 
     const message = commitMessage || `Update skill: ${skillName}`;
 
@@ -574,7 +609,7 @@ export class GitLabService {
   ): Promise<{ success: boolean; uploadedCount?: number; commitSha?: string; errors?: string[]; error?: string }> {
     const baseUrl = instanceUrl || 'https://gitlab.com';
     const projectId = encodeURIComponent(`${owner}/${repo}`);
-    const REQUEST_TIMEOUT = 30000; // 30 seconds timeout
+    const REQUEST_TIMEOUT = 120000; // 120 seconds timeout for file uploads
     const errors: string[] = [];
     let uploadedCount = 0;
 
@@ -623,7 +658,7 @@ export class GitLabService {
           const response = await retryWithBackoff(
             async () => {
               const res = await fetchWithTimeout(
-                `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodeURIComponent(fullPath)}`,
+                `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodedPath}`,
                 {
                   method: 'PUT',
                   headers: {
@@ -674,7 +709,7 @@ export class GitLabService {
               const createResponse = await retryWithBackoff(
                 async () => {
                   const res = await fetchWithTimeout(
-                    `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodeURIComponent(fullPath)}`,
+                    `${baseUrl}/api/v4/projects/${projectId}/repository/files/${encodedPath}`,
                     {
                       method: 'POST',
                       headers: {
@@ -782,6 +817,75 @@ export class GitLabService {
       return {
         success: false,
         error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Get current authenticated user info from GitLab
+   * Uses the PAT to fetch the authenticated user's profile
+   * @param pat - Personal Access Token
+   * @param instanceUrl - Optional GitLab instance URL (default: gitlab.com)
+   * @returns User info including username, email, name, and avatar
+   */
+  static async getCurrentUser(
+    pat: string,
+    instanceUrl?: string
+  ): Promise<{
+    success: boolean;
+    user?: {
+      login: string;
+      name: string | null;
+      email: string | null;
+      avatarUrl: string | null;
+    };
+    error?: string;
+  }> {
+    try {
+      const apiBaseUrl = this.getApiBaseUrl(instanceUrl);
+      const url = `${apiBaseUrl}/user`;
+
+      const response = await fetch(url, getFetchOptions(url, {
+        headers: {
+          'Private-Token': pat,
+          'User-Agent': 'skillsMN-App',
+        },
+      }));
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            success: false,
+            error: 'Authentication failed. Please check your PAT.',
+          };
+        }
+        return {
+          success: false,
+          error: `GitLab API error: ${response.status}`,
+        };
+      }
+
+      const data = await response.json();
+
+      logger.info('Retrieved GitLab user info', 'GitLabService', {
+        username: data.username,
+        name: data.name,
+      });
+
+      return {
+        success: true,
+        user: {
+          login: data.username,
+          name: data.name || null,
+          email: data.email || null,
+          avatarUrl: data.avatar_url || null,
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to get GitLab user info', 'GitLabService', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }

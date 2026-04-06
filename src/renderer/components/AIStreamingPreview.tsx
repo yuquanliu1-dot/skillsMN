@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AIGenerationState } from '../hooks/useAIGeneration';
 
 interface AIStreamingPreviewProps {
@@ -18,6 +19,8 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
   status,
   error,
 }) => {
+  const { t } = useTranslation();
+
   if (status === 'IDLE') {
     return (
       <div className="streaming-preview streaming-preview--idle">
@@ -25,7 +28,7 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
           <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor">
             <path d="M24 4v40M4 24h40" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          <p>AI-generated content will appear here</p>
+          <p>{t('aiDialog.contentWillAppear')}</p>
         </div>
         <style>{previewStyles}</style>
       </div>
@@ -40,7 +43,7 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
             <circle cx="12" cy="12" r="10" strokeWidth="2" />
             <path d="M12 8v4M12 16h.01" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          <p className="error-title">Generation Failed</p>
+          <p className="error-title">{t('common.error')}</p>
           <p className="error-text">{error}</p>
         </div>
         <style>{previewStyles}</style>
@@ -51,11 +54,11 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
   return (
     <div className="streaming-preview">
       <div className="preview-header">
-        <span className="preview-label">Generated Content</span>
+        <span className="preview-label">{t('aiDialog.generatedSkill')}</span>
         {status === 'STREAMING' && (
           <div className="streaming-indicator">
             <div className="spinner"></div>
-            <span>Streaming...</span>
+            <span>{t('aiDialog.streaming')}</span>
           </div>
         )}
         {status === 'COMPLETE' && (
@@ -63,12 +66,12 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
               <path d="M13.5 4.5L6 12l-2.5-2.5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span>Complete</span>
+            <span>{t('aiDialog.complete')}</span>
           </div>
         )}
       </div>
       <div className="preview-content">
-        <pre>{content || 'Waiting for content...'}</pre>
+        <pre>{content || t('aiDialog.contentWillAppear')}</pre>
         {status === 'STREAMING' && <span className="cursor-blink">|</span>}
       </div>
       <style>{previewStyles}</style>

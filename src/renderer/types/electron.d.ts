@@ -30,7 +30,15 @@ import type {
   PermissionDecision,
   PendingPermissionRequest,
   SkillGroup,
+  RepoContributionStats,
+  UserBadge,
+  DetectedSkill,
+  ImportOptions,
+  ImportProgress,
+  ImportResult,
+  UrlScanResult,
 } from '../../shared/types';
+import type { BadgeDefinition } from '../../shared/types';
 
 export interface ElectronAPI {
   // Skill Operations
@@ -249,6 +257,58 @@ export interface ElectronAPI {
   // Skills Refresh Event
   onSkillsRefresh: (callback: () => void) => void;
   removeSkillsRefreshListener: () => void;
+
+  // Contribution Stats Operations (激励徽章系统)
+  getRepoContributionStats: (repoId: string) => Promise<IPCResponse<RepoContributionStats>>;
+  getUserBadges: (repoId: string) => Promise<IPCResponse<{
+    earned: UserBadge[];
+    nextBadges: Array<{ badge: BadgeDefinition; progress: number; remaining: number }>;
+  }>>;
+  recordSkillInstall: (skillPath: string, repoId: string) => Promise<IPCResponse<void>>;
+  setCurrentUserGitInfo: (username: string, email: string) => Promise<IPCResponse<void>>;
+  getCurrentUserGitInfo: () => Promise<IPCResponse<{ username?: string; email?: string } | undefined>>;
+  fetchUserInfoFromPAT: (repoId: string) => Promise<IPCResponse<{
+    login: string;
+    name: string | null;
+    email: string | null;
+    avatarUrl: string | null;
+  }>>;
+  clearContributionCache: (repoId?: string) => Promise<IPCResponse<void>>;
+  getSkillInstallCount: (skillPath: string) => Promise<IPCResponse<number>>;
+  getLevelInfo: (level: string) => Promise<IPCResponse<{
+    level: string;
+    nameKey: string;
+    minScore: number;
+    icon: string;
+    color: string;
+  }>>;
+  getNextLevelInfo: (currentLevel: string) => Promise<IPCResponse<{
+    level: string;
+    nameKey: string;
+    minScore: number;
+    icon: string;
+    color: string;
+  } | null>>;
+
+  // Import Operations
+  scanDirectoryForImport: (dirPath: string) => Promise<IPCResponse<DetectedSkill[]>>;
+  scanUrlForImport: (url: string, pat?: string) => Promise<UrlScanResult>;
+  importLocalSkills: (params: {
+    skills: DetectedSkill[];
+    options: ImportOptions;
+  }) => Promise<IPCResponse<ImportResult>>;
+  importSkillsFromUrl: (params: {
+    url: string;
+    skillPaths: string[];
+    pat?: string;
+    options: ImportOptions;
+  }) => Promise<IPCResponse<ImportResult>>;
+  onImportProgress: (callback: (event: any, progress: ImportProgress) => void) => void;
+  removeImportProgressListener: () => void;
+
+  // Contribution Cache Cleared Event
+  onContributionCacheCleared: (callback: (event: any, data: { repoId?: string }) => void) => void;
+  removeContributionCacheClearedListener: () => void;
 }
 
 declare global {
