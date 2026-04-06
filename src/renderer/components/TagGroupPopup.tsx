@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { SkillGroup } from '../../shared/types';
 
@@ -71,16 +72,16 @@ export default function TagGroupPopup({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/30 z-50"
+        className="fixed inset-0 bg-black/30 z-[9999]"
         onClick={onClose}
       />
 
       {/* Popup */}
-      <div className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 w-72 max-h-96 overflow-hidden"
+      <div className="fixed z-[9999] bg-white rounded-lg shadow-xl border border-gray-200 w-72 max-h-96 overflow-hidden"
         style={{
           top: '50%',
           left: '50%',
@@ -187,6 +188,7 @@ export default function TagGroupPopup({
           </button>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

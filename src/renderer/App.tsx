@@ -130,6 +130,8 @@ export default function App(): JSX.Element {
   const loadSkillsRef = useRef<() => Promise<Skill[] | undefined>>(async () => undefined);
   // Ref to prevent concurrent loadSkills calls
   const isLoadingSkillsRef = useRef(false);
+  // State for refresh button UI
+  const [isRefreshingSkills, setIsRefreshingSkills] = useState(false);
   const [viewingPrivateSkill, setViewingPrivateSkill] = useState<{
     skill: PrivateSkill;
     repo: PrivateRepo;
@@ -318,6 +320,18 @@ export default function App(): JSX.Element {
 
   // Keep ref updated with latest loadSkills function
   loadSkillsRef.current = loadSkills;
+
+  /**
+   * Handle refresh button click
+   */
+  const handleRefreshSkills = useCallback(async (): Promise<void> => {
+    setIsRefreshingSkills(true);
+    try {
+      await loadSkills();
+    } finally {
+      setIsRefreshingSkills(false);
+    }
+  }, [loadSkills]);
 
   /**
    * Check for skill updates
@@ -899,6 +913,8 @@ export default function App(): JSX.Element {
               onSkillUpload={handleUploadSkill}
               onNavigateToSettings={() => setShowSettings(true)}
               onTagAssigned={loadSkills}
+              onRefresh={handleRefreshSkills}
+              isRefreshing={isRefreshingSkills}
             />
           </div>
 

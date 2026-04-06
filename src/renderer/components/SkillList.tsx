@@ -26,6 +26,8 @@ interface SkillListProps {
   onSkillUpload?: (skill: Skill) => Promise<void>;
   onNavigateToSettings?: () => void;
   onTagAssigned?: () => void;
+  onRefresh?: () => Promise<void>;
+  isRefreshing?: boolean;
 }
 
 interface GroupedSkills {
@@ -49,6 +51,8 @@ export default function SkillList({
   onSkillUpload,
   onNavigateToSettings,
   onTagAssigned,
+  onRefresh,
+  isRefreshing = false,
 }: SkillListProps): JSX.Element {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -231,6 +235,31 @@ export default function SkillList({
               />
             </svg>
           </div>
+
+          {/* Refresh Button */}
+          {onRefresh && (
+            <button
+              data-testid="refresh-skills-button"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={t('skills.refreshList')}
+              aria-label={t('skills.refreshList')}
+            >
+              {isRefreshing ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              )}
+            </button>
+          )}
 
           {/* New Skill Button */}
           {onCreateSkill && (
