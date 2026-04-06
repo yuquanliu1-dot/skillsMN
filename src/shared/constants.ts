@@ -207,6 +207,13 @@ export const IPC_CHANNELS = {
   MIGRATION_CHECK_DIRECTORY: 'migration:check-directory',
   MIGRATION_GET_TARGET_DIRECTORY: 'migration:get-target-directory',
 
+  // Import operations
+  IMPORT_SCAN_DIRECTORY: 'import:scan-directory',
+  IMPORT_SCAN_URL: 'import:scan-url',
+  IMPORT_LOCAL_SKILLS: 'import:local-skills',
+  IMPORT_URL_SKILLS: 'import:url-skills',
+  IMPORT_PROGRESS: 'import:progress',
+
   // Skill Group operations
   SKILL_GROUP_LIST: 'skill-group:list',
   SKILL_GROUP_GET: 'skill-group:get',
@@ -225,6 +232,9 @@ export const IPC_CHANNELS = {
 
   // Skills refresh event (for cross-component state synchronization)
   SKILLS_REFRESH: 'skills:refresh',
+
+  // Contribution stats cache cleared event
+  CONTRIBUTION_CACHE_CLEARED: 'contribution:cache-cleared',
 } as const;
 
 // ============================================================================

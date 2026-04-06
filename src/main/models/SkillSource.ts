@@ -52,9 +52,29 @@ export interface PrivateRepoSource {
 }
 
 /**
+ * Source metadata for skills imported from Git URLs (GitHub/GitLab)
+ */
+export interface GitImportSource {
+  /** Source type identifier */
+  type: 'git-import';
+  /** Git provider (github or gitlab) */
+  provider: 'github' | 'gitlab';
+  /** Repository path (owner/repo) */
+  repoPath: string;
+  /** Skill directory path within repository */
+  skillPath: string;
+  /** Installation timestamp (ISO 8601) */
+  installedAt: string;
+  /** Git commit hash (optional) */
+  commitHash?: string;
+  /** Instance URL for self-hosted GitLab (optional) */
+  instanceUrl?: string;
+}
+
+/**
  * Unified skill source type supporting all installation methods
  */
-export type SkillSource = LocalSource | RegistrySource | PrivateRepoSource;
+export type SkillSource = LocalSource | RegistrySource | PrivateRepoSource | GitImportSource;
 
 // ============================================================================
 // Factory Functions
@@ -165,6 +185,54 @@ export function createPrivateRepoSource(
   return privateSource;
 }
 
+/**
+ * Creates a GitImportSource object for skills imported from Git URLs
+ *
+ * @param provider - Git provider ('github' or 'gitlab')
+ * @param repoPath - Repository path (owner/repo)
+ * @param skillPath - Skill directory path within repository
+ * @param instanceUrl - Optional instance URL for self-hosted GitLab
+ * @param commitHash - Optional git commit hash
+ * @returns GitImportSource object with current timestamp
+ *
+ * @example
+ * ```typescript
+ * const source = createGitImportSource('github', 'owner/repo', 'skills/my-skill');
+ * // {
+ * //   type: 'git-import',
+ * //   provider: 'github',
+ * //   repoPath: 'owner/repo',
+ * //   skillPath: 'skills/my-skill',
+ * //   installedAt: '2026-03-14T10:30:45.123Z'
+ * // }
+ * ```
+ */
+export function createGitImportSource(
+  provider: 'github' | 'gitlab',
+  repoPath: string,
+  skillPath: string,
+  instanceUrl?: string,
+  commitHash?: string
+): GitImportSource {
+  const gitImportSource: GitImportSource = {
+    type: 'git-import',
+    provider,
+    repoPath,
+    skillPath,
+    installedAt: new Date().toISOString()
+  };
+
+  if (instanceUrl) {
+    gitImportSource.instanceUrl = instanceUrl;
+  }
+
+  if (commitHash) {
+    gitImportSource.commitHash = commitHash;
+  }
+
+  return gitImportSource;
+}
+
 // ============================================================================
 // Type Guards
 // ============================================================================
@@ -197,6 +265,16 @@ export function isRegistrySkill(skillSource: SkillSource | undefined): skillSour
  */
 export function isPrivateRepoSkill(skillSource: SkillSource | undefined): skillSource is PrivateRepoSource {
   return skillSource?.type === 'private-repo';
+}
+
+/**
+ * Type guard to check if a skill was imported from a Git URL
+ *
+ * @param skillSource - SkillSource object or undefined
+ * @returns True if the skill was imported from a Git URL
+ */
+export function isGitImportSkill(skillSource: SkillSource | undefined): skillSource is GitImportSource {
+  return skillSource?.type === 'git-import';
 }
 
 // ============================================================================
@@ -353,11 +431,73 @@ export function validatePrivateRepoSource(data: unknown): data is PrivateRepoSou
 }
 
 /**
+ * Validates a GitImportSource object
+ *
+ * @param data - Unknown data to validate
+ * @returns True if data is a valid GitImportSource
+ */
+export function validateGitImportSource(data: unknown): data is GitImportSource {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  // Validate type: must be 'git-import'
+  if (obj.type !== 'git-import') {
+    return false;
+  }
+
+  // Validate provider: must be 'github' or 'gitlab'
+  if (obj.provider !== 'github' && obj.provider !== 'gitlab') {
+    return false;
+  }
+
+  // Validate repoPath: GitHub repository path format
+  if (typeof obj.repoPath !== 'string' || !/^[^/]+\/[^/]+$/.test(obj.repoPath)) {
+    return false;
+  }
+
+  // Validate skillPath: non-empty string
+  if (typeof obj.skillPath !== 'string' || obj.skillPath.length === 0) {
+    return false;
+  }
+
+  // Validate installedAt: valid ISO 8601 timestamp
+  if (typeof obj.installedAt !== 'string') {
+    return false;
+  }
+
+  try {
+    const date = new Date(obj.installedAt);
+    if (isNaN(date.getTime())) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+
+  // Validate instanceUrl if present: valid URL
+  if (obj.instanceUrl !== undefined && typeof obj.instanceUrl !== 'string') {
+    return false;
+  }
+
+  // Validate commitHash if present: 40-character hex string
+  if (obj.commitHash !== undefined) {
+    if (typeof obj.commitHash !== 'string' || !/^[0-9a-f]{40}$/i.test(obj.commitHash)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Validates a SkillSource object (any type)
  *
  * @param data - Unknown data to validate
  * @returns True if data is a valid SkillSource
  */
 export function validateSkillSource(data: unknown): data is SkillSource {
-  return validateLocalSource(data) || validateRegistrySource(data) || validatePrivateRepoSource(data);
+  return validateLocalSource(data) || validateRegistrySource(data) || validatePrivateRepoSource(data) || validateGitImportSource(data);
 }

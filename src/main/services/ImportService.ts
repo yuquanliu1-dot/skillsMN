@@ -23,7 +23,7 @@ import {
   UrlScanResult,
   Skill,
 } from '../../shared/types';
-import { createPrivateRepoSource } from '../models/SkillSource';
+import { createGitImportSource } from '../models/SkillSource';
 import { BrowserWindow } from 'electron';
 import { getProxyAgent } from '../utils/proxy';
 
@@ -267,6 +267,7 @@ export class ImportService {
       const branches = ['main', 'master'];
       let tree: any[] = [];
       let actualBranch = '';
+      let lastError: string | null = null;
 
       for (const branch of branches) {
         try {
@@ -283,6 +284,8 @@ export class ImportService {
             break;
           }
         } catch (branchError) {
+          const errorMsg = branchError instanceof Error ? branchError.message : String(branchError);
+          lastError = errorMsg;
           logger.debug('Branch not found, trying next', 'ImportService', { branch, error: branchError });
         }
       }
@@ -295,7 +298,7 @@ export class ImportService {
           repo: parsed.repo,
           skills: [],
           isPrivate: false,
-          error: 'Could not access repository tree. Please check if the repository exists and is accessible.',
+          error: lastError || 'Could not access repository tree. Please check if the repository exists and is accessible.',
         };
       }
 
@@ -525,10 +528,10 @@ export class ImportService {
         }
 
         // Write source metadata
-        const sourceMetadata = createPrivateRepoSource(
-          `${parsed.owner}/${parsed.repo}`,
-          skillName,
+        const sourceMetadata = createGitImportSource(
           parsed.provider,
+          `${parsed.owner}/${parsed.repo}`,
+          skillPath,
           parsed.instanceUrl
         );
         await fsExtra.writeJson(path.join(targetDir, SOURCE_METADATA_FILE), sourceMetadata, { spaces: 2 });
@@ -674,23 +677,39 @@ export class ImportService {
 
   /**
    * Find skill directories in a repository tree
+   * When a directory is identified as a skill (contains SKILL.md), its subdirectories
+   * are not searched for additional skills (prevents nested sub-skills from being listed)
    */
   private findSkillDirectories(tree: any[]): string[] {
     const skillFiles = tree.filter((item: any) =>
       item.type === 'blob' && item.path.endsWith('SKILL.md')
     );
 
-    // Get unique parent directories
-    const skillDirs = new Set<string>();
+    // Collect all skill directories with their paths
+    const allSkillDirs: Array<{ path: string; depth: number }> = [];
     for (const file of skillFiles) {
       const dirPath = path.dirname(file.path);
-      // Only include immediate skill directories (not nested too deep)
-      if (dirPath.split('/').length <= 3) {
-        skillDirs.add(dirPath);
+      const depth = dirPath.split('/').length;
+      allSkillDirs.push({ path: dirPath, depth });
+    }
+
+    // Sort by depth (shallowest first) so we process parent skills before children
+    allSkillDirs.sort((a, b) => a.depth - b.depth);
+
+    // Filter out nested skills (skills that are subdirectories of other skills)
+    const topLevelSkills: string[] = [];
+    for (const skillDir of allSkillDirs) {
+      // Check if this skill is a subdirectory of any already-added top-level skill
+      const isNested = topLevelSkills.some(parentPath =>
+        skillDir.path.startsWith(parentPath + '/')
+      );
+
+      if (!isNested) {
+        topLevelSkills.push(skillDir.path);
       }
     }
 
-    return Array.from(skillDirs);
+    return topLevelSkills;
   }
 
   /**

@@ -75,15 +75,40 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
     checkIfInstalled();
   }, [skill.name, skill.path]);
 
+  /**
+   * Re-check install status when local skills are refreshed
+   */
+  useEffect(() => {
+    const handleRefresh = () => {
+      checkIfInstalled();
+    };
+    window.addEventListener('local-skills-refreshed', handleRefresh);
+    return () => {
+      window.removeEventListener('local-skills-refreshed', handleRefresh);
+    };
+  }, []);
+
   const checkIfInstalled = async () => {
     setIsCheckingStatus(true);
     try {
       const response = await window.electronAPI.listSkills();
       if (response.success && response.data) {
         const skillDirName = skill.path.split('/').pop() || skill.path.split('\\').pop() || skill.name;
+        const repoPath = `${repo.owner}/${repo.repo}`;
+
         const exists = response.data.some(s => {
+          // 优先使用 sourceMetadata 精确匹配（同一仓库 + 同一路径）
+          if (s.sourceMetadata?.type === 'private-repo') {
+            return s.sourceMetadata.repoPath === repoPath &&
+                   s.sourceMetadata.skillPath === skill.path;
+          }
+          if (s.sourceMetadata?.type === 'git-import') {
+            return s.sourceMetadata.repoPath === repoPath &&
+                   s.sourceMetadata.skillPath === skill.path;
+          }
+          // 兜底：目录名匹配
           const localDirName = s.path.split('/').pop() || s.path.split('\\').pop() || '';
-          return localDirName === skillDirName || s.name === skill.name;
+          return localDirName === skillDirName;
         });
         setIsInstalled(exists);
       }

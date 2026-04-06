@@ -17,7 +17,7 @@ import { SkillInstaller } from './SkillInstaller';
 import { decryptPAT } from '../utils/encryption';
 import { SkillModel } from '../models/Skill';
 import { SkillDirectoryModel } from '../models/SkillDirectory';
-import { createLocalSource, isRegistrySkill, isPrivateRepoSkill } from '../models/SkillSource';
+import { createLocalSource, isRegistrySkill, isPrivateRepoSkill, isGitImportSkill } from '../models/SkillSource';
 import { Configuration, Skill, VersionComparison } from '../../shared/types';
 import { SKILL_FILE_NAME, SOURCE_METADATA_FILE } from '../../shared/constants';
 import { SymlinkService } from './SymlinkService';
@@ -98,12 +98,32 @@ export class SkillService {
     // Enrich with symlink information if SymlinkService is available
     if (this.symlinkService) {
       try {
-        const symlinkDb = await this.symlinkService.loadDatabase(appDir);
+        const symlinkDb = await this.symlinkService.loadDatabaseV2(appDir);
 
         for (const skill of skills) {
           const skillName = path.basename(skill.path);
-          skill.symlinkConfig = symlinkDb.symlinks[skillName];
-          skill.isSymlinked = skill.symlinkConfig?.enabled ?? false;
+          const multiTargetConfig = symlinkDb.symlinks[skillName];
+
+          // Calculate symlink target count (number of enabled targets)
+          if (multiTargetConfig && multiTargetConfig.targets) {
+            const enabledTargets = Object.values(multiTargetConfig.targets).filter(t => t.enabled);
+            skill.symlinkTargetCount = enabledTargets.length;
+            skill.isSymlinked = enabledTargets.length > 0;
+
+            // For backward compatibility, set symlinkConfig from first enabled target
+            const firstEnabledTarget = enabledTargets[0];
+            if (firstEnabledTarget) {
+              skill.symlinkConfig = {
+                enabled: true,
+                claudeDirectory: firstEnabledTarget.targetDirectory,
+                createdAt: firstEnabledTarget.createdAt,
+                lastModified: firstEnabledTarget.lastModified,
+              };
+            }
+          } else {
+            skill.symlinkTargetCount = 0;
+            skill.isSymlinked = false;
+          }
         }
 
         logger.debug('Skills enriched with symlink information', 'SkillService', {
@@ -575,6 +595,12 @@ ${content}`;
           if (result) {
             updateMap.set(skill.path, result);
           }
+        } else if (isGitImportSkill(skill.sourceMetadata)) {
+          // Check git-imported skill for updates
+          const result = await this.checkGitImportSkillForUpdates(skill, skill.sourceMetadata);
+          if (result) {
+            updateMap.set(skill.path, result);
+          }
         }
         // Local skills don't have updates
       } catch (error) {
@@ -626,6 +652,32 @@ ${content}`;
    * Returns commits that are newer than the local commit
    *
    * @param commits - Array of commits from GitHub API
+  /**
+   * Convert a skill's source to local
+   * Used when the remote source is no longer available
+   *
+   * @param skillPath - Path to the skill directory
+   * @private
+   */
+  private async convertSkillToLocalSource(skillPath: string): Promise<void> {
+    try {
+      const localSource = createLocalSource();
+      const metadataPath = path.join(skillPath, SOURCE_METADATA_FILE);
+      await fs.promises.writeFile(metadataPath, JSON.stringify(localSource, null, 2), 'utf-8');
+
+      logger.info('Converted skill to local source', 'SkillService', { skillPath });
+    } catch (error) {
+      logger.warn('Failed to convert skill to local source', 'SkillService', {
+        skillPath,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * Extract new commits from commit history
+   *
+   * @param commits - Array of commit objects from GitHub API
    * @param localCommitSHA - The local commit SHA to compare against
    * @returns Object with newCommits array and commitsAhead count
    */
@@ -860,9 +912,14 @@ ${content}`;
       const repo = await configService.getPrivateRepo(sourceMetadata.repoId);
 
       if (!repo) {
-        logger.warn(`Repository not found for skill: ${skill.name}`, 'SkillService', {
-          repoId: sourceMetadata.repoId
+        // Repository configuration was removed, convert skill to local source
+        logger.info(`Repository not found for skill, converting to local source: ${skill.name}`, 'SkillService', {
+          skillPath: skill.path,
+          repoId: sourceMetadata.repoId,
         });
+
+        await this.convertSkillToLocalSource(skill.path);
+
         return null;
       }
 
@@ -883,9 +940,15 @@ ${content}`;
       );
 
       if (!commits || commits.length === 0) {
-        logger.warn(`Failed to get commits for skill: ${skill.name}`, 'SkillService', {
-          skillPath: skill.path
+        // Remote skill was deleted, convert to local source
+        logger.info(`Remote skill deleted, converting to local source: ${skill.name}`, 'SkillService', {
+          skillPath: skill.path,
+          repoId: sourceMetadata.repoId,
+          skillSourcePath: sourceMetadata.skillPath,
         });
+
+        await this.convertSkillToLocalSource(skill.path);
+
         return null;
       }
 
@@ -1007,6 +1070,174 @@ ${content}`;
   }
 
   /**
+   * Check git-imported skill for updates from GitHub/GitLab
+   * Similar to private repo check but uses stored repo info instead of config
+   *
+   * @param skill - Skill to check
+   * @param sourceMetadata - Git import source metadata
+   * @returns Version comparison result or null if check failed
+   */
+  private async checkGitImportSkillForUpdates(
+    skill: Skill,
+    sourceMetadata: import('../models/SkillSource').GitImportSource
+  ): Promise<VersionComparison | null> {
+    try {
+      const [owner, repoName] = sourceMetadata.repoPath.split('/');
+      const branch = 'main'; // Default branch for public repos
+      const skillPath = sourceMetadata.skillPath;
+
+      // Get latest commits for the directory (no PAT needed for public repos)
+      let commits: any[] = [];
+
+      if (sourceMetadata.provider === 'github') {
+        commits = await GitHubService.getDirectoryCommits(
+          owner,
+          repoName,
+          undefined, // No PAT for public repos
+          skillPath,
+          branch
+        );
+      } else {
+        // GitLab - use GitLabService
+        const { GitLabService } = await import('./GitLabService');
+        commits = await GitLabService.getDirectoryCommits(
+          owner,
+          repoName,
+          skillPath,
+          undefined, // No PAT for public repos
+          branch,
+          sourceMetadata.instanceUrl
+        );
+      }
+
+      if (!commits || commits.length === 0) {
+        // Remote skill was deleted or repo is no longer accessible, convert to local source
+        logger.info(`Remote git-imported skill deleted or inaccessible, converting to local source: ${skill.name}`, 'SkillService', {
+          skillPath: skill.path,
+          repoPath: sourceMetadata.repoPath,
+          skillSourcePath: skillPath,
+        });
+
+        await this.convertSkillToLocalSource(skill.path);
+
+        return null;
+      }
+
+      const latestCommitSHA = commits[0].sha;
+
+      // If no commit hash stored, save the current commit hash for future checks
+      if (!sourceMetadata.commitHash) {
+        logger.info('No commit hash stored for git-imported skill, saving current commit hash', 'SkillService', {
+          skillPath: skill.path,
+          commitHash: latestCommitSHA
+        });
+
+        // Update the source metadata file
+        const metadataPath = path.join(skill.path, SOURCE_METADATA_FILE);
+        const updatedMetadata = {
+          ...sourceMetadata,
+          commitHash: latestCommitSHA,
+          installedAt: sourceMetadata.installedAt || new Date().toISOString()
+        };
+
+        try {
+          await fs.promises.writeFile(metadataPath, JSON.stringify(updatedMetadata, null, 2), 'utf-8');
+        } catch (writeError) {
+          logger.warn('Failed to save commit hash to source metadata', 'SkillService', {
+            skillPath: skill.path,
+            error: writeError instanceof Error ? writeError.message : 'Unknown error'
+          });
+        }
+
+        // First check, assume no update
+        return {
+          hasUpdate: false,
+          canUpload: false,
+          localVersion: skill.version,
+          remoteSHA: latestCommitSHA,
+        };
+      }
+
+      const commitChanged = latestCommitSHA !== sourceMetadata.commitHash;
+
+      // Try to fetch remote version for comparison
+      let remoteVersion: string | undefined;
+      if (skill.version) {
+        try {
+          let remoteContent: string | null = null;
+
+          if (sourceMetadata.provider === 'github') {
+            remoteContent = await GitHubService.getPrivateRepoSkillContent(
+              owner,
+              repoName,
+              `${skillPath}/${SKILL_FILE_NAME}`,
+              undefined, // No PAT for public repos
+              branch
+            );
+          } else {
+            const { GitLabService } = await import('./GitLabService');
+            remoteContent = await GitLabService.getSkillContent(
+              owner,
+              repoName,
+              `${skillPath}/${SKILL_FILE_NAME}`,
+              undefined, // No PAT for public repos
+              branch,
+              sourceMetadata.instanceUrl
+            );
+          }
+
+          if (remoteContent) {
+            remoteVersion = this.extractVersionFromContent(remoteContent);
+          }
+        } catch (versionError) {
+          logger.debug('Failed to fetch remote version for git-imported skill', 'SkillService', {
+            skill: skill.name,
+            error: versionError instanceof Error ? versionError.message : versionError,
+          });
+        }
+      }
+
+      // Use unified version comparison logic (git-import does NOT support upload)
+      const { hasUpdate } = this.compareVersionsForUpdate(
+        skill.version,
+        remoteVersion,
+        commitChanged,
+        false // Git-imported skills don't support upload (no repo configured)
+      );
+
+      // Extract new commits if update is available
+      const { newCommits, commitsAhead } = hasUpdate
+        ? this.extractNewCommits(commits, sourceMetadata.commitHash)
+        : { newCommits: [], commitsAhead: 0 };
+
+      if (hasUpdate) {
+        logger.info(`Update available for git-imported skill: ${skill.name}`, 'SkillService', {
+          skillPath: skill.path,
+          repoPath: sourceMetadata.repoPath,
+          localVersion: skill.version,
+          remoteVersion,
+          localSHA: sourceMetadata.commitHash,
+          remoteSHA: latestCommitSHA,
+          commitsAhead,
+        });
+      }
+
+      return {
+        hasUpdate,
+        canUpload: false, // Git-imported skills don't support upload
+        localVersion: skill.version,
+        remoteVersion,
+        remoteSHA: latestCommitSHA,
+        commitsAhead,
+        commits: newCommits,
+      };
+    } catch (error) {
+      logger.error(`Failed to check git-imported skill updates: ${skill.name}`, 'SkillService', error);
+      return null;
+    }
+  }
+
+  /**
    * Update a skill from its source private repository
    * Downloads latest version with optional backup of existing version
    *
@@ -1046,6 +1277,27 @@ ${content}`;
     let permanentBackupPath: string | null = null;
 
     try {
+      // STEP 0: Concurrent edit protection - check if skill was recently modified
+      // This prevents overwriting user's local edits (including auto-saved content)
+      const existingSkillFile = path.join(skillPath, SKILL_FILE_NAME);
+      if (fs.existsSync(existingSkillFile)) {
+        const stats = await fs.promises.stat(existingSkillFile);
+        const currentModified = stats.mtimeMs;
+        const RECENT_EDIT_THRESHOLD = 60 * 1000; // 1 minute
+
+        if (Date.now() - currentModified < RECENT_EDIT_THRESHOLD) {
+          logger.warn('Skill was recently edited, blocking update', 'SkillService', {
+            skillPath,
+            lastModified: new Date(currentModified).toISOString(),
+            timeSinceEdit: `${Math.round((Date.now() - currentModified) / 1000)}s ago`,
+          });
+          return {
+            success: false,
+            error: 'Skill was recently edited. Please save your changes before updating.',
+          };
+        }
+      }
+
       // STEP 1: Get current skill metadata FIRST (before any backup)
       const skill = await this.getSkill(skillPath);
 
@@ -1338,6 +1590,27 @@ ${content}`;
     let permanentBackupPath: string | null = null;
 
     try {
+      // STEP 0: Concurrent edit protection - check if skill was recently modified
+      // This prevents overwriting user's local edits (including auto-saved content)
+      const existingSkillFile = path.join(skillPath, SKILL_FILE_NAME);
+      if (fs.existsSync(existingSkillFile)) {
+        const stats = await fs.promises.stat(existingSkillFile);
+        const currentModified = stats.mtimeMs;
+        const RECENT_EDIT_THRESHOLD = 60 * 1000; // 1 minute
+
+        if (Date.now() - currentModified < RECENT_EDIT_THRESHOLD) {
+          logger.warn('Skill was recently edited, blocking update', 'SkillService', {
+            skillPath,
+            lastModified: new Date(currentModified).toISOString(),
+            timeSinceEdit: `${Math.round((Date.now() - currentModified) / 1000)}s ago`,
+          });
+          return {
+            success: false,
+            error: 'Skill was recently edited. Please save your changes before updating.',
+          };
+        }
+      }
+
       // STEP 1: Get current skill metadata FIRST (before any backup)
       const skill = await this.getSkill(skillPath);
 

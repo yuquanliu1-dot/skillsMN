@@ -7,15 +7,17 @@
 
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { safeStorage } from 'electron';
+import { safeStorage, BrowserWindow } from 'electron';
 import { logger } from '../utils/Logger';
 import { PrivateRepoModel } from '../models/PrivateRepo';
 import { getGitProvider } from './GitProvider';
 import { SkillService } from './SkillService';
-import { createPrivateRepoSource } from '../models/SkillSource';
+import { createPrivateRepoSource, createLocalSource } from '../models/SkillSource';
 import { getConfigService } from '../ipc/configHandlers';
+import { getSkillService } from '../ipc/skillHandlers';
+import { ContributionStatsService } from './ContributionStatsService';
 import type { PrivateRepo, PrivateRepoConfigSection, PrivateSkill, Configuration } from '../../shared/types';
-import { SOURCE_METADATA_FILE } from '../../shared/constants';
+import { SOURCE_METADATA_FILE, IPC_CHANNELS } from '../../shared/constants';
 
 export class PrivateRepoService {
   private static config: PrivateRepoConfigSection | null = null;
@@ -354,8 +356,7 @@ export class PrivateRepoService {
    *
    * Removes only the repository configuration from the app settings.
    * Locally installed skills from this repository are NOT deleted and remain fully functional.
-   * Users can continue to use installed skills even after removing the repository.
-   * The repository can be re-added later if needed to check for updates or install new skills.
+   * Skills that were installed from this repository will have their source converted to 'local'.
    *
    * @param repoId - Repository ID to remove
    * @throws Error if repository not found or save fails
@@ -376,10 +377,76 @@ export class PrivateRepoService {
       this.config!.repositories.splice(index, 1);
       await this.saveConfig();
 
+      // Convert skills from this repo to local source
+      await this.convertSkillsToLocalSource(repoId);
+
       logger.info('Removed private repository', 'PrivateRepoService', { repoId });
     } catch (error) {
       logger.error('Failed to remove private repo', 'PrivateRepoService', error);
       throw error;
+    }
+  }
+
+  /**
+   * Convert skills from a removed repository to local source
+   * This ensures skills remain functional even after the repository is removed
+   * @param repoId - ID of the removed repository
+   * @private
+   */
+  private static async convertSkillsToLocalSource(repoId: string): Promise<void> {
+    try {
+      const configService = getConfigService();
+      const skillService = getSkillService();
+
+      if (!configService || !skillService) {
+        logger.warn('Services not available, skipping skill source conversion', 'PrivateRepoService');
+        return;
+      }
+
+      const appConfig = configService.getCurrent();
+      if (!appConfig) {
+        logger.warn('App config not available, skipping skill source conversion', 'PrivateRepoService');
+        return;
+      }
+
+      // Get all skills
+      const skills = await skillService.listAllSkills(appConfig);
+      const convertedSkills: string[] = [];
+
+      // Find skills that came from this repo
+      for (const skill of skills) {
+        if (skill.sourceMetadata?.type === 'private-repo' && skill.sourceMetadata.repoId === repoId) {
+          try {
+            // Convert to local source
+            const localSource = createLocalSource();
+            const metadataPath = path.join(skill.path, SOURCE_METADATA_FILE);
+            await fs.writeJson(metadataPath, localSource, { spaces: 2 });
+
+            convertedSkills.push(skill.name);
+            logger.debug('Converted skill to local source', 'PrivateRepoService', {
+              skillName: skill.name,
+              skillPath: skill.path,
+              oldRepoId: repoId,
+            });
+          } catch (convertError) {
+            logger.warn('Failed to convert skill to local source', 'PrivateRepoService', {
+              skillName: skill.name,
+              error: convertError,
+            });
+          }
+        }
+      }
+
+      if (convertedSkills.length > 0) {
+        logger.info('Converted skills to local source after repo removal', 'PrivateRepoService', {
+          repoId,
+          convertedCount: convertedSkills.length,
+          skills: convertedSkills,
+        });
+      }
+    } catch (error) {
+      // Non-critical error, don't fail the repo removal
+      logger.error('Error during skill source conversion', 'PrivateRepoService', error);
     }
   }
 
@@ -709,12 +776,45 @@ export class PrivateRepoService {
       // Create skill directory
       await fs.ensureDir(finalPath);
 
-      // Write files
-      for (const [filePath, content] of files.entries()) {
-        const relativePath = path.relative(skillPath, filePath);
-        const absolutePath = path.join(finalPath, relativePath);
-        await fs.ensureDir(path.dirname(absolutePath));
-        await fs.writeFile(absolutePath, content, 'utf-8');
+      // Track written files for cleanup on failure
+      const writtenFiles: string[] = [];
+
+      // Write files with error handling
+      try {
+        for (const [filePath, content] of files.entries()) {
+          const relativePath = path.relative(skillPath, filePath);
+          const absolutePath = path.join(finalPath, relativePath);
+
+          try {
+            await fs.ensureDir(path.dirname(absolutePath));
+            await fs.writeFile(absolutePath, content, 'utf-8');
+            writtenFiles.push(absolutePath);
+          } catch (writeError) {
+            // Clean up partially written files
+            logger.error(`Failed to write file ${relativePath}, rolling back installation`, 'PrivateRepoService', writeError);
+
+            // Remove all written files
+            for (const writtenFile of writtenFiles) {
+              try {
+                await fs.remove(writtenFile);
+              } catch (removeError) {
+                logger.warn(`Failed to clean up file ${writtenFile}`, 'PrivateRepoService', removeError);
+              }
+            }
+
+            // Remove the created directory
+            try {
+              await fs.remove(finalPath);
+            } catch (dirRemoveError) {
+              logger.warn(`Failed to clean up directory ${finalPath}`, 'PrivateRepoService', dirRemoveError);
+            }
+
+            throw new Error(`Failed to write file ${relativePath}: ${writeError instanceof Error ? writeError.message : 'Unknown error'}`);
+          }
+        }
+      } catch (writeError) {
+        // Re-throw to be caught by outer catch block
+        throw writeError;
       }
 
       // Fetch the latest commit hash for the skill directory
@@ -1025,8 +1125,29 @@ export class PrivateRepoService {
           commitSha: result.commitSha,
         });
 
+        // Clear contribution stats cache so the new commit is reflected
+        try {
+          await ContributionStatsService.clearCache(repoId);
+          logger.debug('Cleared contribution stats cache after upload', 'PrivateRepoService', { repoId });
+          // Notify renderer to refresh contribution stats
+          const mainWindow = BrowserWindow.getAllWindows()[0];
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send(IPC_CHANNELS.CONTRIBUTION_CACHE_CLEARED, { repoId });
+          }
+        } catch (cacheError) {
+          logger.warn('Failed to clear contribution stats cache', 'PrivateRepoService', { error: cacheError });
+        }
+
         // Update skill's source metadata to private-repo
-        await this.updateSkillSourceToPrivateRepo(skillPath, repoId, repo, skillDirName, result.commitSha);
+        const metadataResult = await this.updateSkillSourceToPrivateRepo(skillPath, repoId, repo, skillDirName, result.commitSha);
+
+        // Include warning in response if metadata update failed
+        if (!metadataResult.success && metadataResult.warning) {
+          return {
+            ...result,
+            warning: metadataResult.warning,
+          };
+        }
       }
 
       return result;
@@ -1047,6 +1168,7 @@ export class PrivateRepoService {
    * @param repo - Private repository object
    * @param skillDirName - Skill directory name
    * @param commitSha - Optional commit SHA from the upload
+   * @returns Object indicating success or warning message
    * @private
    */
   private static async updateSkillSourceToPrivateRepo(
@@ -1055,7 +1177,7 @@ export class PrivateRepoService {
     repo: PrivateRepo,
     skillDirName: string,
     commitSha?: string
-  ): Promise<void> {
+  ): Promise<{ success: boolean; warning?: string }> {
     try {
       const metadataPath = path.join(skillPath, SOURCE_METADATA_FILE);
 
@@ -1076,9 +1198,15 @@ export class PrivateRepoService {
         repoPath: `${repo.owner}/${repo.repo}`,
         skillDirName,
       });
+
+      return { success: true };
     } catch (error) {
-      logger.error('Failed to update skill source metadata', 'PrivateRepoService', error);
-      // Don't throw - this is not critical to the upload operation
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to update skill source metadata - update detection may not work correctly', 'PrivateRepoService', error);
+      return {
+        success: false,
+        warning: `Skill uploaded successfully, but failed to update source metadata. Future update checks may not detect remote changes. Error: ${errorMsg}`,
+      };
     }
   }
 }
