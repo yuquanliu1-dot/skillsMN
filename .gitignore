@@ -67,7 +67,11 @@ test-*.js
 !tests/
 
 # Local application data
-skills/
+/skills/
+
+# Claude skills - ignore all except skill-creator (which is part of the project)
+.claude/skills/*
+!.claude/skills/skill-creator/
 
 # Electron Builder
 *.blockmap

@@ -1,0 +1,8 @@
+{
+  "type": "registry",
+  "registryUrl": "https://skills.sh",
+  "source": "anthropics/skills",
+  "skillId": "skill-creator",
+  "installedAt": "2026-04-07T18:36:13.435Z",
+  "commitHash": "ef740771ac901e03fbca3ce4e1c453a96010f30a"
+}
