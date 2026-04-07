@@ -361,7 +361,7 @@ export default function SymlinkPanel({
               )}
             </div>
             <div className="text-xs text-gray-500 truncate mt-0.5" title={tool.skillsDir}>
-              {tool.skillsDir.replace('~/', '~/')}
+              {tool.skillsDir}
             </div>
           </div>
 
