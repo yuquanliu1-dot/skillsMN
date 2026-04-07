@@ -335,15 +335,17 @@ export default function App(): JSX.Element {
 
   /**
    * Check for skill updates
+   * @param skillsOverride - Optional skills array to check (useful when called after loadSkills before state updates)
    */
-  const checkForUpdates = useCallback(async (): Promise<void> => {
-    if (!state.skills || state.skills.length === 0) {
+  const checkForUpdates = useCallback(async (skillsOverride?: Skill[]): Promise<void> => {
+    const skillsToCheck = skillsOverride || state.skills;
+    if (!skillsToCheck || skillsToCheck.length === 0) {
       return;
     }
 
     try {
       console.log('🔄 [checkForUpdates] Checking for skill updates...');
-      const updates = await ipcClient.checkForUpdates(state.skills);
+      const updates = await ipcClient.checkForUpdates(skillsToCheck);
       console.log(`✅ [checkForUpdates] Found ${Object.keys(updates).filter(k => updates[k].hasUpdate).length} updates`);
       setSkillUpdates(updates);
     } catch (error) {
@@ -360,10 +362,11 @@ export default function App(): JSX.Element {
       const result = await ipcClient.updateSkillFromSource(skill.path, createBackup);
 
       // Refresh skill list to reflect the update
-      await loadSkills();
+      const updatedSkills = await loadSkills();
 
-      // Re-check for updates
-      await checkForUpdates();
+      // Re-check for updates with the freshly loaded skills
+      // (pass skills directly to avoid stale closure issue)
+      await checkForUpdates(updatedSkills);
 
       // Show success notification
       const skillName = skill.name + (createBackup ? ' (backup created)' : '');
