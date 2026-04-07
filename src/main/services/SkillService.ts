@@ -25,6 +25,7 @@ import { SymlinkService } from './SymlinkService';
 import { app } from 'electron';
 import { compareVersions } from '../utils/versionUtils';
 import { hasUnpushedCommits } from '../utils/gitOperations';
+import { GitApiError } from '../utils/GitApiError';
 
 export class SkillService {
   private frontmatterCache: Map<string, { data: any; timestamp: number }> = new Map();
@@ -936,35 +937,62 @@ ${content}`;
 
       // Use the appropriate Git provider based on the repository's provider type
       let commits;
-      if (provider === 'gitlab') {
-        commits = await GitLabService.getDirectoryCommits(
-          owner,
-          repoName,
-          pat,
-          sourceMetadata.skillPath,
-          branch,
-          repo.instanceUrl
-        );
-      } else {
-        commits = await GitHubService.getDirectoryCommits(
-          owner,
-          repoName,
-          pat,
-          sourceMetadata.skillPath,
-          branch
-        );
+      try {
+        if (provider === 'gitlab') {
+          commits = await GitLabService.getDirectoryCommits(
+            owner,
+            repoName,
+            pat,
+            sourceMetadata.skillPath,
+            branch,
+            repo.instanceUrl
+          );
+        } else {
+          commits = await GitHubService.getDirectoryCommits(
+            owner,
+            repoName,
+            pat,
+            sourceMetadata.skillPath,
+            branch
+          );
+        }
+      } catch (apiError) {
+        // Handle Git API errors based on status code
+        if (apiError instanceof GitApiError) {
+          if (apiError.isAuthError()) {
+            // Auth error (401/403) - don't convert to local source, just log warning
+            logger.warn(`Auth error checking skill updates, keeping skill as private repo source: ${skill.name}`, 'SkillService', {
+              skillPath: skill.path,
+              provider: apiError.provider,
+              status: apiError.status,
+              message: apiError.message,
+            });
+            return null;
+          } else if (apiError.isNotFoundError()) {
+            // Not found (404) - skill was deleted from remote, convert to local source
+            logger.info(`Remote skill deleted (404), converting to local source: ${skill.name}`, 'SkillService', {
+              skillPath: skill.path,
+              repoId: sourceMetadata.repoId,
+              skillSourcePath: sourceMetadata.skillPath,
+              provider: apiError.provider,
+            });
+            await this.convertSkillToLocalSource(skill.path);
+            return null;
+          }
+        }
+        // Re-throw other errors to be caught by outer catch block
+        throw apiError;
       }
 
       if (!commits || commits.length === 0) {
-        // Remote skill was deleted, convert to local source
-        logger.info(`Remote skill deleted, converting to local source: ${skill.name}`, 'SkillService', {
+        // No commits found but no API error - this could mean the directory is empty
+        // Log warning but don't convert to local source (could be temporary issue)
+        logger.warn(`No commits found for skill directory, skipping update check: ${skill.name}`, 'SkillService', {
           skillPath: skill.path,
           repoId: sourceMetadata.repoId,
           skillSourcePath: sourceMetadata.skillPath,
+          provider,
         });
-
-        await this.convertSkillToLocalSource(skill.path);
-
         return null;
       }
 
@@ -1140,37 +1168,62 @@ ${content}`;
       // Get latest commits for the directory (no PAT needed for public repos)
       let commits: any[] = [];
 
-      if (sourceMetadata.provider === 'github') {
-        commits = await GitHubService.getDirectoryCommits(
-          owner,
-          repoName,
-          undefined, // No PAT for public repos
-          skillPath,
-          branch
-        );
-      } else {
-        // GitLab - use GitLabService
-        const { GitLabService } = await import('./GitLabService');
-        commits = await GitLabService.getDirectoryCommits(
-          owner,
-          repoName,
-          skillPath,
-          undefined, // No PAT for public repos
-          branch,
-          sourceMetadata.instanceUrl
-        );
+      try {
+        if (sourceMetadata.provider === 'github') {
+          commits = await GitHubService.getDirectoryCommits(
+            owner,
+            repoName,
+            undefined, // No PAT for public repos
+            skillPath,
+            branch
+          );
+        } else {
+          // GitLab - use GitLabService
+          commits = await GitLabService.getDirectoryCommits(
+            owner,
+            repoName,
+            skillPath,
+            undefined, // No PAT for public repos
+            branch,
+            sourceMetadata.instanceUrl
+          );
+        }
+      } catch (apiError) {
+        // Handle Git API errors based on status code
+        if (apiError instanceof GitApiError) {
+          if (apiError.isAuthError()) {
+            // Auth error (401/403) - don't convert to local source, just log warning
+            logger.warn(`Auth error checking git-imported skill updates, keeping skill as git-import source: ${skill.name}`, 'SkillService', {
+              skillPath: skill.path,
+              provider: apiError.provider,
+              status: apiError.status,
+              message: apiError.message,
+            });
+            return null;
+          } else if (apiError.isNotFoundError()) {
+            // Not found (404) - skill was deleted from remote, convert to local source
+            logger.info(`Remote git-imported skill deleted (404), converting to local source: ${skill.name}`, 'SkillService', {
+              skillPath: skill.path,
+              repoPath: sourceMetadata.repoPath,
+              skillSourcePath: skillPath,
+              provider: apiError.provider,
+            });
+            await this.convertSkillToLocalSource(skill.path);
+            return null;
+          }
+        }
+        // Re-throw other errors to be caught by outer catch block
+        throw apiError;
       }
 
       if (!commits || commits.length === 0) {
-        // Remote skill was deleted or repo is no longer accessible, convert to local source
-        logger.info(`Remote git-imported skill deleted or inaccessible, converting to local source: ${skill.name}`, 'SkillService', {
+        // No commits found but no API error - log warning but don't convert to local source
+        logger.warn(`No commits found for git-imported skill directory, skipping update check: ${skill.name}`, 'SkillService', {
           skillPath: skill.path,
           repoPath: sourceMetadata.repoPath,
           skillSourcePath: skillPath,
+          provider: sourceMetadata.provider,
         });
-
-        await this.convertSkillToLocalSource(skill.path);
-
         return null;
       }
 

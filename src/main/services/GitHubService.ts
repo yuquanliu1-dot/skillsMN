@@ -22,6 +22,7 @@ import type { ProxyConfig } from '../../shared/types';
 // Import shared proxy utilities and re-export for backward compatibility
 export { setProxyConfig, getProxyAgent, getProxySettings } from '../utils/proxy';
 import { getProxyAgent } from '../utils/proxy';
+import { GitApiError } from '../utils/GitApiError';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
@@ -1009,33 +1010,32 @@ export class GitHubService {
     directoryPath: string,
     branch: string = 'main'
   ): Promise<any[]> {
-    try {
-      const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits?path=${encodeURIComponent(directoryPath)}&sha=${branch}&per_page=10`;
-      const headers: Record<string, string> = {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'skillsMN-App',
-      };
+    const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits?path=${encodeURIComponent(directoryPath)}&sha=${branch}&per_page=10`;
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'skillsMN-App',
+    };
 
-      // Only add Authorization header if PAT is provided (for private repos or higher rate limits)
-      if (pat && pat.trim()) {
-        headers['Authorization'] = `token ${pat}`;
-      }
-
-      const response = await fetchWithProxy(url, { headers });
-
-      if (!response.ok) {
-        logger.warn(`Failed to fetch commits for ${directoryPath}`, 'GitHubService', {
-          status: response.status,
-        });
-        return [];
-      }
-
-      const data: any = await response.json();
-      return data || [];
-    } catch (error) {
-      logger.error('Failed to get directory commits', 'GitHubService', error);
-      return [];
+    // Only add Authorization header if PAT is provided (for private repos or higher rate limits)
+    if (pat && pat.trim()) {
+      headers['Authorization'] = `token ${pat}`;
     }
+
+    const response = await fetchWithProxy(url, { headers });
+
+    if (!response.ok) {
+      logger.warn(`Failed to fetch commits for ${directoryPath}`, 'GitHubService', {
+        status: response.status,
+      });
+      throw new GitApiError(
+        `Failed to fetch commits for ${directoryPath}: ${response.status}`,
+        response.status,
+        'github'
+      );
+    }
+
+    const data: any = await response.json();
+    return data || [];
   }
 
   /**
@@ -1075,22 +1075,40 @@ export class GitHubService {
       // PERFORMANCE: Fetch commit history for all skill directories in parallel
       // This reduces total fetch time from O(n * latency) to O(max_latency)
       // Each directory gets its commit metadata concurrently
+      // Handle errors gracefully - if one skill fails, still return others
       const skillsWithMetadata = await Promise.all(
         skillDirs.map(async (dir: any) => {
-          const commits = await GitHubService.getDirectoryCommits(owner, repo, pat, dir.path, actualBranch);
-          const latestCommit = commits[0];
+          try {
+            const commits = await GitHubService.getDirectoryCommits(owner, repo, pat, dir.path, actualBranch);
+            const latestCommit = commits[0];
 
-          return {
-            path: dir.path,
-            name: dir.name,
-            skillFilePath: dir.skillFilePath,
-            directoryCommitSHA: latestCommit?.sha || '',
-            lastCommitMessage: latestCommit?.commit?.message || '',
-            lastCommitAuthor: latestCommit?.commit?.author?.name || '',
-            lastCommitDate: latestCommit?.commit?.author?.date
-              ? new Date(latestCommit.commit.author.date)
-              : null,
-          };
+            return {
+              path: dir.path,
+              name: dir.name,
+              skillFilePath: dir.skillFilePath,
+              directoryCommitSHA: latestCommit?.sha || '',
+              lastCommitMessage: latestCommit?.commit?.message || '',
+              lastCommitAuthor: latestCommit?.commit?.author?.name || '',
+              lastCommitDate: latestCommit?.commit?.author?.date
+                ? new Date(latestCommit.commit.author.date)
+                : null,
+            };
+          } catch (commitError) {
+            // Log warning but still return skill without commit metadata
+            logger.warn('Failed to fetch commits for skill directory, returning without metadata', 'GitHubService', {
+              dirPath: dir.path,
+              error: commitError instanceof Error ? commitError.message : commitError,
+            });
+            return {
+              path: dir.path,
+              name: dir.name,
+              skillFilePath: dir.skillFilePath,
+              directoryCommitSHA: '',
+              lastCommitMessage: '',
+              lastCommitAuthor: '',
+              lastCommitDate: null,
+            };
+          }
         })
       );
 

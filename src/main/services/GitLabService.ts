@@ -11,6 +11,7 @@ import { logger } from '../utils/Logger';
 import { retryWithBackoff } from '../utils/retry';
 import type { TreeItem, Commit, SkillMetadata } from './GitProvider';
 import { getProxyAgent } from '../utils/proxy';
+import { GitApiError } from '../utils/GitApiError';
 
 // HTTPS agent that ignores self-signed certificates for self-hosted GitLab instances
 const insecureAgent = new https.Agent({
@@ -308,6 +309,7 @@ export class GitLabService {
 
   /**
    * Get directory commit history
+   * @throws GitApiError on API failure with status code
    */
   static async getDirectoryCommits(
     owner: string,
@@ -317,36 +319,35 @@ export class GitLabService {
     branch: string,
     instanceUrl?: string
   ): Promise<Commit[]> {
-    try {
-      const apiBaseUrl = this.getApiBaseUrl(instanceUrl);
-      const projectId = this.getProjectId(owner, repo);
-      const url = `${apiBaseUrl}/projects/${projectId}/repository/commits?path=${encodeURIComponent(path)}&ref_name=${encodeURIComponent(branch)}&per_page=10`;
+    const apiBaseUrl = this.getApiBaseUrl(instanceUrl);
+    const projectId = this.getProjectId(owner, repo);
+    const url = `${apiBaseUrl}/projects/${projectId}/repository/commits?path=${encodeURIComponent(path)}&ref_name=${encodeURIComponent(branch)}&per_page=10`;
 
-      const response = await fetch(url, getFetchOptions(url, {
-        headers: {
-          'Private-Token': pat,
-          'User-Agent': 'skillsMN-App',
-        },
-      }));
+    const response = await fetch(url, getFetchOptions(url, {
+      headers: {
+        'Private-Token': pat,
+        'User-Agent': 'skillsMN-App',
+      },
+    }));
 
-      if (!response.ok) {
-        logger.warn(`Failed to fetch commits for ${path}`, 'GitLabService', {
-          status: response.status,
-        });
-        return [];
-      }
-
-      const data: any[] = await response.json();
-      return data.map(commit => ({
-        sha: commit.id,
-        message: commit.message || '',
-        author: commit.author_name || '',
-        date: new Date(commit.created_at),
-      }));
-    } catch (error) {
-      logger.error('Failed to get GitLab directory commits', 'GitLabService', error);
-      return [];
+    if (!response.ok) {
+      logger.warn(`Failed to fetch commits for ${path}`, 'GitLabService', {
+        status: response.status,
+      });
+      throw new GitApiError(
+        `Failed to fetch commits for ${path}: ${response.status}`,
+        response.status,
+        'gitlab'
+      );
     }
+
+    const data: any[] = await response.json();
+    return data.map(commit => ({
+      sha: commit.id,
+      message: commit.message || '',
+      author: commit.author_name || '',
+      date: new Date(commit.created_at),
+    }));
   }
 
   /**
@@ -364,27 +365,45 @@ export class GitLabService {
       const skillDirs = this.findSkillDirectories(tree);
 
       // Fetch commit history for each skill directory in parallel
+      // Handle errors gracefully - if one skill fails, still return others
       const skillsWithMetadata = await Promise.all(
         skillDirs.map(async (dir: any) => {
-          const commits = await this.getDirectoryCommits(
-            owner,
-            repo,
-            dir.path,
-            pat,
-            branch,
-            instanceUrl
-          );
-          const latestCommit = commits[0];
+          try {
+            const commits = await this.getDirectoryCommits(
+              owner,
+              repo,
+              dir.path,
+              pat,
+              branch,
+              instanceUrl
+            );
+            const latestCommit = commits[0];
 
-          return {
-            path: dir.path,
-            name: dir.name,
-            skillFilePath: dir.skillFilePath,
-            directoryCommitSHA: latestCommit?.sha || '',
-            lastCommitMessage: latestCommit?.message || '',
-            lastCommitAuthor: latestCommit?.author || '',
-            lastCommitDate: latestCommit?.date || null,
-          };
+            return {
+              path: dir.path,
+              name: dir.name,
+              skillFilePath: dir.skillFilePath,
+              directoryCommitSHA: latestCommit?.sha || '',
+              lastCommitMessage: latestCommit?.message || '',
+              lastCommitAuthor: latestCommit?.author || '',
+              lastCommitDate: latestCommit?.date || null,
+            };
+          } catch (commitError) {
+            // Log warning but still return skill without commit metadata
+            logger.warn('Failed to fetch commits for skill directory, returning without metadata', 'GitLabService', {
+              dirPath: dir.path,
+              error: commitError instanceof Error ? commitError.message : commitError,
+            });
+            return {
+              path: dir.path,
+              name: dir.name,
+              skillFilePath: dir.skillFilePath,
+              directoryCommitSHA: '',
+              lastCommitMessage: '',
+              lastCommitAuthor: '',
+              lastCommitDate: null,
+            };
+          }
         })
       );
 
