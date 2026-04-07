@@ -1042,13 +1042,25 @@ ${content}`;
       let remoteVersion: string | undefined;
       if (skill.version) {
         try {
-          const remoteContent = await GitHubService.getPrivateRepoSkillContent(
-            owner,
-            repoName,
-            `${sourceMetadata.skillPath}/${SKILL_FILE_NAME}`,
-            pat,
-            branch
-          );
+          let remoteContent: string;
+          if (provider === 'gitlab') {
+            remoteContent = await GitLabService.getSkillContent(
+              owner,
+              repoName,
+              `${sourceMetadata.skillPath}/${SKILL_FILE_NAME}`,
+              pat,
+              branch,
+              repo.instanceUrl
+            );
+          } else {
+            remoteContent = await GitHubService.getPrivateRepoSkillContent(
+              owner,
+              repoName,
+              `${sourceMetadata.skillPath}/${SKILL_FILE_NAME}`,
+              pat,
+              branch
+            );
+          }
           remoteVersion = this.extractVersionFromContent(remoteContent);
 
           if (remoteVersion) {
@@ -1082,14 +1094,26 @@ ${content}`;
           const localSkillPath = path.join(skill.path, SKILL_FILE_NAME);
           const localContent = await fs.promises.readFile(localSkillPath, 'utf-8');
 
-          // Fetch remote SKILL.md content
-          const remoteContent = await GitHubService.getPrivateRepoSkillContent(
-            owner,
-            repoName,
-            `${sourceMetadata.skillPath}/${SKILL_FILE_NAME}`,
-            pat,
-            branch
-          );
+          // Fetch remote SKILL.md content using appropriate provider
+          let remoteContent: string;
+          if (provider === 'gitlab') {
+            remoteContent = await GitLabService.getSkillContent(
+              owner,
+              repoName,
+              `${sourceMetadata.skillPath}/${SKILL_FILE_NAME}`,
+              pat,
+              branch,
+              repo.instanceUrl
+            );
+          } else {
+            remoteContent = await GitHubService.getPrivateRepoSkillContent(
+              owner,
+              repoName,
+              `${sourceMetadata.skillPath}/${SKILL_FILE_NAME}`,
+              pat,
+              branch
+            );
+          }
 
           // Compare contents (normalize line endings for comparison)
           const normalizedLocal = localContent.replace(/\r\n/g, '\n').trim();
@@ -1443,7 +1467,9 @@ ${content}`;
         pat,
         tempDownloadPath,
         repo.id,
-        repo.defaultBranch || 'main'
+        repo.defaultBranch || 'main',
+        repo.provider || 'github',
+        repo.instanceUrl
       );
 
       if (!downloadResult.success) {
@@ -1580,11 +1606,18 @@ ${content}`;
     pat: string,
     targetPath: string,
     sourceRepoId: string,
-    branch: string
+    branch: string,
+    provider: 'github' | 'gitlab' = 'github',
+    instanceUrl?: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      // Download directory files from GitHub
-      const files = await GitHubService.downloadPrivateDirectory(owner, repo, skillPath, pat, branch);
+      // Download directory files from appropriate provider
+      let files: Map<string, string>;
+      if (provider === 'gitlab') {
+        files = await GitLabService.downloadDirectory(owner, repo, skillPath, pat, branch, instanceUrl);
+      } else {
+        files = await GitHubService.downloadPrivateDirectory(owner, repo, skillPath, pat, branch);
+      }
 
       if (!files || files.size === 0) {
         return { success: false, error: 'No files found in skill directory' };
