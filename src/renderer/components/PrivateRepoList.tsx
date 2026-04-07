@@ -645,11 +645,11 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
                       className="text-sm font-semibold"
                       style={{ color: group.color }}
                     >
-                      {group.name}
+                      {group.name.startsWith('skillGroups.') || group.name.includes('.') ? t(group.name) : group.name}
                     </h3>
                     {group.description && (
                       <span className="text-xs text-gray-500">
-                        · {group.description}
+                        · {(group.description.startsWith('skillGroups.') || group.description.includes('.')) ? t(group.description) : group.description}
                       </span>
                     )}
                     <span className="text-xs text-gray-400">

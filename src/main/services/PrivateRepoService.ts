@@ -589,6 +589,16 @@ export class PrivateRepoService {
       const provider = repo.provider || 'github';
       const gitProvider = getGitProvider(provider);
 
+      logger.debug('Fetching skills from git provider', 'PrivateRepoService', {
+        repoId,
+        provider,
+        owner: repo.owner,
+        repo: repo.repo,
+        instanceUrl: repo.instanceUrl,
+        hasGetPrivateRepoSkills: !!(gitProvider as any).getPrivateRepoSkills,
+        hasGetSkills: !!(gitProvider as any).getSkills,
+      });
+
       const skills = await (gitProvider as any).getPrivateRepoSkills?.(
         repo.owner,
         repo.repo,
@@ -602,6 +612,12 @@ export class PrivateRepoService {
         repo.defaultBranch || 'main',
         repo.instanceUrl
       );
+
+      logger.debug('Raw skills fetched from provider', 'PrivateRepoService', {
+        repoId,
+        provider,
+        skillCount: skills?.length || 0,
+      });
 
       // PERFORMANCE: Fetch frontmatter for all skills in parallel
       // This populates description and tags fields

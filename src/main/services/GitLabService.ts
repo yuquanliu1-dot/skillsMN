@@ -157,7 +157,19 @@ export class GitLabService {
     try {
       const apiBaseUrl = this.getApiBaseUrl(instanceUrl);
       const projectId = this.getProjectId(owner, repo);
-      const url = `${apiBaseUrl}/projects/${projectId}/repository/tree?recursive=1&ref=${encodeURIComponent(branch)}`;
+      // Use pagination to get all items - GitLab returns 20 items per page by default
+      // Maximum per_page is 100 for GitLab API
+      const url = `${apiBaseUrl}/projects/${projectId}/repository/tree?recursive=1&ref=${encodeURIComponent(branch)}&per_page=100&page=1`;
+
+      logger.debug('Fetching GitLab repo tree', 'GitLabService', {
+        owner,
+        repo,
+        branch,
+        instanceUrl,
+        apiBaseUrl,
+        projectId,
+        url: url.substring(0, 120) + '...',
+      });
 
       const response = await fetch(url, getFetchOptions(url, {
         headers: {
@@ -172,11 +184,66 @@ export class GitLabService {
           logger.debug('GitLab repository tree not found (404) - repository may be empty or branch does not exist', 'GitLabService', { owner, repo, branch });
           return [];
         }
+        logger.warn('GitLab API returned error', 'GitLabService', {
+          owner,
+          repo,
+          branch,
+          status: response.status,
+          statusText: response.statusText,
+        });
         throw new Error(`Failed to fetch repository tree: ${response.status}`);
       }
 
       const data: any[] = await response.json();
-      return data.map(item => ({
+
+      // Check if there are more pages (GitLab returns 'x-total-pages' header)
+      const totalPages = parseInt(response.headers.get('x-total-pages') || '1', 10);
+      let allItems = [...data];
+
+      // Fetch remaining pages if needed
+      if (totalPages > 1) {
+        logger.debug('GitLab tree has multiple pages, fetching all', 'GitLabService', {
+          owner,
+          repo,
+          branch,
+          totalPages,
+          firstPageSize: data.length,
+        });
+
+        for (let page = 2; page <= totalPages; page++) {
+          const pageUrl = `${apiBaseUrl}/projects/${projectId}/repository/tree?recursive=1&ref=${encodeURIComponent(branch)}&per_page=100&page=${page}`;
+          const pageResponse = await fetch(pageUrl, getFetchOptions(pageUrl, {
+            headers: {
+              'Private-Token': pat,
+              'User-Agent': 'skillsMN-App',
+            },
+          }));
+
+          if (pageResponse.ok) {
+            const pageData: any[] = await pageResponse.json();
+            allItems = [...allItems, ...pageData];
+          } else {
+            logger.warn('Failed to fetch GitLab tree page', 'GitLabService', {
+              owner,
+              repo,
+              branch,
+              page,
+              status: pageResponse.status,
+            });
+          }
+        }
+      }
+
+      logger.debug('GitLab repo tree fetched successfully', 'GitLabService', {
+        owner,
+        repo,
+        branch,
+        totalItems: allItems.length,
+        totalPages,
+        samplePaths: allItems.slice(0, 10).map((item: any) => `${item.path} (${item.type})`),
+      });
+
+      return allItems.map(item => ({
         path: item.path,
         type: item.type === 'blob' ? 'blob' : 'tree',
         sha: item.id,
@@ -362,7 +429,22 @@ export class GitLabService {
   ): Promise<SkillMetadata[]> {
     try {
       const tree = await this.getRepoTree(owner, repo, pat, branch, instanceUrl);
+      logger.debug('GitLab repo tree fetched', 'GitLabService', {
+        owner,
+        repo,
+        branch,
+        instanceUrl,
+        treeItemCount: tree.length,
+        samplePaths: tree.slice(0, 10).map((item: any) => item.path),
+      });
+
       const skillDirs = this.findSkillDirectories(tree);
+      logger.debug('GitLab skill directories found', 'GitLabService', {
+        owner,
+        repo,
+        skillDirCount: skillDirs.length,
+        skillDirs: skillDirs.map((dir: any) => dir.path),
+      });
 
       // Fetch commit history for each skill directory in parallel
       // Handle errors gracefully - if one skill fails, still return others
