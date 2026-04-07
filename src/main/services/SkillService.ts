@@ -936,14 +936,17 @@ ${content}`;
       const provider = repo.provider || 'github';
 
       // Use the appropriate Git provider based on the repository's provider type
+      // Note: GitHub and GitLab have different parameter orders
+      // GitHub: (owner, repo, pat, directoryPath, branch)
+      // GitLab: (owner, repo, path, pat, branch, instanceUrl)
       let commits;
       try {
         if (provider === 'gitlab') {
           commits = await GitLabService.getDirectoryCommits(
             owner,
             repoName,
-            pat,
             sourceMetadata.skillPath,
+            pat,
             branch,
             repo.instanceUrl
           );
@@ -1694,8 +1697,8 @@ ${content}`;
         commits = await GitLabService.getDirectoryCommits(
           owner,
           repo,
-          pat,
           sourceMetadata.skillPath,
+          pat,
           branch,
           instanceUrl
         );
