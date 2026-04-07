@@ -385,28 +385,23 @@ export class SymlinkService {
   /**
    * Detect which AI agent tools are installed on the system
    * Checks if the config directory exists for each tool
-   * @returns Array of installed AgentTool objects with expanded paths
+   * @returns Array of installed AgentTool objects
    */
   async detectInstalledTools(): Promise<AgentTool[]> {
     const installedTools: AgentTool[] = [];
 
     for (const tool of AGENT_TOOLS) {
-      const expandedConfigDir = this.expandTilde(tool.configDir);
+      const configDir = this.expandTilde(tool.configDir);
       try {
-        const exists = await fs.promises.access(expandedConfigDir, fs.constants.F_OK)
+        const exists = await fs.promises.access(configDir, fs.constants.F_OK)
           .then(() => true)
           .catch(() => false);
 
         if (exists) {
-          // Return tool with expanded paths for cross-platform compatibility
-          installedTools.push({
-            ...tool,
-            configDir: expandedConfigDir,
-            skillsDir: this.expandTilde(tool.skillsDir),
-          });
+          installedTools.push(tool);
           logger.debug(`Detected installed tool: ${tool.name}`, 'SymlinkService', {
             toolId: tool.id,
-            configDir: expandedConfigDir,
+            configDir,
           });
         }
       } catch (error) {
