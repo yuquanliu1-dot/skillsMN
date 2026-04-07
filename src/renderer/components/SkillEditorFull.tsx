@@ -1001,8 +1001,6 @@ export default function SkillEditorFull({
               onClick={async () => {
                 try {
                   // Use the app root directory (go up 2 levels from applicationSkillsDirectory)
-                  // applicationSkillsDirectory: D:\skillsMN\.claude\skills
-                  // appRootDir: D:\skillsMN
                   const skillsDir = appConfig?.applicationSkillsDirectory || '';
                   // Go up 2 levels to get the app root
                   const appRootDir = skillsDir
