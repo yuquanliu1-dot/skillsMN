@@ -13,6 +13,7 @@ import { logger } from '../utils/Logger';
 import { PathValidator } from './PathValidator';
 import { ConfigService } from './ConfigService';
 import { GitHubService } from './GitHubService';
+import { GitLabService } from './GitLabService';
 import { SkillInstaller } from './SkillInstaller';
 import { decryptPAT } from '../utils/encryption';
 import { SkillModel } from '../models/Skill';
@@ -931,14 +932,28 @@ ${content}`;
       const owner = repo.owner;
       const repoName = repo.repo;
       const branch = repo.defaultBranch || 'main';
+      const provider = repo.provider || 'github';
 
-      const commits = await GitHubService.getDirectoryCommits(
-        owner,
-        repoName,
-        pat,
-        sourceMetadata.skillPath,
-        branch
-      );
+      // Use the appropriate Git provider based on the repository's provider type
+      let commits;
+      if (provider === 'gitlab') {
+        commits = await GitLabService.getDirectoryCommits(
+          owner,
+          repoName,
+          pat,
+          sourceMetadata.skillPath,
+          branch,
+          repo.instanceUrl
+        );
+      } else {
+        commits = await GitHubService.getDirectoryCommits(
+          owner,
+          repoName,
+          pat,
+          sourceMetadata.skillPath,
+          branch
+        );
+      }
 
       if (!commits || commits.length === 0) {
         // Remote skill was deleted, convert to local source
@@ -1437,7 +1452,16 @@ ${content}`;
       await fs.promises.rename(tempDownloadPath, skillPath);
 
       // Update source metadata with new commit hash
-      await this.updateSourceMetadataWithCommit(skillPath, sourceMetadata, repo.owner, repo.repo, pat, repo.defaultBranch || 'main');
+      await this.updateSourceMetadataWithCommit(
+        skillPath,
+        sourceMetadata,
+        repo.owner,
+        repo.repo,
+        pat,
+        repo.defaultBranch || 'main',
+        repo.provider || 'github',
+        repo.instanceUrl
+      );
 
       // STEP 8: Clean up temporary backup
       logger.info('STEP 7: Cleaning up temporary files', 'SkillService', { tempBackupPath });
@@ -1566,6 +1590,7 @@ ${content}`;
 
   /**
    * Update source metadata file with latest commit hash
+   * Supports both GitHub and GitLab repositories
    */
   private async updateSourceMetadataWithCommit(
     skillPath: string,
@@ -1573,10 +1598,25 @@ ${content}`;
     owner: string,
     repo: string,
     pat: string,
-    branch: string
+    branch: string,
+    provider: string = 'github',
+    instanceUrl?: string
   ): Promise<void> {
     try {
-      const commits = await GitHubService.getDirectoryCommits(owner, repo, pat, sourceMetadata.skillPath, branch);
+      let commits;
+      if (provider === 'gitlab') {
+        commits = await GitLabService.getDirectoryCommits(
+          owner,
+          repo,
+          pat,
+          sourceMetadata.skillPath,
+          branch,
+          instanceUrl
+        );
+      } else {
+        commits = await GitHubService.getDirectoryCommits(owner, repo, pat, sourceMetadata.skillPath, branch);
+      }
+
       const latestCommitSHA = commits && commits.length > 0 ? commits[0].sha : undefined;
 
       const metadataPath = path.join(skillPath, SOURCE_METADATA_FILE);

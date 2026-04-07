@@ -84,15 +84,44 @@ export class SkillModel {
         const metadataContent = await fs.promises.readFile(metadataPath, 'utf-8');
         const parsedMetadata = JSON.parse(metadataContent);
 
+        logger.debug('Reading source metadata file', 'SkillModel', {
+          dirPath,
+          metadataPath,
+          rawContent: metadataContent.substring(0, 500), // First 500 chars to avoid huge logs
+        });
+
         if (validateSkillSource(parsedMetadata)) {
           sourceMetadata = parsedMetadata;
-          logger.debug('Source metadata loaded', 'SkillModel', { dirPath, type: sourceMetadata.type });
+          logger.info('Source metadata loaded successfully', 'SkillModel', {
+            dirPath,
+            type: sourceMetadata.type,
+            metadata: JSON.stringify(sourceMetadata)
+          });
         } else {
-          logger.warn('Invalid source metadata format', 'SkillModel', { dirPath });
+          // Log detailed validation failure reasons
+          const validationErrors: string[] = [];
+          if (parsedMetadata.type === 'private-repo') {
+            if (!parsedMetadata.repoId) validationErrors.push('missing repoId');
+            if (!parsedMetadata.repoPath) validationErrors.push('missing repoPath');
+            if (!parsedMetadata.skillPath) validationErrors.push('missing skillPath');
+            if (!parsedMetadata.installedAt) validationErrors.push('missing installedAt');
+            else if (isNaN(new Date(parsedMetadata.installedAt).getTime())) validationErrors.push('invalid installedAt');
+            if (parsedMetadata.commitHash && !/^[0-9a-f]{40}$/i.test(parsedMetadata.commitHash)) {
+              validationErrors.push('invalid commitHash format');
+            }
+          }
+          logger.warn('Invalid source metadata format', 'SkillModel', {
+            dirPath,
+            type: parsedMetadata.type,
+            validationErrors: validationErrors.length > 0 ? validationErrors : ['unknown validation failure'],
+            rawMetadata: JSON.stringify(parsedMetadata)
+          });
         }
       } catch (error) {
-        logger.warn('Failed to read source metadata', 'SkillModel', { dirPath, error });
+        logger.warn('Failed to read source metadata', 'SkillModel', { dirPath, metadataPath, error });
       }
+    } else {
+      logger.debug('No source metadata file found', 'SkillModel', { dirPath, metadataPath });
     }
 
     const skill: Skill = {

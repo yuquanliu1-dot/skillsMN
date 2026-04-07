@@ -1194,9 +1194,12 @@ export class PrivateRepoService {
 
       logger.info('Updated skill source metadata to private-repo', 'PrivateRepoService', {
         skillPath,
+        metadataPath,
         repoId,
         repoPath: `${repo.owner}/${repo.repo}`,
         skillDirName,
+        commitSha: commitSha || 'undefined',
+        writtenMetadata: JSON.stringify(newSourceMetadata),
       });
 
       return { success: true };
