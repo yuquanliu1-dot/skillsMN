@@ -22,7 +22,7 @@ interface SkillListProps {
   onOpenFolder?: (skill: Skill) => void;
   selectedSkillPath?: string | null;
   skillUpdates?: Record<string, VersionComparison>;
-  onSkillUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
+  onSkillUpdate?: (skill: Skill) => Promise<void>;
   onNavigateToSettings?: () => void;
   onTagAssigned?: () => void;
   onRefresh?: () => Promise<void>;
@@ -207,12 +207,12 @@ export default function SkillList({
     setSearchQuery(query);
   }, []);
 
-  const handleSkillUpdate = useCallback(async (skill: Skill, createBackup: boolean): Promise<void> => {
+  const handleSkillUpdate = useCallback(async (skill: Skill): Promise<void> => {
     if (onSkillUpdate) {
-      await onSkillUpdate(skill, createBackup);
+      await onSkillUpdate(skill);
     } else {
       // Default implementation using IPC
-      await ipcClient.updateSkillFromSource(skill.path, createBackup);
+      await ipcClient.updateSkillFromSource(skill.path);
     }
   }, [onSkillUpdate]);
 

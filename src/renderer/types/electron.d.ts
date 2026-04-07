@@ -57,8 +57,7 @@ export interface ElectronAPI {
     skills: Skill[]
   ) => Promise<IPCResponse<Record<string, VersionComparison>>>;
   updateSkillFromSource: (
-    skillPath: string,
-    createBackup?: boolean
+    skillPath: string
   ) => Promise<IPCResponse<{ newPath: string }>>;
   getSkillFileTree: (skillPath: string) => Promise<IPCResponse<SkillFileTreeNode>>;
   readSkillFile: (filePath: string) => Promise<IPCResponse<SkillFileContent>>;

@@ -78,6 +78,21 @@ export class SkillService {
   }
 
   /**
+   * Get temporary download path for skill updates
+   * Uses skills-tmp directory (sibling to skills directory) to avoid polluting skills directory
+   * @param skillPath - Original skill path
+   * @returns Temporary download path
+   */
+  private async getTempDownloadPath(skillPath: string): Promise<string> {
+    const config = await this.getConfig();
+    const skillsDir = this.getApplicationSkillsDirectory(config);
+    const skillsParent = path.dirname(skillsDir);
+    const tempDir = path.join(skillsParent, 'skills-tmp');
+    const skillName = path.basename(skillPath);
+    return path.join(tempDir, `${Date.now()}-${skillName}`);
+  }
+
+  /**
    * List all skills from application directory only
    * Scans the centralized application directory for skill.md files
    * Uses frontmatter caching for improved performance
@@ -1394,22 +1409,14 @@ ${content}`;
    * }
    */
   async updatePrivateSkill(
-    skillPath: string,
-    createBackup: boolean = true
+    skillPath: string
   ): Promise<{ success: boolean; newPath?: string; error?: string }> {
-    logger.info('Updating skill from private repository', 'SkillService', {
-      skillPath,
-      createBackup,
-    });
+    logger.info('Updating skill from private repository', 'SkillService', { skillPath });
 
-    const timestamp = Date.now();
-    const tempBackupPath = `${skillPath}-temp-backup-${timestamp}`;
-    const tempDownloadPath = `${skillPath}-temp-download-${timestamp}`;
-    let permanentBackupPath: string | null = null;
+    const tempDownloadPath = await this.getTempDownloadPath(skillPath);
 
     try {
       // STEP 0: Concurrent edit protection - check if skill was recently modified
-      // This prevents overwriting user's local edits (including auto-saved content)
       const existingSkillFile = path.join(skillPath, SKILL_FILE_NAME);
       if (fs.existsSync(existingSkillFile)) {
         const stats = await fs.promises.stat(existingSkillFile);
@@ -1429,10 +1436,9 @@ ${content}`;
         }
       }
 
-      // STEP 1: Get current skill metadata FIRST (before any backup)
+      // STEP 1: Get current skill metadata
       const skill = await this.getSkill(skillPath);
 
-      // Check if skill has source metadata
       if (!skill.metadata.sourceMetadata || skill.metadata.sourceMetadata.type !== 'private-repo') {
         throw new Error('Skill was not installed from a private repository');
       }
@@ -1440,7 +1446,6 @@ ${content}`;
       const sourceMetadata = skill.metadata.sourceMetadata;
       const repoId = sourceMetadata.repoId;
 
-      // Get repository configuration
       const configService = await this.getConfigService();
       const repo = await configService.getPrivateRepo(repoId);
 
@@ -1448,16 +1453,10 @@ ${content}`;
         throw new Error('Source repository not found');
       }
 
-      // Decrypt PAT
       const pat = decryptPAT(repo.patEncrypted);
 
-      // STEP 2: Create temporary backup (protect original data)
-      logger.info('STEP 1: Creating temporary backup', 'SkillService', { tempBackupPath });
-      await fs.promises.mkdir(tempBackupPath, { recursive: true });
-      await fs.promises.cp(skillPath, tempBackupPath, { recursive: true });
-
-      // STEP 3: Download new skill to TEMPORARY location (NOT overwriting original)
-      logger.info('STEP 2: Downloading new skill to temporary location', 'SkillService', {
+      // STEP 2: Download new skill to temporary location
+      logger.info('STEP 1: Downloading new skill to temporary location', 'SkillService', {
         tempDownloadPath,
         repo: `${repo.owner}/${repo.repo}`,
         skillPath: sourceMetadata.skillPath,
@@ -1476,61 +1475,35 @@ ${content}`;
       );
 
       if (!downloadResult.success) {
-        // Download failed - original skill is UNTOUCHED, no need to restore
         logger.warn('Download failed, original skill is untouched', 'SkillService', {
           skillPath,
           error: downloadResult.error,
         });
-
-        // Clean up temp files (backup and partial download)
-        await this.safeRemove(tempBackupPath);
         await this.safeRemove(tempDownloadPath);
-
         return {
           success: false,
           error: downloadResult.error || 'Failed to download skill from repository',
         };
       }
 
-      // STEP 4: Verify new skill is valid (has SKILL.md)
-      logger.info('STEP 3: Verifying downloaded skill', 'SkillService', { tempDownloadPath });
+      // STEP 3: Verify new skill is valid
+      logger.info('STEP 2: Verifying downloaded skill', 'SkillService', { tempDownloadPath });
       const skillFile = path.join(tempDownloadPath, SKILL_FILE_NAME);
       if (!fs.existsSync(skillFile)) {
-        // Verification failed - original skill is UNTOUCHED
-        logger.warn('Downloaded skill is invalid (missing SKILL.md), original skill is untouched', 'SkillService', {
-          tempDownloadPath,
-        });
-
-        await this.safeRemove(tempBackupPath);
+        logger.warn('Downloaded skill is invalid (missing SKILL.md)', 'SkillService', { tempDownloadPath });
         await this.safeRemove(tempDownloadPath);
-
         return {
           success: false,
           error: 'Downloaded skill is invalid: missing SKILL.md file',
         };
       }
 
-      // STEP 5: Create permanent backup if requested
-      if (createBackup) {
-        const backupTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        permanentBackupPath = `${skillPath}-backup-${backupTimestamp}`;
-
-        logger.info('STEP 4: Creating permanent backup', 'SkillService', { permanentBackupPath });
-        await fs.promises.mkdir(permanentBackupPath, { recursive: true });
-        await fs.promises.cp(tempBackupPath, permanentBackupPath, { recursive: true });
-
-        logger.info('Permanent backup created', 'SkillService', { permanentBackupPath });
-      }
-
-      // STEP 6: Remove original skill directory
-      logger.info('STEP 5: Removing original skill', 'SkillService', { skillPath });
-      await fs.promises.rm(skillPath, { recursive: true });
-
-      // STEP 7: Move new skill to target location
-      logger.info('STEP 6: Moving new skill to target location', 'SkillService', {
+      // STEP 4: Remove original and move new skill
+      logger.info('STEP 3: Removing original skill and moving new skill', 'SkillService', {
+        skillPath,
         from: tempDownloadPath,
-        to: skillPath,
       });
+      await fs.promises.rm(skillPath, { recursive: true, force: true });
       await fs.promises.rename(tempDownloadPath, skillPath);
 
       // Update source metadata with new commit hash
@@ -1545,14 +1518,7 @@ ${content}`;
         repo.instanceUrl
       );
 
-      // STEP 8: Clean up temporary backup
-      logger.info('STEP 7: Cleaning up temporary files', 'SkillService', { tempBackupPath });
-      await this.safeRemove(tempBackupPath);
-
-      logger.info('Skill updated successfully', 'SkillService', {
-        skillPath,
-        permanentBackupPath,
-      });
+      logger.info('Skill updated successfully', 'SkillService', { skillPath });
 
       return {
         success: true,
@@ -1560,37 +1526,7 @@ ${content}`;
       };
     } catch (error) {
       logger.error('Failed to update skill', 'SkillService', error);
-
-      // Check if original skill still exists
-      const originalExists = fs.existsSync(skillPath);
-
-      if (!originalExists && fs.existsSync(tempBackupPath)) {
-        // Original was deleted but backup exists - restore it
-        logger.warn('Original skill was deleted, restoring from backup', 'SkillService', {
-          skillPath,
-          tempBackupPath,
-        });
-
-        try {
-          await fs.promises.mkdir(skillPath, { recursive: true });
-          await fs.promises.cp(tempBackupPath, skillPath, { recursive: true });
-          logger.info('Successfully restored skill from backup', 'SkillService', { skillPath });
-        } catch (restoreError) {
-          logger.error('CRITICAL: Failed to restore from backup', 'SkillService', {
-            tempBackupPath,
-            restoreError,
-          });
-          return {
-            success: false,
-            error: `${error instanceof Error ? error.message : 'Unknown error'}. CRITICAL: Restoration failed. Backup may exist at: ${tempBackupPath}`,
-          };
-        }
-      }
-
-      // Clean up all temp files
-      await this.safeRemove(tempBackupPath);
       await this.safeRemove(tempDownloadPath);
-
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -1741,22 +1677,14 @@ ${content}`;
    * @returns Object with success status, new path if successful, or error message
    */
   async updateRegistrySkill(
-    skillPath: string,
-    createBackup: boolean = true
+    skillPath: string
   ): Promise<{ success: boolean; newPath?: string; error?: string }> {
-    logger.info('Updating skill from registry', 'SkillService', {
-      skillPath,
-      createBackup,
-    });
+    logger.info('Updating skill from registry', 'SkillService', { skillPath });
 
-    const timestamp = Date.now();
-    const tempBackupPath = `${skillPath}-temp-backup-${timestamp}`;
-    const tempDownloadPath = `${skillPath}-temp-download-${timestamp}`;
-    let permanentBackupPath: string | null = null;
+    const tempDownloadPath = await this.getTempDownloadPath(skillPath);
 
     try {
       // STEP 0: Concurrent edit protection - check if skill was recently modified
-      // This prevents overwriting user's local edits (including auto-saved content)
       const existingSkillFile = path.join(skillPath, SKILL_FILE_NAME);
       if (fs.existsSync(existingSkillFile)) {
         const stats = await fs.promises.stat(existingSkillFile);
@@ -1776,10 +1704,9 @@ ${content}`;
         }
       }
 
-      // STEP 1: Get current skill metadata FIRST (before any backup)
+      // STEP 1: Get current skill metadata
       const skill = await this.getSkill(skillPath);
 
-      // Check if skill has source metadata
       if (!skill.metadata.sourceMetadata || skill.metadata.sourceMetadata.type !== 'registry') {
         throw new Error('Skill was not installed from the registry');
       }
@@ -1791,13 +1718,8 @@ ${content}`;
         throw new Error(`Invalid source format: ${sourceMetadata.source}`);
       }
 
-      // STEP 2: Create temporary backup (protect original data)
-      logger.info('STEP 1: Creating temporary backup', 'SkillService', { tempBackupPath });
-      await fs.promises.mkdir(tempBackupPath, { recursive: true });
-      await fs.promises.cp(skillPath, tempBackupPath, { recursive: true });
-
-      // STEP 3: Download new skill to TEMPORARY location (NOT overwriting original)
-      logger.info('STEP 2: Downloading new skill from registry to temporary location', 'SkillService', {
+      // STEP 2: Download new skill to temporary location
+      logger.info('STEP 1: Downloading new skill from registry to temporary location', 'SkillService', {
         tempDownloadPath,
         source: `${owner}/${repo}`,
         skillId: sourceMetadata.skillId,
@@ -1812,74 +1734,41 @@ ${content}`;
       );
 
       if (!downloadResult.success) {
-        // Download failed - original skill is UNTOUCHED, no need to restore
         logger.warn('Download from registry failed, original skill is untouched', 'SkillService', {
           skillPath,
           error: downloadResult.error,
         });
-
-        // Clean up temp files
-        await this.safeRemove(tempBackupPath);
         await this.safeRemove(tempDownloadPath);
-
         return {
           success: false,
           error: downloadResult.error || 'Failed to download skill from registry',
         };
       }
 
-      // STEP 4: Verify new skill is valid (has SKILL.md)
-      logger.info('STEP 3: Verifying downloaded skill', 'SkillService', { tempDownloadPath });
+      // STEP 3: Verify new skill is valid
+      logger.info('STEP 2: Verifying downloaded skill', 'SkillService', { tempDownloadPath });
       const skillFile = path.join(tempDownloadPath, SKILL_FILE_NAME);
       if (!fs.existsSync(skillFile)) {
-        // Verification failed - original skill is UNTOUCHED
-        logger.warn('Downloaded skill is invalid (missing SKILL.md), original skill is untouched', 'SkillService', {
-          tempDownloadPath,
-        });
-
-        await this.safeRemove(tempBackupPath);
+        logger.warn('Downloaded skill is invalid (missing SKILL.md)', 'SkillService', { tempDownloadPath });
         await this.safeRemove(tempDownloadPath);
-
         return {
           success: false,
           error: 'Downloaded skill is invalid: missing SKILL.md file',
         };
       }
 
-      // STEP 5: Create permanent backup if requested
-      if (createBackup) {
-        const backupTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        permanentBackupPath = `${skillPath}-backup-${backupTimestamp}`;
-
-        logger.info('STEP 4: Creating permanent backup', 'SkillService', { permanentBackupPath });
-        await fs.promises.mkdir(permanentBackupPath, { recursive: true });
-        await fs.promises.cp(tempBackupPath, permanentBackupPath, { recursive: true });
-
-        logger.info('Permanent backup created', 'SkillService', { permanentBackupPath });
-      }
-
-      // STEP 6: Remove original skill directory
-      logger.info('STEP 5: Removing original skill', 'SkillService', { skillPath });
-      await fs.promises.rm(skillPath, { recursive: true });
-
-      // STEP 7: Move new skill to target location
-      logger.info('STEP 6: Moving new skill to target location', 'SkillService', {
+      // STEP 4: Remove original and move new skill
+      logger.info('STEP 3: Removing original skill and moving new skill', 'SkillService', {
+        skillPath,
         from: tempDownloadPath,
-        to: skillPath,
       });
+      await fs.promises.rm(skillPath, { recursive: true, force: true });
       await fs.promises.rename(tempDownloadPath, skillPath);
 
-      // STEP 8: Update source metadata with new commit hash
+      // Update source metadata with new commit hash
       await this.updateRegistrySourceMetadata(skillPath, sourceMetadata, owner, repo);
 
-      // STEP 9: Clean up temporary backup
-      logger.info('STEP 7: Cleaning up temporary files', 'SkillService', { tempBackupPath });
-      await this.safeRemove(tempBackupPath);
-
-      logger.info('Registry skill updated successfully', 'SkillService', {
-        skillPath,
-        permanentBackupPath,
-      });
+      logger.info('Registry skill updated successfully', 'SkillService', { skillPath });
 
       return {
         success: true,
@@ -1887,37 +1776,7 @@ ${content}`;
       };
     } catch (error) {
       logger.error('Failed to update registry skill', 'SkillService', error);
-
-      // Check if original skill still exists
-      const originalExists = fs.existsSync(skillPath);
-
-      if (!originalExists && fs.existsSync(tempBackupPath)) {
-        // Original was deleted but backup exists - restore it
-        logger.warn('Original skill was deleted, restoring from backup', 'SkillService', {
-          skillPath,
-          tempBackupPath,
-        });
-
-        try {
-          await fs.promises.mkdir(skillPath, { recursive: true });
-          await fs.promises.cp(tempBackupPath, skillPath, { recursive: true });
-          logger.info('Successfully restored skill from backup', 'SkillService', { skillPath });
-        } catch (restoreError) {
-          logger.error('CRITICAL: Failed to restore from backup', 'SkillService', {
-            tempBackupPath,
-            restoreError,
-          });
-          return {
-            success: false,
-            error: `${error instanceof Error ? error.message : 'Unknown error'}. CRITICAL: Restoration failed. Backup may exist at: ${tempBackupPath}`,
-          };
-        }
-      }
-
-      // Clean up all temp files
-      await this.safeRemove(tempBackupPath);
       await this.safeRemove(tempDownloadPath);
-
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

@@ -357,9 +357,9 @@ export default function App(): JSX.Element {
   /**
    * Handle update skill
    */
-  const handleUpdateSkill = async (skill: Skill, createBackup: boolean): Promise<void> => {
+  const handleUpdateSkill = async (skill: Skill): Promise<void> => {
     try {
-      const result = await ipcClient.updateSkillFromSource(skill.path, createBackup);
+      const result = await ipcClient.updateSkillFromSource(skill.path);
 
       // Refresh skill list to reflect the update
       const updatedSkills = await loadSkills();
@@ -369,8 +369,7 @@ export default function App(): JSX.Element {
       await checkForUpdates(updatedSkills);
 
       // Show success notification
-      const skillName = skill.name + (createBackup ? ' (backup created)' : '');
-      showToast(`Skill "${skillName}" updated successfully`, 'success');
+      showToast(`Skill "${skill.name}" updated successfully`, 'success');
 
       console.log('Skill updated successfully:', skill.name, 'New path:', result.newPath);
     } catch (error: any) {

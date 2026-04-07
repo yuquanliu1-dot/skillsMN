@@ -21,7 +21,7 @@ interface SkillCardProps {
   onSelect?: (skill: Skill) => void;
   isSelected?: boolean;
   versionStatus?: VersionComparison;
-  onUpdate?: (skill: Skill, createBackup: boolean) => Promise<void>;
+  onUpdate?: (skill: Skill) => Promise<void>;
   onTagAssigned?: () => void;
   onNavigateToSettings?: () => void;
 }
@@ -42,7 +42,6 @@ export default function SkillCard({
 }: SkillCardProps): JSX.Element {
   const { t } = useTranslation();
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
-  const [createBackup, setCreateBackup] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<'idle' | 'updating' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isTruncated, setIsTruncated] = useState(false);
@@ -120,7 +119,7 @@ export default function SkillCard({
     setErrorMessage(null);
 
     try {
-      await onUpdate(skill, createBackup);
+      await onUpdate(skill);
       setUpdateProgress('success');
       setShowUpdateDialog(false);
 
@@ -455,20 +454,6 @@ export default function SkillCard({
                 </div>
               )}
 
-              <label className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={createBackup}
-                  onChange={(e) => setCreateBackup(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 mt-0.5"
-                />
-                <div className="flex-1">
-                  <div className="text-slate-900 dark:text-slate-100 font-medium">{t('skillCard.createBackup')}</div>
-                  <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                    {t('skillCard.backupDescription')}
-                  </div>
-                </div>
-              </label>
             </div>
 
             <div className="border-t border-slate-200 dark:border-slate-700 p-4 flex gap-2 justify-end">

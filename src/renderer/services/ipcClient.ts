@@ -112,11 +112,11 @@ export const ipcClient = {
     return response.data!;
   },
 
-  async updateSkillFromSource(skillPath: string, createBackup: boolean = true): Promise<{ newPath: string }> {
+  async updateSkillFromSource(skillPath: string): Promise<{ newPath: string }> {
     if (!isElectron()) {
       throw new Error('Cannot update skill in browser mode');
     }
-    const response = await window.electronAPI.updateSkillFromSource(skillPath, createBackup);
+    const response = await window.electronAPI.updateSkillFromSource(skillPath);
     if (!response.success) {
       throw new Error(response.error?.message || 'Unknown error');
     }

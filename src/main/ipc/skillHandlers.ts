@@ -224,7 +224,7 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
   // Handler for skill:update-skill
   ipcMain.handle(
     IPC_CHANNELS.SKILL_UPDATE_SKILL,
-    async (_event, { skillPath, createBackup }: { skillPath: string; createBackup: boolean }): Promise<IPCResponse<{ newPath: string }>> => {
+    async (_event, { skillPath }: { skillPath: string }): Promise<IPCResponse<{ newPath: string }>> => {
       try {
         logger.debug(`Updating skill: ${skillPath}`, 'SkillHandlers');
 
@@ -238,7 +238,7 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
 
         // Update based on source type
         if (skill.sourceMetadata.type === 'registry') {
-          const result = await skillService!.updateRegistrySkill(skillPath, createBackup);
+          const result = await skillService!.updateRegistrySkill(skillPath);
           if (!result.success) {
             throw new Error(result.error || 'Update failed');
           }
@@ -246,7 +246,7 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
           notifySkillsRefresh();
           return { success: true, data: { newPath: result.newPath || skillPath } };
         } else if (skill.sourceMetadata.type === 'private-repo') {
-          const result = await skillService!.updatePrivateSkill(skillPath, createBackup);
+          const result = await skillService!.updatePrivateSkill(skillPath);
           if (!result.success) {
             throw new Error(result.error || 'Update failed');
           }

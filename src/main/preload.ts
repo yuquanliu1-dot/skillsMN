@@ -94,10 +94,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   updateSkillFromSource: (
-    skillPath: string,
-    createBackup: boolean = true
+    skillPath: string
   ): Promise<IPCResponse<{ newPath: string }>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_UPDATE_SKILL, { skillPath, createBackup });
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_UPDATE_SKILL, { skillPath });
   },
 
   getSkillFileTree: (skillPath: string): Promise<IPCResponse<SkillFileTreeNode>> => {
