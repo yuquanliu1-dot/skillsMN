@@ -53,6 +53,10 @@ type ClaudeAgentSDK = {
 let sdkModule: ClaudeAgentSDK | null = null;
 let currentConfig: AIConfiguration | null = null;
 
+// Tool permissions memory - persisted across sessions
+let rememberedAllowedTools: string[] = [];
+let rememberedDisallowedTools: string[] = [];
+
 // ============================================================================
 // Session Management
 // ============================================================================
@@ -310,7 +314,14 @@ export class AIService {
         logger.info('Using custom base URL', 'AIService', { hasCustomBaseUrl: true });
       }
 
-      logger.info('AI service initialized', 'AIService');
+      // Load remembered tool permissions from config
+      rememberedAllowedTools = config.allowedTools || [];
+      rememberedDisallowedTools = config.disallowedTools || [];
+
+      logger.info('AI service initialized', 'AIService', {
+        allowedToolsCount: rememberedAllowedTools.length,
+        disallowedToolsCount: rememberedDisallowedTools.length,
+      });
     } catch (error) {
       logger.error('Failed to initialize AI service', 'AIService', error);
       throw new Error('Failed to initialize AI service. Please check your API key.');
@@ -339,6 +350,75 @@ export class AIService {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Save tool permissions to configuration
+   * This persists the user's "remember my choice" selections
+   */
+  static async saveToolPermissions(
+    configService: any,
+    allowedTools: string[],
+    disallowedTools: string[]
+  ): Promise<void> {
+    try {
+      if (!currentConfig) {
+        logger.warn('Cannot save tool permissions: no current config', 'AIService');
+        return;
+      }
+
+      // Update config with new tool permissions
+      const updatedConfig: AIConfiguration = {
+        ...currentConfig,
+        allowedTools: [...allowedTools],
+        disallowedTools: [...disallowedTools],
+      };
+
+      // Save through ConfigService
+      await configService.saveAIConfig(updatedConfig);
+
+      // Update local cache
+      rememberedAllowedTools = [...allowedTools];
+      rememberedDisallowedTools = [...disallowedTools];
+
+      logger.info('Tool permissions saved', 'AIService', {
+        allowedCount: allowedTools.length,
+        disallowedCount: disallowedTools.length,
+      });
+    } catch (error) {
+      logger.error('Failed to save tool permissions', 'AIService', error);
+      // Don't throw - permission saving should not block the AI session
+    }
+  }
+
+  /**
+   * Add a tool permission to memory (immediate effect, saves later)
+   * This is called when user selects "remember my choice"
+   */
+  static addToolPermission(toolEntry: string, allowed: boolean): void {
+    if (allowed) {
+      if (!rememberedAllowedTools.includes(toolEntry)) {
+        rememberedAllowedTools.push(toolEntry);
+      }
+    } else {
+      if (!rememberedDisallowedTools.includes(toolEntry)) {
+        rememberedDisallowedTools.push(toolEntry);
+      }
+    }
+  }
+
+  /**
+   * Get current remembered tool permissions
+   * Used for persisting to configuration
+   */
+  static getRememberedToolPermissions(): {
+    allowedTools: string[];
+    disallowedTools: string[];
+  } {
+    return {
+      allowedTools: [...rememberedAllowedTools],
+      disallowedTools: [...rememberedDisallowedTools],
+    };
   }
 
   /**
@@ -518,8 +598,12 @@ export class AIService {
       }
 
       // Build allowed/disallowed tools lists
-      const allowedTools: string[] = ['Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill', 'NotebookEdit', 'TaskOutput', 'AskUserQuestion'];
-      const disallowedTools: string[] = [];
+      // Start with default tools and add any remembered permissions
+      const allowedTools: string[] = [
+        'Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill', 'NotebookEdit', 'TaskOutput', 'AskUserQuestion',
+        ...rememberedAllowedTools,
+      ];
+      const disallowedTools: string[] = [...rememberedDisallowedTools];
 
       const execOptions = AIService.getExecutableOptions();
 
@@ -623,6 +707,8 @@ export class AIService {
           // Add to allowed list if remember is set
           if (decision.rememberEntry && !allowedTools.includes(decision.rememberEntry)) {
             allowedTools.push(decision.rememberEntry);
+            // Also update global memory for persistence
+            AIService.addToolPermission(decision.rememberEntry, true);
           }
           return { behavior: 'allow' as const, updatedInput: decision.updatedInput ?? input };
         }

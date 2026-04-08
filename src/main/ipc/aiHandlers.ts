@@ -161,9 +161,36 @@ export function registerAIHandlers(): void {
       { requestId, decision }: { requestId: string; decision: PermissionDecision }
     ) => {
       try {
-        logger.debug('Resolving permission request', 'AIHandlers', { requestId, allow: decision.allow });
+        logger.debug('Resolving permission request', 'AIHandlers', {
+          requestId,
+          allow: decision.allow,
+          rememberEntry: decision.rememberEntry
+        });
 
         const resolved = AIService.resolvePermission(requestId, decision);
+
+        // If user chose to remember the permission, save it to config
+        if (resolved && decision.rememberEntry && decision.allow) {
+          try {
+            const configService = getConfigService();
+            if (configService) {
+              // Get current permissions from AIService
+              const { allowedTools, disallowedTools } = AIService.getRememberedToolPermissions();
+
+              // Save to config asynchronously (don't block the response)
+              configService.saveAIConfig({
+                ...(await configService.load()).ai,
+                allowedTools,
+                disallowedTools,
+              }).catch((err) => {
+                logger.error('Failed to save tool permissions', 'AIHandlers', err);
+                // Don't throw - permission saving failure should not affect the AI session
+              });
+            }
+          } catch (err) {
+            logger.error('Failed to access config service for permission saving', 'AIHandlers', err);
+          }
+        }
 
         return { success: resolved };
       } catch (error) {

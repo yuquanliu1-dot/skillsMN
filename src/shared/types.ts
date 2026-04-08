@@ -336,6 +336,10 @@ export interface AIConfigSection {
   maxRetries: number;
   /** Custom API base URL (optional) */
   baseUrl?: string;
+  /** Allowed tools - tool permissions that user has chosen to remember */
+  allowedTools?: string[];
+  /** Disallowed tools - tool permissions that user has chosen to remember and deny */
+  disallowedTools?: string[];
 }
 
 /**
