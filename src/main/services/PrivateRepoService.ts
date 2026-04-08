@@ -625,7 +625,15 @@ export class PrivateRepoService {
         skills.map(async (skill: any) => {
           try {
             // Fetch SKILL.md content
+            // GitHub uses getPrivateRepoSkillContent, GitLab uses getSkillContent
             const skillContent = await (gitProvider as any).getPrivateRepoSkillContent?.(
+              repo.owner,
+              repo.repo,
+              skill.skillFilePath || `${skill.path}/SKILL.md`,
+              pat,
+              repo.defaultBranch || 'main',
+              repo.instanceUrl
+            ) || await (gitProvider as any).getSkillContent?.(
               repo.owner,
               repo.repo,
               skill.skillFilePath || `${skill.path}/SKILL.md`,
