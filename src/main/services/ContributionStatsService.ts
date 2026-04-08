@@ -118,7 +118,12 @@ export class ContributionStatsService {
     provider: 'github' | 'gitlab' = 'github',
     instanceUrl?: string,
     branch: string = 'main',
-    currentUserGitInfo?: { username?: string; email?: string }
+    currentUserGitInfo?: {
+      username?: string;
+      email?: string;
+      userId?: number;
+      instanceUrl?: string;
+    }
   ): Promise<RepoContributionStats> {
     if (!this.config) {
       await this.initialize();
@@ -295,6 +300,8 @@ export class ContributionStatsService {
       const userGitInfo = currentUserGitInfo || this.getCurrentUserGitInfo();
       const userLogin = userGitInfo?.username?.toLowerCase();
       const userEmail = userGitInfo?.email?.toLowerCase();
+      const userId = userGitInfo?.userId;
+      const userInstanceUrl = userGitInfo?.instanceUrl;
 
       if (userEmail || userLogin) {
         const currentUser = contributors.find(c => {
@@ -315,6 +322,12 @@ export class ContributionStatsService {
           if (userLogin && cEmail) {
             const noreplyEmail = `${userLogin}@users.noreply.github.com`;
             if (cEmail === noreplyEmail) return true;
+          }
+
+          // 5. GitLab noreply 邮箱匹配（{id}-{username}@users.noreply.{instanceUrl}）
+          if (userLogin && cEmail && userId && userInstanceUrl) {
+            const gitlabNoreplyEmail = `${userId}-${userLogin}@users.noreply.${userInstanceUrl}`;
+            if (cEmail === gitlabNoreplyEmail) return true;
           }
 
           return false;
@@ -525,21 +538,36 @@ export class ContributionStatsService {
   /**
    * 设置当前用户 Git 信息 (用于匹配贡献者)
    */
-  static async setCurrentUserGitInfo(username: string, email: string): Promise<void> {
+  static async setCurrentUserGitInfo(
+    username: string,
+    email: string,
+    userId?: number,
+    instanceUrl?: string
+  ): Promise<void> {
     if (!this.config) {
       await this.initialize();
     }
 
-    this.config!.currentUserGitInfo = { username, email };
+    this.config!.currentUserGitInfo = { username, email, userId, instanceUrl };
     await this.saveConfig();
 
-    logger.info('Set current user git info', 'ContributionStatsService', { username, email });
+    logger.info('Set current user git info', 'ContributionStatsService', {
+      username,
+      email,
+      userId,
+      instanceUrl,
+    });
   }
 
   /**
    * 获取当前用户 Git 信息
    */
-  static getCurrentUserGitInfo(): { username?: string; email?: string } | undefined {
+  static getCurrentUserGitInfo(): {
+    username?: string;
+    email?: string;
+    userId?: number;
+    instanceUrl?: string;
+  } | undefined {
     return this.config?.currentUserGitInfo;
   }
 
@@ -558,6 +586,7 @@ export class ContributionStatsService {
   ): Promise<{
     success: boolean;
     user?: {
+      id?: number;
       login: string;
       name: string | null;
       email: string | null;
@@ -585,12 +614,16 @@ export class ContributionStatsService {
       // 自动设置用户信息
       await this.setCurrentUserGitInfo(
         result.user.login,
-        result.user.email || ''
+        result.user.email || '',
+        result.user.id,
+        instanceUrl
       );
 
       logger.info('Auto-fetched and set user git info from PAT', 'ContributionStatsService', {
         login: result.user.login,
         email: result.user.email,
+        userId: result.user.id,
+        instanceUrl,
         provider,
       });
 

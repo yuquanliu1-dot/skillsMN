@@ -1262,6 +1262,8 @@ export interface ContributionStatsConfig {
   currentUserGitInfo?: {
     username?: string;
     email?: string;
+    userId?: number;
+    instanceUrl?: string;
   };
 }
 

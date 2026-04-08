@@ -25,6 +25,7 @@ import { getConfigService } from './configHandlers';
 import { SymlinkService } from '../services/SymlinkService';
 
 let skillService: SkillService | null = null;
+let globalPathValidator: PathValidator | null = null;
 
 /**
  * Send skills:refresh event to all renderer windows
@@ -67,6 +68,9 @@ function toIPCError(error: unknown): IPCError {
  * Initialize skill service and register IPC handlers
  */
 export function registerSkillHandlers(pathValidator: PathValidator, symlinkService: SymlinkService): void {
+  // Store pathValidator for use in handlers
+  globalPathValidator = pathValidator;
+
   // Initialize skill service
   skillService = new SkillService(pathValidator, symlinkService);
   logger.info('Skill service initialized', 'SkillHandlers');
@@ -169,14 +173,45 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
   ipcMain.handle(
     IPC_CHANNELS.SKILL_DELETE,
     async (_event, { path }: { path: string }): Promise<IPCResponse<void>> => {
+      const fileWatcher = getFileWatcher();
+      let appDir: string | undefined;
+
       try {
         logger.debug(`Deleting skill: ${path}`, 'SkillHandlers');
+
+        // Stop FileWatcher before deletion to prevent EBUSY errors on Windows
+        if (fileWatcher) {
+          appDir = globalPathValidator?.getApplicationDirectory();
+          if (appDir) {
+            await fileWatcher.stop();
+            logger.debug('Stopped FileWatcher before skill deletion', 'SkillHandlers');
+          }
+        }
+
+        // Delete the skill
         await skillService!.deleteSkill(path);
         logger.info(`Skill deleted: ${path}`, 'SkillHandlers');
+
+        // Restart FileWatcher after deletion
+        if (fileWatcher && appDir) {
+          await fileWatcher.start(appDir);
+          logger.debug('Restarted FileWatcher after skill deletion', 'SkillHandlers');
+        }
+
         // Notify all windows to refresh skills
         notifySkillsRefresh();
         return { success: true };
       } catch (error) {
+        // Ensure FileWatcher is restarted even on error
+        if (fileWatcher && appDir) {
+          try {
+            await fileWatcher.start(appDir);
+            logger.debug('Restarted FileWatcher after deletion error', 'SkillHandlers');
+          } catch (restartError) {
+            logger.error('Failed to restart FileWatcher after deletion error', 'SkillHandlers', restartError);
+          }
+        }
+
         logger.error('Failed to delete skill', 'SkillHandlers', error);
         return { success: false, error: toIPCError(error) };
       }
@@ -225,8 +260,20 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
   ipcMain.handle(
     IPC_CHANNELS.SKILL_UPDATE_SKILL,
     async (_event, { skillPath }: { skillPath: string }): Promise<IPCResponse<{ newPath: string }>> => {
+      const fileWatcher = getFileWatcher();
+      let appDir: string | undefined;
+
       try {
         logger.debug(`Updating skill: ${skillPath}`, 'SkillHandlers');
+
+        // Stop FileWatcher before update to prevent EBUSY errors on Windows
+        if (fileWatcher) {
+          appDir = globalPathValidator?.getApplicationDirectory();
+          if (appDir) {
+            await fileWatcher.stop();
+            logger.debug('Stopped FileWatcher before skill update', 'SkillHandlers');
+          }
+        }
 
         // Get skill to determine source type
         const skillData = await skillService!.getSkill(skillPath);
@@ -259,6 +306,16 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
       } catch (error) {
         logger.error('Failed to update skill', 'SkillHandlers', error);
         return { success: false, error: toIPCError(error) };
+      } finally {
+        // Restart FileWatcher after update (success or error)
+        if (fileWatcher && appDir) {
+          try {
+            await fileWatcher.start(appDir);
+            logger.debug('Restarted FileWatcher after skill update', 'SkillHandlers');
+          } catch (restartError) {
+            logger.error('Failed to restart FileWatcher after skill update', 'SkillHandlers', restartError);
+          }
+        }
       }
     }
   );

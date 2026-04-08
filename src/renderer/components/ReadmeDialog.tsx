@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkFrontmatter from 'remark-frontmatter';
+import rehypeSanitize from 'rehype-sanitize';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import type { Components } from 'react-markdown';
@@ -201,6 +202,7 @@ export default function ReadmeDialog({ repoId, repoName, onClose }: ReadmeDialog
                 <div className="prose prose-slate dark:prose-invert max-w-none">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkFrontmatter]}
+                    rehypePlugins={[rehypeSanitize]}
                     components={{
                       code: CodeBlock as Components['code'],
                       h1: ({ children }) => (

@@ -583,7 +583,6 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
         return { success: true, data: readme };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to fetch README';
-        logger.error('Failed to fetch repository README', 'PrivateRepoHandlers', error);
 
         let errorCode = 'README_FETCH_FAILED';
         let actionableMessage = errorMessage;
@@ -591,12 +590,18 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
         if (errorMessage.includes('Repository not found')) {
           errorCode = 'REPO_NOT_FOUND';
           actionableMessage = 'Repository not found. It may have been removed.';
+          logger.error('Failed to fetch repository README', 'PrivateRepoHandlers', error);
         } else if (errorMessage.includes('authentication failed') || errorMessage.includes('401')) {
           errorCode = 'AUTH_FAILED';
           actionableMessage = 'Authentication failed. Please check your PAT in Settings.';
+          logger.error('Failed to fetch repository README', 'PrivateRepoHandlers', error);
         } else if (errorMessage.includes('README.md not found')) {
           errorCode = 'README_NOT_FOUND';
           actionableMessage = 'This repository does not have a README.md file.';
+          // Log at info level - missing README is common and not an error
+          logger.info('Repository does not have a README.md file', 'PrivateRepoHandlers', { repoId });
+        } else {
+          logger.error('Failed to fetch repository README', 'PrivateRepoHandlers', error);
         }
 
         return {

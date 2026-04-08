@@ -1,0 +1,22 @@
+[
+  {"query": "帮我处理一下 GitHub 上的 issues，自动修复然后关闭", "should_trigger": true},
+  {"query": "go through all my open issues on github and fix them one by one", "should_trigger": true},
+  {"query": "清理一下项目里的 issue backlog，看看哪些能修", "should_trigger": true},
+  {"query": "系统化处理 github.com/yuquanliu1-dot/skillsMN 仓库的所有问题", "should_trigger": true},
+  {"query": "fixing issues", "should_trigger": true},
+  {"query": "processing GitHub issues from my repo", "should_trigger": true},
+  {"query": "handle my repository's issue queue", "should_trigger": true},
+  {"query": "关闭所有已修复的 issue", "should_trigger": true},
+  {"query": "我需要批量处理 GitHub issue，每个都要问我确认", "should_trigger": true},
+  {"query": "work through the issues in this repo systematically", "should_trigger": true},
+  {"query": "看看我仓库里有什么 open issues", "should_trigger": false},
+  {"query": "create a new github issue for this bug", "should_trigger": false},
+  {"query": "comment on issue #42 asking for more details", "should_trigger": false},
+  {"query": "checkout branch fix-issue-123", "should_trigger": false},
+  {"query": "what's the github api endpoint for listing issues?", "should_trigger": false},
+  {"query": "review the pull requests on my repo", "should_trigger": false},
+  {"query": "debug this function that's not working", "should_trigger": false},
+  {"query": "search for similar issues in the repo", "should_trigger": false},
+  {"query": "add labels to my github issues", "should_trigger": false},
+  {"query": "delete all my branches", "should_trigger": false}
+]

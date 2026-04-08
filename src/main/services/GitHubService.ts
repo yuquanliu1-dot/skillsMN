@@ -1710,6 +1710,7 @@ export class GitHubService {
   static async getCurrentUser(pat: string): Promise<{
     success: boolean;
     user?: {
+      id?: number;
       login: string;
       name: string | null;
       email: string | null;

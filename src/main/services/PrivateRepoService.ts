@@ -567,7 +567,17 @@ export class PrivateRepoService {
         throw new Error(`Git provider ${provider} does not support fetching README`);
       }
     } catch (error) {
-      logger.error('Failed to fetch repository README', 'PrivateRepoService', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Only log real errors, not missing README (which is common)
+      if (errorMessage.includes('README.md not found')) {
+        logger.info('Repository does not have a README.md file', 'PrivateRepoService', {
+          repoId,
+        });
+      } else {
+        logger.error('Failed to fetch repository README', 'PrivateRepoService', error);
+      }
+
       throw error;
     }
   }

@@ -970,6 +970,7 @@ export class GitLabService {
   ): Promise<{
     success: boolean;
     user?: {
+      id: number;
       login: string;
       name: string | null;
       email: string | null;
@@ -1011,6 +1012,7 @@ export class GitLabService {
       return {
         success: true,
         user: {
+          id: data.id,
           login: data.username,
           name: data.name || null,
           email: data.email || null,

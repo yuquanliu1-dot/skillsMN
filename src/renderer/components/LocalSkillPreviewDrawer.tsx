@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkFrontmatter from 'remark-frontmatter';
+import rehypeSanitize from 'rehype-sanitize';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import type { Components } from 'react-markdown';
@@ -311,6 +312,7 @@ export default function LocalSkillPreviewDrawer({
               <div className="px-8 py-6">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm, remarkFrontmatter]}
+                  rehypePlugins={[rehypeSanitize]}
                   components={markdownComponents}
                 >
                   {content}
