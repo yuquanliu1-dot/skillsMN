@@ -71,6 +71,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to force refresh
   const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
   const [showReadmeDialog, setShowReadmeDialog] = useState(false);
+  const [repoReadmeAvailable, setRepoReadmeAvailable] = useState<Map<string, boolean>>(new Map()); // Track README availability per repo
 
   // Load skill groups
   const loadSkillGroups = useCallback(async () => {
@@ -287,6 +288,15 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
       const response = await window.electronAPI.getPrivateRepoSkills(repoId);
       if (response.success && response.data) {
         setSkills(response.data);
+
+        // Check if README exists (don't wait for it, do it in background)
+        window.electronAPI.getRepoReadme(repoId)
+          .then((readmeResponse) => {
+            setRepoReadmeAvailable(prev => new Map(prev).set(repoId, readmeResponse.success && !!readmeResponse.data));
+          })
+          .catch(() => {
+            setRepoReadmeAvailable(prev => new Map(prev).set(repoId, false));
+          });
       } else {
         // Check for authentication errors
         const errorMsg = response.error?.message || 'Failed to load skills';
@@ -481,10 +491,22 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
           {selectedRepoId && (
             <button
               onClick={() => setShowReadmeDialog(true)}
-              disabled={isLoadingSkills}
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="View repository README"
-              aria-label="View repository README"
+              disabled={isLoadingSkills || repoReadmeAvailable.get(selectedRepoId) === false}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                repoReadmeAvailable.get(selectedRepoId) === false
+                  ? 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+              }`}
+              title={
+                repoReadmeAvailable.get(selectedRepoId) === false
+                  ? 'This repository does not have a README.md file'
+                  : 'View repository README'
+              }
+              aria-label={
+                repoReadmeAvailable.get(selectedRepoId) === false
+                  ? 'README not available'
+                  : 'View repository README'
+              }
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
