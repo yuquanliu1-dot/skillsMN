@@ -534,10 +534,18 @@ export class PrivateRepoService {
       const frontmatterText = frontmatterMatch[1];
       const result: { description?: string; tags?: string[] } = {};
 
-      // Parse description
-      const descMatch = frontmatterText.match(/^description:\s*["']?(.+?)["']?\s*$/m);
-      if (descMatch) {
-        result.description = descMatch[1].trim();
+      // Parse description - support both single-line and multiline YAML strings
+      // Check for multiline string indicator (| or >)
+      const descMultilineMatch = frontmatterText.match(/^description:\s*[|>]\s*\n([\s\S]*?)(?=\n\s*\n|\n\w+\s*:|$)/m);
+      if (descMultilineMatch) {
+        // Multiline string - trim whitespace
+        result.description = descMultilineMatch[1].trim();
+      } else {
+        // Single-line string
+        const descMatch = frontmatterText.match(/^description:\s*["']?(.+?)["']?\s*$/m);
+        if (descMatch) {
+          result.description = descMatch[1].trim();
+        }
       }
 
       // Parse tags (array format)
