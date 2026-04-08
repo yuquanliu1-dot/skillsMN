@@ -4,7 +4,7 @@
  * IPC handlers for symlink operations
  */
 
-import { ipcMain } from 'electron';
+import { ipcMain, BrowserWindow } from 'electron';
 import { logger } from '../utils/Logger';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { SymlinkService } from '../services/SymlinkService';
@@ -22,6 +22,17 @@ import {
 let symlinkService: SymlinkService | null = null;
 let skillService: SkillService | null = null;
 let configService: ConfigService | null = null;
+
+/**
+ * Send skills:refresh event to all renderer windows
+ */
+function notifySkillsRefresh(): void {
+  const windows = BrowserWindow.getAllWindows();
+  for (const win of windows) {
+    win.webContents.send(IPC_CHANNELS.SKILLS_REFRESH);
+  }
+  logger.debug('Sent skills:refresh event to all windows', 'SymlinkHandlers');
+}
 
 /**
  * Convert error to IPCError format
@@ -77,6 +88,9 @@ export function registerSymlinkHandlers(
         await symlinkService!.updateSkillSymlink(appDir, skillName, skillPath, config);
 
         logger.info('Symlink configuration updated', 'SymlinkHandlers', { skillName });
+
+        // Notify all windows to refresh skills (to update symlinkTargetCount badges)
+        notifySkillsRefresh();
 
         return { success: true };
       } catch (error) {
@@ -217,6 +231,9 @@ export function registerSymlinkHandlers(
           toolId,
           enabled,
         });
+
+        // Notify all windows to refresh skills (to update symlinkTargetCount badges)
+        notifySkillsRefresh();
 
         return { success: true };
       } catch (error) {
