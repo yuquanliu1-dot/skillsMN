@@ -1164,6 +1164,58 @@ export class GitHubService {
   }
 
   /**
+   * Get repository README.md content
+   *
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param pat - Personal Access Token with repo scope
+   * @param branch - Branch to read from (default: 'main')
+   * @returns README.md content as string
+   * @throws Error if README.md is not found or cannot be fetched
+   */
+  static async getRepoReadme(
+    owner: string,
+    repo: string,
+    pat: string,
+    branch: string = 'main'
+  ): Promise<string> {
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'skillsMN-App',
+    };
+
+    if (pat) {
+      headers['Authorization'] = `token ${pat}`;
+    }
+
+    // Try common README filenames
+    const readmeNames = ['README.md', 'readme.md', 'README.MD'];
+    let lastError: Error | null = null;
+
+    for (const readmeName of readmeNames) {
+      try {
+        const response = await fetchWithProxy(
+          `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${readmeName}?ref=${branch}`,
+          { headers }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const content = Buffer.from(data.content, 'base64').toString('utf-8');
+          return content;
+        }
+
+        // Store error for next iteration
+        lastError = new Error(`Failed to fetch ${readmeName}: ${response.status} ${response.statusText}`);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+      }
+    }
+
+    throw new Error(`README.md not found in repository ${owner}/${repo}`);
+  }
+
+  /**
    * Upload a skill to a private GitHub repository
    * Creates or updates the skill.md file and commits it to the repository
    *

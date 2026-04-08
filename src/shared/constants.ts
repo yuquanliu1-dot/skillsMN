@@ -183,6 +183,7 @@ export const IPC_CHANNELS = {
   PRIVATE_REPO_GET_SKILL_METADATA: 'private-repo:get-skill-metadata',
   PRIVATE_REPO_GET_SKILL_CONTENT: 'private-repo:get-skill-content',
   PRIVATE_REPO_UPLOAD_SKILL: 'private-repo:upload-skill',
+  PRIVATE_REPO_GET_README: 'private-repo:get-readme',
 
   // Skills Registry operations (Feature 006)
   REGISTRY_SEARCH: 'registry:search',

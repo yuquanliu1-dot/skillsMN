@@ -519,6 +519,60 @@ export class PrivateRepoService {
   }
 
   /**
+   * Get repository README.md content
+   *
+   * @param repoId - Repository ID
+   * @returns README.md content as string
+   * @throws Error if repository not found or README.md cannot be fetched
+   */
+  static async getRepoReadme(repoId: string): Promise<string> {
+    try {
+      const repo = await this.getRepo(repoId);
+      if (!repo) {
+        throw new Error('Repository not found');
+      }
+
+      // Decrypt PAT (auto-fixes plaintext PATs)
+      const pat = await this.decryptAndFixPAT(repo);
+
+      // Get appropriate provider
+      const provider = repo.provider || 'github';
+      const gitProvider = getGitProvider(provider);
+
+      logger.debug('Fetching README from repository', 'PrivateRepoService', {
+        repoId,
+        provider,
+        owner: repo.owner,
+        repo: repo.repo,
+        instanceUrl: repo.instanceUrl,
+      });
+
+      // Check if provider supports getRepoReadme
+      if (typeof (gitProvider as any).getRepoReadme === 'function') {
+        const readme = await (gitProvider as any).getRepoReadme(
+          repo.owner,
+          repo.repo,
+          pat,
+          repo.defaultBranch || 'main',
+          repo.instanceUrl
+        );
+
+        logger.info('README fetched successfully', 'PrivateRepoService', {
+          repoId,
+          length: readme.length,
+        });
+
+        return readme;
+      } else {
+        throw new Error(`Git provider ${provider} does not support fetching README`);
+      }
+    } catch (error) {
+      logger.error('Failed to fetch repository README', 'PrivateRepoService', error);
+      throw error;
+    }
+  }
+
+  /**
    * Parse frontmatter from skill content
    * Extracts description and tags from YAML frontmatter
    * @private

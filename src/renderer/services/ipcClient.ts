@@ -289,4 +289,21 @@ export const ipcClient = {
     }
     return window.electronAPI.uploadSkillToPrivateRepo(params);
   },
+
+  /**
+   * Get repository README.md content
+   */
+  getRepoReadme: async (repoId: string): Promise<string> => {
+    if (!isElectron()) {
+      throw new Error('Not running in Electron');
+    }
+    if (!window.electronAPI?.getRepoReadme) {
+      throw new Error('Electron API not available');
+    }
+    const response = await window.electronAPI.getRepoReadme(repoId);
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Failed to fetch README');
+    }
+    return response.data!;
+  },
 };

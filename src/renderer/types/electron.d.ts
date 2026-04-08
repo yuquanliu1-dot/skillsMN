@@ -140,6 +140,7 @@ export interface ElectronAPI {
     query: string;
   }) => Promise<IPCResponse<PrivateSkill[]>>;
   getPrivateRepoSkillContent: (repoId: string, skillPath: string) => Promise<IPCResponse<string>>;
+  getRepoReadme: (repoId: string) => Promise<IPCResponse<string>>;
   uploadSkillToPrivateRepo: (params: {
     repoId: string;
     skillPath: string;

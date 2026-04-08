@@ -519,6 +519,39 @@ export class GitLabService {
   }
 
   /**
+   * Get repository README.md content
+   *
+   * @param owner - Repository owner (namespace)
+   * @param repo - Repository name
+   * @param pat - Personal Access Token with api scope
+   * @param branch - Branch to read from (default: 'main')
+   * @param instanceUrl - Optional GitLab instance URL
+   * @returns README.md content as string
+   * @throws Error if README.md is not found or cannot be fetched
+   */
+  static async getRepoReadme(
+    owner: string,
+    repo: string,
+    pat: string,
+    branch: string = 'main',
+    instanceUrl?: string
+  ): Promise<string> {
+    // Try common README filenames
+    const readmeNames = ['README.md', 'readme.md', 'README.MD'];
+    let lastError: Error | null = null;
+
+    for (const readmeName of readmeNames) {
+      try {
+        return await this.getFileContent(owner, repo, readmeName, pat, branch, instanceUrl);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+      }
+    }
+
+    throw new Error(`README.md not found in repository ${owner}/${repo}`);
+  }
+
+  /**
    * Upload a skill to a private GitLab repository
    * Creates or updates the SKILL.md file and commits it to the repository
    *

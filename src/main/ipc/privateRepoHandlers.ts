@@ -566,5 +566,49 @@ export async function registerPrivateRepoHandlers(validator: PathValidator): Pro
     }
   );
 
+  // Handler for private-repo:get-readme
+  ipcMain.handle(
+    IPC_CHANNELS.PRIVATE_REPO_GET_README,
+    async (_event, { repoId }: { repoId: string }): Promise<IPCResponse<string>> => {
+      try {
+        logger.debug('Fetching repository README', 'PrivateRepoHandlers', { repoId });
+
+        const readme = await PrivateRepoService.getRepoReadme(repoId);
+
+        logger.info('Successfully fetched repository README', 'PrivateRepoHandlers', {
+          repoId,
+          length: readme.length,
+        });
+
+        return { success: true, data: readme };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch README';
+        logger.error('Failed to fetch repository README', 'PrivateRepoHandlers', error);
+
+        let errorCode = 'README_FETCH_FAILED';
+        let actionableMessage = errorMessage;
+
+        if (errorMessage.includes('Repository not found')) {
+          errorCode = 'REPO_NOT_FOUND';
+          actionableMessage = 'Repository not found. It may have been removed.';
+        } else if (errorMessage.includes('authentication failed') || errorMessage.includes('401')) {
+          errorCode = 'AUTH_FAILED';
+          actionableMessage = 'Authentication failed. Please check your PAT in Settings.';
+        } else if (errorMessage.includes('README.md not found')) {
+          errorCode = 'README_NOT_FOUND';
+          actionableMessage = 'This repository does not have a README.md file.';
+        }
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: actionableMessage,
+          },
+        };
+      }
+    }
+  );
+
   logger.info('Private repository IPC handlers registered', 'PrivateRepoHandlers');
 }

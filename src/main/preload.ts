@@ -313,6 +313,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_GET_SKILL_CONTENT, { repoId, skillPath });
   },
 
+  getRepoReadme: (repoId: string): Promise<IPCResponse<string>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.PRIVATE_REPO_GET_README, { repoId });
+  },
+
   uploadSkillToPrivateRepo: (params: {
     repoId: string;
     skillPath: string;
