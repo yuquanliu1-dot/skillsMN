@@ -1,14 +1,27 @@
 /**
  * ReadmeDialog Component
  *
- * Displays repository README.md content with markdown rendering
+ * Displays repository README.md content using Monaco Editor (read-only mode)
  */
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkFrontmatter from 'remark-frontmatter';
+import Editor, { OnMount, loader } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
+
+// Configure Monaco to use local installation
+loader.config({ monaco });
+
+/**
+ * Map theme name to Monaco Editor theme
+ */
+const getMonacoTheme = (theme: 'light' | 'dark'): 'vs' | 'vs-dark' => {
+  const themeMap: Record<'light' | 'dark', 'vs' | 'vs-dark'> = {
+    light: 'vs',
+    dark: 'vs-dark',
+  };
+  return themeMap[theme];
+};
 
 interface ReadmeDialogProps {
   repoId: string;
@@ -20,6 +33,25 @@ export default function ReadmeDialog({ repoId, repoName, onClose }: ReadmeDialog
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
+  // Detect theme from system
+  useEffect(() => {
+    const detectTheme = () => {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(isDark ? 'dark' : 'light');
+    };
+
+    detectTheme();
+
+    // Listen for theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', detectTheme);
+
+    return () => {
+      mediaQuery.removeEventListener('change', detectTheme);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchReadme = async () => {
@@ -91,13 +123,13 @@ export default function ReadmeDialog({ repoId, repoName, onClose }: ReadmeDialog
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-hidden">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                 </div>
               ) : error ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="flex flex-col items-center justify-center h-full text-center p-6">
                   <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
                     <svg className="w-8 h-8 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -111,38 +143,31 @@ export default function ReadmeDialog({ repoId, repoName, onClose }: ReadmeDialog
                   </p>
                 </div>
               ) : (
-                <div className="prose prose-slate dark:prose-invert max-w-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkFrontmatter]}
-                    components={{
-                      // Custom styling for code blocks
-                      code: ({ node, inline, className, children, ...props }: any) => {
-                        const match = /language-(\w+)/.exec(className || '');
-                        return !inline ? (
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        ) : (
-                          <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-sm" {...props}>
-                            {children}
-                          </code>
-                        );
-                      },
-                      // Custom styling for links
-                      a: ({ node, children, ...props }: any) => (
-                        <a
-                          className="text-blue-600 dark:text-blue-400 hover:underline"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          {...props}
-                        >
-                          {children}
-                        </a>
-                      ),
+                <div className="h-full">
+                  <Editor
+                    height="100%"
+                    defaultLanguage="markdown"
+                    language="markdown"
+                    value={content}
+                    theme={getMonacoTheme(theme)}
+                    options={{
+                      readOnly: true,
+                      domReadOnly: true,
+                      minimap: { enabled: false },
+                      scrollBeyondLastLine: false,
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                      padding: { top: 16, bottom: 16 },
+                      lineNumbers: 'off',
+                      glyphMargin: false,
+                      folding: false,
+                      lineDecorationsWidth: 0,
+                      lineNumbersMinChars: 0,
+                      renderWhitespace: 'selection',
+                      bracketPairColorization: { enabled: true },
+                      wordWrap: 'on',
                     }}
-                  >
-                    {content}
-                  </ReactMarkdown>
+                  />
                 </div>
               )}
             </div>
