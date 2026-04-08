@@ -107,16 +107,21 @@ export default function SkillCard({
   const handleUpdateClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    setUpdateProgress('updating');  // 立即设置updating状态，禁用按钮
     setShowUpdateDialog(true);
-    setUpdateProgress('idle');
+    setErrorMessage(null);
+  };
+
+  const handleCloseUpdateDialog = () => {
+    setShowUpdateDialog(false);
+    setUpdateProgress('idle');  // 关闭对话框时重置状态
     setErrorMessage(null);
   };
 
   const handleConfirmUpdate = async () => {
     if (!onUpdate) return;
 
-    setUpdateProgress('updating');
-    setErrorMessage(null);
+    // updateProgress已经在handleUpdateClick中设置为'updating'
 
     try {
       await onUpdate(skill);
@@ -129,6 +134,10 @@ export default function SkillCard({
     } catch (error) {
       setUpdateProgress('error');
       setErrorMessage(error instanceof Error ? error.message : 'Update failed');
+      // 失败后也需要重置状态，让用户可以重试
+      setTimeout(() => {
+        setUpdateProgress('idle');
+      }, 3000);
     }
   };
 
@@ -379,7 +388,7 @@ export default function SkillCard({
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('skillCard.updateSkill')}</h3>
               <button
-                onClick={() => setShowUpdateDialog(false)}
+                onClick={handleCloseUpdateDialog}
                 className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 aria-label={t('common.close')}
               >
@@ -458,7 +467,7 @@ export default function SkillCard({
 
             <div className="border-t border-slate-200 dark:border-slate-700 p-4 flex gap-2 justify-end">
               <button
-                onClick={() => setShowUpdateDialog(false)}
+                onClick={handleCloseUpdateDialog}
                 className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
               >
                 {t('common.cancel')}

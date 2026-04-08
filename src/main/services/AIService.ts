@@ -533,10 +533,11 @@ export class AIService {
             type: 'preset',
             preset: 'claude_code',
           },
-          // Load CLAUDE.md from project and local directories only
-          // Note: 'user' is intentionally excluded to prevent user's global config
-          // (e.g., ~/.claude/config.json) from overriding the model setting
-          settingSources: ['project', 'local'],
+          // Load settings from project, local, and user directories
+          // Note: 'user' is included to allow loading global skills like skill-creator
+          // from ~/.claude/plugins/skills/. The model setting is explicitly specified
+          // in the 'model' field above, which takes precedence over config files.
+          settingSources: ['project', 'local', 'user'],
           model: currentConfig.model,
           cwd: workingDirectory,
           // Tools preset for built-in tools

@@ -643,7 +643,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {t('import.ofSkills', { current: progress.currentIndex + 1, total: progress.totalSkills })}
+                {t('import.ofSkills', { current: Math.min(progress.currentIndex + 1, progress.totalSkills), total: progress.totalSkills })}
               </p>
             </div>
           )}

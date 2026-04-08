@@ -68,10 +68,14 @@ export class SkillModel {
     // Extract version, author, and tags from frontmatter
     const version = frontmatter.version?.trim();
     const author = frontmatter.author?.trim();
-    const rawTags = frontmatter.tags as (string | unknown)[] | undefined;
-    const tags = rawTags
-      ?.map((tag) => typeof tag === 'string' ? tag.trim() : String(tag))
-      .filter((tag: string) => tag.length > 0);
+    const rawTags = frontmatter.tags;
+    // Use Array.isArray to safely check if tags is an array before calling .map()
+    // This handles cases where tags might be undefined, null, or a non-array type (e.g., string)
+    const tags = Array.isArray(rawTags)
+      ? rawTags
+          .map((tag) => typeof tag === 'string' ? tag.trim() : String(tag))
+          .filter((tag: string) => tag.length > 0)
+      : [];
 
     // Count resources (all files except skill.md)
     const resourceCount = await this.countResources(dirPath);

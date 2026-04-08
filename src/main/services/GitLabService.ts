@@ -413,6 +413,8 @@ export class GitLabService {
       sha: commit.id,
       message: commit.message || '',
       author: commit.author_name || '',
+      authorName: commit.author_name || '',          // 添加 authorName 字段
+      authorEmail: commit.author_email || '',        // 添加 authorEmail 字段
       date: new Date(commit.created_at),
     }));
   }
