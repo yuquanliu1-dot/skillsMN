@@ -1092,6 +1092,11 @@ export default function App(): JSX.Element {
             // Clear uploading state after refresh
             setUploadingSkill(null);
 
+            // Trigger refresh of shared repository lists
+            window.dispatchEvent(new CustomEvent('private-repo-updated', {
+              detail: { forceRefresh: true }
+            }));
+
             // Show success toast
             showToast(`Skill "${skillName}" uploaded successfully!`, 'success');
           }}
