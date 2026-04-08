@@ -119,8 +119,9 @@ export class SkillService {
         const symlinkDb = await this.symlinkService.loadDatabaseV2(appDir);
 
         for (const skill of skills) {
-          const skillName = path.basename(skill.path);
-          const multiTargetConfig = symlinkDb.symlinks[skillName];
+          // Try to match by skill.name first, then fallback to directory basename
+          // This handles cases where skill.name doesn't match directory name (e.g., private repo skills)
+          const multiTargetConfig = symlinkDb.symlinks[skill.name] || symlinkDb.symlinks[path.basename(skill.path)];
 
           // Calculate symlink target count (number of enabled targets)
           if (multiTargetConfig && multiTargetConfig.targets) {
