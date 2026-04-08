@@ -250,6 +250,7 @@ interface PendingQuestion {
   }>;
   multiSelect: boolean;
   selectedOptions: Set<number>;
+  customValues: Map<number, string>;
 }
 
 /**
@@ -304,6 +305,9 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   // Pending questions from AskUserQuestion tool
   const [pendingQuestions, setPendingQuestions] = useState<PendingQuestion[]>([]);
   const [isWaitingForAnswers, setIsWaitingForAnswers] = useState(false);
+
+  // Track IME composition state to prevent sending messages while inputting Chinese
+  const [isComposing, setIsComposing] = useState(false);
 
   // Conversation history state
   const [conversations, setConversations] = useState<AIConversation[]>([]);
@@ -714,6 +718,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             })),
             multiSelect: q.multiSelect || false,
             selectedOptions: new Set<number>(),
+            customValues: new Map<number, string>(),
           }));
           setPendingQuestions(questions);
           setIsWaitingForAnswers(true);
@@ -758,6 +763,16 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   }, [isIdle]);
 
   /**
+   * Check if an option is a custom/other type option
+   * Detects keywords like 'other', 'custom', '自定义', etc.
+   */
+  const isOtherOption = useCallback((option: { label: string; description?: string }): boolean => {
+    const keywords = ['other', 'custom', '自定义', '其它', '其它（自定义）'];
+    const text = `${option.label} ${option.description || ''}`.toLowerCase();
+    return keywords.some(keyword => text.includes(keyword));
+  }, []);
+
+  /**
    * Handle selecting an option for a question
    */
   const handleSelectOption = useCallback((questionIndex: number, optionIndex: number) => {
@@ -785,6 +800,24 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   }, []);
 
   /**
+   * Handle custom value input change for Other/Custom options
+   */
+  const handleSetCustomValue = useCallback((questionIndex: number, optionIndex: number, value: string) => {
+    setPendingQuestions(prev => {
+      const updated = [...prev];
+      const question = { ...updated[questionIndex] };
+
+      // Create a new Map with the updated value
+      const newCustomValues = new Map(question.customValues);
+      newCustomValues.set(optionIndex, value);
+      question.customValues = newCustomValues;
+
+      updated[questionIndex] = question;
+      return updated;
+    });
+  }, []);
+
+  /**
    * Submit answers and continue conversation
    */
   const handleSubmitAnswers = useCallback(async () => {
@@ -793,14 +826,20 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
     // Build answer text with full option details for better context
     const answerParts: string[] = [];
     pendingQuestions.forEach((q, qIndex) => {
-      const selectedOptions = Array.from(q.selectedOptions)
-        .map(optIndex => q.options[optIndex])
-        .filter(Boolean);
+      const selectedOptionIndices = Array.from(q.selectedOptions);
 
-      if (selectedOptions.length > 0) {
+      if (selectedOptionIndices.length > 0) {
         const header = q.header || `Question ${qIndex + 1}`;
-        const optionsText = selectedOptions.map(opt => {
-          // Include both label and description for better understanding
+        const optionsText = selectedOptionIndices.map(optIndex => {
+          const opt = q.options[optIndex];
+          const customValue = q.customValues.get(optIndex);
+
+          // Use custom value if provided (for Other/Custom options)
+          if (customValue && customValue.trim()) {
+            return customValue.trim();
+          }
+
+          // Otherwise use label and description
           if (opt.description) {
             return `${opt.label} (${opt.description})`;
           }
@@ -1148,12 +1187,13 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
    */
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      // Don't send message if IME is composing (e.g., inputting Chinese characters)
+      if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
         e.preventDefault();
         handleSend();
       }
     },
-    [handleSend]
+    [handleSend, isComposing]
   );
 
   /**
@@ -1630,37 +1670,52 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                 <div className="space-y-1.5">
                   {q.options.map((opt, optIndex) => {
                     const isSelected = q.selectedOptions.has(optIndex);
+                    const isOther = isOtherOption(opt);
+                    const needsInput = isSelected && isOther;
+
                     return (
-                      <button
-                        key={optIndex}
-                        onClick={() => handleSelectOption(qIndex, optIndex)}
-                        className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-all ${
-                          isSelected
-                            ? 'bg-blue-50 border-blue-300 text-blue-800 border-2'
-                            : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-start gap-2">
-                          {/* Selection indicator */}
-                          <span className={`flex-shrink-0 w-4 h-4 rounded ${q.multiSelect ? 'rounded' : 'rounded-full'} border-2 flex items-center justify-center mt-0.5 ${
+                      <div key={optIndex}>
+                        <button
+                          onClick={() => handleSelectOption(qIndex, optIndex)}
+                          className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-all ${
                             isSelected
-                              ? 'bg-blue-500 border-blue-500'
-                              : 'border-slate-300 bg-white'
-                          }`}>
-                            {isSelected && (
-                              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium">{opt.label}</div>
-                            {opt.description && (
-                              <div className="text-[10px] text-slate-400 mt-0.5">{opt.description}</div>
-                            )}
+                              ? 'bg-blue-50 border-blue-300 text-blue-800 border-2'
+                              : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            {/* Selection indicator */}
+                            <span className={`flex-shrink-0 w-4 h-4 rounded ${q.multiSelect ? 'rounded' : 'rounded-full'} border-2 flex items-center justify-center mt-0.5 ${
+                              isSelected
+                                ? 'bg-blue-500 border-blue-500'
+                                : 'border-slate-300 bg-white'
+                            }`}>
+                              {isSelected && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium">{opt.label}</div>
+                              {opt.description && (
+                                <div className="text-[10px] text-slate-400 mt-0.5">{opt.description}</div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </button>
+                        </button>
+
+                        {/* Show input field for Other/Custom options when selected */}
+                        {needsInput && (
+                          <input
+                            type="text"
+                            className="mt-2 w-full px-2.5 py-2 text-xs border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500"
+                            placeholder="请输入自定义值"
+                            value={q.customValues.get(optIndex) || ''}
+                            onChange={(e) => handleSetCustomValue(qIndex, optIndex, e.target.value)}
+                          />
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -1771,6 +1826,8 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
             disabled={isStreaming}
             placeholder={t('aiSidebar.inputPlaceholder')}
             className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed text-xs bg-white text-slate-900 placeholder-slate-400"
