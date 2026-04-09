@@ -183,7 +183,8 @@ export class ContributionStatsService {
             // 优先使用 git commit email（commit.commit.author.email），然后是 GitHub 公开邮箱
             const authorEmail = commit.commit?.author?.email || commit.author?.email || commit.authorEmail || '';
             const authorName = commit.commit?.author?.name || commit.author?.name || commit.authorName || commit.author || 'Unknown';
-            const authorUsername = commit.author?.login || authorName.toLowerCase().replace(/\s+/g, '-');
+            // 优先使用 authorUsername 字段（GitLab），然后是 commit.author.login（GitHub）
+            const authorUsername = commit.authorUsername || commit.author?.login || authorName.toLowerCase().replace(/\s+/g, '-');
 
             const key = authorEmail || authorUsername;
             if (!contributorMap.has(key)) {
@@ -225,7 +226,8 @@ export class ContributionStatsService {
           // 优先使用 git commit email（commit.commit.author.email），然后是 GitHub 公开邮箱
           const authorEmail = firstCommit.commit?.author?.email || firstCommit.author?.email || firstCommit.authorEmail || '';
           const authorName = firstCommit.commit?.author?.name || firstCommit.author?.name || firstCommit.authorName || firstCommit.author || 'Unknown';
-          const authorUsername = firstCommit.author?.login || authorName.toLowerCase().replace(/\s+/g, '-');
+          // 优先使用 authorUsername 字段（GitLab），然后是 commit.author.login（GitHub）
+          const authorUsername = firstCommit.authorUsername || firstCommit.author?.login || authorName.toLowerCase().replace(/\s+/g, '-');
           const key = authorEmail || authorUsername;
 
           if (contributorMap.has(key)) {
