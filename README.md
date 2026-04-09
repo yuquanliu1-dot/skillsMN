@@ -24,7 +24,9 @@ skillsMN is an Electron-based desktop application that provides a unified interf
 - 🤖 **AI-Assisted Generation** - Generate or modify skills using natural language with real-time streaming
 - 🔍 **Discover Public Skills** - Search GitHub and skills.sh registry for community skills
 - 🌐 **Skills Registry Search** - Instant search across thousands of curated skills with one-click installation
-- 🔒 **Private Repository Sync** - Connect to private GitHub repos for team skill sharing with update detection
+- 🔒 **Private Repository Sync** - Connect to private GitHub/GitLab repos for team skill sharing with update detection
+- 🏆 **Contribution Statistics** - Track user contributions with badges, levels, and activity analytics
+- 🌟 **Gamification System** - Earn badges and level up from commits, skill creation, and community engagement
 - ⚡ **Real-time Sync** - Automatic detection and UI updates when files change
 - 📝 **Monaco Editor** - Full-featured code editor with syntax highlighting
 - 🎨 **Modern UI** - Clean, dark-mode interface with responsive design
@@ -35,7 +37,7 @@ skillsMN is an Electron-based desktop application that provides a unified interf
 
 ### Main Interface
 ![Main Interface](docs/screenshots/main-interface.png)
-*Clean, dark-mode interface with skill management*
+*Clean, dark-mode interface with skill management and contribution tracking*
 
 ### Skill Editor
 ![Skill Editor](docs/screenshots/skill-editor.png)
@@ -58,6 +60,19 @@ skillsMN is an Electron-based desktop application that provides a unified interf
 - **Node.js** v20.x or later - [Download](https://nodejs.org/)
 - **npm** v10.x or later (comes with Node.js)
 - **Operating System**: Windows 10/11, macOS 12+, or Linux Ubuntu 20.04+
+
+### Platform Support
+
+**Version Control Platforms:**
+- ✅ GitHub (github.com)
+- ✅ GitHub Enterprise (self-hosted)
+- ✅ GitLab (gitlab.com)
+- ✅ GitLab Self-hosted (any instance)
+
+**Desktop Platforms:**
+- ✅ Windows 10/11 (x64)
+- ✅ macOS 12+ (x64, arm64)
+- ✅ Linux Ubuntu 20.04+ (x64)
 
 ### Installation
 
@@ -138,20 +153,34 @@ Generate or modify skills using natural language:
 
 ### 🔒 Private Repository Management
 
-Connect to private GitHub repositories for team sharing:
+Connect to private GitHub or GitLab repositories for team sharing:
 
 <details>
 <summary><b>⚙️ Setup Private Repository</b></summary>
 
+**For GitHub:**
 1. Open **Settings** → **Repositories** tab
 2. Click **"Add Repository"**
 3. Enter repository URL (e.g., `https://github.com/your-org/team-skills`)
 4. Provide GitHub PAT with `repo` scope
 5. Connection tested automatically
 
+**For GitLab:**
+1. Open **Settings** → **Repositories** tab
+2. Click **"Add Repository"**
+3. Enter GitLab repository URL
+4. Provide GitLab PAT with `api` scope
+5. For self-hosted instances, provide the instance URL
+6. Connection tested automatically
+
 **Creating a GitHub PAT:**
 - Go to GitHub.com → Settings → Developer settings → Personal access tokens
 - Generate new token (classic) with `repo` scope
+- Copy and paste into skillsMN
+
+**Creating a GitLab PAT:**
+- Go to GitLab.com → Settings → Access Tokens
+- Create personal access token with `api` scope
 - Copy and paste into skillsMN
 
 **Security:**
@@ -161,10 +190,60 @@ Connect to private GitHub repositories for team sharing:
 </details>
 
 **Features:**
+- Support for both GitHub and GitLab (including self-hosted instances)
 - Browse skills with metadata (last commit, file count)
 - Update detection with visual badges
 - Conflict resolution (overwrite/rename/skip)
 - Automatic 5-minute caching
+
+### 🏆 Contribution Statistics & Gamification
+
+Track your contributions and earn badges through active participation:
+
+**Contribution Tracking:**
+- **Commit-based scoring** - Each commit earns points toward your level
+- **Skill creation bonuses** - Creating new skills gives extra points
+- **Activity tracking** - Recent activity boosts your score
+- **Real-time statistics** - View your contribution stats instantly
+
+**Level Progression:**
+- **Newcomer** (0-49 points) - Getting started
+- **Contributor** (50-199 points) - Active participant
+- **Active** (200-499 points) - Regular contributor
+- **Core** (500-999 points) - Key team member
+- **Maintainer** (1000+ points) - Project leader
+
+**Badge System:**
+
+<details>
+<summary><b>🏅 Available Badges</b></summary>
+
+**Commit Badges:**
+- 🌱 First Commit - Make your first commit
+- 🔥 Active Contributor - 10 commits
+- 💪 Dedicated Member - 25 commits
+- 💎 Core Member - 50 commits
+- 👑 Legend - 100 commits
+
+**Skill Creation Badges:**
+- ✨ Skill Creator - Create your first skill
+- 🏗️ Skill Architect - Create 5 skills
+- 🎯 Skill Master - Create 10 skills
+
+**Community Badges:**
+- ⭐ Popular Skill - 10 downloads
+- 🚀 Viral Skill - 50 downloads
+- 🌟 Superstar - 100 downloads
+- 📈 Rising Star - 100 contribution score
+- 🏆 Champion - 500 contribution score
+</details>
+
+**Features:**
+- Automatic badge earning based on your activity
+- Progress tracking for next badge/level
+- Team leaderboard for private repos
+- Skill activity analytics
+- Multi-provider support (GitHub & GitLab)
 
 ## ⌨️ Keyboard Shortcuts
 
@@ -186,7 +265,9 @@ Built with modern technologies:
 - **Tailwind CSS** - Utility-first styling
 - **Monaco Editor** - VS Code's editor component
 - **Chokidar** - File system watching
+- **GitHub & GitLab APIs** - Repository integration
 - **Jest & Playwright** - Testing frameworks
+- **i18next** - Internationalization support
 
 ### Project Structure
 
@@ -270,6 +351,17 @@ Robust security implementation:
 - ✅ Safe deletion (recycle bin, not permanent)
 - ✅ No remote code execution (no eval())
 - ✅ Encrypted credential storage (platform-specific)
+- ✅ Support for self-hosted GitLab instances with certificate handling
+
+## 🆕 What's New
+
+**Latest Updates:**
+- 🏆 **Contribution Statistics** - Track your contributions with badges and levels
+- 🌟 **Gamification System** - Earn badges through commits, skill creation, and community engagement
+- 🌐 **GitLab Support** - Full support for GitLab.com and self-hosted GitLab instances
+- 👥 **Team Analytics** - View team contributions and skill activity in private repos
+- 🔐 **Enhanced Security** - Improved credential management and certificate handling
+- 📊 **Activity Tracking** - Real-time statistics and progress tracking
 
 ## 📖 Documentation
 
