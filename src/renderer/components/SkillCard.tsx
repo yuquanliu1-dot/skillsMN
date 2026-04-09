@@ -11,6 +11,13 @@ import { useTranslation } from 'react-i18next';
 import type { Skill, VersionComparison } from '../../shared/types';
 import TagGroupPopup from './TagGroupPopup';
 
+interface KeywordMatchResult {
+  groupId: string | null;
+  confidence: number;
+  matchedKeywords: string[];
+  matchSource: 'name' | 'description' | 'tags';
+}
+
 interface SkillCardProps {
   skill: Skill;
   onClick?: (skill: Skill) => void;
@@ -24,6 +31,7 @@ interface SkillCardProps {
   onUpdate?: (skill: Skill) => Promise<void>;
   onTagAssigned?: () => void;
   onNavigateToSettings?: () => void;
+  matchResult?: KeywordMatchResult;  // Keyword matching result
 }
 
 export default function SkillCard({
@@ -39,6 +47,7 @@ export default function SkillCard({
   onUpdate,
   onTagAssigned,
   onNavigateToSettings,
+  matchResult,
 }: SkillCardProps): JSX.Element {
   const { t } = useTranslation();
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
@@ -171,6 +180,24 @@ export default function SkillCard({
     }
   };
 
+  const getMatchSourceLabel = (source: 'name' | 'description' | 'tags'): string => {
+    const labels = {
+      name: '名称',
+      description: '描述',
+      tags: '标签'
+    };
+    return labels[source];
+  };
+
+  const getMatchSourceIcon = (source: 'name' | 'description' | 'tags'): string => {
+    const icons = {
+      name: '📝',
+      description: '📄',
+      tags: '🏷️'
+    };
+    return icons[source];
+  };
+
   return (
     <>
       {/* Fixed height card: 128px */}
@@ -210,8 +237,8 @@ export default function SkillCard({
                 </span>
               )}
               {skill.sourceMetadata?.type === 'git-import' && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 flex-shrink-0 border-0" title={`${skill.sourceMetadata.provider}: ${skill.sourceMetadata.repoPath}`}>
-                  {skill.sourceMetadata.provider === 'github' ? 'GitHub' : 'GitLab'}
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 flex-shrink-0 border-0" title={`${skill.sourceMetadata.provider}: ${skill.sourceMetadata.repoPath}`}>
+                  {t('skillCard.registry')}
                 </span>
               )}
 
