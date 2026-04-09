@@ -307,10 +307,11 @@ export class AIService {
   static async initialize(config: AIConfiguration): Promise<void> {
     try {
       currentConfig = config;
-      process.env.ANTHROPIC_API_KEY = config.apiKey;
+
+      // Don't set environment variables to avoid conflicts with Claude Code CLI
+      // The API key will be passed directly to the SDK instead
 
       if (config.baseUrl) {
-        process.env.ANTHROPIC_BASE_URL = config.baseUrl;
         logger.info('Using custom base URL', 'AIService', { hasCustomBaseUrl: true });
       }
 
@@ -527,7 +528,6 @@ export class AIService {
     activeStreams.set(requestId, abortController);
 
     // Store original env vars
-    const originalApiKey = process.env.ANTHROPIC_API_KEY;
     const originalBaseUrl = process.env.ANTHROPIC_BASE_URL;
     const originalClaudeCode = process.env.CLAUDECODE;
 
@@ -579,10 +579,7 @@ export class AIService {
 
       const { query } = await loadSDK();
 
-      // Set environment variables
-      if (currentConfig?.apiKey) {
-        process.env.ANTHROPIC_API_KEY = currentConfig.apiKey;
-      }
+      // Set environment variables (only baseUrl, not API key to avoid conflicts)
       if (currentConfig?.baseUrl) {
         process.env.ANTHROPIC_BASE_URL = currentConfig.baseUrl;
       }
@@ -623,6 +620,7 @@ export class AIService {
           // in the 'model' field above, which takes precedence over config files.
           settingSources: ['project', 'local', 'user'],
           model: currentConfig.model,
+          apiKey: currentConfig.apiKey,  // Pass API key directly instead of via env var
           cwd: workingDirectory,
           // Tools preset for built-in tools
           tools: { type: 'preset', preset: 'claude_code' },
@@ -891,11 +889,6 @@ export class AIService {
       });
     } finally {
       // Restore environment variables
-      if (originalApiKey !== undefined) {
-        process.env.ANTHROPIC_API_KEY = originalApiKey;
-      } else {
-        delete process.env.ANTHROPIC_API_KEY;
-      }
       if (originalBaseUrl !== undefined) {
         process.env.ANTHROPIC_BASE_URL = originalBaseUrl;
       } else {
