@@ -147,10 +147,10 @@ export const CONTRIBUTOR_LEVELS: Array<{
   color: string;
 }> = [
   { level: 'newcomer', nameKey: 'levels.newcomer', minScore: 0, icon: '🆕', color: '#9ca3af' },
-  { level: 'contributor', nameKey: 'levels.contributor', minScore: 50, icon: '🤝', color: '#22c55e' },
-  { level: 'active', nameKey: 'levels.active', minScore: 200, icon: '⚡', color: '#3b82f6' },
-  { level: 'core', nameKey: 'levels.core', minScore: 500, icon: '💎', color: '#8b5cf6' },
-  { level: 'maintainer', nameKey: 'levels.maintainer', minScore: 1000, icon: '👑', color: '#fbbf24' },
+  { level: 'contributor', nameKey: 'levels.contributor', minScore: 500, icon: '🤝', color: '#22c55e' },
+  { level: 'active', nameKey: 'levels.active', minScore: 2000, icon: '⚡', color: '#3b82f6' },
+  { level: 'core', nameKey: 'levels.core', minScore: 5000, icon: '💎', color: '#8b5cf6' },
+  { level: 'maintainer', nameKey: 'levels.maintainer', minScore: 10000, icon: '👑', color: '#fbbf24' },
 ];
 
 /**

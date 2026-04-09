@@ -19,6 +19,7 @@ import { registerImportHandlers, initImportService } from './ipc/importHandlers'
 import { registerAIConversationHandlers } from './ipc/aiConversationHandlers';
 import { registerSkillGroupHandlers, setConfigService, autoInitializeDefaultGroups } from './ipc/skillGroupHandlers';
 import { registerContributionStatsHandlers } from './ipc/contributionStatsHandlers';
+import { ContributionStatsService } from './services/ContributionStatsService';
 import { PathValidator } from './services/PathValidator';
 import { FileWatcher } from './services/FileWatcher';
 import { SymlinkService } from './services/SymlinkService';
@@ -230,6 +231,10 @@ async function initialize(): Promise<void> {
     // Register contribution stats handlers
     registerContributionStatsHandlers();
     logger.info('Contribution stats handlers registered', 'Main');
+
+    // Initialize contribution stats service
+    await ContributionStatsService.initialize();
+    logger.info('Contribution stats service initialized', 'Main');
 
     // Initialize and register import handlers
     initImportService(skillService);

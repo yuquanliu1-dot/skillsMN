@@ -32,8 +32,39 @@ export function registerContributionStatsHandlers(): void {
       // 解密 PAT
       const pat = await (PrivateRepoService as any).decryptAndFixPAT(repo);
 
-      // 获取当前用户 Git 信息
-      const currentUserGitInfo = ContributionStatsService.getCurrentUserGitInfo();
+      // 从 PAT 自动获取并设置用户信息（如果还没有设置）
+      let currentUserGitInfo = ContributionStatsService.getCurrentUserGitInfo();
+      logger.debug('Current user git info from cache', 'ContributionStatsHandlers', { currentUserGitInfo });
+
+      if (!currentUserGitInfo || !currentUserGitInfo.email) {
+        logger.info('Fetching user info from PAT', 'ContributionStatsHandlers');
+        const userResult = await ContributionStatsService.fetchAndSetUserInfoFromPAT(
+          repo.provider || 'github',
+          pat,
+          repo.instanceUrl
+        );
+        if (userResult.success && userResult.user) {
+          currentUserGitInfo = {
+            username: userResult.user.login,
+            email: userResult.user.email || undefined,
+            userId: userResult.user.id,
+            instanceUrl: repo.instanceUrl,
+          };
+          logger.info('Fetched user info from PAT', 'ContributionStatsHandlers', {
+            username: currentUserGitInfo.username,
+            email: currentUserGitInfo.email,
+            userId: currentUserGitInfo.userId,
+          });
+        }
+      }
+
+      logger.info('Calling getRepoContributionStats with user info', 'ContributionStatsHandlers', {
+        repoId,
+        owner: repo.owner,
+        repo: repo.repo,
+        provider: repo.provider,
+        currentUserGitInfo,
+      });
 
       const stats = await ContributionStatsService.getRepoContributionStats(
         repoId,
@@ -45,6 +76,13 @@ export function registerContributionStatsHandlers(): void {
         repo.defaultBranch || 'main',
         currentUserGitInfo
       );
+
+      logger.info('Got repo contribution stats', 'ContributionStatsHandlers', {
+        currentUserScore: stats.currentUserScore,
+        currentUserLevel: stats.currentUserLevel,
+        totalContributors: stats.totalContributors,
+        totalCommits: stats.totalCommits,
+      });
 
       return {
         success: true,
@@ -81,8 +119,23 @@ export function registerContributionStatsHandlers(): void {
       // 解密 PAT
       const pat = await (PrivateRepoService as any).decryptAndFixPAT(repo);
 
-      // 获取当前用户 Git 信息
-      const currentUserGitInfo = ContributionStatsService.getCurrentUserGitInfo();
+      // 从 PAT 自动获取并设置用户信息（如果还没有设置）
+      let currentUserGitInfo = ContributionStatsService.getCurrentUserGitInfo();
+      if (!currentUserGitInfo || !currentUserGitInfo.email) {
+        const userResult = await ContributionStatsService.fetchAndSetUserInfoFromPAT(
+          repo.provider || 'github',
+          pat,
+          repo.instanceUrl
+        );
+        if (userResult.success && userResult.user) {
+          currentUserGitInfo = {
+            username: userResult.user.login,
+            email: userResult.user.email || undefined,
+            userId: userResult.user.id,
+            instanceUrl: repo.instanceUrl,
+          };
+        }
+      }
 
       const badges = await ContributionStatsService.getUserBadges(
         repoId,

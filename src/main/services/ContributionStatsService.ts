@@ -184,9 +184,10 @@ export class ContributionStatsService {
             const authorEmail = commit.commit?.author?.email || commit.author?.email || commit.authorEmail || '';
             const authorName = commit.commit?.author?.name || commit.author?.name || commit.authorName || commit.author || 'Unknown';
             // 优先使用 authorUsername 字段（GitLab），然后是 commit.author.login（GitHub）
-            const authorUsername = commit.authorUsername || commit.author?.login || authorName.toLowerCase().replace(/\s+/g, '-');
+            // 注意：GitLab API 可能不返回 author_username，所以保持为 undefined 而不是使用 authorName 作为 fallback
+            const authorUsername = commit.authorUsername || commit.author?.login || undefined;
 
-            const key = authorEmail || authorUsername;
+            const key = authorEmail || authorUsername || authorName;
             if (!contributorMap.has(key)) {
               contributorMap.set(key, {
                 username: authorUsername,
@@ -227,8 +228,9 @@ export class ContributionStatsService {
           const authorEmail = firstCommit.commit?.author?.email || firstCommit.author?.email || firstCommit.authorEmail || '';
           const authorName = firstCommit.commit?.author?.name || firstCommit.author?.name || firstCommit.authorName || firstCommit.author || 'Unknown';
           // 优先使用 authorUsername 字段（GitLab），然后是 commit.author.login（GitHub）
-          const authorUsername = firstCommit.authorUsername || firstCommit.author?.login || authorName.toLowerCase().replace(/\s+/g, '-');
-          const key = authorEmail || authorUsername;
+          // 注意：GitLab API 可能不返回 author_username，所以保持为 undefined 而不是使用 authorName 作为 fallback
+          const authorUsername = firstCommit.authorUsername || firstCommit.author?.login || undefined;
+          const key = authorEmail || authorUsername || authorName;
 
           if (contributorMap.has(key)) {
             contributorMap.get(key)!.skillsCreated += 1;
@@ -305,6 +307,14 @@ export class ContributionStatsService {
       const userId = userGitInfo?.userId;
       const userInstanceUrl = userGitInfo?.instanceUrl;
 
+      logger.info('Matching current user in contributors', 'ContributionStatsService', {
+        userLogin,
+        userEmail,
+        userId,
+        userInstanceUrl,
+        totalContributors: contributors.length,
+      });
+
       if (userEmail || userLogin) {
         const currentUser = contributors.find(c => {
           const cEmail = c.email?.toLowerCase();
@@ -312,24 +322,39 @@ export class ContributionStatsService {
 
           // 匹配逻辑：
           // 1. 邮箱精确匹配
-          if (userEmail && cEmail === userEmail) return true;
+          if (userEmail && cEmail === userEmail) {
+            logger.debug('Matched by email', 'ContributionStatsService', { cEmail, userEmail });
+            return true;
+          }
 
           // 2. 用户名精确匹配
-          if (userLogin && cUsername === userLogin) return true;
+          if (userLogin && cUsername === userLogin) {
+            logger.debug('Matched by username', 'ContributionStatsService', { cUsername, userLogin });
+            return true;
+          }
 
           // 3. 邮箱作为用户名匹配
-          if (userEmail && cUsername === userEmail) return true;
+          if (userEmail && cUsername === userEmail) {
+            logger.debug('Matched by email as username', 'ContributionStatsService', { cUsername, userEmail });
+            return true;
+          }
 
           // 4. GitHub noreply 邮箱匹配（username@users.noreply.github.com）
           if (userLogin && cEmail) {
             const noreplyEmail = `${userLogin}@users.noreply.github.com`;
-            if (cEmail === noreplyEmail) return true;
+            if (cEmail === noreplyEmail) {
+              logger.debug('Matched by GitHub noreply email', 'ContributionStatsService', { cEmail, noreplyEmail });
+              return true;
+            }
           }
 
           // 5. GitLab noreply 邮箱匹配（{id}-{username}@users.noreply.{instanceUrl}）
           if (userLogin && cEmail && userId && userInstanceUrl) {
             const gitlabNoreplyEmail = `${userId}-${userLogin}@users.noreply.${userInstanceUrl}`;
-            if (cEmail === gitlabNoreplyEmail) return true;
+            if (cEmail === gitlabNoreplyEmail) {
+              logger.debug('Matched by GitLab noreply email', 'ContributionStatsService', { cEmail, gitlabNoreplyEmail });
+              return true;
+            }
           }
 
           return false;
@@ -339,7 +364,21 @@ export class ContributionStatsService {
           currentUserScore = currentUser.contributionScore;
           currentUserLevel = currentUser.level;
           currentUserBadges = currentUser.badges;
+          logger.info('Found current user in contributors', 'ContributionStatsService', {
+            currentUserScore,
+            currentUserLevel,
+            username: currentUser.username,
+            email: currentUser.email,
+          });
+        } else {
+          logger.warn('Current user not found in contributors', 'ContributionStatsService', {
+            userLogin,
+            userEmail,
+            contributors: contributors.map(c => ({ username: c.username, email: c.email })),
+          });
         }
+      } else {
+        logger.warn('No user login or email provided for matching', 'ContributionStatsService');
       }
 
       // 计算总提交数

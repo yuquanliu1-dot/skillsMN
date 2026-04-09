@@ -30,6 +30,50 @@ const isInsecureInstance = (url: string): boolean => {
 };
 
 /**
+ * Simple in-memory cache with TTL
+ */
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
+
+class Cache {
+  private entries = new Map<string, CacheEntry<any>>();
+
+  set<T>(key: string, data: T, ttlMs: number): void {
+    this.entries.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl: ttlMs,
+    });
+  }
+
+  get<T>(key: string): T | null {
+    const entry = this.entries.get(key);
+    if (!entry) {
+      return null;
+    }
+
+    // Check if expired
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.entries.delete(key);
+      return null;
+    }
+
+    return entry.data as T;
+  }
+
+  clear(): void {
+    this.entries.clear();
+  }
+}
+
+// Cache instance (5-minute TTL)
+const cache = new Cache();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
  * Get appropriate fetch options with HTTPS agent and proxy support
  * Priority: 1. Proxy agent (if configured) 2. Insecure agent (for self-hosted) 3. Default
  */
@@ -1026,6 +1070,94 @@ export class GitLabService {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  /**
+   * Get all skill directories from a GitLab repository
+   *
+   * @param owner - Repository owner/organization
+   * @param repo - Repository name
+   * @param pat - Personal Access Token
+   * @param branch - Branch name (optional, defaults to 'main')
+   * @param instanceUrl - GitLab instance URL (optional, defaults to gitlab.com)
+   * @returns Array of skill objects with metadata
+   *
+   * @example
+   * ```typescript
+   * const skills = await GitLabService.getPrivateRepoSkills('user', 'repo', pat, 'main', 'https://gitlab.example.com');
+   * skills.forEach(skill => {
+   *   console.log(skill.name, skill.lastCommitDate, skill.directoryCommitSHA);
+   * });
+   * ```
+   */
+  static async getPrivateRepoSkills(
+    owner: string,
+    repo: string,
+    pat: string,
+    branch?: string,
+    instanceUrl?: string
+  ): Promise<any[]> {
+    const cacheKey = `private-skills:${instanceUrl || 'gitlab.com'}:${owner}/${repo}`;
+    const cached = cache.get<any[]>(cacheKey);
+    if (cached) {
+      logger.debug('Returning cached private repo skills', 'GitLabService', { owner, repo });
+      return cached;
+    }
+
+    try {
+      const actualBranch = branch || 'main';
+      const tree = await GitLabService.getRepoTree(owner, repo, pat, actualBranch, instanceUrl);
+      const skillDirs = GitLabService.findSkillDirectories(tree);
+
+      // Fetch commit history for all skill directories in parallel
+      const skillsWithMetadata = await Promise.all(
+        skillDirs.map(async (dir: any) => {
+          try {
+            const commits = await GitLabService.getDirectoryCommits(owner, repo, dir.path, pat, actualBranch, instanceUrl);
+            const latestCommit = commits[0];
+
+            return {
+              path: dir.path,
+              name: dir.name,
+              skillFilePath: dir.skillFilePath,
+              directoryCommitSHA: latestCommit?.sha || '',
+              lastCommitMessage: latestCommit?.message || '',
+              lastCommitAuthor: latestCommit?.author || '',
+              lastCommitDate: latestCommit?.date || null,
+            };
+          } catch (commitError) {
+            // Log warning but still return skill without commit metadata
+            logger.warn('Failed to fetch commits for skill directory, returning without metadata', 'GitLabService', {
+              dirPath: dir.path,
+              error: commitError instanceof Error ? commitError.message : commitError,
+            });
+            return {
+              path: dir.path,
+              name: dir.name,
+              skillFilePath: dir.skillFilePath,
+              directoryCommitSHA: '',
+              lastCommitMessage: '',
+              lastCommitAuthor: '',
+              lastCommitDate: null,
+            };
+          }
+        })
+      );
+
+      cache.set(cacheKey, skillsWithMetadata, CACHE_TTL_MS);
+
+      logger.info('Retrieved private repo skills', 'GitLabService', {
+        owner,
+        repo,
+        instanceUrl,
+        count: skillsWithMetadata.length,
+      });
+
+      return skillsWithMetadata;
+    } catch (error) {
+      logger.error('Failed to get private repo skills', 'GitLabService', error);
+      throw error;
     }
   }
 }

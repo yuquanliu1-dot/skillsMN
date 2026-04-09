@@ -69,7 +69,6 @@ export default function ContributionBadge({ repoId, onClick }: ContributionBadge
   // 计算星星显示
   const level = stats?.currentUserLevel || 'newcomer';
   const starCount = getContributorStarCount(level);
-  const starsDisplay = getStarsDisplay(starCount);
   const starColor = getStarColor(starCount);
   const score = stats?.currentUserScore || 0;
   const badgeCount = stats?.currentUserBadges?.length || 0;
@@ -82,8 +81,8 @@ export default function ContributionBadge({ repoId, onClick }: ContributionBadge
     >
       <span className="text-slate-500 dark:text-slate-400">{t('contribution.title')}</span>
       <span style={{ color: starColor }}>
-        {starsDisplay.slice(0, starCount * 2)}
-        <span className="opacity-30">{starsDisplay.slice(starCount * 2)}</span>
+        {'⭐'.repeat(starCount)}
+        <span className="opacity-20">{'⭐'.repeat(5 - starCount)}</span>
       </span>
     </div>
   );

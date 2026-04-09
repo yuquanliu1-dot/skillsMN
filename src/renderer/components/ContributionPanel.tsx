@@ -159,8 +159,8 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full text-2xl mb-2"
                style={{ backgroundColor: `${currentLevel.color}20` }}>
             <span style={{ color: starColor }}>
-              {starsDisplay.slice(0, starCount * 2)}
-              <span className="opacity-30">{starsDisplay.slice(starCount * 2)}</span>
+              {'⭐'.repeat(starCount)}
+              <span className="opacity-20">{'⭐'.repeat(5 - starCount)}</span>
             </span>
           </div>
           <h4 className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -168,6 +168,9 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
           </h4>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {stats?.currentUserScore || 0} {t('contribution.points')}
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            {starCount}/5 {t('contribution.stars')}
           </p>
         </div>
 
