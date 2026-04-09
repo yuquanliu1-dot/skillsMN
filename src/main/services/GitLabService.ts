@@ -415,6 +415,7 @@ export class GitLabService {
       author: commit.author_name || '',
       authorName: commit.author_name || '',          // 添加 authorName 字段
       authorEmail: commit.author_email || '',        // 添加 authorEmail 字段
+      authorUsername: commit.author_username || '',  // 添加 authorUsername 字段
       date: new Date(commit.created_at),
     }));
   }
