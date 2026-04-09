@@ -24,6 +24,7 @@ import type {
   createNormalizedMessage,
   generateMessageId,
 } from '../../shared/types';
+import { DEFAULT_AI_TOOLS } from '../../shared/constants';
 
 /**
  * Write prompt log to ai_prompt.log file in app's user data directory
@@ -54,8 +55,9 @@ let sdkModule: ClaudeAgentSDK | null = null;
 let currentConfig: AIConfiguration | null = null;
 
 // Tool permissions memory - persisted across sessions
-let rememberedAllowedTools: string[] = [];
-let rememberedDisallowedTools: string[] = [];
+// Use Set for automatic deduplication and thread-safe concurrent adds
+let rememberedAllowedTools = new Set<string>();
+let rememberedDisallowedTools = new Set<string>();
 
 // ============================================================================
 // Session Management
@@ -316,12 +318,13 @@ export class AIService {
       }
 
       // Load remembered tool permissions from config
-      rememberedAllowedTools = config.allowedTools || [];
-      rememberedDisallowedTools = config.disallowedTools || [];
+      // Convert arrays to Sets for automatic deduplication
+      rememberedAllowedTools = new Set(config.allowedTools || []);
+      rememberedDisallowedTools = new Set(config.disallowedTools || []);
 
       logger.info('AI service initialized', 'AIService', {
-        allowedToolsCount: rememberedAllowedTools.length,
-        disallowedToolsCount: rememberedDisallowedTools.length,
+        allowedToolsCount: rememberedAllowedTools.size,
+        disallowedToolsCount: rememberedDisallowedTools.size,
       });
     } catch (error) {
       logger.error('Failed to initialize AI service', 'AIService', error);
@@ -379,8 +382,8 @@ export class AIService {
       await configService.saveAIConfig(updatedConfig);
 
       // Update local cache
-      rememberedAllowedTools = [...allowedTools];
-      rememberedDisallowedTools = [...disallowedTools];
+      rememberedAllowedTools = new Set(allowedTools);
+      rememberedDisallowedTools = new Set(disallowedTools);
 
       logger.info('Tool permissions saved', 'AIService', {
         allowedCount: allowedTools.length,
@@ -398,13 +401,9 @@ export class AIService {
    */
   static addToolPermission(toolEntry: string, allowed: boolean): void {
     if (allowed) {
-      if (!rememberedAllowedTools.includes(toolEntry)) {
-        rememberedAllowedTools.push(toolEntry);
-      }
+      rememberedAllowedTools.add(toolEntry);
     } else {
-      if (!rememberedDisallowedTools.includes(toolEntry)) {
-        rememberedDisallowedTools.push(toolEntry);
-      }
+      rememberedDisallowedTools.add(toolEntry);
     }
   }
 
@@ -417,8 +416,8 @@ export class AIService {
     disallowedTools: string[];
   } {
     return {
-      allowedTools: [...rememberedAllowedTools],
-      disallowedTools: [...rememberedDisallowedTools],
+      allowedTools: Array.from(rememberedAllowedTools),
+      disallowedTools: Array.from(rememberedDisallowedTools),
     };
   }
 
@@ -595,12 +594,13 @@ export class AIService {
       }
 
       // Build allowed/disallowed tools lists
-      // Start with default tools and add any remembered permissions
+      // Create local copies to prevent race conditions with concurrent requests
+      // Include default tools and any remembered permissions
       const allowedTools: string[] = [
-        'Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob', 'Skill', 'NotebookEdit', 'TaskOutput', 'AskUserQuestion',
-        ...rememberedAllowedTools,
+        ...DEFAULT_AI_TOOLS,
+        ...Array.from(rememberedAllowedTools),
       ];
-      const disallowedTools: string[] = [...rememberedDisallowedTools];
+      const disallowedTools: string[] = Array.from(rememberedDisallowedTools);
 
       const execOptions = AIService.getExecutableOptions();
 
@@ -703,17 +703,17 @@ export class AIService {
 
         if (decision.allow) {
           // Add to allowed list if remember is set
+          // Update both local array (for this session) and global Set (for persistence)
           if (decision.rememberEntry && !allowedTools.includes(decision.rememberEntry)) {
             allowedTools.push(decision.rememberEntry);
-            // Also update global memory for persistence
             AIService.addToolPermission(decision.rememberEntry, true);
           }
           return { behavior: 'allow' as const, updatedInput: decision.updatedInput ?? input };
         } else {
           // User denied - add to disallowed list if remember is set
+          // Update both local array (for this session) and global Set (for persistence)
           if (decision.rememberEntry && !disallowedTools.includes(decision.rememberEntry)) {
             disallowedTools.push(decision.rememberEntry);
-            // Also update global memory for persistence
             AIService.addToolPermission(decision.rememberEntry, false);
           }
         }

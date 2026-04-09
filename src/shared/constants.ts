@@ -34,6 +34,12 @@ export const DEFAULT_INSTALL_DIRECTORY = 'project';
 /** Default auto-refresh setting */
 export const DEFAULT_AUTO_REFRESH = true;
 
+/** Default tools allowed for AI operations */
+export const DEFAULT_AI_TOOLS = [
+  'Write', 'Read', 'Edit', 'Bash', 'Grep', 'Glob',
+  'Skill', 'NotebookEdit', 'TaskOutput', 'AskUserQuestion'
+] as const;
+
 /** Configuration defaults */
 export const DEFAULT_CONFIG = {
   projectDirectories: [],
