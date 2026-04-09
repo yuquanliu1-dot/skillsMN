@@ -148,7 +148,6 @@
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^16.1.1",
     "react-window": "^1.8.11",
-    "rehype-sanitize": "^6.0.0",
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
     "trash": "^6.1.1",
