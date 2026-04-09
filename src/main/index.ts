@@ -39,10 +39,19 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 async function createWindow(): Promise<void> {
   logger.info('Creating main window', 'Main');
 
-  // Get icon path based on environment
-  const iconPath = isDev
-    ? path.join(__dirname, '../../../resources/icons/icon.png')
-    : path.join(process.resourcesPath, 'icons/icon.png');
+  // Get icon path based on environment and platform
+  // Note: macOS uses the .app bundle icon (set by electron-builder), but we set
+  // the window icon anyway for development and as a fallback
+  let iconPath: string | undefined;
+  if (isDev) {
+    iconPath = path.join(__dirname, '../../../resources/icons/icon.png');
+  } else {
+    // In production, macOS uses the bundle icon, Windows/Linux use explicit icon
+    if (process.platform !== 'darwin') {
+      iconPath = path.join(process.resourcesPath, 'icons', 'icon.png');
+    }
+    // On macOS, iconPath stays undefined to use the bundle icon
+  }
 
   mainWindow = new BrowserWindow({
     width: 1280,

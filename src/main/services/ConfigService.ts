@@ -2,7 +2,7 @@
  * Configuration Service
  *
  * Manages unified application configuration persistence
- * Stores config in application directory (not userData)
+ * Stores config in userData directory (persists across reinstallations)
  */
 
 import fs from 'fs';
@@ -75,17 +75,19 @@ function createDefaultConfig(): AppConfiguration {
 export class ConfigService {
   private configPath: string;
   private config: AppConfiguration | null = null;
+  private legacyConfigPath: string | null = null;
 
   constructor() {
-    // Store config in application directory (same as executable)
-    // In development, use the project root (where package.json is) instead of process.cwd()
-    // which can change based on how the app is launched
-    let appPath: string;
+    // Store config in userData directory (persists across app reinstallations)
+    const userDataPath = app.getPath('userData');
+    this.configPath = path.join(userDataPath, CONFIG_FILE_NAME);
+
+    // Also track legacy config path for migration
     if (app.isPackaged) {
-      appPath = path.dirname(app.getPath('exe'));
+      this.legacyConfigPath = path.join(path.dirname(app.getPath('exe')), CONFIG_FILE_NAME);
     } else {
-      // In development, find the project root by looking for package.json
-      // Start from the current file and go up until we find it
+      // In development, legacy config is in project root
+      let appPath: string;
       let currentDir = __dirname;
       for (let i = 0; i < 10; i++) {
         const packageJsonPath = path.join(currentDir, 'package.json');
@@ -95,7 +97,6 @@ export class ConfigService {
         }
         const parentDir = path.dirname(currentDir);
         if (parentDir === currentDir) {
-          // Reached root, fallback to cwd
           appPath = process.cwd();
           break;
         }
@@ -104,9 +105,48 @@ export class ConfigService {
       if (!appPath!) {
         appPath = process.cwd();
       }
+      this.legacyConfigPath = path.join(appPath, CONFIG_FILE_NAME);
     }
-    this.configPath = path.join(appPath, CONFIG_FILE_NAME);
+
     logger.info(`Configuration path: ${this.configPath}`, 'ConfigService');
+    logger.info(`Legacy configuration path: ${this.legacyConfigPath}`, 'ConfigService');
+
+    // Ensure userData directory exists
+    if (!fs.existsSync(userDataPath)) {
+      fs.mkdirSync(userDataPath, { recursive: true });
+    }
+
+    // Migrate config from legacy location if needed
+    this.migrateFromLegacy();
+  }
+
+  /**
+   * Migrate configuration from legacy location to userData directory
+   */
+  private migrateFromLegacy(): void {
+    if (!this.legacyConfigPath || !fs.existsSync(this.legacyConfigPath)) {
+      return; // No legacy config to migrate
+    }
+
+    // Check if new config already exists
+    if (fs.existsSync(this.configPath)) {
+      logger.info('Both legacy and new config exist, keeping new config', 'ConfigService');
+      return;
+    }
+
+    try {
+      // Copy legacy config to new location
+      const legacyConfig = fs.readFileSync(this.legacyConfigPath, 'utf-8');
+      fs.writeFileSync(this.configPath, legacyConfig, 'utf-8');
+      logger.info('Migrated configuration from legacy location to userData directory', 'ConfigService', {
+        from: this.legacyConfigPath,
+        to: this.configPath,
+      });
+    } catch (error) {
+      logger.warn('Failed to migrate legacy configuration, will create new config', 'ConfigService', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   }
 
   /**

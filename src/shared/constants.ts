@@ -15,7 +15,7 @@ export const CLAUDE_DIR_NAME = '.claude';
 /** Skills subdirectory name */
 export const SKILLS_DIR_NAME = 'skills';
 
-/** Unified configuration file name (stored in app directory) */
+/** Unified configuration file name (stored in userData directory) */
 export const CONFIG_FILE_NAME = 'config.json';
 
 /** @deprecated Use CONFIG_FILE_NAME - unified config now includes all settings */

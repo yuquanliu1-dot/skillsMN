@@ -17,12 +17,17 @@
       "node_modules/**/*",
       "package.json",
       "resources/icons/icon.ico",
+      "resources/icons/icon.iconset/**/*",
       ".claude/skills/skill-creator/**/*"
     ],
     "extraResources": [
       {
         "from": "resources/icons/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "resources/icons/icon.png",
+        "to": "icon.png"
       },
       {
         "from": "src/main/data",
@@ -43,6 +48,30 @@
       "target": [
         {
           "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "icon": "resources/icons/icon",
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "resources/icons",
+      "target": [
+        {
+          "target": "AppImage",
           "arch": [
             "x64"
           ]
@@ -119,6 +148,7 @@
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^16.1.1",
     "react-window": "^1.8.11",
+    "rehype-sanitize": "^6.0.0",
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
     "trash": "^6.1.1",
