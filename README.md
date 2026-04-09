@@ -37,19 +37,19 @@ skillsMN is an Electron-based desktop application that provides a unified interf
 
 ### Main Interface
 ![Main Interface](docs/screenshots/main-interface.png)
-*Clean, dark-mode interface with skill management and contribution tracking*
+*Local skill management with dark-mode interface*
 
 ### Skill Editor
 ![Skill Editor](docs/screenshots/skill-editor.png)
 *Monaco editor with syntax highlighting for skill editing*
 
+### Team Sharing
+![Team Sharing](docs/screenshots/ai-generation.png)
+*Private repository management for team collaboration*
+
 ### Registry Search
 ![Registry Search](docs/screenshots/registry-search.png)
 *Search and install skills from skills.sh registry*
-
-### AI Generation
-![AI Generation](docs/screenshots/ai-generation.png)
-*Generate skills using natural language with AI assistance*
 
 </div>
 
