@@ -106,9 +106,9 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
             return s.sourceMetadata.repoPath === repoPath &&
                    s.sourceMetadata.skillPath === skill.path;
           }
-          // 兜底：目录名匹配
+          // 兜底：目录名匹配 或 技能名匹配
           const localDirName = s.path.split('/').pop() || s.path.split('\\').pop() || '';
-          return localDirName === skillDirName;
+          return localDirName === skillDirName || s.name === skill.name;
         });
         setIsInstalled(exists);
       }
