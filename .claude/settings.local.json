@@ -21,7 +21,9 @@
       "Bash(cp:*)",
       "Bash(gh issue:*)",
       "Bash(pkill -f \"electron.*skillsMN\")",
-      "Bash(grep -r skillsMN.claude src/ --include=*.ts --include=*.tsx)"
+      "Bash(grep -r skillsMN.claude src/ --include=*.ts --include=*.tsx)",
+      "Bash(curl -k -s -H \"Private-Token: Ezx1vx3C8chv1UdLYhyL\" \"https://192.168.30.111:8090/api/v4/projects/skills-docs%2Fdevelop_skills\")",
+      "Bash(curl -k -s -H \"Private-Token: Ezx1vx3C8chv1UdLYhyL\" \"https://192.168.30.111:8090/api/v4/projects/450/repository/tree?recursive=1&ref=main&per_page=100\")"
     ]
   }
 }

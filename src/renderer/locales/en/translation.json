@@ -24,6 +24,7 @@
     "uploading": "Uploading...",
     "testing": "Testing...",
     "adding": "Adding...",
+    "add": "Add",
     "success": "Success",
     "error": "Error",
     "warning": "Warning",
@@ -837,6 +838,28 @@
     },
     "resetToDefault": "Reset to Default Groups",
     "resetConfirm": "This will restore all default groups. Custom groups will be preserved.",
-    "resetSuccess": "Default groups restored successfully"
+    "resetSuccess": "Default groups restored successfully",
+    "keywords": {
+      "title": "Edit Keywords",
+      "description": "Edit classification keywords",
+      "instructions": "Keyword Instructions",
+      "instructionDetails": [
+        "• Keywords are used to auto-match skill names, descriptions, and tags",
+        "• Supports Chinese and English keywords, separated by commas or newlines",
+        "• Match priority: tags > name > description"
+      ],
+      "addKeyword": "Add Keyword",
+      "addPlaceholder": "Enter keyword and press Enter to add",
+      "currentKeywords": "Current Keywords",
+      "noKeywords": "No keywords yet, please add",
+      "saveButton": "Save Keywords",
+      "saving": "Saving...",
+      "cancelButton": "Cancel",
+      "keywordsCount": "Keywords",
+      "editButton": "Edit",
+      "noKeywordsHint": "No keywords, click tag icon above to add",
+      "updateSuccess": "Keywords updated successfully",
+      "updateError": "Failed to update keywords"
+    }
   }
 }

@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import type { Configuration, PrivateRepo, AIConfiguration, SkillEditorConfig, SkillGroup, ProxyConfig } from '../../shared/types';
 import { changeLanguage, availableLanguages, getCurrentLanguage } from '../i18n';
 import type { LanguageCode } from '../../shared/types';
+import KeywordEditor from './KeywordEditor';
 
 // Preset colors for skill groups (software development themed)
 const PRESET_COLORS = [
@@ -146,6 +147,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editGroupName, setEditGroupName] = useState('');
   const [editGroupDescription, setEditGroupDescription] = useState('');
+  const [editingKeywordsGroupId, setEditingKeywordsGroupId] = useState<string | null>(null);
   const [editGroupColor, setEditGroupColor] = useState('#3B82F6');
   const [editGroupIcon, setEditGroupIcon] = useState('📁');
   const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
@@ -613,6 +615,38 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
       const message = err instanceof Error ? err.message : 'Failed to remove tag from group';
       setError(message);
       console.error('Remove tag from group error:', err);
+    }
+  };
+
+  /**
+   * Handle edit group keywords
+   */
+  const handleEditKeywords = (groupId: string) => {
+    setEditingKeywordsGroupId(groupId);
+  };
+
+  /**
+   * Handle update group keywords
+   */
+  const handleUpdateKeywords = async (groupId: string, keywords: string[]) => {
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await window.electronAPI.updateGroupKeywords(groupId, keywords);
+      if (response.success) {
+        setSuccess(t('skillGroups.keywords.updateSuccess'));
+        await loadSkillGroups();
+        setEditingKeywordsGroupId(null);
+      } else {
+        setError(response.error?.message || t('skillGroups.keywords.updateError'));
+        throw new Error(response.error?.message || 'Failed to update keywords');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update keywords';
+      setError(message);
+      console.error('Update keywords error:', err);
+      throw err;
     }
   };
 
@@ -2398,6 +2432,16 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                                 }`}
                               />
                             </button>
+                            {/* Edit Keywords Button */}
+                            <button
+                              onClick={() => handleEditKeywords(group.id)}
+                              className="p-2 text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+                              title="编辑关键词"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                              </svg>
+                            </button>
                             {/* Edit Button */}
                             <button
                               onClick={() => handleStartEditGroup(group)}
@@ -2455,6 +2499,39 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                               ))}
                             </div>
                           )}
+
+                          {/* Keywords Section */}
+                          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                              </svg>
+                              <span>{t('skillGroups.keywords.keywordsCount')} ({group.keywords?.length || 0})</span>
+                            </div>
+                            {group.keywords && group.keywords.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {group.keywords.slice(0, 8).map(keyword => (
+                                  <span
+                                    key={keyword}
+                                    className="inline-flex items-center px-2 py-0.5 text-xs rounded bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                    title={keyword}
+                                  >
+                                    {keyword.length > 10 ? `${keyword.substring(0, 10)}...` : keyword}
+                                  </span>
+                                ))}
+                                {group.keywords.length > 8 && (
+                                  <span className="inline-flex items-center px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                    +{group.keywords.length - 8}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {(!group.keywords || group.keywords.length === 0) && (
+                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                                {t('skillGroups.keywords.noKeywordsHint')}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -2717,6 +2794,15 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
           </div>
         </div>
       </div>
+
+      {/* Keyword Editor Modal */}
+      {editingKeywordsGroupId && (
+        <KeywordEditor
+          group={skillGroups.find(g => g.id === editingKeywordsGroupId)!}
+          onUpdate={handleUpdateKeywords}
+          onCancel={() => setEditingKeywordsGroupId(null)}
+        />
+      )}
     </div>
   );
 }

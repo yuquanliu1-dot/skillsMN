@@ -20,6 +20,94 @@ interface GroupedSkills {
 }
 
 /**
+ * Keyword Matcher (PrivateRepo Version)
+ * Matches skills to groups based on keywords in name, description, and tags
+ */
+interface KeywordMatchResult {
+  groupId: string | null;
+  confidence: number;
+  matchedKeywords: string[];
+  matchSource: 'name' | 'description' | 'tags';
+}
+
+class KeywordMatcher {
+  static matchSkillToGroups(
+    skill: { name: string; description?: string; tags?: string[] },
+    groups: Array<{ id: string; keywords?: string[] }>
+  ): KeywordMatchResult {
+    const searchParts = {
+      name: skill.name.toLowerCase(),
+      description: (skill.description || '').toLowerCase(),
+      tags: (skill.tags || []).join(' ').toLowerCase()
+    };
+
+    let bestMatch: KeywordMatchResult = {
+      groupId: null,
+      confidence: 0,
+      matchedKeywords: [],
+      matchSource: 'name'
+    };
+
+    for (const group of groups) {
+      if (!group.keywords || group.keywords.length === 0) continue;
+
+      const matchedKeywords: string[] = [];
+      let matchSource: 'name' | 'description' | 'tags' = 'name';
+
+      // Check name matches
+      for (const keyword of group.keywords) {
+        if (searchParts.name.includes(keyword.toLowerCase())) {
+          matchedKeywords.push(keyword);
+        }
+      }
+
+      // Check description matches
+      for (const keyword of group.keywords) {
+        if (searchParts.description.includes(keyword.toLowerCase())) {
+          matchedKeywords.push(keyword);
+        }
+      }
+
+      // Check tags matches (20% higher weight)
+      for (const keyword of group.keywords) {
+        if (searchParts.tags.includes(keyword.toLowerCase())) {
+          matchedKeywords.push(keyword);
+        }
+      }
+
+      if (matchedKeywords.length > 0) {
+        // Calculate weighted confidence (tags count 20% more)
+        let weightedConfidence = matchedKeywords.length;
+        const tagMatches = matchedKeywords.filter(kw =>
+          searchParts.tags.includes(kw.toLowerCase())
+        ).length;
+        weightedConfidence += tagMatches * 0.2;
+
+        // Determine match source priority: tags > name > description
+        if (searchParts.tags.includes(matchedKeywords[0].toLowerCase())) {
+          matchSource = 'tags';
+        } else if (searchParts.name.includes(matchedKeywords[0].toLowerCase())) {
+          matchSource = 'name';
+        } else {
+          matchSource = 'description';
+        }
+
+        if (weightedConfidence > bestMatch.confidence) {
+          bestMatch = {
+            groupId: group.id,
+            confidence: weightedConfidence,
+            matchedKeywords,
+            matchSource
+          };
+        }
+      }
+    }
+
+    return bestMatch;
+  }
+}
+
+/**
  * Check if an error message indicates an authentication failure
  */
 function isAuthenticationError(message: string): boolean {
@@ -127,43 +215,33 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
     return result;
   }, [skills, searchQuery, sortBy]);
 
-  // Group skills by configured groups (based on tags)
+  // Group skills by configured groups (based on keyword matching)
   const groupedSkills = useMemo((): GroupedSkills[] => {
     const result: GroupedSkills[] = [];
     const assignedSkills = new Set<string>();
 
-    // Create a map of tag to group
-    const tagToGroup = new Map<string, SkillGroup>();
-    for (const group of skillGroups) {
-      for (const tag of group.tags) {
-        tagToGroup.set(tag.toLowerCase(), group);
-      }
-    }
-
-    // Group skills by their tags' group assignments
+    // Group skills by keyword matching
     for (const group of skillGroups) {
       const groupSkills: PrivateSkill[] = [];
+
       for (const skill of filteredAndSortedSkills) {
         if (assignedSkills.has(skill.path)) continue;
 
-        // Check if any of the skill's tags belong to this group
-        const skillTags = skill.tags || [];
-        const hasGroupTag = skillTags.some(tag => {
-          const assignedGroup = tagToGroup.get(tag.toLowerCase());
-          return assignedGroup?.id === group.id;
-        });
+        // Match skill to this group using keywords
+        const matchResult = KeywordMatcher.matchSkillToGroups(skill, [group]);
 
-        if (hasGroupTag) {
+        if (matchResult.groupId === group.id) {
           groupSkills.push(skill);
           assignedSkills.add(skill.path);
         }
       }
+
       if (groupSkills.length > 0) {
         result.push({ group, skills: groupSkills });
       }
     }
 
-    // Ungrouped skills (skills without tags or tags not assigned to any group)
+    // Ungrouped skills (skills that didn't match any group)
     const ungroupedSkills = filteredAndSortedSkills.filter(
       (skill) => !assignedSkills.has(skill.path)
     );

@@ -840,6 +840,28 @@
     },
     "resetToDefault": "恢复默认分组",
     "resetConfirm": "将恢复所有系统默认分组，自定义分组将保留。",
-    "resetSuccess": "默认分组已恢复"
+    "resetSuccess": "默认分组已恢复",
+    "keywords": {
+      "title": "编辑关键词",
+      "description": "编辑分类关键词",
+      "instructions": "关键词说明",
+      "instructionDetails": [
+        "• 关键词用于自动匹配技能名称、描述和标签",
+        "• 支持中英文关键词，用逗号或换行分隔",
+        "• 匹配优先级：标签 > 名称 > 描述"
+      ],
+      "addKeyword": "添加关键词",
+      "addPlaceholder": "输入关键词后按回车添加",
+      "currentKeywords": "当前关键词",
+      "noKeywords": "暂无关键词，请添加",
+      "saveButton": "保存关键词",
+      "saving": "保存中...",
+      "cancelButton": "取消",
+      "keywordsCount": "关键词",
+      "editButton": "编辑",
+      "noKeywordsHint": "暂无关键词，点击上方标签图标添加",
+      "updateSuccess": "关键词已更新",
+      "updateError": "关键词更新失败"
+    }
   }
 }

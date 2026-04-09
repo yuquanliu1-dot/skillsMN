@@ -17,7 +17,6 @@ import {
   PrivateRepoConfigSection,
   PrivateRepo,
   AIProvider,
-  SkillGroupsConfig,
 } from '../../shared/types';
 import { ConfigurationModel } from '../models/Configuration';
 import { CONFIG_FILE_NAME, CONFIG_VERSION } from '../../shared/constants';
@@ -48,17 +47,6 @@ function getDefaultPrivateReposConfig(): PrivateRepoConfigSection {
 }
 
 /**
- * Get default skill groups configuration
- */
-function getDefaultSkillGroupsConfig(): SkillGroupsConfig {
-  return {
-    version: 1,
-    groups: [],
-    defaultGroupsInitialized: false,
-  };
-}
-
-/**
  * Get default unified configuration
  */
 function createDefaultConfig(): AppConfiguration {
@@ -68,7 +56,6 @@ function createDefaultConfig(): AppConfiguration {
     version: CONFIG_VERSION,
     ai: getDefaultAIConfig(),
     privateRepos: getDefaultPrivateReposConfig(),
-    skillGroups: getDefaultSkillGroupsConfig(),
   };
 }
 
@@ -240,9 +227,6 @@ export class ConfigService {
       repositories: rawConfig.privateRepos?.repositories || [],
     };
 
-    // Validate skill groups
-    const skillGroupsConfig: SkillGroupsConfig | undefined = rawConfig.skillGroups || undefined;
-
     // Validate proxy config (handle both old and new format)
     let proxyConfig: import('../../shared/types').ProxyConfig | undefined;
     if (rawConfig.proxy) {
@@ -268,7 +252,6 @@ export class ConfigService {
       version: rawConfig.version || CONFIG_VERSION,
       ai: aiConfig,
       privateRepos: privateReposConfig,
-      skillGroups: skillGroupsConfig,
       proxy: proxyConfig,
     };
   }
@@ -277,7 +260,7 @@ export class ConfigService {
    * Save configuration to disk
    * Merges updates with existing configuration and validates before saving
    */
-  async save(updates: Partial<BaseConfiguration> & { skillGroups?: SkillGroupsConfig; proxy?: import('../../shared/types').ProxyConfig }): Promise<AppConfiguration> {
+  async save(updates: Partial<BaseConfiguration> & { proxy?: import('../../shared/types').ProxyConfig }): Promise<AppConfiguration> {
     try {
       // Always load from disk to ensure we have the latest config
       // This prevents losing data if this.config was cleared or corrupted
@@ -289,14 +272,13 @@ export class ConfigService {
       // Validate merged config
       const validated = ConfigurationModel.validate(merged);
 
-      // Build new config preserving AI, private repos, skill groups, and proxy
+      // Build new config preserving AI, private repos, and proxy
       // Use existing (from disk) instead of this.config to avoid losing data
       const newConfig: AppConfiguration = {
         ...validated,
         version: existing.version || CONFIG_VERSION,
         ai: existing.ai || getDefaultAIConfig(),
         privateRepos: existing.privateRepos || getDefaultPrivateReposConfig(),
-        skillGroups: updates.skillGroups !== undefined ? updates.skillGroups : existing.skillGroups,
         proxy: updates.proxy !== undefined ? updates.proxy : existing.proxy,
       };
 
@@ -592,49 +574,6 @@ export class ConfigService {
   async listPrivateRepos(): Promise<PrivateRepo[]> {
     const config = await this.loadPrivateRepos();
     return config.repositories;
-  }
-
-  // ============================================================================
-  // Skill Groups Methods
-  // ============================================================================
-
-  /**
-   * Load skill groups configuration
-   */
-  async loadSkillGroups(): Promise<SkillGroupsConfig | undefined> {
-    const config = await this.load();
-    return config.skillGroups;
-  }
-
-  /**
-   * Save skill groups configuration
-   */
-  async saveSkillGroups(skillGroups: SkillGroupsConfig): Promise<void> {
-    try {
-      const config = await this.load();
-      config.skillGroups = skillGroups;
-
-      // Save (encrypt API key in AI section)
-      const configToSave = {
-        ...config,
-        ai: {
-          ...config.ai,
-          apiKey: config.ai.apiKey ? encryptAPIKey(config.ai.apiKey) : '',
-        },
-      };
-
-      await fs.promises.writeFile(
-        this.configPath,
-        JSON.stringify(configToSave, null, 2),
-        'utf-8'
-      );
-
-      this.config = config;
-      logger.debug('Skill groups saved', 'ConfigService');
-    } catch (error) {
-      ErrorHandler.log(error, 'ConfigService.saveSkillGroups');
-      throw new ConfigurationError('Failed to save skill groups', 'skill-groups');
-    }
   }
 
   // ============================================================================

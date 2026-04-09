@@ -383,8 +383,6 @@ export interface AppConfiguration extends BaseConfiguration {
   ai: AIConfigSection;
   /** Private repository settings */
   privateRepos: PrivateRepoConfigSection;
-  /** Skill groups configuration */
-  skillGroups?: SkillGroupsConfig;
   /** Proxy configuration settings */
   proxy?: ProxyConfig;
 }
@@ -1063,6 +1061,8 @@ export interface SkillGroup {
   icon?: string;
   /** List of tags assigned to this group */
   tags: string[];
+  /** Classification keywords (for auto-matching skills by name, description, and tags) */
+  keywords?: string[];
   /** Whether the group is enabled (disabled groups are hidden from skill list) */
   enabled?: boolean;
   /** Whether this is a system default group */
@@ -1076,15 +1076,13 @@ export interface SkillGroup {
 }
 
 /**
- * Skill groups configuration section
+ * Custom groups configuration (user-defined overrides and additions)
  */
-export interface SkillGroupsConfig {
+export interface CustomGroupsConfig {
   /** Configuration version */
   version: number;
-  /** List of skill groups */
+  /** List of custom groups (can override default groups by ID) */
   groups: SkillGroup[];
-  /** Whether default groups have been initialized */
-  defaultGroupsInitialized?: boolean;
 }
 
 /**
@@ -1103,6 +1101,8 @@ export interface DefaultGroupDefinition {
   icon: string;
   /** Tags to pre-assign */
   tags?: string[];
+  /** Classification keywords (for auto-matching) */
+  keywords?: string[];
   /** Whether enabled by default */
   enabled: boolean;
   /** Whether this is a default group */

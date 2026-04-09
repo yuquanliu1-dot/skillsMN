@@ -6,125 +6,106 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
+import { app } from 'electron';
 import { logger } from '../utils/Logger';
 import {
   SkillGroup,
-  SkillGroupsConfig,
+  CustomGroupsConfig,
   DefaultGroupsConfig,
   DefaultGroupDefinition,
   IPCResponse,
 } from '../../shared/types';
 
-// Default groups configuration embedded in code (DevOps phases)
-const DEFAULT_GROUPS_CONFIG: DefaultGroupsConfig = {
-  version: 1,
-  groups: [
-    {
-      id: 'default-plan',
-      nameKey: 'skillGroups.defaultGroups.plan.name',
-      descriptionKey: 'skillGroups.defaultGroups.plan.description',
-      color: '#8B5CF6',
-      icon: '📋',
-      tags: [],
-      enabled: true,
-      isDefault: true,
-      order: 1,
-    },
-    {
-      id: 'default-code',
-      nameKey: 'skillGroups.defaultGroups.code.name',
-      descriptionKey: 'skillGroups.defaultGroups.code.description',
-      color: '#3B82F6',
-      icon: '💻',
-      tags: [],
-      enabled: true,
-      isDefault: true,
-      order: 2,
-    },
-    {
-      id: 'default-build',
-      nameKey: 'skillGroups.defaultGroups.build.name',
-      descriptionKey: 'skillGroups.defaultGroups.build.description',
-      color: '#F59E0B',
-      icon: '🔧',
-      tags: [],
-      enabled: true,
-      isDefault: true,
-      order: 3,
-    },
-    {
-      id: 'default-test',
-      nameKey: 'skillGroups.defaultGroups.test.name',
-      descriptionKey: 'skillGroups.defaultGroups.test.description',
-      color: '#10B981',
-      icon: '🧪',
-      tags: [],
-      enabled: true,
-      isDefault: true,
-      order: 4,
-    },
-    {
-      id: 'default-release',
-      nameKey: 'skillGroups.defaultGroups.release.name',
-      descriptionKey: 'skillGroups.defaultGroups.release.description',
-      color: '#EC4899',
-      icon: '🚀',
-      tags: [],
-      enabled: true,
-      isDefault: true,
-      order: 5,
-    },
-    {
-      id: 'default-deploy',
-      nameKey: 'skillGroups.defaultGroups.deploy.name',
-      descriptionKey: 'skillGroups.defaultGroups.deploy.description',
-      color: '#EF4444',
-      icon: '🎯',
-      tags: [],
-      enabled: true,
-      isDefault: true,
-      order: 6,
-    },
-    {
-      id: 'default-operate',
-      nameKey: 'skillGroups.defaultGroups.operate.name',
-      descriptionKey: 'skillGroups.defaultGroups.operate.description',
-      color: '#06B6D4',
-      icon: '⚙️',
-      tags: [],
-      enabled: true,
-      isDefault: true,
-      order: 7,
-    },
-    {
-      id: 'default-monitor',
-      nameKey: 'skillGroups.defaultGroups.monitor.name',
-      descriptionKey: 'skillGroups.defaultGroups.monitor.description',
-      color: '#6366F1',
-      icon: '📊',
-      tags: [],
-      enabled: true,
-      isDefault: true,
-      order: 8,
-    },
-  ],
-};
+// Path to default groups configuration (bundled with app)
+// In development: navigate from dist/src/main/services/ to project root app/resources
+// In production: use relative path from app.asar to resources
+const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const DEFAULT_GROUPS_PATH = isDev
+  ? path.join(__dirname, '../../../../app/resources/default-groups.json')
+  : path.join(process.resourcesPath, 'app/resources/default-groups.json');
+
+// Path to custom groups configuration (user data directory)
+const CUSTOM_GROUPS_PATH = path.join(app.getPath('userData'), 'custom-groups.json');
 
 export class SkillGroupService {
-  private config: SkillGroupsConfig;
+  private customConfig: CustomGroupsConfig;
   private defaultGroupsConfig: DefaultGroupsConfig | null = null;
 
-  constructor(initialConfig?: SkillGroupsConfig) {
-    this.config = initialConfig || {
+  constructor(initialCustomConfig?: CustomGroupsConfig) {
+    this.customConfig = initialCustomConfig || {
       version: 1,
       groups: [],
-      defaultGroupsInitialized: false,
     };
-    // Use embedded default groups config
-    this.defaultGroupsConfig = DEFAULT_GROUPS_CONFIG;
-    logger.info('Loaded default groups config', 'SkillGroupService', {
-      groupCount: this.defaultGroupsConfig?.groups.length || 0,
-    });
+    // Load default groups from bundled JSON file
+    this.loadDefaultGroupsConfig();
+  }
+
+  /**
+   * Load default groups configuration from bundled JSON file
+   */
+  private loadDefaultGroupsConfig(): void {
+    try {
+      logger.info('Looking for default groups config', 'SkillGroupService', {
+        path: DEFAULT_GROUPS_PATH,
+        isDev: process.env.NODE_ENV === 'development' || !app.isPackaged,
+        dirname: __dirname,
+      });
+
+      if (fs.existsSync(DEFAULT_GROUPS_PATH)) {
+        const content = fs.readFileSync(DEFAULT_GROUPS_PATH, 'utf8');
+        this.defaultGroupsConfig = JSON.parse(content);
+        logger.info('Loaded default groups config', 'SkillGroupService', {
+          groupCount: this.defaultGroupsConfig?.groups.length || 0,
+        });
+      } else {
+        logger.warn('Default groups config file not found', 'SkillGroupService', {
+          path: DEFAULT_GROUPS_PATH,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to load default groups config', 'SkillGroupService', { error });
+    }
+  }
+
+  /**
+   * Load custom groups configuration from user data directory
+   */
+  static loadCustomGroupsConfig(): CustomGroupsConfig {
+    try {
+      if (fs.existsSync(CUSTOM_GROUPS_PATH)) {
+        const content = fs.readFileSync(CUSTOM_GROUPS_PATH, 'utf8');
+        return JSON.parse(content);
+      }
+    } catch (error) {
+      logger.error('Failed to load custom groups config', 'SkillGroupService', { error });
+    }
+    // Return empty config if file doesn't exist or error occurs
+    return {
+      version: 1,
+      groups: [],
+    };
+  }
+
+  /**
+   * Save custom groups configuration to user data directory
+   */
+  private saveCustomGroupsConfig(): boolean {
+    try {
+      const dir = path.dirname(CUSTOM_GROUPS_PATH);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(CUSTOM_GROUPS_PATH, JSON.stringify(this.customConfig, null, 2));
+      logger.info('Saved custom groups config', 'SkillGroupService', {
+        groupCount: this.customConfig.groups.length,
+      });
+      return true;
+    } catch (error) {
+      logger.error('Failed to save custom groups config', 'SkillGroupService', { error });
+      return false;
+    }
   }
 
   /**
@@ -154,6 +135,7 @@ export class SkillGroupService {
       color: def.color,
       icon: def.icon,
       tags: def.tags || [],
+      keywords: def.keywords || [],
       enabled: def.enabled,
       isDefault: true,
       order: def.order,
@@ -163,53 +145,15 @@ export class SkillGroupService {
   }
 
   /**
-   * Initialize default groups if not already done
-   * This should be called when the config is first loaded
-   * @param t - Translation function for localization
+   * Initialize default groups - no longer needed, kept for compatibility
    */
-  initializeDefaultGroups(t?: (key: string) => string): boolean {
-    // Check if default groups have already been initialized
-    if (this.config.defaultGroupsInitialized) {
-      return false;
-    }
-
-    // Check if there are any existing default groups
-    const existingDefaultIds = new Set(
-      this.config.groups.filter((g) => g.isDefault).map((g) => g.id)
-    );
-
-    if (!this.defaultGroupsConfig) {
-      return false;
-    }
-
-    // Add default groups that don't exist yet
-    const newGroups: SkillGroup[] = [];
-    for (const def of this.defaultGroupsConfig.groups) {
-      if (!existingDefaultIds.has(def.id)) {
-        newGroups.push(this.definitionToGroup(def, t));
-      }
-    }
-
-    if (newGroups.length > 0) {
-      // Add new default groups and sort by order
-      this.config.groups = [...this.config.groups, ...newGroups].sort(
-        (a, b) => (a.order || 999) - (b.order || 999)
-      );
-      this.config.defaultGroupsInitialized = true;
-
-      logger.info('Initialized default groups', 'SkillGroupService', {
-        count: newGroups.length,
-      });
-
-      return true;
-    }
-
-    this.config.defaultGroupsInitialized = true;
+  initializeDefaultGroups(_t?: (key: string) => string): boolean {
+    // Default groups are now loaded from JSON file
     return false;
   }
 
   /**
-   * Reset to default groups (preserves custom groups)
+   * Reset to default groups (clears all custom overrides)
    * @param t - Translation function for localization
    */
   resetToDefaultGroups(t?: (key: string) => string): IPCResponse<SkillGroup[]> {
@@ -224,22 +168,17 @@ export class SkillGroupService {
         };
       }
 
-      // Keep only custom groups
-      const customGroups = this.config.groups.filter((g) => !g.isDefault);
+      // Clear all custom groups
+      this.customConfig.groups = [];
+      this.saveCustomGroupsConfig();
 
-      // Add fresh default groups
+      // Return default groups
       const defaultGroups = this.defaultGroupsConfig.groups.map((def) =>
         this.definitionToGroup(def, t)
       );
 
-      // Merge and sort by order
-      this.config.groups = [...defaultGroups, ...customGroups].sort(
-        (a, b) => (a.order || 999) - (b.order || 999)
-      );
-
       logger.info('Reset to default groups', 'SkillGroupService', {
         defaultCount: defaultGroups.length,
-        customCount: customGroups.length,
       });
 
       return { success: true, data: defaultGroups };
@@ -256,47 +195,89 @@ export class SkillGroupService {
   }
 
   /**
-   * Get current groups configuration
+   * Get custom groups configuration
    */
-  getConfig(): SkillGroupsConfig {
-    return this.config;
+  getCustomConfig(): CustomGroupsConfig {
+    return this.customConfig;
   }
 
   /**
-   * Update configuration
+   * Update custom groups configuration
    */
-  updateConfig(config: SkillGroupsConfig): void {
-    this.config = config;
+  updateCustomConfig(config: CustomGroupsConfig): void {
+    this.customConfig = config;
   }
 
   /**
-   * Get all groups (sorted by order)
+   * Get all groups (default + custom, merged and sorted)
+   * Custom groups override default groups by ID
    */
-  getGroups(): SkillGroup[] {
-    return [...this.config.groups].sort(
+  getGroups(t?: (key: string) => string): SkillGroup[] {
+    const groupsMap = new Map<string, SkillGroup>();
+
+    // Add default groups first
+    if (this.defaultGroupsConfig) {
+      for (const def of this.defaultGroupsConfig.groups) {
+        const group = this.definitionToGroup(def, t);
+        groupsMap.set(group.id, group);
+      }
+    }
+
+    // Override with custom groups
+    for (const customGroup of this.customConfig.groups) {
+      groupsMap.set(customGroup.id, customGroup);
+    }
+
+    // Convert to array and sort by order
+    return Array.from(groupsMap.values()).sort(
       (a, b) => (a.order || 999) - (b.order || 999)
     );
   }
 
   /**
-   * Get only default groups
+   * Get only default groups (not overridden by custom)
    */
-  getDefaultGroupsList(): SkillGroup[] {
-    return this.config.groups.filter((g) => g.isDefault);
+  getDefaultGroupsList(t?: (key: string) => string): SkillGroup[] {
+    const customIds = new Set(this.customConfig.groups.map(g => g.id));
+
+    if (!this.defaultGroupsConfig) {
+      return [];
+    }
+
+    return this.defaultGroupsConfig.groups
+      .filter(def => !customIds.has(def.id))
+      .map(def => this.definitionToGroup(def, t))
+      .sort((a, b) => (a.order || 999) - (b.order || 999));
   }
 
   /**
    * Get only custom groups
    */
   getCustomGroups(): SkillGroup[] {
-    return this.config.groups.filter((g) => !g.isDefault);
+    return [...this.customConfig.groups].sort(
+      (a, b) => (a.order || 999) - (b.order || 999)
+    );
   }
 
   /**
-   * Get a group by ID
+   * Get a group by ID (from both default and custom)
    */
-  getGroup(id: string): SkillGroup | undefined {
-    return this.config.groups.find((g) => g.id === id);
+  getGroup(id: string, t?: (key: string) => string): SkillGroup | undefined {
+    // First check custom groups
+    const customGroup = this.customConfig.groups.find((g) => g.id === id);
+    if (customGroup) {
+      return customGroup;
+    }
+
+    // Then check default groups
+    if (this.defaultGroupsConfig) {
+      const def = this.defaultGroupsConfig.groups.find((g) => g.id === id);
+      if (def) {
+        return this.definitionToGroup(def, t);
+      }
+    }
+
+    return undefined;
   }
 
   /**
@@ -307,7 +288,8 @@ export class SkillGroupService {
   ): IPCResponse<SkillGroup> {
     try {
       const now = new Date().toISOString();
-      const maxOrder = Math.max(0, ...this.config.groups.map((g) => g.order || 0));
+      const allGroups = this.getGroups();
+      const maxOrder = Math.max(0, ...allGroups.map((g) => g.order || 0));
       const group: SkillGroup = {
         id: uuidv4(),
         name: data.name,
@@ -315,6 +297,7 @@ export class SkillGroupService {
         color: data.color || '#3B82F6',
         icon: data.icon || '📁',
         tags: [],
+        keywords: data.keywords || [],
         enabled: data.enabled ?? true,
         isDefault: false,
         order: data.order ?? maxOrder + 1,
@@ -322,7 +305,9 @@ export class SkillGroupService {
         updatedAt: now,
       };
 
-      this.config.groups.push(group);
+      this.customConfig.groups.push(group);
+      this.saveCustomGroupsConfig();
+
       logger.info('Skill group created', 'SkillGroupService', {
         groupId: group.id,
         name: group.name,
@@ -343,14 +328,40 @@ export class SkillGroupService {
 
   /**
    * Update a group (works for both default and custom groups)
+   * For default groups, saves override to customConfig
    */
   updateGroup(
     id: string,
     data: Partial<Omit<SkillGroup, 'id' | 'createdAt' | 'isDefault'>>
   ): IPCResponse<SkillGroup> {
     try {
-      const index = this.config.groups.findIndex((g) => g.id === id);
-      if (index === -1) {
+      // Check if group exists in custom config
+      const customIndex = this.customConfig.groups.findIndex((g) => g.id === id);
+
+      if (customIndex !== -1) {
+        // Update existing custom group
+        const existingGroup = this.customConfig.groups[customIndex];
+        const updatedGroup: SkillGroup = {
+          ...existingGroup,
+          ...data,
+          id, // Ensure ID doesn't change
+          isDefault: existingGroup.isDefault, // Preserve isDefault flag
+          createdAt: existingGroup.createdAt, // Ensure createdAt doesn't change
+          updatedAt: new Date().toISOString(),
+        };
+
+        this.customConfig.groups[customIndex] = updatedGroup;
+        this.saveCustomGroupsConfig();
+
+        logger.info('Custom skill group updated', 'SkillGroupService', { groupId: id });
+        return { success: true, data: updatedGroup };
+      }
+
+      // Check if it's a default group
+      const allGroups = this.getGroups();
+      const existingGroup = allGroups.find((g) => g.id === id);
+
+      if (!existingGroup) {
         return {
           success: false,
           error: {
@@ -360,19 +371,20 @@ export class SkillGroupService {
         };
       }
 
-      const existingGroup = this.config.groups[index];
+      // Create override for default group
       const updatedGroup: SkillGroup = {
         ...existingGroup,
         ...data,
         id, // Ensure ID doesn't change
         isDefault: existingGroup.isDefault, // Preserve isDefault flag
-        createdAt: existingGroup.createdAt, // Ensure createdAt doesn't change
+        createdAt: existingGroup.createdAt, // Preserve original createdAt
         updatedAt: new Date().toISOString(),
       };
 
-      this.config.groups[index] = updatedGroup;
-      logger.info('Skill group updated', 'SkillGroupService', { groupId: id });
+      this.customConfig.groups.push(updatedGroup);
+      this.saveCustomGroupsConfig();
 
+      logger.info('Default group overridden', 'SkillGroupService', { groupId: id });
       return { success: true, data: updatedGroup };
     } catch (error) {
       logger.error('Failed to update skill group', 'SkillGroupService', {
@@ -390,30 +402,67 @@ export class SkillGroupService {
   }
 
   /**
-   * Delete a group (allowed for both default and custom groups)
+   * Delete a group (works for both default and custom groups)
+   * For default groups, creates a "deleted" override in customConfig
    */
   deleteGroup(id: string): IPCResponse<void> {
     try {
-      const index = this.config.groups.findIndex((g) => g.id === id);
-      if (index === -1) {
-        return {
-          success: false,
-          error: {
-            code: 'GROUP_NOT_FOUND',
-            message: 'Group not found',
-          },
-        };
+      // First check if it's in custom config
+      const customIndex = this.customConfig.groups.findIndex((g) => g.id === id);
+
+      if (customIndex !== -1) {
+        // Remove from custom config
+        const group = this.customConfig.groups[customIndex];
+        this.customConfig.groups.splice(customIndex, 1);
+        this.saveCustomGroupsConfig();
+
+        logger.info('Custom group deleted', 'SkillGroupService', {
+          groupId: id,
+          wasDefault: group.isDefault,
+        });
+
+        return { success: true };
       }
 
-      const group = this.config.groups[index];
-      this.config.groups.splice(index, 1);
+      // Check if it's a default group
+      if (this.defaultGroupsConfig) {
+        const def = this.defaultGroupsConfig.groups.find((g) => g.id === id);
+        if (def) {
+          // Create a disabled override to "delete" the default group
+          const now = new Date().toISOString();
+          const deletedGroup: SkillGroup = {
+            id: def.id,
+            name: def.nameKey, // Will be translated later
+            description: def.descriptionKey,
+            color: def.color,
+            icon: def.icon,
+            tags: def.tags || [],
+            keywords: def.keywords || [],
+            enabled: false, // Disable to effectively delete
+            isDefault: true,
+            order: def.order,
+            createdAt: now,
+            updatedAt: now,
+          };
 
-      logger.info('Skill group deleted', 'SkillGroupService', {
-        groupId: id,
-        wasDefault: group.isDefault,
-      });
+          this.customConfig.groups.push(deletedGroup);
+          this.saveCustomGroupsConfig();
 
-      return { success: true };
+          logger.info('Default group disabled (deleted)', 'SkillGroupService', {
+            groupId: id,
+          });
+
+          return { success: true };
+        }
+      }
+
+      return {
+        success: false,
+        error: {
+          code: 'GROUP_NOT_FOUND',
+          message: 'Group not found',
+        },
+      };
     } catch (error) {
       logger.error('Failed to delete skill group', 'SkillGroupService', {
         error,
@@ -434,7 +483,9 @@ export class SkillGroupService {
    */
   addTagToGroup(groupId: string, tag: string): IPCResponse<SkillGroup> {
     try {
-      const group = this.config.groups.find((g) => g.id === groupId);
+      const allGroups = this.getGroups();
+      const group = allGroups.find((g) => g.id === groupId);
+
       if (!group) {
         return {
           success: false,
@@ -458,12 +509,9 @@ export class SkillGroupService {
       // Remove tag from other groups first (a tag can only belong to one group)
       this.removeTagFromAllGroups(tag);
 
-      group.tags.push(tag);
-      group.updatedAt = new Date().toISOString();
-
-      logger.info('Tag added to group', 'SkillGroupService', { groupId, tag });
-
-      return { success: true, data: group };
+      // Update the group (this will create override if needed)
+      const updatedTags = [...group.tags, tag];
+      return this.updateGroup(groupId, { tags: updatedTags });
     } catch (error) {
       logger.error('Failed to add tag to group', 'SkillGroupService', {
         error,
@@ -485,7 +533,9 @@ export class SkillGroupService {
    */
   removeTagFromGroup(groupId: string, tag: string): IPCResponse<SkillGroup> {
     try {
-      const group = this.config.groups.find((g) => g.id === groupId);
+      const allGroups = this.getGroups();
+      const group = allGroups.find((g) => g.id === groupId);
+
       if (!group) {
         return {
           success: false,
@@ -507,12 +557,9 @@ export class SkillGroupService {
         };
       }
 
-      group.tags.splice(tagIndex, 1);
-      group.updatedAt = new Date().toISOString();
-
-      logger.info('Tag removed from group', 'SkillGroupService', { groupId, tag });
-
-      return { success: true, data: group };
+      // Update the group (this will create override if needed)
+      const updatedTags = group.tags.filter((t) => t !== tag);
+      return this.updateGroup(groupId, { tags: updatedTags });
     } catch (error) {
       logger.error('Failed to remove tag from group', 'SkillGroupService', {
         error,
@@ -533,11 +580,11 @@ export class SkillGroupService {
    * Remove tag from all groups
    */
   removeTagFromAllGroups(tag: string): void {
-    for (const group of this.config.groups) {
-      const index = group.tags.indexOf(tag);
-      if (index !== -1) {
-        group.tags.splice(index, 1);
-        group.updatedAt = new Date().toISOString();
+    const allGroups = this.getGroups();
+    for (const group of allGroups) {
+      if (group.tags.includes(tag)) {
+        const updatedTags = group.tags.filter((t) => t !== tag);
+        this.updateGroup(group.id, { tags: updatedTags });
       }
     }
   }
@@ -546,7 +593,8 @@ export class SkillGroupService {
    * Get group for a tag
    */
   getGroupForTag(tag: string): SkillGroup | undefined {
-    return this.config.groups.find((g) => g.tags.includes(tag));
+    const allGroups = this.getGroups();
+    return allGroups.find((g) => g.tags.includes(tag));
   }
 
   /**
@@ -554,24 +602,17 @@ export class SkillGroupService {
    */
   reorderGroups(groupIds: string[]): IPCResponse<void> {
     try {
-      const reorderedGroups: SkillGroup[] = [];
+      const allGroups = this.getGroups();
+
       for (let i = 0; i < groupIds.length; i++) {
-        const group = this.config.groups.find((g) => g.id === groupIds[i]);
+        const groupId = groupIds[i];
+        const group = allGroups.find((g) => g.id === groupId);
         if (group) {
-          group.order = i + 1;
-          group.updatedAt = new Date().toISOString();
-          reorderedGroups.push(group);
+          // Update order via updateGroup to handle overrides
+          this.updateGroup(groupId, { order: i + 1 });
         }
       }
 
-      // Add any groups that weren't in the reorder list
-      for (const group of this.config.groups) {
-        if (!reorderedGroups.find((g) => g.id === group.id)) {
-          reorderedGroups.push(group);
-        }
-      }
-
-      this.config.groups = reorderedGroups;
       logger.info('Skill groups reordered', 'SkillGroupService');
 
       return { success: true };
@@ -582,6 +623,45 @@ export class SkillGroupService {
         error: {
           code: 'REORDER_GROUPS_FAILED',
           message: error instanceof Error ? error.message : 'Failed to reorder groups',
+        },
+      };
+    }
+  }
+
+  /**
+   * Update keywords for a group
+   */
+  updateGroupKeywords(
+    groupId: string,
+    keywords: string[]
+  ): IPCResponse<SkillGroup> {
+    try {
+      // Filter out empty keywords and trim whitespace
+      const cleanedKeywords = keywords
+        .map(k => k.trim())
+        .filter(k => k.length > 0);
+
+      // Use updateGroup to handle overrides
+      const result = this.updateGroup(groupId, { keywords: cleanedKeywords });
+
+      if (result.success) {
+        logger.info('Group keywords updated', 'SkillGroupService', {
+          groupId,
+          keywordCount: cleanedKeywords.length,
+        });
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to update group keywords', 'SkillGroupService', {
+        error,
+        groupId
+      });
+      return {
+        success: false,
+        error: {
+          code: 'UPDATE_KEYWORDS_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to update group keywords',
         },
       };
     }

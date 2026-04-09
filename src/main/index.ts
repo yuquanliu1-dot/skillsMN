@@ -17,7 +17,7 @@ import { registerSymlinkHandlers } from './ipc/symlinkHandlers';
 import { registerMigrationHandlers } from './ipc/migrationHandlers';
 import { registerImportHandlers, initImportService } from './ipc/importHandlers';
 import { registerAIConversationHandlers } from './ipc/aiConversationHandlers';
-import { registerSkillGroupHandlers, setConfigService, autoInitializeDefaultGroups } from './ipc/skillGroupHandlers';
+import { registerSkillGroupHandlers } from './ipc/skillGroupHandlers';
 import { registerContributionStatsHandlers } from './ipc/contributionStatsHandlers';
 import { ContributionStatsService } from './services/ContributionStatsService';
 import { PathValidator } from './services/PathValidator';
@@ -221,12 +221,8 @@ async function initialize(): Promise<void> {
     logger.info('AI conversation handlers registered', 'Main');
 
     // Register skill group handlers
-    setConfigService(configService);
     registerSkillGroupHandlers();
     logger.info('Skill group handlers registered', 'Main');
-
-    // Auto-initialize default skill groups if not already done
-    await autoInitializeDefaultGroups();
 
     // Register contribution stats handlers
     registerContributionStatsHandlers();

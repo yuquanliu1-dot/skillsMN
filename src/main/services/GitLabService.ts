@@ -939,11 +939,11 @@ export class GitLabService {
         }
       }
 
-      // Get the latest commit SHA after upload
+      // Get the latest commit SHA after upload for the specific directory
       let commitSha: string | undefined;
       try {
         const commitResponse = await fetchWithTimeout(
-          `${baseUrl}/api/v4/projects/${projectId}/repository/commits?ref_name=${branch}&per_page=1`,
+          `${baseUrl}/api/v4/projects/${projectId}/repository/commits?path=${encodeURIComponent(skillDirName)}&ref_name=${branch}&per_page=1`,
           {
             method: 'GET',
             headers: {

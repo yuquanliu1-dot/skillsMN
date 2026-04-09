@@ -9,14 +9,9 @@ import { logger } from '../utils/Logger';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { SkillGroupService } from '../services/SkillGroupService';
 import { IPC_CHANNELS } from '../../shared/constants';
-import { SkillGroup, SkillGroupsConfig, IPCResponse, IPCError } from '../../shared/types';
+import { SkillGroup, CustomGroupsConfig, IPCResponse, IPCError } from '../../shared/types';
 
 let skillGroupService: SkillGroupService | null = null;
-let configService: {
-  load: () => Promise<any>;
-  save: (config: any) => Promise<any>;
-  saveSkillGroups: (skillGroups: SkillGroupsConfig) => Promise<void>;
-} | null = null;
 
 /**
  * Send skills:refresh event to all renderer windows
@@ -44,23 +39,15 @@ function toIPCError(error: unknown): IPCError {
 }
 
 /**
- * Set config service reference
- */
-export function setConfigService(service: {
-  load: () => Promise<any>;
-  save: (config: any) => Promise<any>;
-  saveSkillGroups: (skillGroups: SkillGroupsConfig) => Promise<void>;
-}): void {
-  configService = service;
-}
-
-/**
  * Initialize skill group service and register IPC handlers
  */
 export function registerSkillGroupHandlers(): void {
-  // Initialize skill group service
-  skillGroupService = new SkillGroupService();
-  logger.info('Skill group service initialized', 'SkillGroupHandlers');
+  // Load custom groups config and initialize skill group service
+  const customConfig = SkillGroupService.loadCustomGroupsConfig();
+  skillGroupService = new SkillGroupService(customConfig);
+  logger.info('Skill group service initialized', 'SkillGroupHandlers', {
+    customGroupCount: customConfig.groups.length,
+  });
 
   // Handler for skill-group:list
   ipcMain.handle(
@@ -68,7 +55,6 @@ export function registerSkillGroupHandlers(): void {
     async (): Promise<IPCResponse<SkillGroup[]>> => {
       try {
         logger.debug('Listing skill groups', 'SkillGroupHandlers');
-        await loadConfigIntoService();
         const groups = skillGroupService!.getGroups();
         return { success: true, data: groups };
       } catch (error) {
@@ -84,7 +70,7 @@ export function registerSkillGroupHandlers(): void {
     async (_event, { id }: { id: string }): Promise<IPCResponse<SkillGroup>> => {
       try {
         logger.debug('Getting skill group', 'SkillGroupHandlers', { id });
-        await loadConfigIntoService();
+        // Config is loaded at startup
         const group = skillGroupService!.getGroup(id);
         if (!group) {
           return {
@@ -106,10 +92,10 @@ export function registerSkillGroupHandlers(): void {
     async (_event, { data }: { data: Omit<SkillGroup, 'id' | 'skills' | 'createdAt' | 'updatedAt'> }): Promise<IPCResponse<SkillGroup>> => {
       try {
         logger.debug('Creating skill group', 'SkillGroupHandlers', { name: data.name });
-        await loadConfigIntoService();
+        // Config is loaded at startup
         const result = skillGroupService!.createGroup(data);
         if (result.success) {
-          await saveConfigFromService();
+          // Service automatically saves config
           // Notify all windows to refresh skills/groups
           notifySkillsRefresh();
         }
@@ -127,10 +113,10 @@ export function registerSkillGroupHandlers(): void {
     async (_event, { id, data }: { id: string; data: Partial<Omit<SkillGroup, 'id' | 'createdAt'>> }): Promise<IPCResponse<SkillGroup>> => {
       try {
         logger.debug('Updating skill group', 'SkillGroupHandlers', { id });
-        await loadConfigIntoService();
+        // Config is loaded at startup
         const result = skillGroupService!.updateGroup(id, data);
         if (result.success) {
-          await saveConfigFromService();
+          // Service automatically saves config
           // Notify all windows to refresh skills/groups
           notifySkillsRefresh();
         }
@@ -148,10 +134,10 @@ export function registerSkillGroupHandlers(): void {
     async (_event, { id }: { id: string }): Promise<IPCResponse<void>> => {
       try {
         logger.debug('Deleting skill group', 'SkillGroupHandlers', { id });
-        await loadConfigIntoService();
+        // Config is loaded at startup
         const result = skillGroupService!.deleteGroup(id);
         if (result.success) {
-          await saveConfigFromService();
+          // Service automatically saves config
           // Notify all windows to refresh skills/groups
           notifySkillsRefresh();
         }
@@ -169,10 +155,10 @@ export function registerSkillGroupHandlers(): void {
     async (_event, { groupId, tag }: { groupId: string; tag: string }): Promise<IPCResponse<SkillGroup>> => {
       try {
         logger.debug('Adding tag to group', 'SkillGroupHandlers', { groupId, tag });
-        await loadConfigIntoService();
+        // Config is loaded at startup
         const result = skillGroupService!.addTagToGroup(groupId, tag);
         if (result.success) {
-          await saveConfigFromService();
+          // Service automatically saves config
           // Notify all windows to refresh skills/groups
           notifySkillsRefresh();
         }
@@ -190,10 +176,10 @@ export function registerSkillGroupHandlers(): void {
     async (_event, { groupId, tag }: { groupId: string; tag: string }): Promise<IPCResponse<SkillGroup>> => {
       try {
         logger.debug('Removing tag from group', 'SkillGroupHandlers', { groupId, tag });
-        await loadConfigIntoService();
+        // Config is loaded at startup
         const result = skillGroupService!.removeTagFromGroup(groupId, tag);
         if (result.success) {
-          await saveConfigFromService();
+          // Service automatically saves config
           // Notify all windows to refresh skills/groups
           notifySkillsRefresh();
         }
@@ -205,16 +191,37 @@ export function registerSkillGroupHandlers(): void {
     }
   );
 
+  // Handler for skill-group:update-keywords
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_GROUP_UPDATE_KEYWORDS,
+    async (_event, { groupId, keywords }: { groupId: string; keywords: string[] }): Promise<IPCResponse<SkillGroup>> => {
+      try {
+        logger.debug('Updating group keywords', 'SkillGroupHandlers', { groupId, keywordCount: keywords.length });
+        // Config is loaded at startup
+        const result = skillGroupService!.updateGroupKeywords(groupId, keywords);
+        if (result.success) {
+          // Service automatically saves config
+          // Notify all windows to refresh skills/groups
+          notifySkillsRefresh();
+        }
+        return result;
+      } catch (error) {
+        logger.error('Failed to update group keywords', 'SkillGroupHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
   // Handler for skill-group:reorder
   ipcMain.handle(
     IPC_CHANNELS.SKILL_GROUP_REORDER,
     async (_event, { groupIds }: { groupIds: string[] }): Promise<IPCResponse<void>> => {
       try {
         logger.debug('Reordering skill groups', 'SkillGroupHandlers', { count: groupIds.length });
-        await loadConfigIntoService();
+        // Config is loaded at startup
         const result = skillGroupService!.reorderGroups(groupIds);
         if (result.success) {
-          await saveConfigFromService();
+          // Service automatically saves config
           // Notify all windows to refresh skills/groups
           notifySkillsRefresh();
         }
@@ -232,10 +239,10 @@ export function registerSkillGroupHandlers(): void {
     async (): Promise<IPCResponse<{ initialized: boolean; groups: SkillGroup[] }>> => {
       try {
         logger.debug('Initializing default skill groups', 'SkillGroupHandlers');
-        await loadConfigIntoService();
+        // Config is loaded at startup
         const initialized = skillGroupService!.initializeDefaultGroups();
         if (initialized) {
-          await saveConfigFromService();
+          // Service automatically saves config
           notifySkillsRefresh();
         }
         const groups = skillGroupService!.getGroups();
@@ -253,10 +260,10 @@ export function registerSkillGroupHandlers(): void {
     async (): Promise<IPCResponse<SkillGroup[]>> => {
       try {
         logger.debug('Resetting to default skill groups', 'SkillGroupHandlers');
-        await loadConfigIntoService();
+        // Config is loaded at startup
         const result = skillGroupService!.resetToDefaultGroups();
         if (result.success) {
-          await saveConfigFromService();
+          // Service automatically saves config
           notifySkillsRefresh();
         }
         return result;
@@ -286,68 +293,9 @@ export function registerSkillGroupHandlers(): void {
 }
 
 /**
- * Load config into service
- */
-async function loadConfigIntoService(): Promise<void> {
-  if (!configService) {
-    logger.warn('Config service not set, using default config', 'SkillGroupHandlers');
-    return;
-  }
-
-  const config = await configService.load();
-  if (config.skillGroups) {
-    skillGroupService!.updateConfig(config.skillGroups);
-  }
-}
-
-/**
- * Save config from service
- */
-async function saveConfigFromService(): Promise<void> {
-  if (!configService) {
-    logger.warn('Config service not set, cannot save', 'SkillGroupHandlers');
-    return;
-  }
-
-  const groupsConfig = skillGroupService!.getConfig();
-  await configService.saveSkillGroups(groupsConfig);
-}
-
-/**
  * Get skill group service instance
  */
 export function getSkillGroupService(): SkillGroupService | null {
   return skillGroupService;
 }
 
-/**
- * Auto-initialize default skill groups
- * Should be called after config is loaded
- */
-export async function autoInitializeDefaultGroups(): Promise<boolean> {
-  if (!skillGroupService || !configService) {
-    logger.warn('Skill group service or config service not initialized', 'SkillGroupHandlers');
-    return false;
-  }
-
-  try {
-    await loadConfigIntoService();
-    const config = skillGroupService.getConfig();
-    logger.debug('Current skill groups config', 'SkillGroupHandlers', {
-      groupCount: config.groups.length,
-      defaultGroupsInitialized: config.defaultGroupsInitialized,
-    });
-    const initialized = skillGroupService.initializeDefaultGroups();
-    if (initialized) {
-      await saveConfigFromService();
-      notifySkillsRefresh();
-      logger.info('Auto-initialized default skill groups', 'SkillGroupHandlers');
-    } else {
-      logger.debug('Default groups already initialized or no groups to add', 'SkillGroupHandlers');
-    }
-    return initialized;
-  } catch (error) {
-    logger.error('Failed to auto-initialize default groups', 'SkillGroupHandlers', error);
-    return false;
-  }
-}
