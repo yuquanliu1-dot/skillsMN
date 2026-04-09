@@ -219,12 +219,16 @@ export function registerConfigHandlers(): void {
             );
           }
         } else if (platform === 'darwin') {
-          // macOS: Use open -a Terminal
-          await execAsync(`open -a Terminal "${workingDirectory}"`, {
+          // macOS: Use AppleScript to run Claude Code in new terminal window
+          const script = `
+            tell application "Terminal"
+              activate
+              do script "cd '${workingDirectory.replace(/'/g, "'\\''")}' && exec claude"
+            end tell
+          `;
+          await execAsync(`osascript -e '${script.replace(/'/g, "'\\''")}'`, {
             timeout: 10000,
           });
-          // Note: On macOS, we can't easily run a command in the new terminal
-          // The user will need to type 'claude' manually
         } else {
           // Linux: Try to use gnome-terminal or xterm
           try {
