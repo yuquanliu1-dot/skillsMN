@@ -550,14 +550,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_DELETE, { id });
   },
 
-  addTagToGroup: (groupId: string, tag: string): Promise<IPCResponse<SkillGroup>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_ADD_TAG, { groupId, tag });
-  },
-
-  removeTagFromGroup: (groupId: string, tag: string): Promise<IPCResponse<SkillGroup>> => {
-    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_REMOVE_TAG, { groupId, tag });
-  },
-
   updateGroupKeywords: (groupId: string, keywords: string[]): Promise<IPCResponse<SkillGroup>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GROUP_UPDATE_KEYWORDS, { groupId, keywords });
   },

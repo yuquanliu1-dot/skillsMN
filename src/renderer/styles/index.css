@@ -213,6 +213,18 @@
     letter-spacing: 0.025em;
   }
 
+  /* --------------------------------------------------------------------------
+     Select Input
+     -------------------------------------------------------------------------- */
+  .select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 12px center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-right: 40px;
+  }
+
   .badge-success {
     background: rgba(16, 185, 129, 0.15);
     color: #34D399;                   /* Green-400 */

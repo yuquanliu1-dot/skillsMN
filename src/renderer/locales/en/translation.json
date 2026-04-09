@@ -166,6 +166,9 @@
     "aiAssistant": "AI Assistant",
     "showAI": "Show AI Assistant",
     "hideAI": "Hide AI Assistant",
+    "aiPanelCloseTitle": "AI Assistant Running",
+    "aiPanelCloseMessage": "AI assistant is currently executing a task. Closing the panel will not interrupt the task, but you won't see the progress. Are you sure you want to close?",
+    "aiPanelCloseConfirm": "Close",
     "aiRewrite": "AI Rewrite",
     "aiInsert": "AI Insert",
     "save": "Save",
@@ -351,13 +354,9 @@
     "disabled": "Disabled",
     "optional": "Optional",
     "skillsInGroup": "{{count}} skills",
-    "tagsInGroup": "{{count}} tags",
     "selectGroup": "Select a group",
-    "assignToGroup": "Assign to Group",
-    "removeFromGroup": "Remove from Group",
     "noSkillsInGroup": "No skills in this group",
-    "addSkillsToGroup": "Add skills to this group",
-    "noTagsInGroup": "No tags in this group. Edit the group to add tags"
+    "addSkillsToGroup": "Add skills to this group"
   },
 
   "setup": {

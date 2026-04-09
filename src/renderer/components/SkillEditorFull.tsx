@@ -331,14 +331,45 @@ export default function SkillEditorFull({
    * Reload skill content from disk (refresh active tab)
    */
   const reloadSkillContent = useCallback(async () => {
-    if (!skill || isNewSkill || !activeTab) return;
+    console.log('[SkillEditorFull] reloadSkillContent called');
+    console.log('[SkillEditorFull] skill:', skill?.path);
+    console.log('[SkillEditorFull] isNewSkill:', isNewSkill);
+    console.log('[SkillEditorFull] activeTab:', activeTab);
+    console.log('[SkillEditorFull] activeTabId:', activeTabId);
+    console.log('[SkillEditorFull] tabs:', tabs.map(t => ({ id: t.id, isMainFile: t.isMainFile, path: t.path })));
+
+    if (!skill || isNewSkill) {
+      console.log('[SkillEditorFull] Early return: no skill or new skill');
+      return;
+    }
+
+    // Try to use activeTab, but if not available, find the main file tab
+    let tabToReload = activeTab;
+
+    if (!tabToReload) {
+      console.log('[SkillEditorFull] No active tab, finding main file tab...');
+      tabToReload = tabs.find(t => t.isMainFile);
+      if (tabToReload) {
+        console.log('[SkillEditorFull] Found main file tab:', tabToReload.id);
+        // Set this as the active tab
+        setActiveTabId(tabToReload.id);
+      } else {
+        console.log('[SkillEditorFull] ERROR: No main file tab found!');
+        return;
+      }
+    }
+
+    const tabIdToReload = tabToReload.id;
+    console.log('[SkillEditorFull] Reloading tab:', tabIdToReload);
 
     try {
-      if (activeTab.isMainFile) {
+      if (tabToReload.isMainFile) {
+        console.log('[SkillEditorFull] Reloading main file from disk...');
         const response = await window.electronAPI.getSkill(skill.path);
         if (response.success && response.data) {
+          console.log('[SkillEditorFull] Main file loaded successfully, content length:', response.data.content.length);
           setTabs(prev => prev.map(tab =>
-            tab.id === activeTabId
+            tab.id === tabIdToReload
               ? {
                   ...tab,
                   content: response.data.content,
@@ -348,12 +379,16 @@ export default function SkillEditorFull({
               : tab
           ));
           setExternalChangeDetected(false);
+        } else {
+          console.error('[SkillEditorFull] Failed to load main file:', response.error);
         }
-      } else if (activeTab.path) {
-        const response = await ipcClient.readSkillFile(activeTab.path);
+      } else if (tabToReload.path) {
+        console.log('[SkillEditorFull] Reloading non-main file:', tabToReload.path);
+        const response = await ipcClient.readSkillFile(tabToReload.path);
         if (!response.isBinary) {
+          console.log('[SkillEditorFull] Non-main file loaded successfully, content length:', response.content.length);
           setTabs(prev => prev.map(tab =>
-            tab.id === activeTabId
+            tab.id === tabIdToReload
               ? {
                   ...tab,
                   content: response.content,
@@ -363,12 +398,14 @@ export default function SkillEditorFull({
                 }
               : tab
           ));
+        } else {
+          console.log('[SkillEditorFull] File is binary, not loading content');
         }
       }
     } catch (err) {
       console.error('[SkillEditorFull] Failed to reload skill:', err);
     }
-  }, [skill, isNewSkill, activeTab, activeTabId]);
+  }, [skill, isNewSkill, activeTab, activeTabId, tabs, setActiveTabId]);
 
   /**
    * Open or switch to a tab for a file
@@ -756,24 +793,59 @@ export default function SkillEditorFull({
    * Handle AI skill modification callback
    */
   const handleSkillModified = useCallback((filePath?: string) => {
+    console.log('[SkillEditorFull] handleSkillModified called with filePath:', filePath);
+    console.log('[SkillEditorFull] current skill.path:', skill?.path);
+
     // Normalize path separators before comparison (Windows uses \, AI may use /)
     if (filePath && skill) {
       const normalizedFilePath = filePath.replace(/\\/g, '/');
       const normalizedSkillPath = skill.path.replace(/\\/g, '/');
+      console.log('[SkillEditorFull] normalizedFilePath:', normalizedFilePath);
+      console.log('[SkillEditorFull] normalizedSkillPath:', normalizedSkillPath);
+
       if (normalizedFilePath.includes(normalizedSkillPath)) {
-        // Reload the affected tab if it's currently open
-        const affectedTab = tabs.find(t =>
-          t.isMainFile ? normalizedFilePath.endsWith('SKILL.md') : t.path === filePath
-        );
-        if (affectedTab) {
+        console.log('[SkillEditorFull] File path matches skill path, will reload content');
+
+        // Check if the modified file is the main SKILL.md file
+        const isMainFile = normalizedFilePath.endsWith('SKILL.md') ||
+                          normalizedFilePath.endsWith('/SKILL.md') ||
+                          normalizedFilePath.includes('\\SKILL.md');
+
+        if (isMainFile) {
+          console.log('[SkillEditorFull] Main file was modified, reloading...');
+          // Always reload the main file when it's modified
           reloadSkillContent();
+        } else {
+          // For other files, find the specific tab
+          const affectedTab = tabs.find(t => {
+            const normalizedTabPath = t.path.replace(/\\/g, '/');
+            return normalizedTabPath === normalizedFilePath;
+          });
+
+          if (affectedTab) {
+            console.log('[SkillEditorFull] Found affected tab:', affectedTab.path);
+            // Switch to the affected tab and reload it
+            setActiveTabId(affectedTab.id);
+            reloadSkillContent();
+          } else {
+            console.log('[SkillEditorFull] No affected tab found, but path matches skill. Reloading main file.');
+            // If the file matches the skill path but no tab found, reload the main file
+            reloadSkillContent();
+          }
         }
+      } else {
+        console.log('[SkillEditorFull] File path does not match skill path, skipping reload');
       }
+    } else {
+      console.log('[SkillEditorFull] No filePath or skill provided, performing general refresh');
+      // If no specific file path, just refresh the file tree
+      setFileTreeRefreshKey(prev => prev + 1);
     }
-    // Refresh the file tree to show any new/modified files
+
+    // Always notify parent and refresh file tree
     setFileTreeRefreshKey(prev => prev + 1);
     onSkillModified?.(filePath);
-  }, [skill, tabs, reloadSkillContent, onSkillModified])
+  }, [skill, tabs, reloadSkillContent, onSkillModified, setActiveTabId])
 
   /**
    * Save AI Panel width to configuration
@@ -1329,39 +1401,40 @@ export default function SkillEditorFull({
         </div>
 
         {/* Third Column - AI Assistant (collapsible) */}
-        {isAIPanelVisible && (
+        <div
+          className="flex-shrink-0 border-l border-gray-200 flex"
+          style={{
+            width: `${aiPanelWidth}px`,
+            display: isAIPanelVisible ? 'flex' : 'none'  // Hide but keep mounted
+          }}
+        >
+          {/* Resize Handle - Draggable divider */}
           <div
-            className="flex-shrink-0 border-l border-gray-200 flex"
-            style={{ width: `${aiPanelWidth}px` }}
+            className="w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize flex-shrink-0 group transition-colors"
+            onMouseDown={handleResizeStart}
           >
-            {/* Resize Handle - Draggable divider */}
-            <div
-              className="w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize flex-shrink-0 group transition-colors"
-              onMouseDown={handleResizeStart}
-            >
-              {/* Visual indicator on hover */}
-              <div className="absolute inset-y-0 -left-1 w-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="h-full w-1 bg-blue-400 rounded-full" />
-              </div>
-            </div>
-
-            {/* AI Panel Content */}
-            <div className="flex-1 overflow-hidden">
-              <AISkillSidebar
-                isOpen={true}
-                onClose={() => setIsAIPanelVisible(false)}
-                onSkillCreated={handleSkillCreated}
-                onSkillModified={handleSkillModified}
-                config={appConfig}
-                currentSkillContent={activeTab?.content || ''}
-                currentSkillName={isNewSkill ? undefined : skill?.name}
-                currentSkillPath={isNewSkill ? undefined : skill?.path}
-                onStreamingChange={setIsAIStreaming}
-                onShowToast={onShowToast}
-              />
+            {/* Visual indicator on hover */}
+            <div className="absolute inset-y-0 -left-1 w-3 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="h-full w-1 bg-blue-400 rounded-full" />
             </div>
           </div>
-        )}
+
+          {/* AI Panel Content */}
+          <div className="flex-1 overflow-hidden">
+            <AISkillSidebar
+              isOpen={true}
+              onClose={() => setIsAIPanelVisible(false)}
+              onSkillCreated={handleSkillCreated}
+              onSkillModified={handleSkillModified}
+              config={appConfig}
+              currentSkillContent={activeTab?.content || ''}
+              currentSkillName={isNewSkill ? undefined : skill?.name}
+              currentSkillPath={isNewSkill ? undefined : skill?.path}
+              onStreamingChange={setIsAIStreaming}
+              onShowToast={onShowToast}
+            />
+          </div>
+        </div>
       </div>
 
       {/* AI Rewrite Popover */}
@@ -1445,6 +1518,7 @@ export default function SkillEditorFull({
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -32,18 +32,19 @@ const BADGES: BadgeDefinition[] = [
   { id: 'champion', nameKey: 'badges.champion', descriptionKey: 'badges.championDesc', icon: '🏆', color: '#fcd34d', condition: { type: 'score', value: 500 }, tier: 4 },
 ];
 
-// 等级配置
+// 等级配置 - 必须与 shared/badges.ts 中的 CONTRIBUTOR_LEVELS 保持一致
 const LEVELS = [
   { level: 'newcomer' as ContributorLevel, nameKey: 'levels.newcomer', minScore: 0, color: '#9ca3af' },
-  { level: 'contributor' as ContributorLevel, nameKey: 'levels.contributor', minScore: 50, color: '#22c55e' },
-  { level: 'active' as ContributorLevel, nameKey: 'levels.active', minScore: 200, color: '#3b82f6' },
-  { level: 'core' as ContributorLevel, nameKey: 'levels.core', minScore: 500, color: '#8b5cf6' },
-  { level: 'maintainer' as ContributorLevel, nameKey: 'levels.maintainer', minScore: 1000, color: '#fbbf24' },
+  { level: 'contributor' as ContributorLevel, nameKey: 'levels.contributor', minScore: 500, color: '#22c55e' },
+  { level: 'active' as ContributorLevel, nameKey: 'levels.active', minScore: 2000, color: '#3b82f6' },
+  { level: 'core' as ContributorLevel, nameKey: 'levels.core', minScore: 5000, color: '#8b5cf6' },
+  { level: 'maintainer' as ContributorLevel, nameKey: 'levels.maintainer', minScore: 10000, color: '#fbbf24' },
 ];
 
 export default function ContributionPanel({ repoId, onClose }: ContributionPanelProps): JSX.Element {
   const { t } = useTranslation();
   const [stats, setStats] = useState<RepoContributionStats | null>(null);
+  const [username, setUsername] = useState<string>('');
   const [userBadges, setUserBadges] = useState<{
     earned: UserBadge[];
     nextBadges: Array<{ badge: BadgeDefinition; progress: number; remaining: number }>;
@@ -60,6 +61,12 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
     setError(null);
 
     try {
+      // 获取用户名
+      const userInfoResponse = await window.electronAPI.getCurrentUserGitInfo();
+      if (userInfoResponse.success && userInfoResponse.data?.username) {
+        setUsername(userInfoResponse.data.username);
+      }
+
       // 获取仓库贡献统计
       const statsResponse = await window.electronAPI.getRepoContributionStats(repoId);
       if (statsResponse.success && statsResponse.data) {
@@ -154,6 +161,29 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
 
       {/* Content */}
       <div className="p-4 space-y-6">
+        {/* 当前用户信息 */}
+        {username && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-700 dark:text-slate-300">{username}</span>
+                <span className="text-slate-400 dark:text-slate-500">·</span>
+                <span className="font-medium text-slate-900 dark:text-slate-100">{t(currentLevel.nameKey)}</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-slate-600 dark:text-slate-400">
+                  {stats?.currentUserScore || 0} {t('contribution.points')}
+                </span>
+                {stats?.currentUserBadges && stats.currentUserBadges.length > 0 && (
+                  <span className="text-slate-600 dark:text-slate-400">
+                    {stats.currentUserBadges.length} {t('contribution.badges')}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 当前等级和分数 */}
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full text-2xl mb-2"
@@ -192,7 +222,7 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
                 }}
               />
             </div>
-            <p className="text-xs text-center mt-1 text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-center mt-1 font-medium text-slate-700 dark:text-slate-300">
               {nextLevel.minScore - (stats?.currentUserScore || 0)} {t('contribution.pointsToNextLevel')}
             </p>
           </div>

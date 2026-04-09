@@ -221,8 +221,6 @@ export const IPC_CHANNELS = {
   SKILL_GROUP_CREATE: 'skill-group:create',
   SKILL_GROUP_UPDATE: 'skill-group:update',
   SKILL_GROUP_DELETE: 'skill-group:delete',
-  SKILL_GROUP_ADD_TAG: 'skill-group:add-tag',
-  SKILL_GROUP_REMOVE_TAG: 'skill-group:remove-tag',
   SKILL_GROUP_UPDATE_KEYWORDS: 'skill-group:update-keywords',
   SKILL_GROUP_REORDER: 'skill-group:reorder',
   SKILL_GROUP_INIT_DEFAULTS: 'skill-group:init-defaults',

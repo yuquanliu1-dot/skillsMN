@@ -161,23 +161,33 @@ export function registerAIHandlers(): void {
       { requestId, decision }: { requestId: string; decision: PermissionDecision }
     ) => {
       try {
-        logger.debug('Resolving permission request', 'AIHandlers', {
+        logger.info('🔧 Resolving permission request', 'AIHandlers', {
           requestId,
           allow: decision.allow,
-          rememberEntry: decision.rememberEntry
+          rememberEntry: decision.rememberEntry,
+          hasRememberEntry: !!decision.rememberEntry
         });
 
         const resolved = AIService.resolvePermission(requestId, decision);
 
-        // If user chose to remember the permission, save it to config
-        if (resolved && decision.rememberEntry && decision.allow) {
+        // If user chose to remember the permission, add to memory and save to config
+        if (resolved && decision.rememberEntry) {
+          // First, add the permission to memory
+          AIService.addToolPermission(decision.rememberEntry, decision.allow);
+
+          logger.info('💾 Permission saved to memory', 'AIHandlers', {
+            entry: decision.rememberEntry,
+            allowed: decision.allow
+          });
+
+          // Then save to config asynchronously (don't block the response)
           try {
             const configService = getConfigService();
             if (configService) {
-              // Get current permissions from AIService
+              // Get current permissions from AIService (now includes the new permission)
               const { allowedTools, disallowedTools } = AIService.getRememberedToolPermissions();
 
-              // Save to config asynchronously (don't block the response)
+              // Save to config
               configService.saveAIConfig({
                 ...(await configService.load()).ai,
                 allowedTools,

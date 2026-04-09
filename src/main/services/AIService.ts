@@ -709,6 +709,13 @@ export class AIService {
             AIService.addToolPermission(decision.rememberEntry, true);
           }
           return { behavior: 'allow' as const, updatedInput: decision.updatedInput ?? input };
+        } else {
+          // User denied - add to disallowed list if remember is set
+          if (decision.rememberEntry && !disallowedTools.includes(decision.rememberEntry)) {
+            disallowedTools.push(decision.rememberEntry);
+            // Also update global memory for persistence
+            AIService.addToolPermission(decision.rememberEntry, false);
+          }
         }
 
         return { behavior: 'deny' as const, message: decision.message ?? 'User denied tool use' };
@@ -776,6 +783,7 @@ export class AIService {
 
           case 'content_block_stop':
             // Streaming ended for this block
+            logger.info('AI content block stop - generation complete', 'AIService', { sessionId });
             yield createMessage('stream_end', { sessionId });
             break;
 
@@ -789,6 +797,13 @@ export class AIService {
                   sessionId,
                 });
               } else if (piece.type === 'tool_use') {
+                // Log tool usage to main process for debugging
+                logger.info('AI tool use detected', 'AIService', {
+                  toolName: piece.name,
+                  toolInput: JSON.stringify(piece.input).substring(0, 200),
+                  sessionId,
+                });
+
                 yield createMessage('tool_use', {
                   toolName: piece.name,
                   toolInput: piece.input,

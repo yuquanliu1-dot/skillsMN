@@ -149,48 +149,6 @@ export function registerSkillGroupHandlers(): void {
     }
   );
 
-  // Handler for skill-group:add-tag
-  ipcMain.handle(
-    IPC_CHANNELS.SKILL_GROUP_ADD_TAG,
-    async (_event, { groupId, tag }: { groupId: string; tag: string }): Promise<IPCResponse<SkillGroup>> => {
-      try {
-        logger.debug('Adding tag to group', 'SkillGroupHandlers', { groupId, tag });
-        // Config is loaded at startup
-        const result = skillGroupService!.addTagToGroup(groupId, tag);
-        if (result.success) {
-          // Service automatically saves config
-          // Notify all windows to refresh skills/groups
-          notifySkillsRefresh();
-        }
-        return result;
-      } catch (error) {
-        logger.error('Failed to add tag to group', 'SkillGroupHandlers', error);
-        return { success: false, error: toIPCError(error) };
-      }
-    }
-  );
-
-  // Handler for skill-group:remove-tag
-  ipcMain.handle(
-    IPC_CHANNELS.SKILL_GROUP_REMOVE_TAG,
-    async (_event, { groupId, tag }: { groupId: string; tag: string }): Promise<IPCResponse<SkillGroup>> => {
-      try {
-        logger.debug('Removing tag from group', 'SkillGroupHandlers', { groupId, tag });
-        // Config is loaded at startup
-        const result = skillGroupService!.removeTagFromGroup(groupId, tag);
-        if (result.success) {
-          // Service automatically saves config
-          // Notify all windows to refresh skills/groups
-          notifySkillsRefresh();
-        }
-        return result;
-      } catch (error) {
-        logger.error('Failed to remove tag from group', 'SkillGroupHandlers', error);
-        return { success: false, error: toIPCError(error) };
-      }
-    }
-  );
-
   // Handler for skill-group:update-keywords
   ipcMain.handle(
     IPC_CHANNELS.SKILL_GROUP_UPDATE_KEYWORDS,

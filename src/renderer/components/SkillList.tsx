@@ -7,135 +7,9 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Skill, FilterSource, SortBy, VersionComparison, SkillGroup } from '../../shared/types';
+import { KeywordMatcher } from '../../shared/services/KeywordMatcher';
 import SkillCard from './SkillCard';
 import { ipcClient } from '../services/ipcClient';
-
-/**
- * Keyword Matcher (Renderer Process Version)
- * Matches skills to groups based on keywords in name, description, and tags
- */
-interface KeywordMatchResult {
-  groupId: string | null;
-  confidence: number;
-  matchedKeywords: string[];
-  matchSource: 'name' | 'description' | 'tags';
-}
-
-class KeywordMatcher {
-  static matchSkillToGroups(
-    skill: { name: string; description?: string; tags?: string[] },
-    groups: Array<{ id: string; keywords?: string[] }>
-  ): KeywordMatchResult {
-    const searchParts = {
-      name: skill.name.toLowerCase(),
-      description: (skill.description || '').toLowerCase(),
-      tags: (skill.tags || []).join(' ').toLowerCase()
-    };
-
-    let bestMatch: KeywordMatchResult = {
-      groupId: null,
-      confidence: 0,
-      matchedKeywords: [],
-      matchSource: 'name'
-    };
-
-    for (const group of groups) {
-      if (!group.keywords || group.keywords.length === 0) continue;
-
-      const matchedKeywords: string[] = [];
-      let matchSource: 'name' | 'description' | 'tags' = 'name';
-      const keywordSources = new Map<string, 'name' | 'description' | 'tags'>();
-
-      for (const keyword of group.keywords) {
-        const keywordLower = keyword.toLowerCase();
-
-        if (searchParts.tags.includes(keywordLower)) {
-          keywordSources.set(keyword, 'tags');
-          if (!matchedKeywords.includes(keyword)) {
-            matchedKeywords.push(keyword);
-          }
-        } else if (searchParts.name.includes(keywordLower)) {
-          if (!keywordSources.has(keyword)) {
-            keywordSources.set(keyword, 'name');
-            if (!matchedKeywords.includes(keyword)) {
-              matchedKeywords.push(keyword);
-            }
-          }
-        } else if (searchParts.description.includes(keywordLower)) {
-          if (!keywordSources.has(keyword)) {
-            keywordSources.set(keyword, 'description');
-            if (!matchedKeywords.includes(keyword)) {
-              matchedKeywords.push(keyword);
-            }
-          }
-        }
-      }
-
-      if (matchedKeywords.length > 0) {
-        matchSource = 'description';
-        for (const keyword of matchedKeywords) {
-          const source = keywordSources.get(keyword);
-          if (source === 'tags') {
-            matchSource = 'tags';
-            break;
-          } else if (source === 'name' && matchSource === 'description') {
-            matchSource = 'name';
-          }
-        }
-
-        const confidence = matchedKeywords.length / group.keywords.length;
-        const weightedConfidence = matchSource === 'tags'
-          ? Math.min(confidence * 1.2, 1.0)
-          : confidence;
-
-        if (weightedConfidence > bestMatch.confidence) {
-          bestMatch = {
-            groupId: group.id,
-            confidence: weightedConfidence,
-            matchedKeywords,
-            matchSource
-          };
-        }
-      }
-    }
-
-    return bestMatch;
-  }
-
-  static matchSkillsToGroups(
-    skills: Array<{ path: string; name: string; description?: string; tags?: string[] }>,
-    groups: Array<{ id: string; keywords?: string[] }>
-  ): Map<string, KeywordMatchResult> {
-    const result = new Map<string, KeywordMatchResult>();
-
-    for (const skill of skills) {
-      const match = this.matchSkillToGroups(skill, groups);
-      if (match.groupId) {
-        result.set(skill.path, match);
-      }
-    }
-
-    return result;
-  }
-
-  static getMatchSourceLabel(source: 'name' | 'description' | 'tags'): string {
-    const labels = {
-      name: '名称',
-      description: '描述',
-      tags: '标签'
-    };
-    return labels[source];
-  }
-
-  static getMatchSourceIcon(source: 'name' | 'description' | 'tags'): string {
-    const icons = {
-      name: '📝',
-      description: '📄',
-      tags: '🏷️'
-    };
-    return icons[source];
-  }
-}
 
 interface SkillListProps {
   skills: Skill[];
@@ -275,10 +149,13 @@ export default function SkillList({
     const result: GroupedSkills[] = [];
     const assignedSkills = new Set<string>();
 
+    // Only use enabled groups for matching
+    const enabledGroups = skillGroups.filter(group => group.enabled !== false);
+
     // Step 1: Use keyword matching (considers name + description + tags)
     const keywordMatches = KeywordMatcher.matchSkillsToGroups(
       filteredAndSortedSkills,
-      skillGroups
+      enabledGroups
     );
 
     // Step 2: Organize skills by group
@@ -295,8 +172,7 @@ export default function SkillList({
     }
 
     // Step 3: Output groups in order
-    for (const group of skillGroups) {
-      if (group.enabled === false) continue;
+    for (const group of enabledGroups) {
       const groupSkills = groupsMap.get(group.id);
       if (groupSkills && groupSkills.length > 0) {
         result.push({ group, skills: groupSkills });

@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PrivateRepo, PrivateSkill, SkillGroup } from '../../shared/types';
+import { KeywordMatcher } from '../../shared/services/KeywordMatcher';
 import PrivateSkillCard from './PrivateSkillCard';
 import ContributionBadge from './ContributionBadge';
 import ReadmeDialog from './ReadmeDialog';
@@ -17,94 +18,6 @@ type SortBy = 'name' | 'modified';
 interface GroupedSkills {
   group: SkillGroup | null;
   skills: PrivateSkill[];
-}
-
-/**
- * Keyword Matcher (PrivateRepo Version)
- * Matches skills to groups based on keywords in name, description, and tags
- */
-interface KeywordMatchResult {
-  groupId: string | null;
-  confidence: number;
-  matchedKeywords: string[];
-  matchSource: 'name' | 'description' | 'tags';
-}
-
-class KeywordMatcher {
-  static matchSkillToGroups(
-    skill: { name: string; description?: string; tags?: string[] },
-    groups: Array<{ id: string; keywords?: string[] }>
-  ): KeywordMatchResult {
-    const searchParts = {
-      name: skill.name.toLowerCase(),
-      description: (skill.description || '').toLowerCase(),
-      tags: (skill.tags || []).join(' ').toLowerCase()
-    };
-
-    let bestMatch: KeywordMatchResult = {
-      groupId: null,
-      confidence: 0,
-      matchedKeywords: [],
-      matchSource: 'name'
-    };
-
-    for (const group of groups) {
-      if (!group.keywords || group.keywords.length === 0) continue;
-
-      const matchedKeywords: string[] = [];
-      let matchSource: 'name' | 'description' | 'tags' = 'name';
-
-      // Check name matches
-      for (const keyword of group.keywords) {
-        if (searchParts.name.includes(keyword.toLowerCase())) {
-          matchedKeywords.push(keyword);
-        }
-      }
-
-      // Check description matches
-      for (const keyword of group.keywords) {
-        if (searchParts.description.includes(keyword.toLowerCase())) {
-          matchedKeywords.push(keyword);
-        }
-      }
-
-      // Check tags matches (20% higher weight)
-      for (const keyword of group.keywords) {
-        if (searchParts.tags.includes(keyword.toLowerCase())) {
-          matchedKeywords.push(keyword);
-        }
-      }
-
-      if (matchedKeywords.length > 0) {
-        // Calculate weighted confidence (tags count 20% more)
-        let weightedConfidence = matchedKeywords.length;
-        const tagMatches = matchedKeywords.filter(kw =>
-          searchParts.tags.includes(kw.toLowerCase())
-        ).length;
-        weightedConfidence += tagMatches * 0.2;
-
-        // Determine match source priority: tags > name > description
-        if (searchParts.tags.includes(matchedKeywords[0].toLowerCase())) {
-          matchSource = 'tags';
-        } else if (searchParts.name.includes(matchedKeywords[0].toLowerCase())) {
-          matchSource = 'name';
-        } else {
-          matchSource = 'description';
-        }
-
-        if (weightedConfidence > bestMatch.confidence) {
-          bestMatch = {
-            groupId: group.id,
-            confidence: weightedConfidence,
-            matchedKeywords,
-            matchSource
-          };
-        }
-      }
-    }
-
-    return bestMatch;
-  }
 }
 
 /**
@@ -175,6 +88,15 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
 
   useEffect(() => {
     loadSkillGroups();
+
+    // Subscribe to skills:refresh event to reload groups when they change
+    const unsubscribe = window.electronAPI.onSkillsRefresh(() => {
+      loadSkillGroups();
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [loadSkillGroups]);
 
   // Handle tag assigned callback
@@ -220,26 +142,34 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
     const result: GroupedSkills[] = [];
     const assignedSkills = new Set<string>();
 
-    // Group skills by keyword matching
-    for (const group of skillGroups) {
-      const groupSkills: PrivateSkill[] = [];
+    // Only use enabled groups for matching
+    const enabledGroups = skillGroups.filter(group => group.enabled !== false);
 
-      for (const skill of filteredAndSortedSkills) {
-        if (assignedSkills.has(skill.path)) continue;
+    // Match each skill to the best group using KeywordMatcher
+    for (const skill of filteredAndSortedSkills) {
+      if (assignedSkills.has(skill.path)) continue;
 
-        // Match skill to this group using keywords
-        const matchResult = KeywordMatcher.matchSkillToGroups(skill, [group]);
+      // Match skill to all enabled groups at once, let KeywordMatcher find best match
+      const matchResult = KeywordMatcher.matchSkillToGroups(skill, enabledGroups);
 
-        if (matchResult.groupId === group.id) {
-          groupSkills.push(skill);
+      if (matchResult.groupId) {
+        // Find the matching group from enabled groups
+        const matchedGroup = enabledGroups.find(g => g.id === matchResult.groupId);
+        if (matchedGroup) {
+          // Check if we already have this group in result
+          let groupEntry = result.find(entry => entry.group?.id === matchedGroup.id);
+          if (!groupEntry) {
+            groupEntry = { group: matchedGroup, skills: [] };
+            result.push(groupEntry);
+          }
+          groupEntry.skills.push(skill);
           assignedSkills.add(skill.path);
         }
       }
-
-      if (groupSkills.length > 0) {
-        result.push({ group, skills: groupSkills });
-      }
     }
+
+    // Sort groups by order
+    result.sort((a, b) => (a.group?.order || 999) - (b.group?.order || 999));
 
     // Ungrouped skills (skills that didn't match any group)
     const ungroupedSkills = filteredAndSortedSkills.filter(

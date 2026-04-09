@@ -575,50 +575,6 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   };
 
   /**
-   * Handle add tag to group
-   */
-  const handleAddTagToGroup = async (groupId: string, tag: string) => {
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const response = await window.electronAPI.addTagToGroup(groupId, tag);
-      if (response.success) {
-        setSuccess(t('settings.groupUpdated'));
-        await loadSkillGroups();
-      } else {
-        setError(response.error?.message || 'Failed to add tag to group');
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to add tag to group';
-      setError(message);
-      console.error('Add tag to group error:', err);
-    }
-  };
-
-  /**
-   * Handle remove tag from group
-   */
-  const handleRemoveTagFromGroup = async (groupId: string, tag: string) => {
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const response = await window.electronAPI.removeTagFromGroup(groupId, tag);
-      if (response.success) {
-        setSuccess(t('settings.groupUpdated'));
-        await loadSkillGroups();
-      } else {
-        setError(response.error?.message || 'Failed to remove tag from group');
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to remove tag from group';
-      setError(message);
-      console.error('Remove tag from group error:', err);
-    }
-  };
-
-  /**
    * Handle edit group keywords
    */
   const handleEditKeywords = (groupId: string) => {
@@ -1083,209 +1039,245 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
           {/* Content Area with Scroll */}
           <div className="flex-1 overflow-y-auto p-6">
         <form onSubmit={handleSubmit} style={{ display: activeTab === 'general' ? 'block' : 'none' }}>
-          {/* Auto Refresh */}
-          <div className="mb-4">
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input
-                data-testid="auto-refresh-toggle"
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
-                disabled={isSaving}
-              />
-              <span className="text-sm text-slate-700">{t('settings.autoRefresh')}</span>
-            </label>
-          </div>
-
-          {/* Language Selection */}
-          <div className="mb-4">
-            <label
-              htmlFor="language-select"
-              className="block text-sm font-medium text-slate-700 mb-1.5"
-            >
-              {t('settings.language')}
-            </label>
-            <p className="text-xs text-slate-500 mb-2">
-              {t('settings.languageDescription')}
-            </p>
-            <select
-              id="language-select"
-              data-testid="language-select"
-              value={currentLanguage}
-              onChange={(e) => handleLanguageChange(e.target.value as LanguageCode)}
-              className="select w-full"
-              disabled={isSaving}
-            >
-              {availableLanguages.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.nativeName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Proxy Configuration */}
-          <div className="pt-4 border-t border-slate-200">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-sm font-medium text-slate-700">{t('settings.proxy.title')}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {t('settings.proxy.description')}
-                </p>
+          <div className="space-y-5">
+            {/* General Settings Card */}
+            <div className="card">
+              <div className="flex items-center gap-2 mb-4">
+                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                <h4 className="text-sm font-semibold text-slate-900">General Settings</h4>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={proxyConfig.enabled}
-                  onChange={(e) => setProxyConfig({ ...proxyConfig, enabled: e.target.checked })}
-                  className="sr-only peer"
-                  disabled={isSaving}
-                />
-                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
 
-            {/* Proxy Scope Info */}
-            <div className="mb-3 flex items-start gap-2 text-xs text-blue-600 bg-blue-50 px-2.5 py-2 rounded-md">
-              <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>
-                {t('settings.proxy.scopeDescription')}
-              </span>
-            </div>
-
-            {proxyConfig.enabled && (
-              <div className="space-y-3 pl-1">
-                {/* Proxy Type Selection */}
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="proxyType"
-                      value="system"
-                      checked={proxyConfig.type === 'system'}
-                      onChange={() => setProxyConfig({ ...proxyConfig, type: 'system' })}
-                      className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+              <div className="space-y-4">
+                {/* Auto Refresh */}
+                <div className="flex items-center justify-between group">
+                  <div className="flex items-center gap-3 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => setAutoRefresh(!autoRefresh)}
                       disabled={isSaving}
-                    />
-                    <span className="text-sm text-slate-700">{t('settings.proxy.systemProxy')}</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="proxyType"
-                      value="custom"
-                      checked={proxyConfig.type === 'custom'}
-                      onChange={() => setProxyConfig({ ...proxyConfig, type: 'custom' })}
-                      className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500"
-                      disabled={isSaving}
-                    />
-                    <span className="text-sm text-slate-700">{t('settings.proxy.customProxy')}</span>
-                  </label>
+                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                        autoRefresh ? 'bg-blue-500' : 'bg-slate-200 group-hover:bg-slate-300'
+                      } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      aria-pressed={autoRefresh}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
+                          autoRefresh ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                    <div>
+                      <span className="text-sm text-slate-700 font-medium block">{t('settings.autoRefresh')}</span>
+                      <p className="text-xs text-slate-500">Automatically refresh skill list</p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* System Proxy Hint */}
-                {proxyConfig.type === 'system' && (
-                  <p className="text-xs text-slate-400">
-                    {t('settings.proxy.systemProxyHint')}
+                {/* Language Selection */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    {t('settings.language')}
+                  </label>
+                  <p className="text-xs text-slate-500 mb-2">
+                    {t('settings.languageDescription')}
                   </p>
-                )}
+                  <select
+                    id="language-select"
+                    data-testid="language-select"
+                    value={currentLanguage}
+                    onChange={(e) => handleLanguageChange(e.target.value as LanguageCode)}
+                    className="input text-sm"
+                    disabled={isSaving}
+                  >
+                    {availableLanguages.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.nativeName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
 
-                {/* Custom Proxy URL */}
-                {proxyConfig.type === 'custom' && (
-                  <div>
-                    <input
-                      type="text"
-                      value={proxyConfig.customUrl || ''}
-                      onChange={(e) => setProxyConfig({ ...proxyConfig, customUrl: e.target.value || undefined })}
-                      placeholder="http://127.0.0.1:7890"
-                      className="input w-full"
-                      disabled={isSaving}
-                    />
-                    <p className="text-xs text-slate-400 mt-1">
-                      {t('settings.proxy.customProxyHint')}
-                    </p>
+            {/* Proxy Configuration Card */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                  </svg>
+                  <h4 className="text-sm font-semibold text-slate-900">{t('settings.proxy.title')}</h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setProxyConfig({ ...proxyConfig, enabled: !proxyConfig.enabled })}
+                  disabled={isSaving}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                    proxyConfig.enabled ? 'bg-blue-500' : 'bg-slate-200'
+                  } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  aria-pressed={proxyConfig.enabled}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
+                      proxyConfig.enabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-500 mb-3">
+                {t('settings.proxy.description')}
+              </p>
+
+              {/* Proxy Scope Info */}
+              <div className="mb-3 flex items-start gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-md">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  {t('settings.proxy.scopeDescription')}
+                </span>
+              </div>
+
+              {proxyConfig.enabled && (
+                <div className="space-y-3 pt-2">
+                  {/* Proxy Type Selection */}
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="proxyType"
+                        value="system"
+                        checked={proxyConfig.type === 'system'}
+                        onChange={() => setProxyConfig({ ...proxyConfig, type: 'system' })}
+                        className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                        disabled={isSaving}
+                      />
+                      <span className="text-sm text-slate-700">{t('settings.proxy.systemProxy')}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="proxyType"
+                        value="custom"
+                        checked={proxyConfig.type === 'custom'}
+                        onChange={() => setProxyConfig({ ...proxyConfig, type: 'custom' })}
+                        className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                        disabled={isSaving}
+                      />
+                      <span className="text-sm text-slate-700">{t('settings.proxy.customProxy')}</span>
+                    </label>
                   </div>
-                )}
+
+                  {/* System Proxy Hint */}
+                  {proxyConfig.type === 'system' && (
+                    <p className="text-xs text-slate-400">
+                      {t('settings.proxy.systemProxyHint')}
+                    </p>
+                  )}
+
+                  {/* Custom Proxy URL */}
+                  {proxyConfig.type === 'custom' && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                        Proxy URL
+                      </label>
+                      <input
+                        type="text"
+                        value={proxyConfig.customUrl || ''}
+                        onChange={(e) => setProxyConfig({ ...proxyConfig, customUrl: e.target.value || undefined })}
+                        placeholder="http://127.0.0.1:7890"
+                        className="input text-sm"
+                        disabled={isSaving}
+                      />
+                      <p className="text-xs text-slate-400 mt-1">
+                        {t('settings.proxy.customProxyHint')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Success message */}
+            {success && (
+              <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-md">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-green-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <p className="text-sm text-green-400">{success}</p>
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Success message */}
-          {success && (
-            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md">
-              <div className="flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-green-400 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <p className="text-sm text-green-400">{success}</p>
+            {/* Error message */}
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-md">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-red-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Error message */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md">
-              <div className="flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-red-400 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <p className="text-sm text-red-400">{error}</p>
-              </div>
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSaving}
+                className="btn btn-secondary"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="btn btn-primary"
+              >
+                {isSaving ? t('common.saving') : t('common.save')}
+              </button>
             </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSaving}
-              className="btn btn-secondary"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="btn btn-primary"
-            >
-              {isSaving ? t('common.saving') : t('common.save')}
-            </button>
           </div>
         </form>
 
         {/* Storage Tab */}
         {activeTab === 'storage' && (
-          <div className="space-y-6">
-            {/* Project Directories */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-slate-700">
-                  {t('settings.directories')}
-                </label>
+          <div className="space-y-5">
+            {/* Project Directories Card */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                  <h4 className="text-sm font-semibold text-slate-900">{t('settings.directories')}</h4>
+                </div>
                 <button
                   type="button"
                   onClick={handleAddDirectory}
@@ -1310,12 +1302,13 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                   )}
                 </button>
               </div>
+
               <p className="text-xs text-slate-500 mb-3">
                 {t('settings.directoriesDescription')}
               </p>
 
               {/* Tip for project skills directory */}
-              <div className="mb-3 flex items-start gap-2 text-xs text-blue-600 bg-blue-50 px-2.5 py-2 rounded-md">
+              <div className="mb-3 flex items-start gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-md">
                 <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -1326,19 +1319,27 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
               {/* Directory List */}
               {projectDirectories.length === 0 ? (
-                <p className="text-sm text-slate-500 italic">
-                  {t('settings.noDirectories')}
-                </p>
+                <div className="text-center py-8 text-slate-400">
+                  <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                  <p className="text-sm">{t('settings.noDirectories')}</p>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {projectDirectories.map((dir) => (
                     <div
                       key={dir}
-                      className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
                     >
-                      <span className="text-sm text-slate-700 font-mono truncate flex-1" title={dir}>
-                        {dir}
-                      </span>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        <span className="text-sm text-slate-700 font-mono truncate" title={dir}>
+                          {dir}
+                        </span>
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveDirectory(dir)}
@@ -1398,76 +1399,104 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                 </div>
               </div>
             )}
-
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSaving}
-                className="btn btn-secondary"
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
           </div>
         )}
 
         {/* Skill View Tab */}
         {activeTab === 'skill-view' && (
-          <div className="space-y-6">
-            {/* Skill Editor Configuration */}
-            <div>
-              <h3 className="text-sm font-medium text-slate-700 mb-3 border-b border-slate-200 pb-2">
-                {t('settings.skillEditor')}
-              </h3>
-              <div className="space-y-3">
-                {/* Font Size and Theme - Side by side */}
-                <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-5">
+            {/* Editor Appearance Card */}
+            <div className="card">
+              <div className="flex items-center gap-2 mb-4">
+                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <h4 className="text-sm font-semibold text-slate-900">Editor Appearance</h4>
+              </div>
+
+              <div className="space-y-4">
+                {/* Font Size and Theme */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                       {t('settings.fontSize')}
                     </label>
                     <select
                       data-testid="editor-font-size"
                       value={skillEditorConfig.fontSize}
                       onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, fontSize: parseInt(e.target.value) })}
-                      className="select w-full"
+                      className="input text-sm"
                       disabled={isSaving}
                     >
-                      <option value="10">10px - Very Small</option>
-                      <option value="11">11px - Small</option>
-                      <option value="12">12px - Compact</option>
-                      <option value="13">13px - Medium Small</option>
-                      <option value="14">14px - Default</option>
-                      <option value="15">15px - Medium</option>
-                      <option value="16">16px - Large</option>
-                      <option value="18">18px - Extra Large</option>
-                      <option value="20">20px - Big</option>
-                      <option value="22">22px - Very Big</option>
-                      <option value="24">24px - Huge</option>
+                      <option value="10">10px</option>
+                      <option value="11">11px</option>
+                      <option value="12">12px</option>
+                      <option value="13">13px</option>
+                      <option value="14">14px (Default)</option>
+                      <option value="15">15px</option>
+                      <option value="16">16px</option>
+                      <option value="18">18px</option>
+                      <option value="20">20px</option>
+                      <option value="22">22px</option>
+                      <option value="24">24px</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                       {t('settings.theme')}
                     </label>
                     <select
                       value={skillEditorConfig.theme}
                       onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, theme: e.target.value as 'light' | 'dark' })}
-                      className="select w-full"
+                      className="input text-sm"
                       disabled={isSaving}
                     >
-                      <option value="light">{t('settings.light')}</option>
-                      <option value="dark">{t('settings.dark')}</option>
+                      <option value="light">Light</option>
+                      <option value="dark">Dark</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Tab Size and Line Numbers - Side by side */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Font Family */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    {t('settings.fontFamily')}
+                  </label>
+                  <select
+                    value={skillEditorConfig.fontFamily}
+                    onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, fontFamily: e.target.value })}
+                    className="input text-sm"
+                    disabled={isSaving}
+                  >
+                    <option value="'Fira Code', 'Cascadia Code', 'Consolas', monospace">Fira Code (Recommended)</option>
+                    <option value="'Cascadia Code', 'Consolas', monospace">Cascadia Code</option>
+                    <option value="'JetBrains Mono', 'Consolas', monospace">JetBrains Mono</option>
+                    <option value="'Source Code Pro', 'Consolas', monospace">Source Code Pro</option>
+                    <option value="Consolas, 'Courier New', monospace">Consolas (Windows)</option>
+                    <option value="'Monaco', 'Menlo', monospace">Monaco (macOS)</option>
+                    <option value="'Menlo', 'Monaco', monospace">Menlo (macOS)</option>
+                    <option value="'Courier New', monospace">Courier New</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Editor Options Card */}
+            <div className="card">
+              <div className="flex items-center gap-2 mb-4">
+                <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <h4 className="text-sm font-semibold text-slate-900">Editor Options</h4>
+              </div>
+
+              <div className="space-y-4">
+                {/* Tab Size and Line Numbers */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                       {t('settings.tabSize')}
                     </label>
                     <input
@@ -1478,19 +1507,18 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                       min={2}
                       max={8}
                       step={2}
-                      className="input w-full"
+                      className="input text-sm"
                       disabled={isSaving}
                     />
-                    <p className="text-xs text-slate-500 mt-1">2 - 8</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                       {t('settings.lineNumbers')}
                     </label>
                     <select
                       value={skillEditorConfig.lineNumbers}
                       onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, lineNumbers: e.target.value as 'on' | 'off' | 'relative' })}
-                      className="select w-full"
+                      className="input text-sm"
                       disabled={isSaving}
                     >
                       <option value="on">{t('settings.on')}</option>
@@ -1500,90 +1528,112 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                   </div>
                 </div>
 
-                {/* Font Family */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    {t('settings.fontFamily')}
-                  </label>
-                  <select
-                    value={skillEditorConfig.fontFamily}
-                    onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, fontFamily: e.target.value })}
-                    className="select w-full"
-                    disabled={isSaving}
-                  >
-                    <option value="'Fira Code', 'Cascadia Code', 'Consolas', monospace">Fira Code (Recommended)</option>
-                    <option value="'Cascadia Code', 'Consolas', monospace">Cascadia Code</option>
-                    <option value="'JetBrains Mono', 'Consolas', monospace">JetBrains Mono</option>
-                    <option value="'Source Code Pro', 'Consolas', monospace">Source Code Pro</option>
-                    <option value="Consolas, 'Courier New', monospace">Consolas (Windows)</option>
-                    <option value="'Monaco', 'Menlo', monospace">Monaco (macOS)</option>
-                    <option value="'Menlo', 'Monaco', monospace">Menlo (macOS)</option>
-                    <option value="'Courier New', monospace">Courier New (Universal)</option>
-                  </select>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {t('settings.selectMonospaceFont')}
-                  </p>
-                </div>
-
-                {/* Auto-save Options */}
-                <div className="space-y-2.5">
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={skillEditorConfig.autoSaveEnabled}
-                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, autoSaveEnabled: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
-                      disabled={isSaving}
-                    />
-                    <span className="text-sm text-slate-700">{t('settings.enableAutoSave')}</span>
-                  </label>
-
-                  {skillEditorConfig.autoSaveEnabled && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        {t('settings.autoSaveDelay')}
-                      </label>
-                      <input
-                        type="number"
-                        value={skillEditorConfig.autoSaveDelay}
-                        onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, autoSaveDelay: parseInt(e.target.value) })}
-                        min={500}
-                        max={10000}
-                        step={500}
-                        className="input w-full"
+                {/* Toggle Options */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setSkillEditorConfig({ ...skillEditorConfig, showMinimap: !skillEditorConfig.showMinimap })}
                         disabled={isSaving}
-                      />
-                      <p className="text-xs text-slate-500 mt-1">500 - 10,000 (default: 2000)</p>
+                        className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                          skillEditorConfig.showMinimap ? 'bg-blue-500' : 'bg-slate-200 group-hover:bg-slate-300'
+                        } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                        aria-pressed={skillEditorConfig.showMinimap}
+                      >
+                        <span
+                          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
+                            skillEditorConfig.showMinimap ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                      <div>
+                        <span className="text-sm text-slate-700 font-medium block">{t('settings.showMinimap')}</span>
+                        <p className="text-xs text-slate-500">Show code minimap on the right side</p>
+                      </div>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="flex items-center justify-between group">
+                    <div className="flex items-center gap-3 flex-1">
+                      <button
+                        type="button"
+                        data-testid="word-wrap-toggle"
+                        onClick={() => setSkillEditorConfig({ ...skillEditorConfig, wordWrap: !skillEditorConfig.wordWrap })}
+                        disabled={isSaving}
+                        className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                          skillEditorConfig.wordWrap ? 'bg-blue-500' : 'bg-slate-200 group-hover:bg-slate-300'
+                        } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                        aria-pressed={skillEditorConfig.wordWrap}
+                      >
+                        <span
+                          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
+                            skillEditorConfig.wordWrap ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                      <div>
+                        <span className="text-sm text-slate-700 font-medium block">{t('settings.enableWordWrap')}</span>
+                        <p className="text-xs text-slate-500">Wrap long lines to fit the editor width</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Auto-save Card */}
+            <div className="card">
+              <div className="flex items-center gap-2 mb-4">
+                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <h4 className="text-sm font-semibold text-slate-900">Auto-save</h4>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between group">
+                  <div className="flex items-center gap-3 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => setSkillEditorConfig({ ...skillEditorConfig, autoSaveEnabled: !skillEditorConfig.autoSaveEnabled })}
+                      disabled={isSaving}
+                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                        skillEditorConfig.autoSaveEnabled ? 'bg-blue-500' : 'bg-slate-200 group-hover:bg-slate-300'
+                      } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      aria-pressed={skillEditorConfig.autoSaveEnabled}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
+                          skillEditorConfig.autoSaveEnabled ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                    <div>
+                      <span className="text-sm text-slate-700 font-medium block">{t('settings.enableAutoSave')}</span>
+                      <p className="text-xs text-slate-500">Automatically save changes while editing</p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Editor Display Options */}
-                <div className="space-y-2.5">
-                  <label className="flex items-center gap-2.5 cursor-pointer">
+                {skillEditorConfig.autoSaveEnabled && (
+                  <div className="pl-12">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                      {t('settings.autoSaveDelay')} (ms)
+                    </label>
                     <input
-                      data-testid="show-minimap-toggle"
-                      type="checkbox"
-                      checked={skillEditorConfig.showMinimap}
-                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, showMinimap: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
+                      type="number"
+                      value={skillEditorConfig.autoSaveDelay}
+                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, autoSaveDelay: parseInt(e.target.value) })}
+                      min={500}
+                      max={10000}
+                      step={500}
+                      className="input text-sm"
                       disabled={isSaving}
                     />
-                    <span className="text-sm text-slate-700">{t('settings.showMinimap')}</span>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      data-testid="word-wrap-toggle"
-                      type="checkbox"
-                      checked={skillEditorConfig.wordWrap}
-                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, wordWrap: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-white"
-                      disabled={isSaving}
-                    />
-                    <span className="text-sm text-slate-700">{t('settings.enableWordWrap')}</span>
-                  </label>
-                </div>
+                    <p className="text-xs text-slate-500 mt-1">500 - 10,000 (default: 2000ms)</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1674,49 +1724,59 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
         {/* Keyboard Shortcuts Tab */}
         {activeTab === 'shortcuts' && (
-          <div className="space-y-6">
-            {/* General Shortcuts */}
-            <div>
-              <h3 className="text-sm font-medium text-slate-700 mb-3">{t('settings.generalShortcuts')}</h3>
+          <div className="space-y-5">
+            {/* General Shortcuts Card */}
+            <div className="card">
+              <div className="flex items-center gap-2 mb-4">
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                <h4 className="text-sm font-semibold text-slate-900">{t('settings.generalShortcuts')}</h4>
+              </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
-                  <span className="text-slate-600">{t('settings.createNewSkill')}</span>
+                <div className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <span className="text-slate-700">{t('settings.createNewSkill')}</span>
                   <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Ctrl+N</kbd>
                 </div>
-                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
-                  <span className="text-slate-600">{t('settings.refreshSkillList')}</span>
+                <div className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <span className="text-slate-700">{t('settings.refreshSkillList')}</span>
                   <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Ctrl+R</kbd>
                 </div>
-                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
-                  <span className="text-slate-600">{t('settings.saveSkill')}</span>
+                <div className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <span className="text-slate-700">{t('settings.saveSkill')}</span>
                   <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Ctrl+S</kbd>
                 </div>
-                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
-                  <span className="text-slate-600">{t('settings.closeEditor')}</span>
+                <div className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <span className="text-slate-700">{t('settings.closeEditor')}</span>
                   <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Ctrl+W</kbd>
                 </div>
-                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
-                  <span className="text-slate-600">{t('settings.deleteSkill')}</span>
+                <div className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <span className="text-slate-700">{t('settings.deleteSkill')}</span>
                   <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Delete</kbd>
                 </div>
-                <div className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
-                  <span className="text-slate-600">{t('settings.closeDialog')}</span>
+                <div className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <span className="text-slate-700">{t('settings.closeDialog')}</span>
                   <kbd className="px-2.5 py-1 bg-slate-200 rounded text-xs text-slate-700 font-mono">Esc</kbd>
                 </div>
               </div>
             </div>
 
-            {/* AI Shortcuts */}
-            <div>
-              <h3 className="text-sm font-medium text-slate-700 mb-3">{t('settings.aiShortcuts')}</h3>
+            {/* AI Shortcuts Card */}
+            <div className="card">
+              <div className="flex items-center gap-2 mb-4">
+                <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                </svg>
+                <h4 className="text-sm font-semibold text-slate-900">{t('settings.aiShortcuts')}</h4>
+              </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                  <span className="text-slate-600 dark:text-slate-300">{t('settings.aiRewrite')}</span>
-                  <kbd className="px-2.5 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs text-blue-700 dark:text-blue-300 font-mono">Ctrl+Alt+R</kbd>
+                <div className="flex items-center justify-between text-sm p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                  <span className="text-slate-700">{t('settings.aiRewrite')}</span>
+                  <kbd className="px-2.5 py-1 bg-purple-200 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+R</kbd>
                 </div>
-                <div className="flex items-center justify-between text-sm p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                  <span className="text-slate-600 dark:text-slate-300">{t('settings.aiInsert')}</span>
-                  <kbd className="px-2.5 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs text-blue-700 dark:text-blue-300 font-mono">Ctrl+Alt+I</kbd>
+                <div className="flex items-center justify-between text-sm p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                  <span className="text-slate-700">{t('settings.aiInsert')}</span>
+                  <kbd className="px-2.5 py-1 bg-purple-200 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+I</kbd>
                 </div>
               </div>
             </div>
@@ -2465,73 +2525,37 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                           </div>
                         </div>
 
-                        {/* Tags Section */}
+                        {/* Keywords Section */}
                         <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                             </svg>
-                            <span>{t('settings.tagsInGroup', { count: group.tags.length })}</span>
+                            <span>{t('skillGroups.keywords.keywordsCount')} ({group.keywords?.length || 0})</span>
                           </div>
-                          {group.tags.length > 0 && (
+                          {group.keywords && group.keywords.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 mt-2">
-                              {group.tags.map(tag => (
+                              {group.keywords.slice(0, 8).map(keyword => (
                                 <span
-                                  key={tag}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full"
-                                  style={{
-                                    backgroundColor: `${group.color}15`,
-                                    color: group.color,
-                                    border: `1px solid ${group.color}30`
-                                  }}
+                                  key={keyword}
+                                  className="inline-flex items-center px-2 py-0.5 text-xs rounded bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                  title={keyword}
                                 >
-                                  {tag}
-                                  <button
-                                    onClick={() => handleRemoveTagFromGroup(group.id, tag)}
-                                    className="ml-0.5 hover:opacity-70 transition-opacity"
-                                    title={t('settings.removeFromGroup')}
-                                  >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                  </button>
-                                </span>
+                                  {keyword.length > 10 ? `${keyword.substring(0, 10)}...` : keyword}
+                                  </span>
                               ))}
+                              {group.keywords.length > 8 && (
+                                <span className="inline-flex items-center px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                  +{group.keywords.length - 8}
+                                </span>
+                              )}
                             </div>
                           )}
-
-                          {/* Keywords Section */}
-                          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                              </svg>
-                              <span>{t('skillGroups.keywords.keywordsCount')} ({group.keywords?.length || 0})</span>
-                            </div>
-                            {group.keywords && group.keywords.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 mt-2">
-                                {group.keywords.slice(0, 8).map(keyword => (
-                                  <span
-                                    key={keyword}
-                                    className="inline-flex items-center px-2 py-0.5 text-xs rounded bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
-                                    title={keyword}
-                                  >
-                                    {keyword.length > 10 ? `${keyword.substring(0, 10)}...` : keyword}
-                                  </span>
-                                ))}
-                                {group.keywords.length > 8 && (
-                                  <span className="inline-flex items-center px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                                    +{group.keywords.length - 8}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {(!group.keywords || group.keywords.length === 0) && (
-                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                                {t('skillGroups.keywords.noKeywordsHint')}
-                              </p>
-                            )}
-                          </div>
+                          {(!group.keywords || group.keywords.length === 0) && (
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                              {t('skillGroups.keywords.noKeywordsHint')}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}

@@ -334,9 +334,6 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
   // Track the previous skill path to detect actual skill changes vs. initial skill creation
   const prevSkillPathRef = useRef<string | undefined>(currentSkillPath);
 
-  // Track processed Write tool calls to prevent duplicate refresh triggers
-  const processedWriteToolsRef = useRef<Set<string>>(new Set());
-
   const {
     status,
     content,
@@ -356,17 +353,45 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
     onComplete: async (finalContent, finalToolCalls) => {
       console.log('[AISkillSidebar] AI skill generation complete');
       console.log('[AISkillSidebar] finalToolCalls:', finalToolCalls);
+      console.log('[AISkillSidebar] currentSkillPath:', currentSkillPath);
 
-      // Extract created skill path from tool calls (use finalToolCalls to avoid stale closure)
+      // STRATEGY: When modifying existing skill, always refresh editor and file tree
+      // Try to get filePath from any tool call, but refresh regardless
+      if (currentSkillPath) {
+        console.log('[AISkillSidebar] Current skill path exists, treating as modification');
+        console.log('[AISkillSidebar] currentSkillPath:', currentSkillPath);
+
+        // Try to get file path from any tool (Write, Edit, or other tools with file_path)
+        let filePath: string | undefined = undefined;
+        const toolWithFilePath = finalToolCalls.find(t => t.input?.file_path);
+        if (toolWithFilePath?.input?.file_path) {
+          filePath = toolWithFilePath.input.file_path as string;
+          console.log('[AISkillSidebar] Found file path from', toolWithFilePath.name, 'tool:', filePath);
+        }
+
+        // Show completion toast
+        onShowToast?.('AI response complete!', 'success');
+
+        // CRITICAL: Always refresh editor and file tree after AI completes
+        // This ensures any changes made by skills or other tools are reflected
+        console.log('[AISkillSidebar] Refreshing editor and file tree, filePath:', filePath);
+        onSkillModified?.(filePath);
+        onSkillCreated(); // This triggers file tree refresh
+        return;
+      }
+
+      // Check for new skill creation (only when currentSkillPath is undefined)
+      // Look for Write tool in the tool calls
       const writeToolCall = finalToolCalls.find(t => t.name === 'Write');
-      console.log('[AISkillSidebar] writeToolCall:', writeToolCall);
-
       if (writeToolCall?.input?.file_path) {
         const filePath = writeToolCall.input.file_path as string;
+        console.log('[AISkillSidebar] Write tool found, checking for new skill creation');
+        console.log('[AISkillSidebar] file_path:', filePath);
+
         // Extract skill name from path (e.g., /path/to/skills/skill-name/SKILL.md -> skill-name)
         const pathParts = filePath.replace(/\\/g, '/').split('/');
         const skillsIndex = pathParts.findIndex(p => p === 'skills');
-        console.log('[AISkillSidebar] filePath:', filePath, 'pathParts:', pathParts, 'skillsIndex:', skillsIndex);
+        console.log('[AISkillSidebar] Checking for new skill creation, skillsIndex:', skillsIndex);
 
         if (skillsIndex !== -1 && pathParts.length > skillsIndex + 1) {
           const skillName = pathParts[skillsIndex + 1];
@@ -381,11 +406,8 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         }
       }
 
-      console.log('[AISkillSidebar] No Write tool found or could not extract skill name');
-      // Show completion toast for skill modification
-      if (currentSkillPath) {
-        onShowToast?.('Skill modified successfully!', 'success');
-      }
+      // Default behavior for new skill mode without clear creation
+      console.log('[AISkillSidebar] No current skill path and no new skill created, default completion');
       onSkillCreated();
     },
     onError: (errorMessage) => {
@@ -733,34 +755,6 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
       }
     }
   }, [toolCalls, isStreaming, stop]);
-
-  /**
-   * Detect Write tool calls and notify parent to refresh editor
-   * This allows the editor to refresh when the AI modifies the current skill file
-   * Uses ref to prevent duplicate triggers from the same Write tool call
-   */
-  useEffect(() => {
-    if (toolCalls && toolCalls.length > 0 && onSkillModified) {
-      const writeTool = toolCalls.find(t => t.name === 'Write');
-      if (writeTool?.input?.file_path) {
-        const filePath = writeTool.input.file_path as string;
-
-        // Only notify once per unique file path
-        if (!processedWriteToolsRef.current.has(filePath)) {
-          processedWriteToolsRef.current.add(filePath);
-          console.log('[AISkillSidebar] Write tool detected, notifying parent to refresh:', filePath);
-          onSkillModified(filePath);
-        }
-      }
-    }
-  }, [toolCalls, onSkillModified]);
-
-  // Clear processed Write tools when generation resets (new conversation)
-  useEffect(() => {
-    if (isIdle) {
-      processedWriteToolsRef.current.clear();
-    }
-  }, [isIdle]);
 
   /**
    * Check if an option is a custom/other type option

@@ -247,8 +247,6 @@ export interface ElectronAPI {
   createSkillGroup: (data: Omit<SkillGroup, 'id' | 'tags' | 'createdAt' | 'updatedAt'>) => Promise<IPCResponse<SkillGroup>>;
   updateSkillGroup: (id: string, data: Partial<Omit<SkillGroup, 'id' | 'createdAt'>>) => Promise<IPCResponse<SkillGroup>>;
   deleteSkillGroup: (id: string) => Promise<IPCResponse<void>>;
-  addTagToGroup: (groupId: string, tag: string) => Promise<IPCResponse<SkillGroup>>;
-  removeTagFromGroup: (groupId: string, tag: string) => Promise<IPCResponse<SkillGroup>>;
   updateGroupKeywords: (groupId: string, keywords: string[]) => Promise<IPCResponse<SkillGroup>>;
   reorderSkillGroups: (groupIds: string[]) => Promise<IPCResponse<void>>;
   initDefaultSkillGroups: () => Promise<IPCResponse<{ initialized: boolean; groups: SkillGroup[] }>>;

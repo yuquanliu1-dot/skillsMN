@@ -9,7 +9,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { Skill, VersionComparison } from '../../shared/types';
-import TagGroupPopup from './TagGroupPopup';
 
 interface KeywordMatchResult {
   groupId: string | null;
@@ -55,10 +54,6 @@ export default function SkillCard({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isTruncated, setIsTruncated] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
-
-  // Tag group popup state
-  const [showTagPopup, setShowTagPopup] = useState(false);
-  const [selectedTag, setSelectedTag] = useState<string>('');
 
   const hasUpdate = versionStatus?.hasUpdate || false;
 
@@ -147,36 +142,6 @@ export default function SkillCard({
       setTimeout(() => {
         setUpdateProgress('idle');
       }, 3000);
-    }
-  };
-
-  const handleTagClick = (e: React.MouseEvent, tag: string) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setSelectedTag(tag);
-    setShowTagPopup(true);
-  };
-
-  const handleAssignTag = async (tag: string, groupId: string | null) => {
-    try {
-      if (groupId) {
-        await window.electronAPI.addTagToGroup(groupId, tag);
-      } else {
-        // Remove tag from any group it's in
-        const groups = await window.electronAPI.listSkillGroups();
-        if (groups.success && groups.data) {
-          for (const group of groups.data) {
-            if (group.tags.includes(tag)) {
-              await window.electronAPI.removeTagFromGroup(group.id, tag);
-            }
-          }
-        }
-      }
-      // Notify parent to refresh skill list
-      onTagAssigned?.();
-    } catch (error) {
-      console.error('Failed to assign tag:', error);
-      throw error;
     }
   };
 
@@ -391,14 +356,13 @@ export default function SkillCard({
           {skill.tags && skill.tags.length > 0 && (
             <div className="flex items-center gap-1 overflow-hidden flex-1">
               {skill.tags.slice(0, 3).map((tag, index) => (
-                <button
+                <span
                   key={index}
-                  onClick={(e) => handleTagClick(e, tag)}
-                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-0 flex-shrink-0 hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors cursor-pointer"
-                  title={`${tag} - ${t('skillCard.clickToAssignGroup', 'Click to assign to group')}`}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-0 flex-shrink-0"
+                  title={`${tag}`}
                 >
                   {tag}
-                </button>
+                </span>
               ))}
               {skill.tags.length > 3 && (
                 <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">+{skill.tags.length - 3}</span>
@@ -510,15 +474,6 @@ export default function SkillCard({
         </div>,
         document.body
       )}
-
-      {/* Tag Group Popup */}
-      <TagGroupPopup
-        isOpen={showTagPopup}
-        tag={selectedTag}
-        onClose={() => setShowTagPopup(false)}
-        onAssign={handleAssignTag}
-        onNavigateToSettings={onNavigateToSettings}
-      />
     </>
   );
 }
