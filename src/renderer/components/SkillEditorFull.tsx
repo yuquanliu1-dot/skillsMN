@@ -1405,6 +1405,7 @@ export default function SkillEditorFull({
           className="flex-shrink-0 border-l border-gray-200 flex"
           style={{
             width: `${aiPanelWidth}px`,
+            height: '100%',  // Add explicit height constraint
             display: isAIPanelVisible ? 'flex' : 'none'  // Hide but keep mounted
           }}
         >
