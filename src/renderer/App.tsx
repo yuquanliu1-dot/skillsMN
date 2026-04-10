@@ -180,14 +180,11 @@ export default function App(): JSX.Element {
         }
 
         // Start file watcher if autoRefresh is enabled
-        console.log('🔍 [App.tsx] Checking autoRefresh setting:', config.autoRefresh);
         if (config.autoRefresh !== false) {  // Default to true if not set
-          console.log('🚀 [App.tsx] AutoRefresh enabled, starting file watcher...');
           try {
             await ipcClient.startWatching();
-            console.log('✅ [App.tsx] startWatching() completed successfully');
           } catch (error) {
-            console.error('❌ [App.tsx] Failed to start file watcher:', error);
+            console.error('Failed to start file watcher:', error);
           }
 
           // Remove any existing listener before adding new one
@@ -195,19 +192,12 @@ export default function App(): JSX.Element {
 
           // Subscribe to file system changes
           ipcClient.onFSChange(async (event) => {
-            console.log('🔔 [App.tsx] File system change detected:', event);
-            console.log('🔔 [App.tsx] Calling loadSkills...');
             await loadSkillsRef.current();
-            console.log('✅ [App.tsx] loadSkills completed');
           });
-          console.log('File system watcher started on initialization');
-        } else {
-          console.log('⚠️ [App.tsx] AutoRefresh disabled, skipping file watcher');
         }
 
         // Subscribe to skills:refresh event for cross-component synchronization
         window.electronAPI.onSkillsRefresh(async () => {
-          console.log('🔔 [App.tsx] skills:refresh event received, reloading skills...');
           await loadSkillsRef.current();
         });
 
@@ -290,27 +280,23 @@ export default function App(): JSX.Element {
    */
   const loadSkills = useCallback(async (): Promise<Skill[] | undefined> => {
     if (!state.config) {
-      console.log('⚠️ [loadSkills] No config, skipping');
       return;
     }
 
     // Prevent concurrent loads
     if (isLoadingSkillsRef.current) {
-      console.log('⚠️ [loadSkills] Already loading, skipping duplicate call');
       return;
     }
 
     try {
       isLoadingSkillsRef.current = true;
-      console.log('🔄 [loadSkills] Starting to load skills...');
       const skills = await ipcClient.listSkills(state.config);
-      console.log(`✅ [loadSkills] Loaded ${skills.length} skills`);
       dispatch({ type: 'SET_SKILLS', payload: skills });
       // Dispatch event to notify other components (e.g., PrivateSkillCard) that skills have been refreshed
       window.dispatchEvent(new CustomEvent('local-skills-refreshed'));
       return skills;
     } catch (error) {
-      console.error('❌ [loadSkills] Failed to load skills:', error);
+      console.error('Failed to load skills:', error);
       dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
       return;
     } finally {
@@ -344,12 +330,10 @@ export default function App(): JSX.Element {
     }
 
     try {
-      console.log('🔄 [checkForUpdates] Checking for skill updates...');
       const updates = await ipcClient.checkForUpdates(skillsToCheck);
-      console.log(`✅ [checkForUpdates] Found ${Object.keys(updates).filter(k => updates[k].hasUpdate).length} updates`);
       setSkillUpdates(updates);
     } catch (error) {
-      console.error('❌ [checkForUpdates] Failed to check for updates:', error);
+      console.error('Failed to check for updates:', error);
       // Don't show error toast for background update checks
     }
   }, [state.skills]);
@@ -371,7 +355,6 @@ export default function App(): JSX.Element {
       // Show success notification
       showToast(`Skill "${skill.name}" updated successfully`, 'success');
 
-      console.log('Skill updated successfully:', skill.name, 'New path:', result.newPath);
     } catch (error: any) {
       console.error('Failed to update skill:', error);
       showToast(`Failed to update skill: ${error.message}`, 'error');
@@ -444,10 +427,8 @@ export default function App(): JSX.Element {
 
         // Subscribe to file system changes
         ipcClient.onFSChange(async (event) => {
-          console.log('File system change detected:', event);
           await loadSkillsRef.current();
         });
-        console.log('File system watcher started after setup');
       }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
@@ -499,10 +480,8 @@ export default function App(): JSX.Element {
             await ipcClient.startWatching();
             ipcClient.removeFSChangeListener();
             ipcClient.onFSChange(async (event) => {
-              console.log('File system change detected:', event);
               await loadSkillsRef.current();
             });
-            console.log('File system watcher started after migration');
           } catch (err) {
             console.warn('File watcher may already be running:', err);
           }
@@ -533,10 +512,8 @@ export default function App(): JSX.Element {
         await ipcClient.startWatching();
         ipcClient.removeFSChangeListener();
         ipcClient.onFSChange(async (event) => {
-          console.log('File system change detected:', event);
           await loadSkillsRef.current();
         });
-        console.log('File system watcher started after migration skip');
       } catch (err) {
         console.warn('File watcher may already be running:', err);
       }
@@ -613,8 +590,6 @@ export default function App(): JSX.Element {
       // Show success notification (T084)
       showToast('Skill saved successfully', 'success');
 
-      console.log('Skill saved successfully:', editingSkill.name);
-
       // Return the updated lastModified timestamp from the response
       if (response.data && response.data.lastModified) {
         return { lastModified: new Date(response.data.lastModified).getTime() };
@@ -638,7 +613,6 @@ export default function App(): JSX.Element {
     try {
       // Close the editor if the skill being deleted is currently open
       if (editingSkill && editingSkill.path === skill.path) {
-        console.log('Closing editor for skill being deleted:', skill.name);
         setEditingSkill(null);
       }
 
@@ -658,7 +632,6 @@ export default function App(): JSX.Element {
       // Show success notification (T097)
       showToast(`Skill "${skill.name}" moved to recycle bin`, 'success');
 
-      console.log('Skill deleted successfully:', skill.name);
     } catch (error: any) {
       console.error('Failed to delete skill:', error);
 
@@ -679,7 +652,6 @@ export default function App(): JSX.Element {
         throw new Error(response.error?.message || 'Failed to open folder');
       }
 
-      console.log('Folder opened successfully:', skill.name);
     } catch (error: any) {
       console.error('Failed to open folder:', error);
       showToast(`Failed to open folder: ${error.message}`, 'error');
@@ -704,7 +676,6 @@ export default function App(): JSX.Element {
       // Show success notification
       showToast(`Skill "${newName}" created from "${copyingSkill.name}"`, 'success');
 
-      console.log('Skill copied successfully:', newName);
     } catch (error: any) {
       console.error('Failed to copy skill:', error);
       showToast(`Failed to copy skill: ${error.message}`, 'error');
@@ -736,19 +707,15 @@ export default function App(): JSX.Element {
           ipcClient.removeFSChangeListener();
 
           ipcClient.onFSChange(async (event) => {
-            console.log('File system change detected:', event);
             await loadSkillsRef.current();
           });
-          console.log('File system watcher started');
         } else if (wasWatching && !shouldWatch) {
           // Stop watching
           await ipcClient.stopWatching();
           ipcClient.removeFSChangeListener();
-          console.log('File system watcher stopped');
         }
       }
 
-      console.log('Settings saved successfully');
     } catch (error) {
       console.error('Failed to save settings:', error);
       throw error;
@@ -792,25 +759,19 @@ export default function App(): JSX.Element {
    * Handle viewing discover skill content
    */
   const handleViewDiscoverSkill = async (skill: any) => {
-    console.log('🔍 handleViewDiscoverSkill called with skill:', skill);
     try {
       // Fetch skill content from the registry
-      console.log('📡 Fetching skill content from registry...', skill.source, skill.skillId);
       const response = await window.electronAPI.getRegistrySkillContent(
         skill.source,
         skill.skillId
       );
 
-      console.log('📦 Registry response:', response);
-
       if (response.success && response.data) {
-        console.log('✅ Skill content loaded, length:', response.data.length);
         setViewingDiscoverSkill({
           skill,
           content: response.data,
         });
       } else {
-        console.error('❌ Failed to load skill content:', response.error);
         throw new Error(response.error?.message || 'Failed to load skill content');
       }
     } catch (error) {
