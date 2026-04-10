@@ -158,6 +158,13 @@ export default function App(): JSX.Element {
         const config = await ipcClient.loadConfig();
         dispatch({ type: 'SET_CONFIG', payload: config });
 
+        // Check if setup is needed (setupCompleted flag) - Check FIRST before migration
+        if (!config.setupCompleted) {
+          setShowSetup(true);
+          dispatch({ type: 'SET_LOADING', payload: false });
+          return;
+        }
+
         // Check if there are skills in project directories that could be migrated
         const skillsResponse = await window.electronAPI.detectExistingSkills();
         if (skillsResponse.success && skillsResponse.data && skillsResponse.data.length > 0) {
@@ -168,13 +175,6 @@ export default function App(): JSX.Element {
             setMigrationTargetDirectory(targetDirResponse.data);
           }
           setShowMigrationDialog(true);
-          dispatch({ type: 'SET_LOADING', payload: false });
-          return;
-        }
-
-        // Check if setup is needed (setupCompleted flag)
-        if (!config.setupCompleted) {
-          setShowSetup(true);
           dispatch({ type: 'SET_LOADING', payload: false });
           return;
         }

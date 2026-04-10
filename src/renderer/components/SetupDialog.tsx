@@ -26,7 +26,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
   const [error, setError] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
 
-  // Step 1: Private Repos
+  // Step 1: Private Repos - Initialize with defaults from API
   const [privateRepos, setPrivateRepos] = useState<PrivateRepo[]>([]);
   const [showAddRepoForm, setShowAddRepoForm] = useState(false);
   const [newRepoUrl, setNewRepoUrl] = useState('');
@@ -38,7 +38,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
   const [testingRepoId, setTestingRepoId] = useState<string | null>(null);
   const [repoTestResults, setRepoTestResults] = useState<Record<string, { success: boolean; error?: string }>>({});
 
-  // Step 2: AI Configuration
+  // Step 2: AI Configuration - Initialize with defaults from API
   const [aiConfig, setAiConfig] = useState<AIConfiguration | null>(null);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [isSavingAI, setIsSavingAI] = useState(false);
@@ -56,8 +56,26 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
   useEffect(() => {
     if (currentStep === 'private-repos') {
       loadPrivateRepos();
+      loadRepoDefaults();
     }
   }, [currentStep]);
+
+  /**
+   * Load repository defaults from API
+   */
+  const loadRepoDefaults = async () => {
+    try {
+      const response = await window.electronAPI.getSetupRepoDefaults();
+      if (response.success) {
+        setNewRepoProvider('gitlab');
+        setNewRepoInstanceUrl(response.data.instanceUrl || '');
+        setNewRepoUrl(response.data.repositoryUrl || '');
+        setNewRepoDisplayName(response.data.description || '');
+      }
+    } catch (err) {
+      console.error('Failed to load repo defaults:', err);
+    }
+  };
 
   /**
    * Load existing private repositories configuration
@@ -80,28 +98,43 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
     setIsLoadingAI(true);
     setError(null);
     try {
-      const response = await window.electronAPI.getAIConfiguration();
-      if (response.success && response.data) {
-        setAiConfig(response.data);
-        setAITestResult(null);
-      } else {
+      // In setup wizard, always use defaults from setup-defaults.json
+      const defaultsResponse = await window.electronAPI.getSetupAIDefaults();
+
+      if (defaultsResponse.success) {
+        // Use default configuration from API (without API key)
+        const defaults = defaultsResponse.data;
         setAiConfig({
-          provider: 'anthropic',
+          provider: 'anthropic', // Always anthropic for now
+          apiKey: '', // Never pre-fill API key
+          model: defaults.model,
+          baseUrl: defaults.baseUrl,
+          streamingEnabled: defaults.streamingEnabled,
+          timeout: defaults.timeout,
+          maxRetries: defaults.maxRetries,
+        });
+      } else {
+        // Fallback to hardcoded defaults if API fails
+        setAiConfig({
+          provider: 'anthropic' as const,
           apiKey: '',
-          model: '',
+          model: 'GLM-4.7',
+          baseUrl: 'https://open.bigmodel.cn/api/anthropic',
           streamingEnabled: true,
-          timeout: 120000,
-          maxRetries: 3,
+          timeout: 30000,
+          maxRetries: 2,
         });
       }
     } catch (err) {
+      // Create minimal config on error
       setAiConfig({
-        provider: 'anthropic',
+        provider: 'anthropic' as const,
         apiKey: '',
-        model: '',
+        model: 'GLM-4.7',
+        baseUrl: 'https://open.bigmodel.cn/api/anthropic',
         streamingEnabled: true,
-        timeout: 120000,
-        maxRetries: 3,
+        timeout: 30000,
+        maxRetries: 2,
       });
     } finally {
       setIsLoadingAI(false);
@@ -127,11 +160,12 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
 
       if (response.success && response.data) {
         setPrivateRepos([...privateRepos, response.data]);
+        // Reset form
         setNewRepoUrl('');
         setNewRepoPAT('');
-        setNewRepoDisplayName('');
         setNewRepoProvider('github');
         setNewRepoInstanceUrl('');
+        setNewRepoDisplayName('');
         setShowAddRepoForm(false);
 
         window.dispatchEvent(new CustomEvent('private-repo-updated', {
@@ -409,11 +443,12 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                         type="button"
                         onClick={() => {
                           setShowAddRepoForm(false);
+                          // Reset form
                           setNewRepoUrl('');
                           setNewRepoPAT('');
-                          setNewRepoDisplayName('');
                           setNewRepoProvider('github');
                           setNewRepoInstanceUrl('');
+                          setNewRepoDisplayName('');
                         }}
                         className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
                         disabled={isAddingRepo}
@@ -514,7 +549,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                         type="text"
                         value={aiConfig.model}
                         onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
-                        placeholder="claude-sonnet-4-6"
+                        placeholder="GLM-4.7"
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         disabled={isSavingAI}
                       />
@@ -525,7 +560,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                         type="text"
                         value={aiConfig.baseUrl || ''}
                         onChange={(e) => setAiConfig({ ...aiConfig, baseUrl: e.target.value || undefined })}
-                        placeholder="https://api.anthropic.com"
+                        placeholder="https://open.bigmodel.cn/api/anthropic"
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         disabled={isSavingAI}
                       />

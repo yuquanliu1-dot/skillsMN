@@ -215,6 +215,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.AI_CONFIG_TEST, { config });
   },
 
+  // ============================================================================
+  // Setup Defaults Operations
+  // ============================================================================
+
+  getSetupRepoDefaults: (): Promise<IPCResponse<{
+    provider: 'gitlab';
+    instanceUrl: string;
+    repositoryUrl?: string;
+    description?: string;
+  }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SETUP_DEFAULTS_GET_REPO_CONFIG);
+  },
+
+  getSetupAIDefaults: (): Promise<IPCResponse<{
+    provider: string;
+    model: string;
+    baseUrl: string;
+    streamingEnabled: boolean;
+    timeout: number;
+    maxRetries: number;
+  }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SETUP_DEFAULTS_GET_AI_CONFIG);
+  },
+
   // Permission & Session Management
   abortAISession: (sessionId: string): Promise<IPCResponse<boolean>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.AI_ABORT_SESSION, { sessionId });

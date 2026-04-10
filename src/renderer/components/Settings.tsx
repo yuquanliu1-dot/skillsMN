@@ -209,6 +209,14 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   }, [isOpen, config]);
 
   /**
+   * Clear success and error messages when switching tabs
+   */
+  useEffect(() => {
+    setSuccess(null);
+    setError(null);
+  }, [activeTab]);
+
+  /**
    * Load private repositories
    */
   useEffect(() => {

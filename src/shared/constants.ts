@@ -241,6 +241,10 @@ export const IPC_CHANNELS = {
 
   // Contribution stats cache cleared event
   CONTRIBUTION_CACHE_CLEARED: 'contribution:cache-cleared',
+
+  // Setup defaults operations
+  SETUP_DEFAULTS_GET_REPO_CONFIG: 'setup-defaults:get-repo-config',
+  SETUP_DEFAULTS_GET_AI_CONFIG: 'setup-defaults:get-ai-config',
 } as const;
 
 // ============================================================================

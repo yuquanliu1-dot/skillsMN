@@ -97,6 +97,22 @@ export interface ElectronAPI {
   saveAIConfiguration: (config: AIConfiguration) => Promise<IPCResponse<void>>;
   testAIConnection: (config?: AIConfiguration) => Promise<IPCResponse<{ success: boolean; latency?: number }>>;
 
+  // Setup Defaults Operations
+  getSetupRepoDefaults: () => Promise<IPCResponse<{
+    provider: 'gitlab';
+    instanceUrl: string;
+    repositoryUrl?: string;
+    description?: string;
+  }>>;
+  getSetupAIDefaults: () => Promise<IPCResponse<{
+    provider: string;
+    model: string;
+    baseUrl: string;
+    streamingEnabled: boolean;
+    timeout: number;
+    maxRetries: number;
+  }>>;
+
   // AI Session & Permission Management
   abortAISession: (sessionId: string) => Promise<IPCResponse<boolean>>;
   checkSessionStatus: (sessionId: string) => Promise<IPCResponse<{
