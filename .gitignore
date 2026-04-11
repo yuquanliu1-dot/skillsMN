@@ -71,6 +71,8 @@ test-*.js
 
 # Configuration files with sensitive data
 config.json
+.claude/settings.local.json
+.claude/settings.json
 
 # Claude skills - ignore all except skill-creator (which is part of the project)
 .claude/skills/*

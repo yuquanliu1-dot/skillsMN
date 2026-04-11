@@ -931,19 +931,37 @@ ${content}`;
       const repo = await configService.getPrivateRepo(sourceMetadata.repoId);
 
       if (!repo) {
-        // Repository configuration was removed, convert skill to local source
-        logger.info(`Repository not found for skill, converting to local source: ${skill.name}`, 'SkillService', {
+        // Repository configuration not found - this could be due to:
+        // 1. Temporary decryption failure (safeStorage unavailable)
+        // 2. Config file corruption
+        // 3. Repository was manually removed from config
+        //
+        // DON'T convert to local source yet - we need to verify via Git API first
+        // Only convert if we can successfully access Git API and get 404
+        logger.warn(`Repository configuration not found for skill, keeping as private-repo source: ${skill.name}`, 'SkillService', {
           skillPath: skill.path,
           repoId: sourceMetadata.repoId,
+          reason: 'Unable to access repository config - may be temporary issue',
+          action: 'Preserving current source type'
         });
-
-        await this.convertSkillToLocalSource(skill.path);
-
         return null;
       }
 
       // Decrypt PAT
-      const pat = decryptPAT(repo.patEncrypted);
+      let pat: string;
+      try {
+        pat = decryptPAT(repo.patEncrypted);
+      } catch (decryptError) {
+        // Decryption failure - this is a temporary issue (safeStorage unavailable, etc.)
+        // Don't convert to local source, just log and skip this update check
+        logger.warn(`Failed to decrypt PAT for repository, keeping skill as private-repo source: ${skill.name}`, 'SkillService', {
+          skillPath: skill.path,
+          repoId: sourceMetadata.repoId,
+          error: decryptError instanceof Error ? decryptError.message : 'Unknown decryption error',
+          action: 'Preserving current source type - will retry on next update check'
+        });
+        return null;
+      }
 
       // Get latest commit SHA for the directory
       const owner = repo.owner;
