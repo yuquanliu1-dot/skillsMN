@@ -193,8 +193,8 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
           {/* Progress */}
           {isInstalling && installProgress && (
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-md p-3">
-              <div className="flex items-center gap-3">
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
+              <div className="flex items-center gap-3.5">
+                <div className="animate-spin rounded-full h-5 w-5 border-4 border-primary border-t-transparent" />
                 <p className="text-sm text-primary font-medium">{installProgress}</p>
               </div>
             </div>
@@ -203,7 +203,7 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
           {/* Error */}
           {installError && (
             <div className="bg-red-50 dark:bg-red-900/20 rounded-md p-3">
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3.5">
                 <ExclamationTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-red-800 dark:text-red-200">{t('install.installationFailed')}</p>
@@ -215,7 +215,7 @@ export const InstallDialog: React.FC<InstallDialogProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-end gap-3.5 p-6 border-t border-slate-200 dark:border-slate-700">
           <button
             onClick={onClose}
             disabled={isInstalling}

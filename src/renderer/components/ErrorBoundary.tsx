@@ -44,7 +44,7 @@ class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-8">
           <div className="max-w-2xl w-full bg-slate-800 rounded-lg shadow-xl p-8 border border-slate-700">
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3.5 mb-6">
               <svg
                 className="w-8 h-8 text-red-400"
                 fill="none"
@@ -86,7 +86,7 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="flex gap-4">
               <button
                 onClick={this.handleReload}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
               >
                 Reload Application
               </button>

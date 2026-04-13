@@ -84,7 +84,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
       {/* Search Header */}
       <div className="bg-white border-b border-gray-200 p-4 space-y-3 flex-shrink-0">
         {/* Top row: Search */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3.5">
           {/* Search */}
           <div className="relative flex-1">
             <input
@@ -112,7 +112,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
             </svg>
             {isLoading && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
+                <div className="animate-spin rounded-full h-5 w-5 border-4 border-blue-500 border-t-transparent"></div>
               </div>
             )}
           </div>
@@ -153,8 +153,8 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+            <div className="flex flex-col items-center gap-3.5">
+              <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
               <span className="text-sm text-gray-600">{t('discover.searching')}</span>
             </div>
           </div>
@@ -177,7 +177,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
             <p className="text-sm text-gray-600 text-center max-w-md mb-4">{error}</p>
             <button
               onClick={() => handleQueryChange(query)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
               aria-label={t('discover.retry')}
             >
               {t('discover.retry')}

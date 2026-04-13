@@ -70,7 +70,7 @@ function getToolIcon(toolId: string, className = "w-5 h-5"): JSX.Element {
       ),
     },
     'aider': {
-      color: '#8B5CF6',
+      color: '#0071e3',  // Apple Blue
       icon: (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
@@ -102,7 +102,7 @@ function getToolIcon(toolId: string, className = "w-5 h-5"): JSX.Element {
       ),
     },
     'codium': {
-      color: '#6366F1',
+      color: '#0066cc',  // Link Blue (darker Apple Blue)
       icon: (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
@@ -188,7 +188,7 @@ function getToolIcon(toolId: string, className = "w-5 h-5"): JSX.Element {
       ),
     },
     'bito': {
-      color: '#6366F1',
+      color: '#2997ff',  // Bright Blue (Apple Blue for dark backgrounds)
       icon: (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z"/>
@@ -329,7 +329,7 @@ export default function SymlinkPanel({
         {/* Loading indicator */}
         {isUpdating && (
           <div className="absolute inset-0 bg-white/60 rounded-lg flex items-center justify-center z-10">
-            <div className="animate-spin w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full" />
+            <div className="animate-spin w-5 h-5 border-4 border-gray-300 border-t-blue-500 rounded-full" />
           </div>
         )}
 
@@ -456,7 +456,7 @@ export default function SymlinkPanel({
         <div className="border-t border-gray-200 bg-white p-4">
           {isLoading ? (
             <div className="py-6 text-center text-sm text-gray-500">
-              <div className="animate-spin inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full mr-2" />
+              <div className="animate-spin inline-block w-5 h-5 border-4 border-gray-300 border-t-blue-500 rounded-full mr-2" />
               {t('symlink.loadingTargets')}
             </div>
           ) : installedTools.length === 0 ? (

@@ -142,7 +142,7 @@ export default function UploadToPrivateRepoDialog({
                   <label
                     key={repo.id}
                     className={`
-                      flex items-center gap-3 p-3 border rounded cursor-pointer transition-colors
+                      flex items-center gap-3.5 p-3 border rounded cursor-pointer transition-colors
                       ${selectedRepoId === repo.id
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'}
@@ -207,11 +207,11 @@ export default function UploadToPrivateRepoDialog({
           <button
             onClick={handleUpload}
             disabled={isUploading || !selectedRepoId || repositories.length === 0}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-600 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             {isUploading ? (
               <>
-                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>

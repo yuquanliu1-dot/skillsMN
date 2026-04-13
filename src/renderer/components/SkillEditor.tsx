@@ -851,7 +851,7 @@ export default function SkillEditor({
     <div data-testid="skill-editor" className={containerClasses}>
       {/* Header */}
       <div data-testid="editor-header" className={`border-b ${borderColor} px-4 py-3 flex items-center justify-between ${headerBg}`}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3.5">
           <div className="flex-shrink-0 w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
             <svg
               className="w-5 h-5 text-blue-600"
@@ -918,7 +918,7 @@ export default function SkillEditor({
                 }
               }
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-primary hover:bg-primary-600 text-white transition-colors"
             title={t('editor.openClaudeInTerminal', 'Open Claude Code in terminal to test this skill')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -970,7 +970,7 @@ export default function SkillEditor({
           {onCommitChanges && skill.sourceMetadata && skill.sourceMetadata.type !== 'local' && hasUnsavedChanges && (
             <button
               onClick={() => onCommitChanges(skill)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-primary hover:bg-primary-600 text-white transition-colors"
               title={t('commit.description')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1124,7 +1124,7 @@ export default function SkillEditor({
           {isLoading && (
             <div className="flex-1 flex items-center justify-center bg-white dark:bg-slate-800">
               <div className="flex flex-col items-center gap-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
                 <div className="text-gray-600 dark:text-gray-400">{t('editor.loadingContent')}</div>
               </div>
             </div>

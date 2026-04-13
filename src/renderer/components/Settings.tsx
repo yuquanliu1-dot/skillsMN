@@ -11,11 +11,11 @@ import { changeLanguage, availableLanguages, getCurrentLanguage } from '../i18n'
 import type { LanguageCode } from '../../shared/types';
 import KeywordEditor from './KeywordEditor';
 
-// Preset colors for skill groups (software development themed)
+// Preset colors for skill groups (Apple design system compliant)
 const PRESET_COLORS = [
-  { value: '#3B82F6', name: '开发', description: 'Development' },
+  { value: '#0071e3', name: '开发', description: 'Development' },      // Apple Blue
   { value: '#10B981', name: '测试', description: 'Testing' },
-  { value: '#8B5CF6', name: '设计', description: 'Design' },
+  { value: '#0066cc', name: '设计', description: 'Design' },          // Link Blue (darker)
   { value: '#F59E0B', name: '部署', description: 'Deployment' },
   { value: '#EF4444', name: '紧急', description: 'Urgent/Bug' },
   { value: '#06B6D4', name: '文档', description: 'Documentation' },
@@ -889,7 +889,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
         <div className="w-56 bg-slate-50 dark:bg-slate-900/50 border-r border-slate-200 dark:border-slate-700 flex-shrink-0">
           {/* Header */}
           <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3.5">
               <div className="flex-shrink-0 w-9 h-9 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
                 <svg
                   className="w-5 h-5 text-blue-600 dark:text-blue-400"
@@ -920,7 +920,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
           <nav className="p-2 space-y-1">
             <button
               onClick={() => setActiveTab('general')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'general'
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -933,7 +933,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             </button>
             <button
               onClick={() => setActiveTab('storage')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'storage'
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -946,7 +946,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             </button>
             <button
               onClick={() => setActiveTab('skill-view')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'skill-view'
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -960,7 +960,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             </button>
             <button
               onClick={() => setActiveTab('skill-groups')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'skill-groups'
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -973,7 +973,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             </button>
             <button
               onClick={() => setActiveTab('repositories')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'repositories'
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -986,7 +986,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             </button>
             <button
               onClick={() => setActiveTab('ai')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'ai'
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -999,7 +999,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             </button>
             <button
               onClick={() => setActiveTab('shortcuts')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'shortcuts'
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -1060,7 +1060,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               <div className="space-y-4">
                 {/* Auto Refresh */}
                 <div className="flex items-center justify-between group">
-                  <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center gap-3.5 flex-1">
                     <button
                       type="button"
                       onClick={() => setAutoRefresh(!autoRefresh)}
@@ -1113,7 +1113,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             <div className="card">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                   </svg>
                   <h4 className="text-sm font-semibold text-slate-900">{t('settings.proxy.title')}</h4>
@@ -1254,7 +1254,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <div className="flex justify-end gap-3.5 pt-4 border-t border-slate-200">
               <button
                 type="button"
                 onClick={onClose}
@@ -1294,7 +1294,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                 >
                   {isAddingDirectory ? (
                     <>
-                      <svg className="w-4 h-4 mr-1.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 mr-1.5 animate-spin" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
@@ -1539,7 +1539,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                 {/* Toggle Options */}
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between group">
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-center gap-3.5 flex-1">
                       <button
                         type="button"
                         onClick={() => setSkillEditorConfig({ ...skillEditorConfig, showMinimap: !skillEditorConfig.showMinimap })}
@@ -1563,7 +1563,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                   </div>
 
                   <div className="flex items-center justify-between group">
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-center gap-3.5 flex-1">
                       <button
                         type="button"
                         data-testid="word-wrap-toggle"
@@ -1601,7 +1601,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between group">
-                  <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center gap-3.5 flex-1">
                     <button
                       type="button"
                       onClick={() => setSkillEditorConfig({ ...skillEditorConfig, autoSaveEnabled: !skillEditorConfig.autoSaveEnabled })}
@@ -1690,7 +1690,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <div className="flex justify-end gap-3.5 pt-4 border-t border-slate-200">
               <button
                 type="button"
                 onClick={onClose}
@@ -1772,7 +1772,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             {/* AI Shortcuts Card */}
             <div className="card">
               <div className="flex items-center gap-2 mb-4">
-                <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z" />
                 </svg>
                 <h4 className="text-sm font-semibold text-slate-900">{t('settings.aiShortcuts')}</h4>
@@ -1877,7 +1877,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3.5">
                       {/* Personal Access Token */}
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -1988,7 +1988,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             {/* Repository List */}
             {isLoadingRepos ? (
               <div className="flex items-center justify-center py-6">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
               </div>
             ) : privateRepos.length === 0 ? (
               <div className="text-center py-6">
@@ -2065,7 +2065,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                       </div>
                     ) : (
                       // Normal Display
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start justify-between gap-3.5">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <svg
@@ -2097,7 +2097,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                           {repo.description && (
                             <p className="text-xs text-slate-500 truncate mb-1">{repo.description}</p>
                           )}
-                          <div className="flex items-center gap-3 text-xs text-slate-500">
+                          <div className="flex items-center gap-3.5 text-xs text-slate-500">
                             <span>{repo.defaultBranch || 'main'}</span>
                             {repo.skillCount !== undefined && (
                               <span>{repo.skillCount} skills</span>
@@ -2115,7 +2115,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                             title={t('settings.testConnection')}
                           >
                             {testingRepoId === repo.id ? (
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-slate-600"></div>
+                              <div className="animate-spin rounded-full h-5 w-5 border-4 border-slate-600 border-t-transparent"></div>
                             ) : (
                               t('settings.testConnection')
                             )}
@@ -2156,7 +2156,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               </div>
               <button
                 onClick={() => setShowAddGroupForm(!showAddGroupForm)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                 disabled={isAddingGroup}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2275,12 +2275,12 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                     </button>
                     <button
                       type="submit"
-                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary-600 rounded-lg transition-colors disabled:opacity-50"
                       disabled={isAddingGroup || !newGroupName.trim()}
                     >
                       {isAddingGroup ? (
                         <span className="flex items-center gap-1.5">
-                          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                           </svg>
@@ -2320,7 +2320,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
             {/* Groups List */}
             {isLoadingGroups ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
               </div>
             ) : skillGroups.length === 0 ? (
               <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700">
@@ -2333,7 +2333,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('settings.noGroupsDescription')}</p>
                 <button
                   onClick={() => setShowAddGroupForm(true)}
-                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -2363,7 +2363,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                           <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{t('settings.editGroup')}</h4>
                         </div>
                         <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 gap-3.5">
                             <div>
                               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                                 {t('settings.groupName')}
@@ -2439,7 +2439,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                             <button
                               onClick={() => handleSaveEditGroup(group.id)}
                               disabled={isUpdatingGroup}
-                              className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                              className="px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary-600 rounded-lg transition-colors disabled:opacity-50"
                             >
                               {isUpdatingGroup ? t('common.saving') : t('common.save')}
                             </button>
@@ -2456,8 +2456,8 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                     ) : (
                       // Normal Display
                       <div className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3.5">
+                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
                             {/* Icon */}
                             <div
                               className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -2581,7 +2581,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
           <div>
             {isLoadingAI ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
               </div>
             ) : aiConfig ? (
               <div className="space-y-4">
@@ -2606,7 +2606,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                   </div>
 
                   {/* Base URL and Model - Side by side */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3.5">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">
                         {t('settings.baseUrl')}
@@ -2641,7 +2641,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                   <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">{t('settings.requestSettings')}</h3>
 
                   {/* Timeout and Retries - Side by side */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3.5">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">
                         {t('settings.timeout')}
@@ -2779,7 +2779,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                 )}
 
                 {/* Actions */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                <div className="flex justify-end gap-3.5 pt-4 border-t border-slate-200">
                   <button
                     data-testid="test-connection-button"
                     type="button"

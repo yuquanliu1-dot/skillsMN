@@ -197,7 +197,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
                   ? 'bg-green-600 dark:bg-green-600 text-white'
                   : installProgress === 'error'
                   ? 'bg-red-600 dark:bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-primary dark:bg-blue-600 text-white hover:bg-primary-600'
               }`}
               aria-label={t('install.installSkill', { name: skill.name })}
               aria-busy={installProgress === 'installing'}
@@ -205,14 +205,14 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
             >
               {isCheckingStatus && (
                 <span className="flex items-center gap-1">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-4 border-white border-t-transparent"></div>
                 </span>
               )}
               {!isCheckingStatus && isInstalled && t('install.install')}
               {!isCheckingStatus && !isInstalled && installProgress === 'idle' && t('install.install')}
               {!isCheckingStatus && !isInstalled && installProgress === 'installing' && (
                 <span className="flex items-center gap-1">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-4 border-white border-t-transparent"></div>
                 </span>
               )}
               {!isCheckingStatus && !isInstalled && installProgress === 'error' && t('privateRepos.retry')}
@@ -255,7 +255,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
         </div>
 
         {/* Bottom row: Author + Tags */}
-        <div className="flex items-center gap-3 overflow-hidden">
+        <div className="flex items-center gap-3.5 overflow-hidden">
           {skill.lastCommitAuthor && (
             <span className="flex items-center gap-1 min-w-0 flex-shrink-0">
               <svg className="w-3 h-3 flex-shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

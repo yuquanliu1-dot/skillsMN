@@ -385,7 +385,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
   if (isLoadingRepos) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-400 border-t-transparent"></div>
       </div>
     );
   }
@@ -419,7 +419,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
       {/* Header with filters and search */}
       <div className="border-b border-gray-200 p-4 space-y-3 flex-shrink-0 bg-white">
         {/* Top row: Search + Refresh button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3.5">
           {/* Search */}
           <div className="relative flex-1">
             <input
@@ -457,7 +457,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
             aria-label={t('privateRepos.refreshSkillsList')}
           >
             {isRefreshing ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+              <div className="animate-spin rounded-full h-5 w-5 border-4 border-gray-600 border-t-transparent"></div>
             ) : (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -613,7 +613,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
         )}
         {isLoadingSkills ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
@@ -647,7 +647,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
             {!isAuthError && (
               <button
                 onClick={() => selectedRepoId && loadSkills(selectedRepoId)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
                 aria-label={t('privateRepos.retry')}
               >
                 {t('privateRepos.retry')}
@@ -717,7 +717,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
                 )}
 
                 {/* Skill cards grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
                   {groupSkills.slice(0, visibleCount).map((skill) => (
                         <PrivateSkillCard
                       key={skill.path}

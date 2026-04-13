@@ -112,7 +112,7 @@ export default function CreateSkillDialog({
       <div data-testid="create-skill-dialog" className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3.5">
             <div className="flex-shrink-0 w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
               <svg
                 className="w-6 h-6 text-blue-600 dark:text-blue-400"
@@ -220,7 +220,7 @@ export default function CreateSkillDialog({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3.5">
             <button
               type="button"
               onClick={onClose}
@@ -233,12 +233,12 @@ export default function CreateSkillDialog({
               data-testid="confirm-create-button"
               type="submit"
               disabled={!name.trim() || isCreating}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              className="px-4 py-2 bg-primary hover:bg-primary-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {isCreating ? (
                 <>
                   <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4"
+                    className="animate-spin -ml-1 mr-2 h-5 w-5"
                     fill="none"
                     viewBox="0 0 24 24"
                   >

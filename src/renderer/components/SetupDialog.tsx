@@ -371,7 +371,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                 <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <form onSubmit={handleAddRepo}>
                     <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3.5">
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">Provider</label>
                           <select
@@ -457,7 +457,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+                        className="px-4 py-1.5 bg-primary hover:bg-primary-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
                         disabled={isAddingRepo || !newRepoUrl || !newRepoPAT}
                       >
                         {isAddingRepo ? t('common.adding') : t('common.create')}
@@ -472,7 +472,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                 <div className="space-y-2">
                   {privateRepos.map((repo) => (
                     <div key={repo.id} className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3.5">
                         <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
                           <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
@@ -526,7 +526,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
 
               {isLoadingAI ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
                 </div>
               ) : aiConfig ? (
                 <div className="space-y-4">
@@ -627,7 +627,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
               </button>
               <button
                 onClick={handleNext}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2 bg-primary hover:bg-primary-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
                 disabled={isCompleting || isAddingRepo || isSavingAI}
               >
                 {isCompleting ? (

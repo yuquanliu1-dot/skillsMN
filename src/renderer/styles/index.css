@@ -3,6 +3,136 @@
 @tailwind utilities;
 
 /* ============================================================================
+   APPLE DESIGN SYSTEM TOKENS
+   Based on DESIGN.md - Apple-inspired design system
+   ============================================================================ */
+
+@layer base {
+  :root {
+    /* ==========================================================================
+       COLOR PALETTE - Apple Design System
+       ========================================================================== */
+
+    /* Primary Colors */
+    --color-pure-black: #000000;
+    --color-light-gray: #f5f5f7;
+    --color-near-black: #1d1d1f;
+    --color-white: #ffffff;
+
+    /* Interactive Colors */
+    --color-apple-blue: #0071e3;
+    --color-link-blue: #0066cc;
+    --color-bright-blue: #2997ff;
+
+    /* Text Colors */
+    --color-text-primary: #1d1d1f;           /* Near Black - on light backgrounds */
+    --color-text-secondary: rgba(0, 0, 0, 0.8);  /* Black 80% */
+    --color-text-tertiary: rgba(0, 0, 0, 0.48);   /* Black 48% */
+    --color-text-on-dark: #ffffff;
+
+    /* Surface Colors - Dark */
+    --color-dark-surface-1: #272729;
+    --color-dark-surface-2: #262628;
+    --color-dark-surface-3: #28282a;
+    --color-dark-surface-4: #2a2a2d;
+    --color-dark-surface-5: #242426;
+
+    /* Button States */
+    --color-button-active: #ededf2;
+    --color-button-default-light: #fafafc;
+    --color-overlay: rgba(210, 210, 215, 0.64);
+    --color-white-32: rgba(255, 255, 255, 0.32);
+
+    /* Shadow */
+    --shadow-card: rgba(0, 0, 0, 0.22) 3px 5px 30px 0px;
+
+    /* ==========================================================================
+       TYPOGRAPHY - SF Pro System
+       ========================================================================== */
+
+    /* Font Families */
+    --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    /* Optical sizing boundary: 20px */
+    --optical-sizing-boundary: 20px;
+
+    /* Font Sizes */
+    --font-size-display-hero: 56px;      /* 3.50rem */
+    --font-size-section-heading: 40px;    /* 2.50rem */
+    --font-size-tile-heading: 28px;       /* 1.75rem */
+    --font-size-card-title: 21px;         /* 1.31rem */
+    --font-size-nav-heading: 34px;        /* 2.13rem */
+    --font-size-sub-nav: 24px;            /* 1.50rem */
+    --font-size-body: 17px;               /* 1.06rem */
+    --font-size-button-large: 18px;       /* 1.13rem */
+    --font-size-button: 17px;             /* 1.06rem */
+    --font-size-link: 14px;               /* 0.88rem */
+    --font-size-caption: 14px;            /* 0.88rem */
+    --font-size-micro: 12px;              /* 0.75rem */
+    --font-size-nano: 10px;               /* 0.63rem */
+
+    /* Font Weights */
+    --font-weight-light: 300;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;            /* For emphasis */
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* Line Heights */
+    --line-height-tight-hero: 1.07;
+    --line-height-tight-heading: 1.10;
+    --line-height-tight-card: 1.14;
+    --line-height-tight-label: 1.19;
+    --line-height-normal: 1.47;
+    --line-height-relaxed: 2.41;
+
+    /* Letter Spacing (Negative tracking at all sizes) */
+    --letter-spacing-display-hero: -0.28px;
+    --letter-spacing-body: -0.374px;
+    --letter-spacing-caption: -0.224px;
+    --letter-spacing-micro: -0.12px;
+    --letter-spacing-nano: -0.08px;
+
+    /* ==========================================================================
+       SPACING SYSTEM - 8px Base Unit
+       Scale: 2, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 17, 20, 24
+       ========================================================================== */
+
+    --space-2: 2px;
+    --space-4: 4px;
+    --space-5: 5px;
+    --space-6: 6px;
+    --space-7: 7px;
+    --space-8: 8px;
+    --space-9: 9px;
+    --space-10: 10px;
+    --space-11: 11px;
+    --space-14: 14px;
+    --space-15: 15px;
+    --space-17: 17px;
+    --space-20: 20px;
+    --space-24: 24px;
+
+    /* ==========================================================================
+       BORDER RADIUS - Apple Scale
+       ========================================================================== */
+
+    --radius-micro: 5px;
+    --radius-standard: 8px;
+    --radius-comfortable: 11px;
+    --radius-large: 12px;
+    --radius-pill: 980px;
+
+    /* ==========================================================================
+       LAYOUT
+       ========================================================================== */
+
+    --max-content-width: 980px;
+  }
+}
+
+/* ============================================================================
    BASE LAYER - Global Styles
    ============================================================================ */
 
@@ -12,16 +142,45 @@
     scroll-behavior: smooth;
   }
 
-  /* Body defaults */
+  /* Body defaults - Apple Design System */
   body {
-    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-    background: #F9FAFB;
-    color: #111827;
+    /* SF Pro Text for body (optical sizing < 20px) */
+    font-family: var(--font-body);
+    /* Apple light gray background */
+    background: var(--color-light-gray);
+    /* Near-black text for contrast */
+    color: var(--color-text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Apple body text specifications */
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-normal);
+    letter-spacing: var(--letter-spacing-body);
   }
 
-  /* Code and monospace */
+  /* Headings - SF Pro Display (optical sizing >= 20px) */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    color: var(--color-text-primary);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-tight-heading);
+  }
+
+  h1 {
+    font-size: var(--font-size-display-hero);
+    line-height: var(--line-height-tight-hero);
+    letter-spacing: var(--letter-spacing-display-hero);
+  }
+
+  h2 {
+    font-size: var(--font-size-section-heading);
+  }
+
+  h3 {
+    font-size: var(--font-size-tile-heading);
+  }
+
+  /* Code and monospace - keep JetBrains Mono for code */
   code, pre, .font-mono {
     font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
   }
@@ -45,9 +204,9 @@
     background: #9CA3AF;  /* Gray-400 */
   }
 
-  /* Focus visible for keyboard navigation */
+  /* Focus visible for keyboard navigation - Apple Blue */
   :focus-visible {
-    outline: 2px solid #3B82F6;
+    outline: 2px solid var(--color-apple-blue);
     outline-offset: 2px;
   }
 
@@ -69,13 +228,16 @@
 
 @layer components {
   /* --------------------------------------------------------------------------
-     Card Component
+     Card Component - Apple Design (No borders, soft shadow or flat)
      -------------------------------------------------------------------------- */
   .card {
-    background: #FFFFFF;              /* White */
-    border: 1px solid #E5E7EB;        /* Gray-200 */
-    border-radius: 12px;
-    padding: 10px;
+    /* Apple light gray or white */
+    background: var(--color-light-gray);
+    /* Apple almost never uses borders on cards */
+    border: none;
+    /* Apple standard radius */
+    border-radius: var(--radius-standard);
+    padding: var(--space-10);
     transition: all 0.2s ease-out;
   }
 
@@ -84,23 +246,27 @@
   }
 
   .card-interactive:hover {
-    background: #F9FAFB;              /* Gray-50 */
-    border-color: #D1D5DB;            /* Gray-300 */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    /* Subtle background shift on hover */
+    background: var(--color-white);
+    /* Apple soft shadow (diffused, not harsh) */
+    box-shadow: var(--shadow-card);
   }
 
   /* --------------------------------------------------------------------------
-     Button System
+     Button System - Apple Design
      -------------------------------------------------------------------------- */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 10px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 8px;
+    gap: var(--space-8);
+    /* Apple button padding: 8px 15px */
+    padding: var(--space-8) var(--space-15);
+    /* Apple button text size */
+    font-size: var(--font-size-button);
+    font-weight: var(--font-weight-regular);
+    /* Apple standard radius */
+    border-radius: var(--radius-standard);
     border: none;
     cursor: pointer;
     transition: all 0.2s ease-out;
@@ -112,87 +278,86 @@
     cursor: not-allowed;
   }
 
-  /* Primary Button */
+  /* Primary Button - Apple Blue */
   .btn-primary {
-    background: #3B82F6;              /* Blue-500 */
-    color: #FFFFFF;
+    background: var(--color-apple-blue);
+    color: var(--color-white);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #2563EB;              /* Blue-600 */
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    /* Slight brightening on hover */
+    filter: brightness(1.1);
+    box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
   }
 
   .btn-primary:active:not(:disabled) {
-    background: #1D4ED8;              /* Blue-700 */
+    /* Active state color shift */
+    background: var(--color-button-active);
   }
 
   /* Secondary Button */
   .btn-secondary {
-    background: #F3F4F6;              /* Gray-100 */
-    color: #111827;
+    background: var(--color-button-default-light);
+    color: var(--color-text-primary);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #E5E7EB;              /* Gray-200 */
-  }
-
-  .btn-secondary:active:not(:disabled) {
-    background: #D1D5DB;              /* Gray-300 */
+    background: var(--color-button-active);
   }
 
   /* Ghost Button */
   .btn-ghost {
     background: transparent;
-    color: #6B7280;                   /* Gray-500 */
+    color: var(--color-text-secondary);
   }
 
   .btn-ghost:hover:not(:disabled) {
-    background: #F3F4F6;              /* Gray-100 */
-    color: #111827;
+    background: var(--color-button-default-light);
+    color: var(--color-text-primary);
   }
 
   /* Danger Button */
   .btn-danger {
-    background: #EF4444;              /* Red-500 */
-    color: #FFFFFF;
+    background: #EF4444;
+    color: var(--color-white);
   }
 
   .btn-danger:hover:not(:disabled) {
-    background: #DC2626;              /* Red-600 */
+    background: #DC2626;
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
   }
 
   .btn-danger:active:not(:disabled) {
-    background: #B91C1C;              /* Red-700 */
+    background: #B91C1C;
   }
 
   /* --------------------------------------------------------------------------
-     Input System
+     Input System - Apple Design
      -------------------------------------------------------------------------- */
   .input {
     width: 100%;
-    padding: 10px 14px;
-    background: #FFFFFF;              /* White */
-    border: 1px solid #E5E7EB;        /* Gray-200 */
-    border-radius: 8px;
-    color: #111827;                   /* Gray-900 */
-    font-size: 14px;
+    padding: var(--space-10) var(--space-14);
+    background: var(--color-white);
+    border: 1px solid #E5E7EB;
+    border-radius: var(--radius-standard);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-button);
     transition: all 0.2s ease-out;
   }
 
   .input::placeholder {
-    color: #9CA3AF;                   /* Gray-400 */
+    color: #9CA3AF;
   }
 
   .input:hover:not(:disabled) {
-    border-color: #D1D5DB;            /* Gray-300 */
+    border-color: #D1D5DB;
   }
 
   .input:focus {
     outline: none;
-    border-color: #3B82F6;            /* Blue-500 */
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    /* Apple Blue focus */
+    border-color: var(--color-apple-blue);
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
   }
 
   .input:disabled {
@@ -369,7 +534,7 @@
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: linear-gradient(135deg, #8B5CF6, #6366F1);
+    background: var(--color-apple-blue);
     color: white;
   }
 
@@ -482,7 +647,7 @@
 
   .prompt-textarea:focus {
     outline: none;
-    border-color: #8B5CF6;
+    border-color: var(--color-apple-blue);
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
   }
 
@@ -558,7 +723,7 @@
   }
 
   .generate-button {
-    background: linear-gradient(135deg, #8B5CF6, #6366F1);
+    background: var(--color-apple-blue);
     color: white;
   }
 
@@ -631,12 +796,12 @@
   }
 
   .mode-button:hover:not(:disabled) {
-    border-color: #8B5CF6;
+    border-color: var(--color-apple-blue);
   }
 
   .mode-button.active {
-    background: #8B5CF6;
-    border-color: #8B5CF6;
+    background: var(--color-apple-blue);
+    border-color: var(--color-apple-blue);
     color: white;
   }
 
@@ -740,7 +905,7 @@
   }
 
   .prompt-textarea:focus {
-    border-color: #8B5CF6;
+    border-color: var(--color-apple-blue);
   }
 
   .mode-selector {
@@ -792,7 +957,7 @@
      Text Gradient
      -------------------------------------------------------------------------- */
   .text-gradient {
-    background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+    background: linear-gradient(135deg, var(--color-apple-blue), #005BB5);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -991,7 +1156,7 @@
   }
   50% {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(168, 85, 247, 0.2);
-    border-color: rgb(139, 92, 246); /* violet-500 */
+    border-color: rgb(0, 113, 227); /* Apple Blue */
   }
 }
 

@@ -7,23 +7,35 @@ module.exports = {
   darkMode: 'class',
   theme: {
     extend: {
-      // Developer Tools Color System - Light Mode
+      // Apple Design System Colors
       colors: {
         primary: {
-          DEFAULT: '#3B82F6',   // Blue-500 - Primary actions
-          50: '#EFF6FF',
-          100: '#DBEAFE',
-          200: '#BFDBFE',
-          300: '#93C5FD',
-          400: '#60A5FA',
-          500: '#3B82F6',
-          600: '#2563EB',
-          700: '#1D4ED8',
-          800: '#1E40AF',
-          900: '#1E3A8A',
+          DEFAULT: '#0071e3',   // Apple Blue - Primary actions
+          50: '#EBF5FF',
+          100: '#D1EBFF',
+          200: '#A8D9FF',
+          300: '#7FC7FF',
+          400: '#56B5FF',
+          500: '#0071e3',      // Apple Blue
+          600: '#005BB5',
+          700: '#004687',
+          800: '#003159',
+          900: '#001C2B',
+        },
+        // Apple Light Gray for backgrounds
+        'apple-gray': {
+          DEFAULT: '#f5f5f7',
+          light: '#fafafb',
+          dark: '#e5e5e7',
+        },
+        // Apple Near Black for text
+        'apple-text': {
+          DEFAULT: '#1d1d1f',
+          secondary: 'rgba(0, 0, 0, 0.8)',
+          tertiary: 'rgba(0, 0, 0, 0.48)',
         },
         secondary: {
-          DEFAULT: '#6B7280',   // Gray-500 - Secondary text
+          DEFAULT: '#6B7280',
           50: '#F9FAFB',
           100: '#F3F4F6',
           200: '#E5E7EB',
@@ -36,24 +48,24 @@ module.exports = {
           900: '#111827',
         },
         background: {
-          DEFAULT: '#F9FAFB',   // Gray-50 - App background
+          DEFAULT: '#f5f5f7',   // Apple Light Gray - App background
           secondary: '#FFFFFF', // White - Cards/panels
           tertiary: '#F3F4F6',  // Gray-100 - Hover states
         },
         surface: {
           DEFAULT: '#FFFFFF',   // White - Surfaces
-          elevated: '#F9FAFB',  // Gray-50 - Elevated surfaces
+          elevated: '#f5f5f7',  // Apple Light Gray - Elevated surfaces
         },
         text: {
-          primary: '#111827',   // Gray-900 - Primary text
-          secondary: '#6B7280', // Gray-500 - Secondary text
+          primary: '#1d1d1f',   // Apple Near Black - Primary text
+          secondary: 'rgba(0, 0, 0, 0.8)', // Apple Black 80%
           muted: '#9CA3AF',     // Gray-400 - Muted text
           disabled: '#D1D5DB',  // Gray-300 - Disabled text
         },
         border: {
           DEFAULT: '#E5E7EB',   // Gray-200 - Default borders
           light: '#F3F4F6',     // Gray-100 - Light borders
-          focus: '#3B82F6',     // Blue-500 - Focus borders
+          focus: '#0071e3',     // Apple Blue - Focus borders
         },
         // Status colors
         success: {
@@ -77,9 +89,15 @@ module.exports = {
           dark: '#2563EB',      // Blue-600
         },
       },
-      // Developer Mono Font System
+      // Apple Typography System - SF Pro
       fontFamily: {
-        sans: ['IBM Plex Sans', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: [
+          'SF Pro Display',
+          'SF Pro Text',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'sans-serif',
+        ],
         mono: ['JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
       },
       fontSize: {
@@ -91,15 +109,22 @@ module.exports = {
         '2xl': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.015em' }],
         '3xl': ['1.875rem', { lineHeight: '2.25rem', letterSpacing: '-0.02em' }],
       },
-      // Spacing Scale (8px base)
+      // Apple Spacing Scale - 8px base unit
+      // Scale: 2, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 17, 20, 24
       spacing: {
-        '0.5': '2px',
-        '1': '4px',
-        '2': '8px',
-        '3': '12px',
-        '4': '16px',
-        '5': '20px',
-        '6': '24px',
+        '0.5': '2px',     // 2px
+        '1': '4px',       // 4px
+        '1.5': '5px',     // 5px
+        '1.75': '6px',    // 6px
+        '2': '8px',       // 8px (base unit)
+        '2.25': '9px',    // 9px
+        '2.5': '10px',    // 10px
+        '2.75': '11px',   // 11px
+        '3': '12px',      // Legacy - use 3.5 (14px) instead
+        '3.5': '14px',    // 14px
+        '4': '16px',      // Not in scale - rounded from 17px
+        '5': '20px',      // 20px
+        '6': '24px',      // 24px
         '8': '32px',
         '10': '40px',
         '12': '48px',
@@ -107,17 +132,18 @@ module.exports = {
         '20': '80px',
         '24': '96px',
       },
-      // Border Radius
+      // Apple Border Radius Scale
       borderRadius: {
-        'sm': '4px',
-        'DEFAULT': '8px',
-        'md': '8px',
-        'lg': '12px',
+        'micro': '5px',        // Micro - Small containers
+        DEFAULT: '8px',        // Standard - Buttons, product cards
+        'comfortable': '11px', // Comfortable - Search inputs
+        'lg': '12px',          // Large - Feature panels
         'xl': '16px',
         '2xl': '20px',
+        'pill': '980px',       // Full Pill - CTA links
         'full': '9999px',
       },
-      // Box Shadows for Light Mode
+      // Box Shadows - Apple soft shadow + standard shadows
       boxShadow: {
         'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
         'DEFAULT': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
@@ -125,8 +151,10 @@ module.exports = {
         'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         'xl': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        'glow': '0 0 20px rgba(59, 130, 246, 0.15)',
-        'glow-lg': '0 0 30px rgba(59, 130, 246, 0.2)',
+        // Apple card shadow - soft, diffused
+        'apple-card': 'rgba(0, 0, 0, 0.22) 3px 5px 30px 0px',
+        'glow': '0 0 20px rgba(0, 113, 227, 0.15)',
+        'glow-lg': '0 0 30px rgba(0, 113, 227, 0.2)',
       },
       // Transitions
       transitionDuration: {

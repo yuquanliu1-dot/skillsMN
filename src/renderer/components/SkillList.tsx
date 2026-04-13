@@ -216,7 +216,7 @@ export default function SkillList({
       {/* Header with filters and search */}
       <div className="border-b border-gray-200 p-4 space-y-3 flex-shrink-0 bg-white">
         {/* Top row: Search + New Skill button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3.5">
           {/* Search */}
           <div className="relative flex-1">
             <input
@@ -255,7 +255,7 @@ export default function SkillList({
               aria-label={t('skills.refreshList')}
             >
               {isRefreshing ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+                <div className="animate-spin rounded-full h-5 w-5 border-4 border-gray-600 border-t-transparent"></div>
               ) : (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -274,7 +274,7 @@ export default function SkillList({
             <button
               data-testid="create-skill-button"
               onClick={onCreateSkill}
-              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium"
               aria-label={t('skills.createSkill')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,7 +294,7 @@ export default function SkillList({
             <button
               data-testid="import-skill-button"
               onClick={onImportSkill}
-              className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
               aria-label={t('import.title')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -403,7 +403,7 @@ export default function SkillList({
                 )}
 
                 {/* Skill cards grid - using content-visibility for performance */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
                   {groupSkills.map((skill) => {
                     const versionStatus = skillUpdates[skill.path];
                     // Get match result for display

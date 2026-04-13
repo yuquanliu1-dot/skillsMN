@@ -168,7 +168,7 @@ export default function ReadmeDialog({ repoId, repoName, onClose }: ReadmeDialog
               </h2>
               <button
                 onClick={onClose}
-                className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
+                className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
                 aria-label="Close"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,7 +181,7 @@ export default function ReadmeDialog({ repoId, repoName, onClose }: ReadmeDialog
             <div className="flex-1 overflow-y-auto p-6">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
                 </div>
               ) : error ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">

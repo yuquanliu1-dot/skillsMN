@@ -240,7 +240,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
       <div className="w-10 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col items-center py-4 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer transition-colors group">
         <button
           onClick={onToggle}
-          className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded transition-colors"
+          className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 rounded transition-colors"
           title={t('fileTree.show')}
         >
           <svg className="w-5 h-5 text-amber-500 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
@@ -263,7 +263,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
         </div>
         <button
           onClick={onToggle}
-          className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
+          className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
           title={t('fileTree.hide')}
         >
           <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,7 +276,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
       <div className="flex-1 overflow-y-auto py-2">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : error ? (
           <div className="px-3 py-4 text-sm text-red-500 text-center">

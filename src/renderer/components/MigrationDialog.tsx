@@ -238,7 +238,7 @@ export default function MigrationDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3.5">
           {!isMigrating && (
             <button
               onClick={onSkip}
@@ -250,7 +250,7 @@ export default function MigrationDialog({
           <button
             onClick={handleMigrate}
             disabled={isMigrating || totalSkills === 0}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isMigrating ? t('migration.moving') : t('migration.moveSkills', { count: totalSkills })}
           </button>

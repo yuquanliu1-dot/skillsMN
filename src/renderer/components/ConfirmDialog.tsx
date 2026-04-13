@@ -108,7 +108,7 @@ export default function ConfirmDialog({
           headerBorder: 'border-blue-100 dark:border-blue-900/30',
           iconBg: 'bg-blue-100 dark:bg-blue-900/50',
           iconColor: 'text-blue-600 dark:text-blue-400',
-          buttonBg: 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500',
+          buttonBg: 'bg-primary hover:bg-primary-600 dark:bg-blue-600 dark:hover:bg-blue-500',
         };
       case 'warning':
       default:
@@ -245,7 +245,7 @@ export default function ConfirmDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700">
+        <div className="flex items-center justify-end gap-3.5 px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700">
           <button
             data-testid="confirm-dialog-cancel"
             onClick={onClose}
@@ -263,7 +263,7 @@ export default function ConfirmDialog({
             {isDisabled ? (
               <>
                 <svg
-                  className="animate-spin w-4 h-4"
+                  className="animate-spin w-5 h-5"
                   fill="none"
                   viewBox="0 0 24 24"
                 >

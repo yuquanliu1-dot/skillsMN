@@ -86,7 +86,7 @@ export default function ConflictResolutionDialog({
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Resolution Strategy</label>
             <div className="space-y-2">
-              <label className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
+              <label className="flex items-start gap-3.5 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
                 <input
                   type="radio"
                   name="resolution"
@@ -103,7 +103,7 @@ export default function ConflictResolutionDialog({
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
+              <label className="flex items-start gap-3.5 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
                 <input
                   type="radio"
                   name="resolution"
@@ -120,7 +120,7 @@ export default function ConflictResolutionDialog({
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
+              <label className="flex items-start gap-3.5 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
                 <input
                   type="radio"
                   name="resolution"
@@ -142,7 +142,7 @@ export default function ConflictResolutionDialog({
           {/* Apply to All Checkbox */}
           {remainingConflicts > 0 && (
             <div className="bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg p-3">
-              <label className="flex items-start gap-3 cursor-pointer">
+              <label className="flex items-start gap-3.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={applyToAll}
@@ -189,10 +189,10 @@ export default function ConflictResolutionDialog({
             className={`px-4 py-2 rounded transition-colors flex items-center gap-2 ${
               resolution === 'skip'
                 ? 'bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400'
-                : 'bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700'
+                : 'bg-primary dark:bg-blue-600 text-white hover:bg-primary-600 dark:hover:bg-blue-700'
             }`}
           >
-            {isResolving && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+            {isResolving && <div className="animate-spin rounded-full h-5 w-5 border-4 border-white border-t-transparent"></div>}
             {isResolving ? 'Resolving...' : resolution === 'skip' ? 'Skip Installation' : 'Apply Resolution'}
           </button>
         </div>

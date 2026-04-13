@@ -118,7 +118,7 @@ export default function Toast({
       data-toast-type={type}
       className={`
         fixed bottom-4 right-4 z-50
-        flex items-center gap-3 px-4 py-3 rounded-lg border
+        flex items-center gap-3.5 px-4 py-3 rounded-lg border
         ${getTypeStyles()}
         transition-all duration-200 ease-out
         ${isVisible && !isExiting

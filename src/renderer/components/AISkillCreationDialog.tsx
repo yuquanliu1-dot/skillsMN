@@ -168,7 +168,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z" />
@@ -207,7 +207,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between mb-3 flex-shrink-0">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('aiDialog.preview')}</label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3.5">
                 {isStreaming && (
                   <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
                     <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></div>
@@ -312,7 +312,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                   data-testid="ai-generate-button"
                   onClick={handleGenerate}
                   disabled={!prompt.trim()}
-                  className="flex-1 btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 btn bg-primary hover:bg-primary-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                   title={t('aiDialog.generateSkill')}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -337,7 +337,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                 <button
                   onClick={handleGenerate}
                   disabled={!prompt.trim()}
-                  className="flex-1 btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 btn bg-primary hover:bg-primary-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                   title={t('aiDialog.generateAgain')}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

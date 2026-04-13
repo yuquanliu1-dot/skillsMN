@@ -114,7 +114,7 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
   if (loading) {
     return (
       <div className="p-4 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
       </div>
     );
   }
@@ -170,7 +170,7 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
                 <span className="text-slate-400 dark:text-slate-500">·</span>
                 <span className="font-medium text-slate-900 dark:text-slate-100">{t(currentLevel.nameKey)}</span>
               </div>
-              <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-3.5 text-xs">
                 <span className="text-slate-600 dark:text-slate-400">
                   {stats?.currentUserScore || 0} {t('contribution.points')}
                 </span>
@@ -279,7 +279,7 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
             </h5>
             <div className="space-y-2">
               {userBadges.nextBadges.slice(0, 3).map(({ badge, progress, remaining }) => (
-                <div key={badge.id} className="flex items-center gap-3">
+                <div key={badge.id} className="flex items-center gap-3.5">
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-lg opacity-50"
                     style={{ backgroundColor: `${badge.color}20` }}

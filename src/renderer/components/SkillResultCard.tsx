@@ -195,14 +195,14 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : isInstalling
                   ? 'bg-blue-400 text-white cursor-wait'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-primary hover:bg-primary-600 text-white'
               }`}
               aria-label={isInstalled ? 'Already installed' : isInstalling ? 'Installing...' : 'Install skill'}
               data-testid="install-button"
             >
               {isInstalling ? (
                 <span className="flex items-center justify-center gap-1">
-                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent" />
+                  <div className="animate-spin rounded-full h-5 w-5 border-4 border-white border-t-transparent" />
                 </span>
               ) : isInstalled ? (
                 t('install.installed')
@@ -232,7 +232,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
         {isInstalling && installProgress && (
           <div className="absolute inset-x-3 bottom-3 bg-blue-50 rounded p-2">
             <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-500 border-t-transparent" />
+              <div className="animate-spin rounded-full h-5 w-5 border-4 border-blue-500 border-t-transparent" />
               <p className="text-xs text-blue-700 font-medium truncate">{installProgress}</p>
             </div>
           </div>

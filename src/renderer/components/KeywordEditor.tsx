@@ -84,7 +84,7 @@ export default function KeywordEditor({ group, onUpdate, onCancel }: KeywordEdit
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3.5">
               <span className="text-2xl" style={{ color: group.color }}>
                 {group.icon || '📁'}
               </span>
@@ -144,7 +144,7 @@ export default function KeywordEditor({ group, onUpdate, onCancel }: KeywordEdit
               />
               <button
                 onClick={handleAddKeyword}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium"
               >
                 {t('common.add')}
               </button>
@@ -197,7 +197,7 @@ export default function KeywordEditor({ group, onUpdate, onCancel }: KeywordEdit
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-end gap-3.5 p-4 border-t border-slate-200 dark:border-slate-700">
           <button
             onClick={onCancel}
             disabled={isSaving}
@@ -208,11 +208,11 @@ export default function KeywordEditor({ group, onUpdate, onCancel }: KeywordEdit
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                <div className="animate-spin rounded-full h-5 w-5 border-4 border-white border-t-transparent"></div>
                 {t('skillGroups.keywords.saving')}
               </>
             ) : (

@@ -1005,7 +1005,7 @@ export default function SkillEditorFull({
       {/* Header - Toolbar */}
       <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between flex-shrink-0">
         {/* Left: Icon and Title */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3.5">
           <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1086,7 +1086,7 @@ export default function SkillEditorFull({
                   setError(t('editor.failedToOpenTerminal', 'Failed to open terminal'));
                 }
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-primary hover:bg-primary-600 text-white transition-colors"
               title={t('editor.openClaudeInTerminal', 'Open Claude Code in terminal to test this skill')}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1120,7 +1120,7 @@ export default function SkillEditorFull({
               className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 versionStatus?.hasUpdate
                   ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-primary hover:bg-primary-600 text-white'
               }`}
               title={versionStatus?.hasUpdate ? t('editor.commitConflictWarning') : undefined}
             >
@@ -1142,11 +1142,11 @@ export default function SkillEditorFull({
             <button
               onClick={() => handleSave(false)}
               disabled={isSaving || !hasUnsavedChanges}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-primary hover:bg-primary-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? (
                 <>
-                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+                  <div className="animate-spin rounded-full h-5 w-5 border-4 border-white border-t-transparent" />
                   {t('editor.saving')}
                 </>
               ) : (
@@ -1300,7 +1300,7 @@ export default function SkillEditorFull({
           {isLoading && (
             <div className="flex-1 flex items-center justify-center">
               <div className="flex flex-col items-center gap-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
                 <div className="text-gray-600">{t('editor.loadingContent')}</div>
               </div>
             </div>
@@ -1476,7 +1476,7 @@ export default function SkillEditorFull({
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100]">
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             {/* Header */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3.5 mb-4">
               <div className="flex-shrink-0 w-10 h-10 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -1493,7 +1493,7 @@ export default function SkillEditorFull({
             </p>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3.5">
               <button
                 onClick={() => {
                   setShowExternalModificationDialog(false);
@@ -1505,7 +1505,7 @@ export default function SkillEditorFull({
               </button>
               <button
                 onClick={handleReloadFromDisk}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-primary hover:bg-primary-600 text-white rounded-lg transition-colors"
               >
                 {t('editor.reload')}
               </button>

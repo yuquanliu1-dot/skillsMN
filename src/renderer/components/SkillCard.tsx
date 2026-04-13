@@ -239,7 +239,7 @@ export default function SkillCard({
             {onEdit && !(hasUpdate && onUpdate && updateProgress !== 'success') && (
               <button
                 onClick={handleEdit}
-                className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
                 aria-label={t('skillCard.edit')}
                 title={t('skillCard.editHint')}
               >
@@ -254,7 +254,7 @@ export default function SkillCard({
               <button
                 onClick={handleUpdateClick}
                 disabled={updateProgress === 'updating'}
-                className="btn text-xs px-3 py-1 bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700 disabled:opacity-50 animate-pulse"
+                className="btn text-xs px-3 py-1 bg-primary dark:bg-blue-600 text-white hover:bg-primary-600 dark:hover:bg-blue-700 disabled:opacity-50 animate-pulse"
               >
                 {updateProgress === 'updating' ? '...' : t('skillCard.update')}
               </button>
@@ -264,7 +264,7 @@ export default function SkillCard({
             {onOpenFolder && (
               <button
                 onClick={handleOpenFolder}
-                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
                 aria-label={t('skillCard.openFolder')}
                 title={t('skillCard.openFolderHint')}
               >
@@ -278,7 +278,7 @@ export default function SkillCard({
             {onCopy && (
               <button
                 onClick={handleCopy}
-                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
                 aria-label={t('skillCard.copy')}
                 title={t('skillCard.copyHint')}
               >
@@ -293,7 +293,7 @@ export default function SkillCard({
               <button
                 data-testid="delete-button"
                 onClick={handleDelete}
-                className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                 aria-label={t('skillCard.delete')}
                 title={t('skillCard.deleteHint')}
               >
@@ -465,7 +465,7 @@ export default function SkillCard({
               </button>
               <button
                 onClick={handleConfirmUpdate}
-                className="px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-primary dark:bg-blue-600 text-white rounded hover:bg-primary-600 dark:hover:bg-blue-700 transition-colors"
               >
                 {t('skillCard.updateSkill')}
               </button>

@@ -36,7 +36,7 @@ export default function SearchResultCard({
               href={result.repositoryUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
               aria-label="Open repository in GitHub"
               title="Open in GitHub"
             >
@@ -111,7 +111,7 @@ export default function SearchResultCard({
                   </button>
                   <button
                     onClick={() => onInstall(result.repositoryName, skill.path, skill.downloadUrl)}
-                    className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm cursor-pointer flex items-center gap-1"
+                    className="px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors shadow-sm cursor-pointer flex items-center gap-1"
                     aria-label="Install skill"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

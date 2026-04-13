@@ -370,7 +370,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
 
                 {isScanningLocal && (
                   <div className="flex items-center gap-2 text-sm text-slate-500 mt-3">
-                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
@@ -432,7 +432,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                   >
                     {isScanningUrl ? (
                       <>
-                        <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
@@ -555,7 +555,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                   <label
                     key={skill.path}
                     data-testid={`import-skill-${skill.name}`}
-                    className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer transition-colors"
+                    className="flex items-center gap-3.5 p-3 hover:bg-slate-50 cursor-pointer transition-colors"
                   >
                     <input
                       type="checkbox"
@@ -596,7 +596,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                 </div>
 
                 <div className="space-y-3">
-                  <label className="flex items-start gap-3 cursor-pointer group">
+                  <label className="flex items-start gap-3.5 cursor-pointer group">
                     <input
                       type="radio"
                       name="conflictStrategy"
@@ -610,7 +610,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                       <p className="text-xs text-slate-500">{t('import.renameDesc')}</p>
                     </div>
                   </label>
-                  <label className="flex items-start gap-3 cursor-pointer group">
+                  <label className="flex items-start gap-3.5 cursor-pointer group">
                     <input
                       type="radio"
                       name="conflictStrategy"
@@ -624,7 +624,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                       <p className="text-xs text-slate-500">{t('import.skipDesc')}</p>
                     </div>
                   </label>
-                  <label className="flex items-start gap-3 cursor-pointer group">
+                  <label className="flex items-start gap-3.5 cursor-pointer group">
                     <input
                       type="radio"
                       name="conflictStrategy"
@@ -652,7 +652,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                   </div>
 
                   <div className="space-y-3">
-                    <label className="flex items-center gap-3 cursor-pointer">
+                    <label className="flex items-center gap-3.5 cursor-pointer">
                       <input
                         type="radio"
                         name="deleteOption"
@@ -666,7 +666,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                         <p className="text-xs text-slate-500">Remove original files after import</p>
                       </div>
                     </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
+                    <label className="flex items-center gap-3.5 cursor-pointer">
                       <input
                         type="radio"
                         name="deleteOption"
@@ -761,7 +761,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
           {/* Error */}
           {error && (
             <div className="card border-red-300">
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3.5">
                 <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
@@ -785,7 +785,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3.5">
           <button
             onClick={onClose}
             disabled={isImporting}
@@ -799,7 +799,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
               onClick={handleImport}
               disabled={isImporting || (activeTab === 'local' ? selectedLocalSkills.size === 0 : selectedUrlSkills.size === 0)}
               data-testid="confirm-import-button"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium disabled:opacity-50"
             >
               {isImporting ? t('import.importing') : t('import.import')}
             </button>
