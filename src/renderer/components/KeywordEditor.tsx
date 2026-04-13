@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SkillGroup } from '../../shared/types';
+import GroupIcon from './GroupIcon';
 
 interface KeywordEditorProps {
   group: SkillGroup;
@@ -85,8 +86,8 @@ export default function KeywordEditor({ group, onUpdate, onCancel }: KeywordEdit
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
           <div>
             <div className="flex items-center gap-3.5">
-              <span className="text-2xl" style={{ color: group.color }}>
-                {group.icon || '📁'}
+              <span style={{ color: group.color }}>
+                <GroupIcon icon={group.icon} className="w-6 h-6" />
               </span>
               <div>
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
@@ -144,7 +145,7 @@ export default function KeywordEditor({ group, onUpdate, onCancel }: KeywordEdit
               />
               <button
                 onClick={handleAddKeyword}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium"
+                className="btn btn-primary btn-sm"
               >
                 {t('common.add')}
               </button>
@@ -201,14 +202,14 @@ export default function KeywordEditor({ group, onUpdate, onCancel }: KeywordEdit
           <button
             onClick={onCancel}
             disabled={isSaving}
-            className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+            className="btn btn-secondary disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             {t('skillGroups.keywords.cancelButton')}
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="btn btn-primary btn-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
             {isSaving ? (
               <>

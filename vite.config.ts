@@ -9,7 +9,7 @@ export default defineConfig({
   root: 'src/renderer',
   publicDir: path.resolve(__dirname, 'src/renderer/public'),
   server: {
-    port: 5173,
+    port: 5199,
     strictPort: true,
     host: true
   },

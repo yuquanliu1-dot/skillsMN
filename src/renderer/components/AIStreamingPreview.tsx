@@ -1,12 +1,13 @@
 /**
  * AI Streaming Preview Component
  *
- * Displays AI-generated content in real-time with streaming visualization
+ * Displays AI-generated content in real-time with rich Markdown rendering
  */
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AIGenerationState } from '../hooks/useAIGeneration';
+import StreamingMarkdown from './StreamingMarkdown';
 
 interface AIStreamingPreviewProps {
   content: string;
@@ -20,6 +21,7 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
   error,
 }) => {
   const { t } = useTranslation();
+  const isStreaming = status === 'STREAMING';
 
   if (status === 'IDLE') {
     return (
@@ -30,7 +32,6 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
           </svg>
           <p>{t('aiDialog.contentWillAppear')}</p>
         </div>
-        <style>{previewStyles}</style>
       </div>
     );
   }
@@ -46,7 +47,6 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
           <p className="error-title">{t('common.error')}</p>
           <p className="error-text">{error}</p>
         </div>
-        <style>{previewStyles}</style>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
     <div className="streaming-preview">
       <div className="preview-header">
         <span className="preview-label">{t('aiDialog.generatedSkill')}</span>
-        {status === 'STREAMING' && (
+        {isStreaming && (
           <div className="streaming-indicator">
             <div className="spinner"></div>
             <span>{t('aiDialog.streaming')}</span>
@@ -71,8 +71,11 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
         )}
       </div>
       <div className="preview-content">
-        <pre>{content || t('aiDialog.contentWillAppear')}</pre>
-        {status === 'STREAMING' && <span className="cursor-blink">|</span>}
+        {content ? (
+          <StreamingMarkdown content={content} isStreaming={isStreaming} />
+        ) : (
+          <span className="text-sm text-gray-400">{t('aiDialog.contentWillAppear')}</span>
+        )}
       </div>
       <style>{previewStyles}</style>
     </div>
@@ -81,8 +84,8 @@ export const AIStreamingPreview: React.FC<AIStreamingPreviewProps> = ({
 
 const previewStyles = `
   .streaming-preview {
-    background: var(--background-secondary);
-    border: 1px solid var(--border-color);
+    background: #ffffff;
+    border: 1px solid #E5E7EB;
     border-radius: 8px;
     min-height: 200px;
     max-height: 400px;
@@ -97,12 +100,12 @@ const previewStyles = `
   }
 
   .streaming-preview--error {
-    border-color: var(--color-error);
+    border-color: #EF4444;
   }
 
   .preview-placeholder {
     text-align: center;
-    color: var(--text-tertiary);
+    color: rgba(0, 0, 0, 0.48);
   }
 
   .preview-placeholder svg {
@@ -117,7 +120,7 @@ const previewStyles = `
 
   .error-message {
     text-align: center;
-    color: var(--color-error);
+    color: #EF4444;
     padding: 2rem;
   }
 
@@ -143,8 +146,8 @@ const previewStyles = `
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border-color);
-    background: var(--background-primary);
+    border-bottom: 1px solid #E5E7EB;
+    background: #ffffff;
   }
 
   .preview-label {
@@ -152,7 +155,7 @@ const previewStyles = `
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-secondary);
+    color: rgba(0, 0, 0, 0.48);
   }
 
   .streaming-indicator,
@@ -161,14 +164,14 @@ const previewStyles = `
     align-items: center;
     gap: 0.5rem;
     font-size: 0.75rem;
-    color: var(--text-secondary);
+    color: rgba(0, 0, 0, 0.48);
   }
 
   .spinner {
     width: 12px;
     height: 12px;
-    border: 2px solid var(--border-color);
-    border-top-color: var(--color-primary);
+    border: 2px solid #E5E7EB;
+    border-top-color: #0071e3;
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -180,41 +183,16 @@ const previewStyles = `
   }
 
   .complete-indicator {
-    color: var(--color-success);
+    color: #10B981;
   }
 
   .complete-indicator svg {
-    stroke: var(--color-success);
+    stroke: #10B981;
   }
 
   .preview-content {
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
-  }
-
-  .preview-content pre {
-    margin: 0;
-    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    color: var(--text-primary);
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-
-  .cursor-blink {
-    display: inline-block;
-    color: var(--color-primary);
-    animation: blink 1s infinite;
-  }
-
-  @keyframes blink {
-    0%, 50% {
-      opacity: 1;
-    }
-    51%, 100% {
-      opacity: 0;
-    }
   }
 `;

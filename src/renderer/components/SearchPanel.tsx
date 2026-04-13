@@ -433,19 +433,19 @@ export default function SearchPanel({ isOpen, onClose, onInstallComplete, isInli
             <div className="flex gap-3.5 justify-end">
               <button
                 onClick={() => setInstallingSkill(null)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleInstallFromDialog('project')}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
+                className="btn btn-primary"
               >
                 Install to Project
               </button>
               <button
                 onClick={() => handleInstallFromDialog('global')}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="btn !bg-green-600 hover:!bg-green-700 text-white"
               >
                 Install to Global
               </button>

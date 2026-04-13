@@ -104,7 +104,7 @@ export default function ContributionBadge({ repoId, onClick }: ContributionBadge
   return (
     <div
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors' : ''}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${onClick ? 'cursor-pointer hover:bg-white dark:hover:bg-gray-700 transition-colors' : ''}`}
       title={
         username ?
         `${username}\n` +

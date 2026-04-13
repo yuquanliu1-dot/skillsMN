@@ -2298,9 +2298,15 @@ installedAt: ${new Date().toISOString()}
 
     if (isBinary) {
       logger.debug(`File is binary: ${filePath}`, 'SkillService');
+      // Return base64 for previewable types
+      const ext = path.extname(validatedPath).toLowerCase();
+      const previewableExts = ['.pdf', '.docx', '.doc', '.xlsx', '.xls'];
+      const binaryContent = previewableExts.includes(ext)
+        ? (await fs.promises.readFile(validatedPath)).toString('base64')
+        : '';
       return {
         path: validatedPath,
-        content: '',
+        content: binaryContent,
         isBinary: true,
         language: undefined,
       };

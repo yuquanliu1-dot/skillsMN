@@ -40,7 +40,9 @@ function formatToolInput(toolName: string, input: any): JSX.Element {
       return (
         <div className="space-y-1">
           <div className="flex items-center gap-1 text-xs">
-            <span className="text-slate-400">📁</span>
+            <span className="text-slate-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+            </span>
             <span className="text-blue-600 font-medium break-all">{input.file_path}</span>
           </div>
           {input.content && (
@@ -225,7 +227,7 @@ export const PermissionRequestPanel: React.FC<PermissionRequestPanelProps> = ({
               <div className="flex gap-2">
                 <button
                   onClick={() => handleAllow(request.requestId, request.toolName, request.input)}
-                  className="flex-1 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                  className="btn btn-sm !bg-green-600 hover:!bg-green-700 text-white flex-1 flex items-center justify-center gap-1.5"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -234,7 +236,7 @@ export const PermissionRequestPanel: React.FC<PermissionRequestPanelProps> = ({
                 </button>
                 <button
                   onClick={() => handleDeny(request.requestId)}
-                  className="flex-1 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                  className="btn btn-danger btn-sm flex-1 flex items-center justify-center gap-1.5"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -243,7 +245,7 @@ export const PermissionRequestPanel: React.FC<PermissionRequestPanelProps> = ({
                 </button>
                 <button
                   onClick={() => onDismiss(request.requestId)}
-                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium transition-colors"
+                  className="btn btn-secondary btn-sm"
                   title={t('permissions.dismiss')}
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

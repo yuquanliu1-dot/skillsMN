@@ -76,7 +76,7 @@ async function createWindow(): Promise<void> {
   // Load the app
   if (isDev) {
     // In development, load from Vite dev server
-    const viteDevServerUrl = 'http://localhost:5173';
+    const viteDevServerUrl = 'http://localhost:5199';
     try {
       await mainWindow.loadURL(viteDevServerUrl);
       logger.info('Loaded renderer from Vite dev server', 'Main');
@@ -270,7 +270,10 @@ export function getFileWatcher(): FileWatcher | null {
 }
 
 // Application lifecycle events
-app.whenReady().then(initialize);
+
+app.whenReady().then(async () => {
+  await initialize();
+});
 
 app.on('window-all-closed', () => {
   logger.info('All windows closed', 'Main');

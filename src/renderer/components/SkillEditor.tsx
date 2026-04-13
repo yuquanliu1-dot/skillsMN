@@ -15,6 +15,10 @@ import { AISkillSidebar } from './AISkillSidebar';
 import { ipcClient } from '../services/ipcClient';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import SymlinkPanel from './SymlinkPanel';
+import SkillTipTapEditor from './SkillTipTapEditor';
+import PdfBlock from './PdfBlock';
+import WordBlock from './WordBlock';
+import SpreadsheetBlock from './SpreadsheetBlock';
 import { FileTreePanel } from './FileTreePanel';
 
 // Configure Monaco to use local installation instead of CDN
@@ -95,6 +99,11 @@ export default function SkillEditor({
   const [selectedFileNode, setSelectedFileNode] = useState<SkillFileTreeNode | null>(null);
   const [currentEditingPath, setCurrentEditingPath] = useState<string | null>(null);
   const [binaryFileError, setBinaryFileError] = useState<string | null>(null);
+  const [previewableFile, setPreviewableFile] = useState<{
+    path: string;
+    type: 'pdf' | 'docx' | 'xlsx';
+    base64Content?: string;
+  } | null>(null);
   const [currentLanguage, setCurrentLanguage] = useState<string>('markdown');
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -120,6 +129,7 @@ export default function SkillEditor({
 
     setIsLoading(true);
     setBinaryFileError(null);
+    setPreviewableFile(null);
     setSelectedFileNode(fileNode);
 
     try {
@@ -137,7 +147,29 @@ export default function SkillEditor({
         // Load other file using readSkillFile
         const response = await ipcClient.readSkillFile(fileNode.absolutePath);
         if (response.isBinary) {
-          setBinaryFileError(t('editor.binaryFileError', { fileName: fileNode.name }));
+          // Check if this is a previewable binary file
+          const ext = fileNode.name.toLowerCase().split('.').pop();
+          const previewableTypes: Record<string, 'pdf' | 'docx' | 'xlsx'> = {
+            pdf: 'pdf',
+            docx: 'docx',
+            doc: 'docx',
+            xlsx: 'xlsx',
+            xls: 'xlsx',
+          };
+          const previewType = previewableTypes[ext || ''];
+          if (previewType) {
+            setPreviewableFile({
+              path: fileNode.absolutePath,
+              type: previewType,
+              base64Content: response.content, // base64 from backend
+            });
+            setBinaryFileError(null);
+            setContent('');
+            setCurrentEditingPath(fileNode.absolutePath);
+            setCurrentLanguage('plaintext');
+          } else {
+            setBinaryFileError(t('editor.binaryFileError', { fileName: fileNode.name }));
+          }
           setIsLoading(false);
           return;
         }
@@ -169,6 +201,7 @@ export default function SkillEditor({
 
     setIsLoading(true);
     setBinaryFileError(null);
+    setPreviewableFile(null);
     setSelectedFileNode(null);
     setCurrentEditingPath(null);
     setCurrentLanguage('markdown');
@@ -841,7 +874,7 @@ export default function SkillEditor({
 
   const containerClasses = isInline
     ? "h-full flex flex-col bg-white"
-    : "fixed inset-0 bg-gray-50 flex flex-col z-50";
+    : "fixed inset-0 bg-white flex flex-col z-50";
 
   const headerBg = isInline ? "bg-white border-gray-200" : "bg-white border-gray-200";
   const borderColor = isInline ? "border-gray-200" : "border-gray-200";
@@ -918,7 +951,7 @@ export default function SkillEditor({
                 }
               }
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-primary hover:bg-primary-600 text-white transition-colors"
+            className="btn btn-primary btn-sm flex items-center gap-1.5"
             title={t('editor.openClaudeInTerminal', 'Open Claude Code in terminal to test this skill')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -931,7 +964,7 @@ export default function SkillEditor({
           {!readOnly && (
             <button
               onClick={() => setIsAISidebarOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-colors"
+              className="btn text-sm font-medium !bg-gradient-to-r !from-primary !to-blue-700 hover:!from-primary-600 hover:!to-blue-800 text-white inline-flex items-center gap-1.5"
               title="Open AI Assistant sidebar for conversational skill editing"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -956,7 +989,7 @@ export default function SkillEditor({
           {onUploadSkill && (
             <button
               onClick={() => onUploadSkill(skill)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
+              className="btn btn-sm flex items-center gap-1.5 !bg-green-600 hover:!bg-green-700 text-white"
               title={t('skillCard.uploadToPrivateRepo')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -970,7 +1003,7 @@ export default function SkillEditor({
           {onCommitChanges && skill.sourceMetadata && skill.sourceMetadata.type !== 'local' && hasUnsavedChanges && (
             <button
               onClick={() => onCommitChanges(skill)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-primary hover:bg-primary-600 text-white transition-colors"
+              className="btn btn-primary btn-sm flex items-center gap-1.5"
               title={t('commit.description')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1042,13 +1075,13 @@ export default function SkillEditor({
                     console.error('Failed to reload skill:', err);
                   }
                 }}
-                className="px-3 py-1.5 text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded transition-colors cursor-pointer"
+                className="btn btn-secondary btn-sm"
               >
                 {t('editor.reload')}
               </button>
               <button
                 onClick={() => setExternalChangeDetected(false)}
-                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors cursor-pointer"
+                className="btn btn-secondary btn-sm"
               >
                 {t('editor.keepChanges')}
               </button>
@@ -1120,6 +1153,21 @@ export default function SkillEditor({
             </div>
           )}
 
+          {/* Previewable binary file (PDF, Word, Spreadsheet) */}
+          {previewableFile && (
+            <div className="flex-1 overflow-auto bg-white">
+              {previewableFile.type === 'pdf' && previewableFile.base64Content && (
+                <PdfBlock code={`data:application/pdf;base64,${previewableFile.base64Content}`} />
+              )}
+              {previewableFile.type === 'docx' && previewableFile.base64Content && (
+                <WordBlock code={`data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${previewableFile.base64Content}`} />
+              )}
+              {previewableFile.type === 'xlsx' && previewableFile.base64Content && (
+                <SpreadsheetBlock code={previewableFile.base64Content} isBinary />
+              )}
+            </div>
+          )}
+
           {/* Loading state */}
           {isLoading && (
             <div className="flex-1 flex items-center justify-center bg-white dark:bg-slate-800">
@@ -1130,9 +1178,20 @@ export default function SkillEditor({
             </div>
           )}
 
-          {/* Monaco Editor */}
+          {/* Editor - TipTap for Markdown, Monaco for other files */}
           {!isLoading && (
             <div data-testid="editor-content" className="flex-1">
+              {config.useTiptap && currentLanguage === 'markdown' ? (
+                <SkillTipTapEditor
+                  skill={skill}
+                  content={content}
+                  onSave={onSave}
+                  readOnly={readOnly}
+                  config={config}
+                  appConfig={appConfig}
+                  onShowToast={onShowToast}
+                />
+              ) : (
               <Editor
                 height="100%"
                 defaultLanguage="markdown"
@@ -1162,6 +1221,7 @@ export default function SkillEditor({
                   showFoldingControls: 'always',
                 }}
               />
+            )}
             </div>
           )}
         </div>

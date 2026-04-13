@@ -399,7 +399,7 @@ export default function SymlinkPanel({
   const aiTools = installedTools.filter((t) => t.type !== 'project');
 
   return (
-    <div className="border-b border-gray-200 bg-gray-50">
+    <div className="border-b border-gray-200 bg-white">
       {/* Header bar */}
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">

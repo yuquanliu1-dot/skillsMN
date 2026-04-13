@@ -141,14 +141,14 @@ export default function PrivateInstallDialog({
           <button
             onClick={onClose}
             disabled={isInstalling}
-            className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded hover:bg-slate-300 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
           >
             {t('common.cancel')}
           </button>
           <button
             onClick={handleInstall}
             disabled={isInstalling}
-            className="px-4 py-2 bg-primary dark:bg-blue-600 text-white rounded hover:bg-primary-600 dark:hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:text-slate-500 transition-colors flex items-center gap-2"
+            className="btn btn-primary flex items-center gap-2"
           >
             {isInstalling && <div className="animate-spin rounded-full h-5 w-5 border-4 border-white border-t-transparent"></div>}
             {isInstalling ? t('install.installing') : t('install.installToLibrary')}

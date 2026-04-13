@@ -318,17 +318,17 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
       <div className="bg-white border border-gray-200 rounded-xl shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-4">
             {/* Logo */}
             <div className="w-12 h-12 bg-white border border-gray-200 rounded-lg flex items-center justify-center">
-              <span className="font-bold text-xl" style={{ color: '#DE2910' }}>SKM</span>
+              <span className="font-bold text-card-title" style={{ color: '#DE2910' }}>SKM</span>
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900">{t('setup.welcome')}</h2>
+              <h2 className="text-card-title font-semibold text-gray-900">{t('setup.welcome')}</h2>
               <p className="text-sm text-gray-500 mt-0.5">{t('setup.setupDescription')}</p>
             </div>
             {/* Step indicator */}
@@ -356,7 +356,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
               {!showAddRepoForm && (
                 <button
                   onClick={() => setShowAddRepoForm(true)}
-                  className="w-full mb-4 px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-600 text-sm transition-colors flex items-center justify-center gap-2"
+                  className="btn btn-secondary w-full border border-gray-200 flex items-center justify-center gap-2 mb-4"
                   disabled={isAddingRepo}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -457,7 +457,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-1.5 bg-primary hover:bg-primary-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+                        className="btn btn-primary btn-sm disabled:opacity-50"
                         disabled={isAddingRepo || !newRepoUrl || !newRepoPAT}
                       >
                         {isAddingRepo ? t('common.adding') : t('common.create')}
@@ -494,7 +494,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                         <button
                           onClick={() => handleTestRepoConnection(repo.id)}
                           disabled={testingRepoId === repo.id}
-                          className="px-2 py-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
+                          className="btn-icon text-xs text-blue-600 hover:!text-blue-700 hover:!bg-blue-50 disabled:opacity-50"
                         >
                           {testingRepoId === repo.id ? t('common.testing') : t('settings.testConnection')}
                         </button>
@@ -572,7 +572,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
                     <div className="pt-2">
                       <button
                         onClick={handleTestAIConnection}
-                        className="px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700 transition-colors disabled:opacity-50"
+                        className="btn btn-secondary disabled:opacity-50"
                         disabled={isTestingAI || isSavingAI}
                       >
                         {isTestingAI ? t('settings.testingConnection') : t('settings.testConnectionButton')}
@@ -604,7 +604,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
+        <div className="p-4 border-t border-gray-100 bg-white rounded-b-xl">
           <div className="flex items-center justify-between">
             <div>
               {currentStep !== 'private-repos' && (
@@ -627,7 +627,7 @@ export default function SetupDialog({ onComplete }: SetupDialogProps): JSX.Eleme
               </button>
               <button
                 onClick={handleNext}
-                className="px-6 py-2 bg-primary hover:bg-primary-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="btn btn-primary btn-sm disabled:opacity-50 flex items-center gap-2"
                 disabled={isCompleting || isAddingRepo || isSavingAI}
               >
                 {isCompleting ? (

@@ -190,12 +190,12 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
             <button
               onClick={handleInstallClick}
               disabled={isInstalling || isInstalled}
-              className={`text-xs px-3 py-1 rounded transition-colors ${
+              className={`btn btn-sm transition-colors ${
                 isInstalled
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : isInstalling
                   ? 'bg-blue-400 text-white cursor-wait'
-                  : 'bg-primary hover:bg-primary-600 text-white'
+                  : 'btn-primary'
               }`}
               aria-label={isInstalled ? 'Already installed' : isInstalling ? 'Installing...' : 'Install skill'}
               data-testid="install-button"
@@ -299,7 +299,7 @@ export const SkillResultCard: React.FC<SkillResultCardProps> = ({
               <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
                 <button
                   onClick={() => setShowSkillSelectionDialog(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+                  className="btn btn-secondary btn-sm"
                 >
                   {t('common.cancel')}
                 </button>

@@ -129,7 +129,7 @@ export default function CreateSkillDialog({
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('skills.createNewSkill')}</h2>
+            <h2 className="text-card-title font-semibold text-slate-900 dark:text-slate-100">{t('skills.createNewSkill')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -225,7 +225,7 @@ export default function CreateSkillDialog({
               type="button"
               onClick={onClose}
               disabled={isCreating}
-              className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+              className="btn btn-secondary disabled:opacity-50"
             >
               {t('common.cancel')}
             </button>
@@ -233,7 +233,7 @@ export default function CreateSkillDialog({
               data-testid="confirm-create-button"
               type="submit"
               disabled={!name.trim() || isCreating}
-              className="px-4 py-2 bg-primary hover:bg-primary-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {isCreating ? (
                 <>

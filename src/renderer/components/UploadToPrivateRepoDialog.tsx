@@ -145,7 +145,7 @@ export default function UploadToPrivateRepoDialog({
                       flex items-center gap-3.5 p-3 border rounded cursor-pointer transition-colors
                       ${selectedRepoId === repo.id
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'}
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-white dark:hover:bg-slate-700'}
                     `}
                   >
                     <input
@@ -200,14 +200,14 @@ export default function UploadToPrivateRepoDialog({
           <button
             onClick={onClose}
             disabled={isUploading}
-            className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+            className="btn btn-secondary disabled:opacity-50 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
           >
             {t('common.cancel')}
           </button>
           <button
             onClick={handleUpload}
             disabled={isUploading || !selectedRepoId || repositories.length === 0}
-            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="btn btn-primary disabled:opacity-50 flex items-center gap-2"
           >
             {isUploading ? (
               <>

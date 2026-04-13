@@ -197,7 +197,7 @@ export default function PrivateSkillCard({ skill, repo, onInstallComplete, onSki
                   ? 'bg-green-600 dark:bg-green-600 text-white'
                   : installProgress === 'error'
                   ? 'bg-red-600 dark:bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-primary dark:bg-blue-600 text-white hover:bg-primary-600'
+                  : 'btn-primary'
               }`}
               aria-label={t('install.installSkill', { name: skill.name })}
               aria-busy={installProgress === 'installing'}

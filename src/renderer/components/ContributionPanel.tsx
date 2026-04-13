@@ -125,7 +125,7 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
         <p>{error}</p>
         <button
           onClick={loadStats}
-          className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="mt-2 btn btn-primary btn-sm"
         >
           {t('common.retry')}
         </button>
@@ -150,7 +150,7 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
         {onClose && (
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            className="btn-icon"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -193,7 +193,7 @@ export default function ContributionPanel({ repoId, onClose }: ContributionPanel
               <span className="opacity-20">{'⭐'.repeat(5 - starCount)}</span>
             </span>
           </div>
-          <h4 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+          <h4 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
             {t(currentLevel.nameKey)}
           </h4>
           <p className="text-sm text-slate-500 dark:text-slate-400">

@@ -12,6 +12,7 @@ import { useAIGeneration } from '../hooks/useAIGeneration';
 import { PermissionRequestPanel } from './PermissionRequestPanel';
 import ConfirmDialog from './ConfirmDialog';
 import type { Configuration, AIConversation, AIConversationMessage, PermissionDecision, AIGenerationMode } from '../../shared/types';
+import StreamingMarkdown from './StreamingMarkdown';
 
 interface AISkillSidebarProps {
   isOpen: boolean;
@@ -1247,10 +1248,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           {/* New Conversation Button */}
           <button
             onClick={handleNewConversation}
-            className="p-1.5 rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            className="btn-icon"
+            style={{ padding: '6px' }}
             title={t('aiSidebar.newConversation')}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
           </button>
@@ -1259,12 +1261,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           <div className="relative" ref={historyMenuRef}>
             <button
               onClick={() => setShowHistoryMenu(!showHistoryMenu)}
-              className={`p-1.5 rounded-md transition-colors ${
-                showHistoryMenu ? 'text-blue-600 bg-blue-50' : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
-              }`}
+              className={`btn-icon ${showHistoryMenu ? '!text-blue-600 !bg-blue-50' : ''}`}
+              style={{ padding: '6px' }}
               title={t('aiSidebar.history')}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
@@ -1299,7 +1300,8 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                           </div>
                           <button
                             onClick={(e) => handleDeleteConversation(conv.id, e)}
-                            className="p-0.5 text-slate-400 hover:text-red-500 transition-colors"
+                            className="btn-icon hover:!bg-red-50 hover:!text-red-500"
+                            style={{ padding: '4px' }}
                             title={t('aiSidebar.deleteConversation')}
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1318,10 +1320,11 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           {messages.length > 0 && (
             <button
               onClick={handleClearConversation}
-              className="p-1.5 rounded-md text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors"
+              className="btn-icon hover:!bg-red-50 hover:!text-red-500"
+              style={{ padding: '6px' }}
               title={t('aiSidebar.clearConversation')}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1406,7 +1409,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                       <button
                         key={index}
                         onClick={() => toggleToolExpansion(toolKey)}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-md text-[11px] transition-colors"
+                        className="btn-icon border border-slate-200 hover:border-blue-300 inline-flex items-center gap-1.5" style={{ padding: '4px 8px', fontSize: '11px' }}
                         title={isExpanded ? t('aiSidebar.clickToCollapse') : t('aiSidebar.clickToExpand')}
                       >
                         <svg
@@ -1468,7 +1471,9 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                             <div className="space-y-1.5">
                               {input.file_path && (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center text-[10px]">📁</span>
+                                  <span className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center text-blue-500">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                  </span>
                                   <span className="text-blue-600 font-medium break-all text-[11px]">{input.file_path}</span>
                                 </div>
                               )}
@@ -1525,7 +1530,9 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                         case 'Skill':
                           return (
                             <div className="flex items-center gap-1.5">
-                              <span className="w-5 h-5 bg-blue-100 dark:bg-blue-900/30 rounded flex items-center justify-center text-[10px]">🎯</span>
+                              <span className="w-5 h-5 bg-blue-100 dark:bg-blue-900/30 rounded flex items-center justify-center text-blue-500">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 6a4 4 0 100 8 4 4 0 000-8zm0 2a2 2 0 110 4 2 2 0 010-4z"/></svg>
+                              </span>
                               <span className="text-blue-600 font-medium text-[11px]">{input.skill}</span>
                               {input.args && <span className="text-slate-400 text-[10px]">{input.args}</span>}
                             </div>
@@ -1600,8 +1607,10 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
               )}
 
               {/* Message content */}
-              <div className="text-xs whitespace-pre-wrap break-words leading-relaxed">
-                {message.content || (message.isStreaming && (
+              <div className="text-xs leading-relaxed">
+                {message.content ? (
+                  <StreamingMarkdown content={message.content} isStreaming={!!message.isStreaming} />
+                ) : (message.isStreaming && (
                   <span className="inline-flex items-center gap-1.5 text-blue-500">
                     <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -1721,7 +1730,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
               <button
                 onClick={handleSubmitAnswers}
                 disabled={pendingQuestions.some(q => q.selectedOptions.size === 0)}
-                className="flex-1 px-4 py-2 bg-primary hover:bg-primary-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                className="flex-1 btn btn-primary btn-sm flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1730,7 +1739,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
               </button>
               <button
                 onClick={handleSkipQuestions}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium transition-colors"
+                className="btn btn-secondary btn-sm"
               >
                 {t('aiSidebar.skipQuestions')}
               </button>
@@ -1748,7 +1757,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           <button
             onClick={() => !isStreaming && setShowPromptMenu(!showPromptMenu)}
             disabled={isStreaming}
-            className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-slate-500 disabled:hover:bg-transparent"
+            className="btn-icon inline-flex items-center gap-1.5 text-[11px] text-slate-500 hover:!text-blue-600 hover:!bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-slate-500 disabled:hover:bg-transparent" style={{ padding: '4px 8px', fontSize: '11px' }}
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -1832,7 +1841,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
           <button
             onClick={handleFileSelect}
             disabled={isStreaming}
-            className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-icon absolute top-2 right-2 disabled:opacity-50 disabled:cursor-not-allowed"
             title={t('aiSidebar.attachFile')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1851,7 +1860,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
             {isStreaming ? (
               <button
                 onClick={handleStop}
-                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium"
+                className="btn btn-danger btn-sm flex items-center gap-1.5"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <rect x="6" y="6" width="12" height="12" rx="2" strokeWidth="2" />

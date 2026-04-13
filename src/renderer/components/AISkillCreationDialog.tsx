@@ -175,16 +175,16 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">{t('aiSidebar.title')}</h2>
+              <h2 className="text-card-title font-bold text-white">{t('aiSidebar.title')}</h2>
               <p className="text-sm text-white/80">{t('aiSidebar.subtitle')}</p>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={isStreaming}
-            className="text-white/80 hover:text-white transition-colors disabled:opacity-50"
+            className="btn-icon text-white/80 hover:!text-white disabled:opacity-50"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -312,7 +312,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                   data-testid="ai-generate-button"
                   onClick={handleGenerate}
                   disabled={!prompt.trim()}
-                  className="flex-1 btn bg-primary hover:bg-primary-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 btn btn-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                   title={t('aiDialog.generateSkill')}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -337,7 +337,7 @@ export const AISkillCreationDialog: React.FC<AISkillCreationDialogProps> = ({
                 <button
                   onClick={handleGenerate}
                   disabled={!prompt.trim()}
-                  className="flex-1 btn bg-primary hover:bg-primary-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 btn btn-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                   title={t('aiDialog.generateAgain')}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

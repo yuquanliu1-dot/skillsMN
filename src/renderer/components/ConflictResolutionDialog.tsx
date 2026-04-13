@@ -179,17 +179,17 @@ export default function ConflictResolutionDialog({
           <button
             onClick={onClose}
             disabled={isResolving}
-            className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded hover:bg-slate-300 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={handleResolve}
             disabled={isResolving || resolution === 'skip'}
-            className={`px-4 py-2 rounded transition-colors flex items-center gap-2 ${
+            className={`btn rounded flex items-center gap-2 ${
               resolution === 'skip'
                 ? 'bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400'
-                : 'bg-primary dark:bg-blue-600 text-white hover:bg-primary-600 dark:hover:bg-blue-700'
+                : 'btn-primary'
             }`}
           >
             {isResolving && <div className="animate-spin rounded-full h-5 w-5 border-4 border-white border-t-transparent"></div>}

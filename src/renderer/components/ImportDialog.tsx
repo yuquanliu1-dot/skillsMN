@@ -292,7 +292,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
       <div ref={dialogRef} className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-card-title font-semibold text-gray-900">
             {t('import.title')}
           </h2>
           <button
@@ -468,7 +468,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
 
           {/* Empty State - No skills found after scanning */}
           {activeTab === 'local' && localDirectory && !isScanningLocal && localSkills.length === 0 && !error && (
-            <div className="mt-4 p-6 bg-gray-50 border border-gray-200 rounded-lg text-center">
+            <div className="mt-4 p-6 bg-white border border-gray-200 rounded-lg text-center">
               <div className="w-12 h-12 mx-auto mb-3 text-gray-400">
                 <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v18m10-3a.75.75 0 00-1.5-.75L3 7.5a3 3-2 2 0 00-2 2v2a2 2 0 012 2 2h6m6 2 2 0 002-2v-2a2 2 0 00-2-2v-2a2 2 0 00-2-2-2H5v-2a2 2 0 00-2 2v2a2 2 0 012 2 2h6M3 7v6a4 4 0 01-.99.28l1.47-1.47A4.5 4.5 0 00-6.364l1.36-1.36A4.5 4.5 0 006.364 0l1.36 1.36A4.5 4.5 0 006.364l-1.36-1.36A4.5 4.5 0 00-6.364-1.36L12 13zm0 3a4 4 0 014 4 4v4H3a4a4 0 01-4-4z" />
@@ -489,7 +489,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
           )}
 
           {activeTab === 'url' && urlScanResult && !isScanningUrl && urlSkills.length === 0 && (
-            <div className="mt-4 p-6 bg-gray-50 border border-gray-200 rounded-lg text-center">
+            <div className="mt-4 p-6 bg-white border border-gray-200 rounded-lg text-center">
               <div className="w-12 h-12 mx-auto mb-3 text-gray-400">
                 <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -790,7 +790,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
             onClick={onClose}
             disabled={isImporting}
             data-testid="cancel-import-button"
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50"
+            className="btn btn-secondary btn-sm disabled:opacity-50"
           >
             {t('common.close')}
           </button>
@@ -799,7 +799,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
               onClick={handleImport}
               disabled={isImporting || (activeTab === 'local' ? selectedLocalSkills.size === 0 : selectedUrlSkills.size === 0)}
               data-testid="confirm-import-button"
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium disabled:opacity-50"
+              className="btn btn-primary btn-sm disabled:opacity-50"
             >
               {isImporting ? t('import.importing') : t('import.import')}
             </button>

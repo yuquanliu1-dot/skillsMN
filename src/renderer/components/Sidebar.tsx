@@ -107,7 +107,7 @@ export default function Sidebar({
           className="w-12 h-12 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
           title="skillsMN"
         >
-          <span className="font-bold text-xl tracking-tight" style={{ color: '#DE2910' }}>SKM</span>
+          <span className="font-bold text-card-title tracking-tight" style={{ color: '#DE2910' }}>SKM</span>
         </div>
       </div>
 
@@ -127,7 +127,7 @@ export default function Sidebar({
                   ? 'bg-blue-50 text-blue-600 ring-1 ring-blue-200'
                   : item.disabled
                   ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-500 hover:text-blue-600 hover:bg-gray-50'
+                  : 'text-gray-500 hover:text-blue-600 hover:bg-white'
               }
             `}
             data-testid={`nav-${item.id}`}
@@ -151,7 +151,7 @@ export default function Sidebar({
           onClick={onSettingsClick}
           onMouseEnter={() => setShowTooltip('settings')}
           onMouseLeave={() => setShowTooltip(null)}
-          className="w-full aspect-square rounded-xl flex items-center justify-center transition-all duration-200 relative text-gray-500 hover:text-blue-600 hover:bg-gray-50"
+          className="w-full aspect-square rounded-xl flex items-center justify-center transition-all duration-200 relative text-gray-500 hover:text-blue-600 hover:bg-white"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -182,7 +182,7 @@ export default function Sidebar({
           className={`w-full aspect-square rounded-xl flex items-center justify-center relative transition-colors ${
             claudeInstalled === false
               ? 'bg-red-50 hover:bg-red-100'
-              : 'hover:bg-gray-50'
+              : 'hover:bg-white'
           }`}
         >
           {/* Claude Icon */}

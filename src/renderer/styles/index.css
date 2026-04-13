@@ -146,8 +146,8 @@
   body {
     /* SF Pro Text for body (optical sizing < 20px) */
     font-family: var(--font-body);
-    /* Apple light gray background */
-    background: var(--color-light-gray);
+    /* White background - Apple's primary canvas */
+    background: #ffffff;
     /* Near-black text for contrast */
     color: var(--color-text-primary);
     -webkit-font-smoothing: antialiased;
@@ -231,8 +231,8 @@
      Card Component - Apple Design (No borders, soft shadow or flat)
      -------------------------------------------------------------------------- */
   .card {
-    /* Apple light gray or white */
-    background: var(--color-light-gray);
+    /* White background - Apple's card surface */
+    background: #ffffff;
     /* Apple almost never uses borders on cards */
     border: none;
     /* Apple standard radius */
@@ -246,10 +246,9 @@
   }
 
   .card-interactive:hover {
-    /* Subtle background shift on hover */
-    background: var(--color-white);
-    /* Apple soft shadow (diffused, not harsh) */
+    /* Subtle shadow on hover */
     box-shadow: var(--shadow-card);
+    transform: translateY(-2px);
   }
 
   /* --------------------------------------------------------------------------
@@ -278,6 +277,13 @@
     cursor: not-allowed;
   }
 
+  /* Small Button Variant - for toolbars, inline actions */
+  .btn-sm {
+    padding: var(--space-6) var(--space-10);   /* 6px 10px */
+    font-size: var(--font-size-caption);         /* 14px */
+    gap: var(--space-6);                         /* 6px */
+  }
+
   /* Primary Button - Apple Blue */
   .btn-primary {
     background: var(--color-apple-blue);
@@ -285,14 +291,15 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    /* Slight brightening on hover */
-    filter: brightness(1.1);
+    /* Apple spec: brightens slightly on hover */
+    filter: brightness(1.12);
     box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
   }
 
   .btn-primary:active:not(:disabled) {
-    /* Active state color shift */
+    /* Active state color shift per Apple spec */
     background: var(--color-button-active);
+    color: var(--color-text-primary);
   }
 
   /* Secondary Button */
@@ -329,6 +336,30 @@
 
   .btn-danger:active:not(:disabled) {
     background: #B91C1C;
+  }
+
+  /* Icon-only Button - Apple design */
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8);    /* 8px = 40px tap target for w-5 h-5 icons */
+    border-radius: var(--radius-standard);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease-out;
+    color: var(--color-text-tertiary);
+  }
+
+  .btn-icon:hover:not(:disabled) {
+    background: var(--color-button-default-light);
+    color: var(--color-text-secondary);
+  }
+
+  .btn-icon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   /* --------------------------------------------------------------------------

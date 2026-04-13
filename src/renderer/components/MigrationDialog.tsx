@@ -75,7 +75,7 @@ export default function MigrationDialog({
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">{t('migration.title')}</h2>
+          <h2 className="text-card-title font-semibold text-gray-900">{t('migration.title')}</h2>
           <p className="text-sm text-gray-600 mt-1"
             dangerouslySetInnerHTML={{
               __html: t('migration.foundSkills', { count: totalSkills })
@@ -250,7 +250,7 @@ export default function MigrationDialog({
           <button
             onClick={handleMigrate}
             disabled={isMigrating || totalSkills === 0}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-primary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isMigrating ? t('migration.moving') : t('migration.moveSkills', { count: totalSkills })}
           </button>

@@ -48,13 +48,13 @@ module.exports = {
           900: '#111827',
         },
         background: {
-          DEFAULT: '#f5f5f7',   // Apple Light Gray - App background
-          secondary: '#FFFFFF', // White - Cards/panels
+          DEFAULT: '#FFFFFF',   // White - Primary background
+          secondary: '#f5f5f7', // Apple Light Gray - Alternate sections
           tertiary: '#F3F4F6',  // Gray-100 - Hover states
         },
         surface: {
-          DEFAULT: '#FFFFFF',   // White - Surfaces
-          elevated: '#f5f5f7',  // Apple Light Gray - Elevated surfaces
+          DEFAULT: '#FFFFFF',   // White - Cards/panels
+          elevated: '#f5f5f7',  // Apple Light Gray - Alternate sections
         },
         text: {
           primary: '#1d1d1f',   // Apple Near Black - Primary text
@@ -101,13 +101,23 @@ module.exports = {
         mono: ['JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
       },
       fontSize: {
-        'xs': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.025em' }],
-        'sm': ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0.015em' }],
-        'base': ['1rem', { lineHeight: '1.5rem', letterSpacing: '0' }],
-        'lg': ['1.125rem', { lineHeight: '1.75rem', letterSpacing: '-0.005em' }],
-        'xl': ['1.25rem', { lineHeight: '1.75rem', letterSpacing: '-0.01em' }],
-        '2xl': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.015em' }],
-        '3xl': ['1.875rem', { lineHeight: '2.25rem', letterSpacing: '-0.02em' }],
+        // Apple Design System - SF Pro Typography Scale
+        'nano': ['0.63rem', { lineHeight: '1.47', letterSpacing: '-0.08px' }],       // 10px - Legal text, smallest size
+        'micro': ['0.75rem', { lineHeight: '1.33', letterSpacing: '-0.12px' }],      // 12px - Fine print, footnotes
+        'xs': ['0.75rem', { lineHeight: '1.33', letterSpacing: '-0.12px' }],         // 12px - Alias for micro (backward compat)
+        'sm': ['0.88rem', { lineHeight: '1.29', letterSpacing: '-0.224px' }],        // 14px - Caption, link
+        'base': ['1.06rem', { lineHeight: '1.47', letterSpacing: '-0.374px' }],       // 17px - Body text (Apple standard)
+        'lg': ['1.13rem', { lineHeight: '1.00', letterSpacing: '0' }],               // 18px - Button large
+        'xl': ['1.25rem', { lineHeight: '1.50', letterSpacing: '0' }],               // 20px - Sub-nav (light weight)
+        'card-title': ['1.31rem', { lineHeight: '1.19', letterSpacing: '0.231px' }], // 21px - Card title
+        '2xl': ['1.50rem', { lineHeight: '1.50', letterSpacing: '0' }],              // 24px - Sub-nav
+        'tile-heading': ['1.75rem', { lineHeight: '1.14', letterSpacing: '0.196px' }], // 28px - Tile heading
+        'nav-heading': ['2.13rem', { lineHeight: '1.47', letterSpacing: '-0.374px' }], // 34px - Nav heading
+        'section-heading': ['2.50rem', { lineHeight: '1.10', letterSpacing: '0' }],   // 40px - Section heading
+        'display-hero': ['3.50rem', { lineHeight: '1.07', letterSpacing: '-0.28px' }], // 56px - Display hero
+        // Legacy size aliases (for backward compatibility)
+        'button': ['1.06rem', { lineHeight: '2.41', letterSpacing: '0' }],           // 17px - Button text
+        'button-large': ['1.13rem', { lineHeight: '1.00', letterSpacing: '0' }],     // 18px - Large button
       },
       // Apple Spacing Scale - 8px base unit
       // Scale: 2, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 17, 20, 24
@@ -195,5 +205,7 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }

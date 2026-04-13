@@ -99,7 +99,7 @@ export interface SkillFileTreeNode {
 export interface SkillFileContent {
   /** File path */
   path: string;
-  /** File content (text only) */
+  /** File content (text, or base64 for previewable binary files) */
   content: string;
   /** Whether file is binary (cannot be edited) */
   isBinary: boolean;
@@ -280,6 +280,8 @@ export interface SkillEditorConfig {
   wordWrap: boolean;
   /** AI Panel width in pixels (default: 420) */
   aiPanelWidth?: number;
+  /** Use TipTap rich text editor for Markdown files (default: false) */
+  useTiptap?: boolean;
 }
 
 /**

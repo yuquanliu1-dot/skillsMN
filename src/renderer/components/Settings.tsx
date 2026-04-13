@@ -10,6 +10,7 @@ import type { Configuration, PrivateRepo, AIConfiguration, SkillEditorConfig, Sk
 import { changeLanguage, availableLanguages, getCurrentLanguage } from '../i18n';
 import type { LanguageCode } from '../../shared/types';
 import KeywordEditor from './KeywordEditor';
+import GroupIcon, { GROUP_SVG_ICONS } from './GroupIcon';
 
 // Preset colors for skill groups (Apple design system compliant)
 const PRESET_COLORS = [
@@ -23,24 +24,24 @@ const PRESET_COLORS = [
   { value: '#6B7280', name: '其他', description: 'Other' },
 ];
 
-// Preset icons for skill groups (tech-styled)
+// Preset icons for skill groups (SVG stroke style)
 const PRESET_ICONS = [
-  { value: '⚡', name: '需求', description: 'Requirements' },
-  { value: '🎯', name: '设计', description: 'Design' },
-  { value: '⌨️', name: '开发', description: 'Development' },
-  { value: '🔬', name: '测试', description: 'Testing' },
-  { value: '🚀', name: '部署', description: 'Deployment' },
-  { value: '📘', name: '文档', description: 'Documentation' },
-  { value: '🐞', name: 'Bug', description: 'Bug Fixing' },
-  { value: '⚙️', name: '配置', description: 'Configuration' },
-  { value: '🛡️', name: '安全', description: 'Security' },
-  { value: '📈', name: '分析', description: 'Analytics' },
-  { value: '🔗', name: '集成', description: 'Integration' },
-  { value: '☁️', name: '云端', description: 'Cloud' },
-  { value: '🧠', name: 'AI', description: 'Artificial Intelligence' },
-  { value: '💾', name: '数据', description: 'Database' },
-  { value: '🔄', name: 'CI/CD', description: 'DevOps Pipeline' },
-  { value: '🌐', name: '网络', description: 'Network/Web' },
+  { value: 'lightning', name: '需求', description: 'Requirements' },
+  { value: 'target', name: '设计', description: 'Design' },
+  { value: 'code', name: '开发', description: 'Development' },
+  { value: 'beaker', name: '测试', description: 'Testing' },
+  { value: 'rocket', name: '部署', description: 'Deployment' },
+  { value: 'book', name: '文档', description: 'Documentation' },
+  { value: 'bug', name: 'Bug', description: 'Bug Fixing' },
+  { value: 'cog', name: '配置', description: 'Configuration' },
+  { value: 'shield', name: '安全', description: 'Security' },
+  { value: 'chart', name: '分析', description: 'Analytics' },
+  { value: 'link', name: '集成', description: 'Integration' },
+  { value: 'cloud', name: '云端', description: 'Cloud' },
+  { value: 'brain', name: 'AI', description: 'Artificial Intelligence' },
+  { value: 'database', name: '数据', description: 'Database' },
+  { value: 'refresh', name: 'CI/CD', description: 'DevOps Pipeline' },
+  { value: 'globe', name: '网络', description: 'Network/Web' },
 ];
 
 interface SettingsProps {
@@ -142,14 +143,14 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
   const [newGroupColor, setNewGroupColor] = useState('#3B82F6');
-  const [newGroupIcon, setNewGroupIcon] = useState('📁');
+  const [newGroupIcon, setNewGroupIcon] = useState('code');
   const [isAddingGroup, setIsAddingGroup] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editGroupName, setEditGroupName] = useState('');
   const [editGroupDescription, setEditGroupDescription] = useState('');
   const [editingKeywordsGroupId, setEditingKeywordsGroupId] = useState<string | null>(null);
   const [editGroupColor, setEditGroupColor] = useState('#3B82F6');
-  const [editGroupIcon, setEditGroupIcon] = useState('📁');
+  const [editGroupIcon, setEditGroupIcon] = useState('code');
   const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
 
   // Proxy Configuration State
@@ -458,7 +459,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
         setNewGroupName('');
         setNewGroupDescription('');
         setNewGroupColor('#3B82F6');
-        setNewGroupIcon('⌨️');
+        setNewGroupIcon('code');
         setShowAddGroupForm(false);
         await loadSkillGroups();
       } else {
@@ -481,7 +482,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
     setEditGroupName(tGroupField(group.name, t));
     setEditGroupDescription(tGroupField(group.description, t));
     setEditGroupColor(group.color || '#3B82F6');
-    setEditGroupIcon(group.icon || '📁');
+    setEditGroupIcon(group.icon || 'code');
     setError(null);
     setSuccess(null);
   };
@@ -494,7 +495,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
     setEditGroupName('');
     setEditGroupDescription('');
     setEditGroupColor('#3B82F6');
-    setEditGroupIcon('📁');
+    setEditGroupIcon('code');
   };
 
   /**
@@ -1030,7 +1031,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               data-testid="close-settings-button"
               onClick={onClose}
               disabled={isSaving}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors disabled:opacity-50 cursor-pointer p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+              className="btn-icon disabled:opacity-50"
               aria-label={t('common.close')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2156,7 +2157,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               </div>
               <button
                 onClick={() => setShowAddGroupForm(!showAddGroupForm)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="btn btn-primary btn-sm flex items-center gap-1.5 disabled:opacity-50"
                 disabled={isAddingGroup}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2244,14 +2245,14 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                             type="button"
                             onClick={() => setNewGroupIcon(icon.value)}
                             disabled={isAddingGroup}
-                            className={`w-8 h-8 text-base rounded-lg border-2 transition-all ${
+                            className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${
                               newGroupIcon === icon.value
-                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                                : 'border-slate-200 dark:border-slate-600 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                : 'border-slate-200 dark:border-slate-600 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400'
                             }`}
                             title={`${icon.name} - ${icon.description}`}
                           >
-                            {icon.value}
+                            <GroupIcon icon={icon.value} className="w-4.5 h-4.5" />
                           </button>
                         ))}
                       </div>
@@ -2266,16 +2267,16 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                         setNewGroupName('');
                         setNewGroupDescription('');
                         setNewGroupColor('#3B82F6');
-                        setNewGroupIcon('⌨️');
+                        setNewGroupIcon('code');
                       }}
-                      className="px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                      className="btn btn-secondary btn-sm border border-slate-300 dark:text-slate-300 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600"
                       disabled={isAddingGroup}
                     >
                       {t('common.cancel')}
                     </button>
                     <button
                       type="submit"
-                      className="px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary-600 rounded-lg transition-colors disabled:opacity-50"
+                      className="btn btn-primary btn-sm disabled:opacity-50"
                       disabled={isAddingGroup || !newGroupName.trim()}
                     >
                       {isAddingGroup ? (
@@ -2333,7 +2334,7 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('settings.noGroupsDescription')}</p>
                 <button
                   onClick={() => setShowAddGroupForm(true)}
-                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="mt-4 btn btn-primary btn-sm flex items-center gap-1.5"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -2356,9 +2357,9 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                         <div className="flex items-center gap-2 mb-4">
                           <div
                             className="w-8 h-8 rounded-lg flex items-center justify-center"
-                            style={{ backgroundColor: `${editGroupColor}20` }}
+                            style={{ backgroundColor: `${editGroupColor}20`, color: editGroupColor }}
                           >
-                            <span className="text-lg">{editGroupIcon}</span>
+                            <GroupIcon icon={editGroupIcon} className="w-4.5 h-4.5" />
                           </div>
                           <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{t('settings.editGroup')}</h4>
                         </div>
@@ -2424,13 +2425,13 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                                   type="button"
                                   onClick={() => setEditGroupIcon(icon.value)}
                                   disabled={isUpdatingGroup}
-                                  className={`w-7 h-7 text-sm rounded-md border transition-all ${
+                                  className={`w-7 h-7 rounded-md border transition-all flex items-center justify-center ${
                                     editGroupIcon === icon.value
-                                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                                      : 'border-transparent hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                      : 'border-transparent hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400'
                                   }`}
                                 >
-                                  {icon.value}
+                                  <GroupIcon icon={icon.value} className="w-4 h-4" />
                                 </button>
                               ))}
                             </div>
@@ -2439,14 +2440,14 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                             <button
                               onClick={() => handleSaveEditGroup(group.id)}
                               disabled={isUpdatingGroup}
-                              className="px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary-600 rounded-lg transition-colors disabled:opacity-50"
+                              className="btn btn-primary btn-sm disabled:opacity-50"
                             >
                               {isUpdatingGroup ? t('common.saving') : t('common.save')}
                             </button>
                             <button
                               onClick={handleCancelEditGroup}
                               disabled={isUpdatingGroup}
-                              className="px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                              className="btn btn-secondary btn-sm border border-slate-300 dark:text-slate-300 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600"
                             >
                               {t('common.cancel')}
                             </button>
@@ -2461,11 +2462,9 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                             {/* Icon */}
                             <div
                               className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                              style={{ backgroundColor: `${group.color}15` }}
+                              style={{ backgroundColor: `${group.color}15`, color: group.color }}
                             >
-                              <span className="text-xl" style={{ color: group.color }}>
-                                {group.icon || '📁'}
-                              </span>
+                              <GroupIcon icon={group.icon} className="w-5 h-5" />
                             </div>
                             {/* Info */}
                             <div className="min-w-0 flex-1">
@@ -2503,30 +2502,30 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                             {/* Edit Keywords Button */}
                             <button
                               onClick={() => handleEditKeywords(group.id)}
-                              className="p-2 text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+                              className="btn-icon hover:!bg-purple-50 hover:!text-purple-600"
                               title="编辑关键词"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                               </svg>
                             </button>
                             {/* Edit Button */}
                             <button
                               onClick={() => handleStartEditGroup(group)}
-                              className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                              className="btn-icon hover:!bg-blue-50 hover:!text-blue-600"
                               title={t('settings.editGroup')}
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </button>
                             {/* Delete Button */}
                             <button
                               onClick={() => handleDeleteGroup(group.id)}
-                              className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                              className="btn-icon hover:!bg-red-50 hover:!text-red-500"
                               title={t('settings.deleteGroup')}
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
                             </button>

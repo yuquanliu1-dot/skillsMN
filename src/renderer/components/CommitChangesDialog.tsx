@@ -213,14 +213,14 @@ export default function CommitChangesDialog({
           <button
             onClick={onClose}
             disabled={isCommitting}
-            className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+            className="btn btn-secondary disabled:opacity-50 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
           >
             {t('commit.cancel')}
           </button>
           <button
             onClick={handleCommit}
             disabled={isCommitting || !commitMessage.trim()}
-            className="px-4 py-2 bg-primary dark:bg-blue-600 text-white rounded hover:bg-primary-600 dark:hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="btn btn-primary disabled:opacity-50 flex items-center gap-2"
           >
             {isCommitting ? (
               <>

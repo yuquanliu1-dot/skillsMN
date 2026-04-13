@@ -188,14 +188,14 @@ export default function CopySkillDialog({
               type="button"
               onClick={onClose}
               disabled={isCopying}
-              className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+              className="btn btn-secondary disabled:opacity-50"
             >
               {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={isCopying || !newName.trim()}
-              className="px-4 py-2 bg-primary dark:bg-blue-600 text-white rounded hover:bg-primary-600 dark:hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="btn btn-primary disabled:opacity-50"
             >
               {isCopying ? t('common.creating') : t('skillCard.copySkill')}
             </button>

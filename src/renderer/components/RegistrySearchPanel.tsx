@@ -80,7 +80,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-white">
       {/* Search Header */}
       <div className="bg-white border-b border-gray-200 p-4 space-y-3 flex-shrink-0">
         {/* Top row: Search */}
@@ -149,7 +149,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
       </div>
 
       {/* Search Results */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
+      <div className="flex-1 overflow-y-auto bg-white p-4">
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
@@ -177,7 +177,7 @@ export const RegistrySearchPanel: React.FC<RegistrySearchPanelProps> = ({
             <p className="text-sm text-gray-600 text-center max-w-md mb-4">{error}</p>
             <button
               onClick={() => handleQueryChange(query)}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
+              className="btn btn-primary"
               aria-label={t('discover.retry')}
             >
               {t('discover.retry')}

@@ -240,7 +240,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
       <div className="w-10 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col items-center py-4 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer transition-colors group">
         <button
           onClick={onToggle}
-          className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 rounded transition-colors"
+          className="btn-icon hover:!bg-blue-50 dark:hover:bg-blue-900"
           title={t('fileTree.show')}
         >
           <svg className="w-5 h-5 text-amber-500 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
@@ -254,7 +254,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
   return (
     <div className="w-60 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         <div className="flex items-center gap-2">
           <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -263,7 +263,7 @@ export const FileTreePanel: React.FC<FileTreePanelProps> = ({
         </div>
         <button
           onClick={onToggle}
-          className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
+          className="btn-icon dark:hover:bg-slate-700"
           title={t('fileTree.hide')}
         >
           <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

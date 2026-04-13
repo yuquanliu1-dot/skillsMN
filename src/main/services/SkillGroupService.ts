@@ -295,7 +295,7 @@ export class SkillGroupService {
         name: data.name,
         description: data.description,
         color: data.color || '#3B82F6',
-        icon: data.icon || '📁',
+        icon: data.icon || 'folder',
         tags: [],
         keywords: data.keywords || [],
         enabled: data.enabled ?? true,

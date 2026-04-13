@@ -10,6 +10,7 @@ import type { Skill, FilterSource, SortBy, VersionComparison, SkillGroup } from 
 import { KeywordMatcher } from '../../shared/services/KeywordMatcher';
 import SkillCard from './SkillCard';
 import { ipcClient } from '../services/ipcClient';
+import GroupIcon from './GroupIcon';
 
 interface SkillListProps {
   skills: Skill[];
@@ -274,7 +275,7 @@ export default function SkillList({
             <button
               data-testid="create-skill-button"
               onClick={onCreateSkill}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium"
+              className="btn btn-primary btn-sm flex items-center gap-1.5"
               aria-label={t('skills.createSkill')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,7 +295,7 @@ export default function SkillList({
             <button
               data-testid="import-skill-button"
               onClick={onImportSkill}
-              className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              className="btn btn-sm flex items-center gap-1.5 !bg-green-600 hover:!bg-green-700 text-white"
               aria-label={t('import.title')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -360,7 +361,7 @@ export default function SkillList({
       </div>
 
       {/* Skill grid with groups */}
-      <div data-testid="skills-list" className="flex-1 overflow-auto bg-gray-50 p-4">
+      <div data-testid="skills-list" className="flex-1 overflow-auto bg-white p-4">
         {filteredAndSortedSkills.length > 0 ? (
           <div className="space-y-6">
             {groupedSkills.map(({ group, skills: groupSkills }) => (
@@ -369,10 +370,9 @@ export default function SkillList({
                 {group && (
                   <div className="flex items-center gap-2 mb-3">
                     <span
-                      className="text-xl"
                       style={{ color: group.color }}
                     >
-                      {group.icon || '📁'}
+                      <GroupIcon icon={group.icon} className="w-5 h-5" />
                     </span>
                     <h3
                       className="text-sm font-semibold"
@@ -392,7 +392,7 @@ export default function SkillList({
                 )}
                 {!group && groupSkills.length > 0 && (
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl text-gray-400">📦</span>
+                    <span className="text-gray-400"><GroupIcon className="w-5 h-5" /></span>
                     <h3 className="text-sm font-semibold text-gray-500">
                       {t('skills.ungrouped')}
                     </h3>

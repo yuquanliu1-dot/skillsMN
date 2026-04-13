@@ -90,7 +90,7 @@ export default function SearchResultCard({
         {result.skillFiles.length > 0 ? (
           <div className="space-y-2">
             {result.skillFiles.slice(0, 3).map((skill: { path: string; downloadUrl: string }, index: number) => (
-              <div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg p-2.5">
+              <div key={index} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2.5">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -100,7 +100,7 @@ export default function SearchResultCard({
                 <div className="flex gap-2">
                   <button
                     onClick={() => onPreview(skill.downloadUrl)}
-                    className="px-3 py-1.5 text-xs bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer flex items-center gap-1"
+                    className="btn btn-secondary btn-sm border border-gray-200 text-xs cursor-pointer flex items-center gap-1"
                     aria-label="Preview skill"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +111,7 @@ export default function SearchResultCard({
                   </button>
                   <button
                     onClick={() => onInstall(result.repositoryName, skill.path, skill.downloadUrl)}
-                    className="px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors shadow-sm cursor-pointer flex items-center gap-1"
+                    className="btn btn-primary btn-sm flex items-center gap-1 shadow-sm cursor-pointer"
                     aria-label="Install skill"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

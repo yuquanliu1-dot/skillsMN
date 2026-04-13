@@ -12,6 +12,7 @@ import { KeywordMatcher } from '../../shared/services/KeywordMatcher';
 import PrivateSkillCard from './PrivateSkillCard';
 import ContributionBadge from './ContributionBadge';
 import ReadmeDialog from './ReadmeDialog';
+import GroupIcon from './GroupIcon';
 
 type SortBy = 'name' | 'modified';
 
@@ -452,7 +453,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
           <button
             onClick={handleRefresh}
             disabled={isLoadingSkills || isRefreshing || !selectedRepoId}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-secondary btn-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             title={t('privateRepos.refreshSkillsList')}
             aria-label={t('privateRepos.refreshSkillsList')}
           >
@@ -597,7 +598,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
       )}
 
       {/* Skills List */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-4 relative">
+      <div className="flex-1 overflow-y-auto bg-white p-4 relative">
         {/* 贡献徽章 - 右上角 */}
         {selectedRepoId && !isLoadingSkills && !error && filteredAndSortedSkills.length > 0 && (
           <div className="absolute top-4 right-4 z-10">
@@ -647,7 +648,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
             {!isAuthError && (
               <button
                 onClick={() => selectedRepoId && loadSkills(selectedRepoId)}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
+                className="btn btn-primary"
                 aria-label={t('privateRepos.retry')}
               >
                 {t('privateRepos.retry')}
@@ -683,10 +684,9 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
                 {group && (
                   <div className="flex items-center gap-2 mb-3">
                     <span
-                      className="text-xl"
                       style={{ color: group.color }}
                     >
-                      {group.icon || '📁'}
+                      <GroupIcon icon={group.icon} className="w-5 h-5" />
                     </span>
                     <h3
                       className="text-sm font-semibold"
@@ -706,7 +706,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
                 )}
                 {!group && groupSkills.length > 0 && (
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl text-gray-400">📦</span>
+                    <span className="text-gray-400"><GroupIcon className="w-5 h-5" /></span>
                     <h3 className="text-sm font-semibold text-gray-500">
                       {t('skills.ungrouped')}
                     </h3>
@@ -741,7 +741,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
               <div className="mt-4 text-center">
                 <button
                   onClick={() => setVisibleCount(prev => prev + 50)}
-                  className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="btn btn-secondary border border-gray-300"
                   aria-label={`Load more skills (${filteredAndSortedSkills.length - visibleCount} remaining)`}
                 >
                   {t('privateRepos.loadMore', { count: filteredAndSortedSkills.length - visibleCount })}
