@@ -11,6 +11,9 @@ import type { ProxyConfig } from '../../shared/types';
 
 const execAsync = promisify(exec);
 
+// Timeout for git clone operations (60 seconds)
+const CLONE_TIMEOUT_MS = 60000;
+
 // Proxy settings from application config
 let proxyConfig: ProxyConfig | null = null;
 
@@ -256,7 +259,8 @@ export class GitOperations {
         `git clone --depth 1 --single-branch "${repoUrl}" "${targetDir}"`,
         {
           windowsHide: true,
-          env: getGitEnv()
+          env: getGitEnv(),
+          timeout: CLONE_TIMEOUT_MS,
         }
       );
 
@@ -378,6 +382,14 @@ export class GitOperations {
     ) {
       return {
         message: ERROR_MESSAGES.NETWORK_ERROR.user,
+        code: 'NETWORK_ERROR'
+      };
+    }
+
+    // Clone timeout (exec killed after timeout)
+    if (lowerError.includes('sigterm') || lowerError.includes('signal')) {
+      return {
+        message: 'Connection timed out. The server may be unreachable or responding too slowly. Please check the server address and network connection.',
         code: 'NETWORK_ERROR'
       };
     }

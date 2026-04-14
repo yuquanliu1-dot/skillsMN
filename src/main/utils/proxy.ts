@@ -227,6 +227,17 @@ export async function fetchWithProxy(url: string, options: any = {}): Promise<an
       signal: options.signal || controller.signal,
     });
     return response;
+  } catch (error: any) {
+    // Convert abort errors (timeout) to descriptive network errors
+    if (error?.name === 'AbortError' || (typeof error?.message === 'string' && error.message.includes('abort'))) {
+      const timeoutError = new Error(
+        `Connection timed out after ${Math.round(timeout / 1000)} seconds. ` +
+        'The server may be unreachable. Please check the server address and network connection.'
+      );
+      (timeoutError as any).code = 'ETIMEDOUT';
+      throw timeoutError;
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }

@@ -69,6 +69,13 @@ class Cache {
   }
 }
 
+// Default timeout for GitLab API requests (30 seconds)
+const GITLAB_API_TIMEOUT_MS = 30000;
+// Shorter timeout for connection tests (10 seconds)
+const GITLAB_TEST_TIMEOUT_MS = 10000;
+// Timeout for read operations like tree/content/commits (15 seconds)
+const GITLAB_READ_TIMEOUT_MS = 15000;
+
 // Cache instance (5-minute TTL)
 const cache = new Cache();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -97,6 +104,32 @@ const getFetchOptions = (url: string, options: RequestInit = {}): RequestInit =>
   }
 
   return options;
+};
+
+/**
+ * Fetch with timeout for GitLab API calls.
+ * Wraps getFetchOptions with AbortController to prevent indefinite hanging
+ * when the GitLab server is unreachable.
+ */
+const gitLabFetch = async (url: string, options: RequestInit = {}, timeoutMs: number = GITLAB_API_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, getFetchOptions(url, { ...options, signal: controller.signal }));
+  } catch (error: any) {
+    // Convert abort errors (timeout) to descriptive network errors
+    if (error?.name === 'AbortError' || (typeof error?.message === 'string' && error.message.includes('abort'))) {
+      const timeoutError = new Error(
+        `Connection timed out after ${Math.round(timeoutMs / 1000)} seconds. ` +
+        'The GitLab server may be unreachable. Please check the server address and network connection.'
+      );
+      (timeoutError as any).code = 'ETIMEDOUT';
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
 /**
@@ -140,12 +173,12 @@ export class GitLabService {
       const projectId = this.getProjectId(owner, repo);
       const url = `${apiBaseUrl}/projects/${projectId}`;
 
-      const response = await fetch(url, getFetchOptions(url, {
+      const response = await gitLabFetch(url, {
         headers: {
           'Private-Token': pat,
           'User-Agent': 'skillsMN-App',
         },
-      }));
+      }, GITLAB_TEST_TIMEOUT_MS);
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -181,9 +214,12 @@ export class GitLabService {
       };
     } catch (error) {
       logger.error('Failed to test GitLab connection', 'GitLabService', error);
+      const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('abort'));
       return {
         valid: false,
-        error: error instanceof Error ? error.message : 'Network error',
+        error: isTimeout
+          ? 'Connection timed out. The GitLab server may be unreachable. Please check the server address and network connection.'
+          : (error instanceof Error ? error.message : 'Network error'),
       };
     }
   }
@@ -215,12 +251,12 @@ export class GitLabService {
         url: url.substring(0, 120) + '...',
       });
 
-      const response = await fetch(url, getFetchOptions(url, {
+      const response = await gitLabFetch(url, {
         headers: {
           'Private-Token': pat,
           'User-Agent': 'skillsMN-App',
         },
-      }));
+      }, GITLAB_READ_TIMEOUT_MS);
 
       if (!response.ok) {
         // Handle 404 gracefully - repository may be empty or branch doesn't exist
@@ -256,12 +292,12 @@ export class GitLabService {
 
         for (let page = 2; page <= totalPages; page++) {
           const pageUrl = `${apiBaseUrl}/projects/${projectId}/repository/tree?recursive=1&ref=${encodeURIComponent(branch)}&per_page=100&page=${page}`;
-          const pageResponse = await fetch(pageUrl, getFetchOptions(pageUrl, {
+          const pageResponse = await gitLabFetch(pageUrl, {
             headers: {
               'Private-Token': pat,
               'User-Agent': 'skillsMN-App',
             },
-          }));
+          }, GITLAB_READ_TIMEOUT_MS);
 
           if (pageResponse.ok) {
             const pageData: any[] = await pageResponse.json();
@@ -402,12 +438,12 @@ export class GitLabService {
     const projectId = this.getProjectId(owner, repo);
     const url = `${apiBaseUrl}/projects/${projectId}/repository/files/${encodeURIComponent(filePath)}?ref=${encodeURIComponent(branch)}`;
 
-    const response = await fetch(url, getFetchOptions(url, {
+    const response = await gitLabFetch(url, {
       headers: {
         'Private-Token': pat,
         'User-Agent': 'skillsMN-App',
       },
-    }));
+    }, GITLAB_READ_TIMEOUT_MS);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch file ${filePath}: ${response.status}`);
@@ -434,12 +470,12 @@ export class GitLabService {
     const projectId = this.getProjectId(owner, repo);
     const url = `${apiBaseUrl}/projects/${projectId}/repository/commits?path=${encodeURIComponent(path)}&ref_name=${encodeURIComponent(branch)}&per_page=10`;
 
-    const response = await fetch(url, getFetchOptions(url, {
+    const response = await gitLabFetch(url, {
       headers: {
         'Private-Token': pat,
         'User-Agent': 'skillsMN-App',
       },
-    }));
+    }, GITLAB_READ_TIMEOUT_MS);
 
     if (!response.ok) {
       logger.warn(`Failed to fetch commits for ${path}`, 'GitLabService', {
@@ -1027,12 +1063,12 @@ export class GitLabService {
       const apiBaseUrl = this.getApiBaseUrl(instanceUrl);
       const url = `${apiBaseUrl}/user`;
 
-      const response = await fetch(url, getFetchOptions(url, {
+      const response = await gitLabFetch(url, {
         headers: {
           'Private-Token': pat,
           'User-Agent': 'skillsMN-App',
         },
-      }));
+      });
 
       if (!response.ok) {
         if (response.status === 401) {
