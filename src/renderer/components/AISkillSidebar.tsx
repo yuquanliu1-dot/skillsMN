@@ -1391,7 +1391,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
               data-testid={message.role === 'assistant' ? 'ai-response-content' : undefined}
               className={`max-w-[92%] rounded-xl px-3 py-2 ${
                 message.role === 'user'
-                  ? 'bg-blue-500 text-white'
+                  ? 'text-slate-800'
                   : `bg-slate-50 border text-slate-800 ${
                       message.isStreaming
                         ? 'border-blue-400 shadow-md animate-pulse'
@@ -1409,7 +1409,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                       <button
                         key={index}
                         onClick={() => toggleToolExpansion(toolKey)}
-                        className="btn-icon border border-slate-200 hover:border-blue-300 inline-flex items-center gap-1.5" style={{ padding: '4px 8px', fontSize: '11px' }}
+                        className="btn-icon border border-slate-300 hover:border-blue-400 inline-flex items-center gap-1.5" style={{ padding: '4px 8px', fontSize: '11px' }}
                         title={isExpanded ? t('aiSidebar.clickToCollapse') : t('aiSidebar.clickToExpand')}
                       >
                         <svg
@@ -1597,7 +1597,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
                     return (
                       <div
                         key={`detail-${index}`}
-                        className="bg-white border border-slate-200 rounded-lg p-2.5 text-xs"
+                        className="bg-white border border-slate-300 rounded-lg p-2.5 text-xs"
                       >
                         {formatToolInput(tool.name, tool.input)}
                       </div>
