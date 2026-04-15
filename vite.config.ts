@@ -15,7 +15,7 @@ export default defineConfig({
   },
   build: {
     outDir: path.resolve(__dirname, 'dist/renderer'),
-    emptyOutDir: false,
+    emptyOutDir: true,
     dropConsole: true,
     dropDebugger: true,
     rollupOptions: {
