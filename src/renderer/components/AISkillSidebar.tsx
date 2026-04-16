@@ -1608,7 +1608,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
               )}
 
               {/* Message content */}
-              <div className="text-xs leading-relaxed">
+              <div className={`text-xs leading-relaxed${message.role === 'user' ? ' [&_*]:!text-white' : ''}`}>
                 {message.content ? (
                   <StreamingMarkdown content={message.content} isStreaming={!!message.isStreaming} />
                 ) : (message.isStreaming && (
