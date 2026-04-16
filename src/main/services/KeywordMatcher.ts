@@ -10,7 +10,8 @@ import { KeywordMatcher as SharedKeywordMatcher, KeywordMatchResult, SkillForMat
 
 /**
  * Keyword Matcher Service (Main Process)
- * Exports shared functionality from shared KeywordMatcher
+ * Extends shared KeywordMatcher with logging
+ * Inherits getMatchSourceLabel() and getMatchSourceIcon() from SharedKeywordMatcher
  */
 export class KeywordMatcher extends SharedKeywordMatcher {
   /**
@@ -57,29 +58,5 @@ export class KeywordMatcher extends SharedKeywordMatcher {
     });
 
     return result;
-  }
-
-  /**
-   * Get display label for match source
-   */
-  static getMatchSourceLabel(source: 'name' | 'description' | 'tags'): string {
-    const labels = {
-      name: '名称',
-      description: '描述',
-      tags: '标签'
-    };
-    return labels[source];
-  }
-
-  /**
-   * Get match source icon
-   */
-  static getMatchSourceIcon(source: 'name' | 'description' | 'tags'): string {
-    const icons = {
-      name: '📝',
-      description: '📄',
-      tags: '🏷️'
-    };
-    return icons[source];
   }
 }

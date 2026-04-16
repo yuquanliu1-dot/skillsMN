@@ -12,7 +12,8 @@ import { createRegistrySource, SkillSource } from '../models/SkillSource';
 import { logger } from '../utils/Logger';
 import { SOURCE_METADATA_FILE } from '../../shared/constants';
 import type { InstallFromRegistryRequest, InstallProgressEvent, RegistryErrorCode } from '../../shared/types';
-import { getProxyAgent } from './GitHubService';
+import { getProxyAgent, fetchWithProxy } from '../utils/proxy';
+import { toKebabCase } from '../utils/pathUtils';
 
 /**
  * Parsed skill metadata from SKILL.md frontmatter
@@ -40,27 +41,6 @@ const FETCH_TIMEOUT_MS = 30000;
 const MAX_RETRIES = 3;
 
 /**
- * Fetch with timeout, retry, and proxy support
- */
-async function fetchWithTimeout(url: string, options?: any, timeoutMs: number = FETCH_TIMEOUT_MS): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    // Get proxy agent if configured
-    const proxyAgent = getProxyAgent(url);
-    const response = await fetch(url, {
-      ...options,
-      agent: proxyAgent,
-      signal: controller.signal
-    });
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-/**
  * Fetch with retry logic
  */
 async function fetchWithRetry(url: string, options?: RequestInit, maxRetries: number = MAX_RETRIES): Promise<Response> {
@@ -68,7 +48,7 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries: nu
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetchWithTimeout(url, options);
+      const response = await fetchWithProxy(url, options);
       return response;
     } catch (error: any) {
       lastError = error;
@@ -497,24 +477,35 @@ export class SkillInstaller {
         paths: skillFiles.map((f: any) => f.path)
       });
 
-      // Download files sequentially to avoid network overload
-      for (const file of skillFiles) {
-        try {
-          const downloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${file.path}`;
-          const response = await fetchWithRetry(downloadUrl, {
-            headers: { 'User-Agent': 'skillsMN-App' }
-          });
+      // Download files in parallel with concurrency limit
+      const CONCURRENCY = 5;
+      const batches: any[][] = [];
+      for (let i = 0; i < skillFiles.length; i += CONCURRENCY) {
+        batches.push(skillFiles.slice(i, i + CONCURRENCY));
+      }
 
-          if (response.ok) {
-            const content = await response.text();
-            files.set(file.path, content);
-          } else {
-            logger.warn(`Failed to download file: ${file.path}`, 'SkillInstaller', {
-              status: response.status
+      for (const batch of batches) {
+        const results = await Promise.allSettled(
+          batch.map(async (file: any) => {
+            const downloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${file.path}`;
+            const response = await fetchWithRetry(downloadUrl, {
+              headers: { 'User-Agent': 'skillsMN-App' }
             });
+
+            if (response.ok) {
+              return { path: file.path, content: await response.text() };
+            } else {
+              throw new Error(`HTTP ${response.status}`);
+            }
+          })
+        );
+
+        for (const result of results) {
+          if (result.status === 'fulfilled') {
+            files.set(result.value.path, result.value.content);
+          } else {
+            logger.warn('Error downloading file', 'SkillInstaller', { error: result.reason });
           }
-        } catch (error) {
-          logger.warn(`Error downloading file: ${file.path}`, 'SkillInstaller', { error });
         }
       }
 
@@ -600,7 +591,7 @@ export class SkillInstaller {
     appDirectory: string,
     skillName: string
   ): Promise<string> {
-    const slugifiedName = this.slugify(skillName);
+    const slugifiedName = toKebabCase(skillName);
     let targetPath = path.join(appDirectory, slugifiedName);
 
     // Ensure application directory exists
@@ -620,16 +611,6 @@ export class SkillInstaller {
 
     logger.debug(`Created unique target path: ${targetPath}`, 'SkillInstaller');
     return targetPath;
-  }
-
-  /**
-   * Slugify a string for use as a directory name
-   */
-  private slugify(text: string): string {
-    return text
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
   }
 
   /**

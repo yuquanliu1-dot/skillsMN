@@ -144,20 +144,18 @@ export default function SkillList({
     return result;
   }, [skills, filterSource, searchQuery, sortBy]);
 
+  // Keyword matching results (cached alongside grouping)
+  const keywordMatches = useMemo(() => {
+    const groups = skillGroups.filter(group => group.enabled !== false);
+    return KeywordMatcher.matchSkillsToGroups(filteredAndSortedSkills, groups);
+  }, [filteredAndSortedSkills, skillGroups]);
+
   // Group skills by configured groups (using keyword matching)
   // Disabled groups are filtered out and not displayed
   const groupedSkills = useMemo((): GroupedSkills[] => {
     const result: GroupedSkills[] = [];
     const assignedSkills = new Set<string>();
-
-    // Only use enabled groups for matching
-    const enabledGroups = skillGroups.filter(group => group.enabled !== false);
-
-    // Step 1: Use keyword matching (considers name + description + tags)
-    const keywordMatches = KeywordMatcher.matchSkillsToGroups(
-      filteredAndSortedSkills,
-      enabledGroups
-    );
+    const groups = skillGroups.filter(group => group.enabled !== false);
 
     // Step 2: Organize skills by group
     const groupsMap = new Map<string, Skill[]>();
@@ -173,7 +171,7 @@ export default function SkillList({
     }
 
     // Step 3: Output groups in order
-    for (const group of enabledGroups) {
+    for (const group of groups) {
       const groupSkills = groupsMap.get(group.id);
       if (groupSkills && groupSkills.length > 0) {
         result.push({ group, skills: groupSkills });
@@ -189,7 +187,7 @@ export default function SkillList({
     }
 
     return result;
-  }, [filteredAndSortedSkills, skillGroups]);
+  }, [filteredAndSortedSkills, skillGroups, keywordMatches]);
 
   const handleFilterChange = useCallback((newFilter: FilterSource) => {
     setFilterSource(newFilter);
@@ -406,9 +404,9 @@ export default function SkillList({
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
                   {groupSkills.map((skill) => {
                     const versionStatus = skillUpdates[skill.path];
-                    // Get match result for display
+                    // Get match result for display (reuse cached keywordMatches)
                     const matchResult = group
-                      ? KeywordMatcher.matchSkillToGroups(skill, [group])
+                      ? keywordMatches.get(skill.path)
                       : undefined;
 
                     return (

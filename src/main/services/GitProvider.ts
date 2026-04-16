@@ -131,6 +131,55 @@ export interface GitProvider {
 }
 
 /**
+ * Find skill directories in a repository tree
+ *
+ * Shared utility used by both GitHub and GitLab services.
+ * When a directory is identified as a skill (contains SKILL.md), its subdirectories
+ * are not searched for additional skills (prevents nested sub-skills from being listed).
+ *
+ * @param tree - Array of tree items from the repository
+ * @returns Array of skill directory info with path, name, skillFilePath, and depth
+ */
+export function findSkillDirectories(tree: TreeItem[]): Array<{ path: string; name: string; skillFilePath: string; depth: number }> {
+  const skillFiles = tree.filter((item: TreeItem) => {
+    return item.type === 'blob' && item.path.endsWith('SKILL.md');
+  });
+
+  // Build list of skill directories with their paths
+  const allSkillDirs: Array<{ path: string; name: string; skillFilePath: string; depth: number }> = [];
+  for (const file of skillFiles) {
+    const pathParts = file.path.split('/');
+    pathParts.pop();
+    const dirPath = pathParts.join('/');
+    const depth = pathParts.length;
+
+    allSkillDirs.push({
+      path: dirPath,
+      name: pathParts[pathParts.length - 1] || 'root',
+      skillFilePath: file.path,
+      depth,
+    });
+  }
+
+  // Sort by path length (shorter first) to process parent dirs before children
+  allSkillDirs.sort((a, b) => a.path.length - b.path.length);
+
+  // Filter out nested skills (skills that are subdirectories of other skills)
+  const topLevelSkills: typeof allSkillDirs = [];
+  for (const skillDir of allSkillDirs) {
+    const isNested = topLevelSkills.some(parent =>
+      skillDir.path.startsWith(parent.path + '/')
+    );
+
+    if (!isNested) {
+      topLevelSkills.push(skillDir);
+    }
+  }
+
+  return topLevelSkills;
+}
+
+/**
  * Factory function to get the appropriate Git provider service
  */
 export function getGitProvider(provider: 'github' | 'gitlab'): typeof GitHubService | typeof GitLabService {

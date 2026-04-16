@@ -21,6 +21,24 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'src/renderer/index.html')
+      },
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // Monaco Editor — large, only needed in skill editor
+            if (id.includes('monaco-editor')) return 'monaco';
+            // Shiki syntax highlighting
+            if (id.includes('shiki')) return 'shiki';
+            // Mermaid diagrams
+            if (id.includes('mermaid')) return 'mermaid';
+            // Markdown rendering
+            if (id.includes('react-markdown') || id.includes('remark') || id.includes('rehype')) return 'markdown';
+            // i18n
+            if (id.includes('i18next') || id.includes('react-i18next')) return 'i18n';
+            // Everything else (react, tiptap, etc. — kept together to avoid circular deps)
+            return 'vendor';
+          }
+        }
       }
     }
   },

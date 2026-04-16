@@ -11,7 +11,7 @@ import './styles/index.css';
 import './i18n'; // Initialize i18n before the app loads
 
 // Preload Shiki highlighter in background (doesn't block render)
-import('./components/ShikiService').then(({ shikiService }) => {
+import('./services/ShikiService').then(({ shikiService }) => {
   shikiService.init().catch(() => {});
 });
 

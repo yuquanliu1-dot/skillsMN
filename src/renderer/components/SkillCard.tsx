@@ -33,7 +33,7 @@ interface SkillCardProps {
   matchResult?: KeywordMatchResult;  // Keyword matching result
 }
 
-export default function SkillCard({
+function SkillCard({
   skill,
   onClick,
   onEdit,
@@ -477,3 +477,16 @@ export default function SkillCard({
     </>
   );
 }
+
+function skillPropsEqual(prev: SkillCardProps, next: SkillCardProps): boolean {
+  return (
+    prev.skill.path === next.skill.path &&
+    prev.skill.name === next.skill.name &&
+    prev.skill.isSymlinked === next.skill.isSymlinked &&
+    prev.isSelected === next.isSelected &&
+    prev.versionStatus === next.versionStatus &&
+    prev.matchResult === next.matchResult
+  );
+}
+
+export default React.memo(SkillCard, skillPropsEqual);

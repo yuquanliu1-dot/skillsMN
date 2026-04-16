@@ -194,6 +194,21 @@ export function getProxyAgent(url: string): any {
   return undefined;
 }
 
+// Persistent HTTPS agent for connection reuse (keepAlive)
+let persistentHttpsAgent: any = null;
+
+function getPersistentHttpsAgent(): any {
+  if (!persistentHttpsAgent) {
+    const https = require('https');
+    persistentHttpsAgent = new https.Agent({
+      keepAlive: true,
+      timeout: 30000,
+      maxSockets: 10,
+    });
+  }
+  return persistentHttpsAgent;
+}
+
 /**
  * Fetch with proxy support and timeout
  * This is a shared utility for all services that need to make HTTP requests
@@ -205,17 +220,12 @@ export async function fetchWithProxy(url: string, options: any = {}): Promise<an
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    // Get proxy agent if configured, otherwise use a fresh agent to avoid connection pooling issues
+    // Get proxy agent if configured, otherwise use a persistent agent for connection reuse
     let agent = getProxyAgent(url);
 
-    // If no proxy agent, create a simple agent that disables connection pooling
-    // This helps prevent ECONNRESET errors from connection reuse
+    // If no proxy agent, create a persistent agent with keepAlive for connection reuse
     if (!agent && url.startsWith('https://')) {
-      const https = require('https');
-      agent = new https.Agent({
-        keepAlive: false, // Disable keep-alive to prevent connection reuse issues
-        timeout: 30000,
-      });
+      agent = getPersistentHttpsAgent();
     }
 
     // Use node-fetch if available, otherwise use global fetch

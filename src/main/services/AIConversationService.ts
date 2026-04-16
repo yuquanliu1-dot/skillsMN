@@ -26,14 +26,13 @@ export class AIConversationService {
   /**
    * Initialize the service, creating the conversations directory if needed
    */
-  private ensureInitialized(): void {
+  private async ensureInitialized(): Promise<void> {
     if (this.initialized) return;
 
     try {
-      if (!fs.existsSync(this.conversationsDir)) {
-        fs.mkdirSync(this.conversationsDir, { recursive: true });
-        logger.info(`Created conversations directory: ${this.conversationsDir}`, 'AIConversationService');
-      }
+      await fs.promises.access(this.conversationsDir).catch(() => null);
+      await fs.promises.mkdir(this.conversationsDir, { recursive: true });
+      logger.info(`Created conversations directory: ${this.conversationsDir}`, 'AIConversationService');
       this.initialized = true;
     } catch (error) {
       logger.error(`Failed to initialize conversations directory: ${error}`, 'AIConversationService');
@@ -52,7 +51,7 @@ export class AIConversationService {
    * Save a conversation
    */
   async saveConversation(conversation: AIConversation): Promise<AIConversation> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     const filePath = this.getConversationPath(conversation.id);
 
@@ -63,7 +62,7 @@ export class AIConversationService {
         updatedAt: new Date().toISOString(),
       };
 
-      fs.writeFileSync(filePath, JSON.stringify(updatedConversation, null, 2), 'utf-8');
+      await fs.promises.writeFile(filePath, JSON.stringify(updatedConversation, null, 2), 'utf-8');
       logger.info(`Saved conversation: ${conversation.id}`, 'AIConversationService');
 
       // Clean up old conversations if we exceed the limit
@@ -80,22 +79,26 @@ export class AIConversationService {
    * Load all conversations, sorted by updatedAt (most recent first)
    */
   async loadConversations(): Promise<AIConversation[]> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     try {
-      const files = fs.readdirSync(this.conversationsDir)
+      const files = (await fs.promises.readdir(this.conversationsDir))
         .filter(file => file.endsWith('.json'));
 
       const conversations: AIConversation[] = [];
 
-      for (const file of files) {
-        try {
+      // Read all files in parallel
+      const results = await Promise.allSettled(
+        files.map(async (file) => {
           const filePath = path.join(this.conversationsDir, file);
-          const content = fs.readFileSync(filePath, 'utf-8');
-          const conversation = JSON.parse(content) as AIConversation;
-          conversations.push(conversation);
-        } catch (error) {
-          logger.warn(`Failed to load conversation ${file}: ${error}`, 'AIConversationService');
+          const content = await fs.promises.readFile(filePath, 'utf-8');
+          return JSON.parse(content) as AIConversation;
+        })
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          conversations.push(result.value);
         }
       }
 
@@ -116,19 +119,15 @@ export class AIConversationService {
    * Get a specific conversation by ID
    */
   async getConversation(conversationId: string): Promise<AIConversation | null> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     const filePath = this.getConversationPath(conversationId);
 
     try {
-      if (!fs.existsSync(filePath)) {
-        return null;
-      }
-
-      const content = fs.readFileSync(filePath, 'utf-8');
+      const content = await fs.promises.readFile(filePath, 'utf-8');
       return JSON.parse(content) as AIConversation;
     } catch (error) {
-      logger.error(`Failed to get conversation ${conversationId}: ${error}`, 'AIConversationService');
+      // File doesn't exist or can't be read
       return null;
     }
   }
@@ -137,18 +136,15 @@ export class AIConversationService {
    * Delete a conversation
    */
   async deleteConversation(conversationId: string): Promise<void> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     const filePath = this.getConversationPath(conversationId);
 
     try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        logger.info(`Deleted conversation: ${conversationId}`, 'AIConversationService');
-      }
+      await fs.promises.unlink(filePath);
+      logger.info(`Deleted conversation: ${conversationId}`, 'AIConversationService');
     } catch (error) {
-      logger.error(`Failed to delete conversation ${conversationId}: ${error}`, 'AIConversationService');
-      throw error;
+      // File may not exist, that's fine
     }
   }
 
@@ -157,31 +153,34 @@ export class AIConversationService {
    */
   private async cleanupOldConversations(): Promise<void> {
     try {
-      const files = fs.readdirSync(this.conversationsDir)
+      const files = (await fs.promises.readdir(this.conversationsDir))
         .filter(file => file.endsWith('.json'));
 
       if (files.length <= MAX_CONVERSATIONS) {
         return;
       }
 
-      // Get file stats to determine age
-      const fileStats = files.map(file => {
-        const filePath = path.join(this.conversationsDir, file);
-        const stat = fs.statSync(filePath);
-        return { file, mtime: stat.mtime };
-      });
+      // Get file stats to determine age (parallel)
+      const fileStats = await Promise.all(
+        files.map(async (file) => {
+          const filePath = path.join(this.conversationsDir, file);
+          const stat = await fs.promises.stat(filePath);
+          return { file, mtime: stat.mtime };
+        })
+      );
 
       // Sort by modification time, oldest first
       fileStats.sort((a, b) => a.mtime.getTime() - b.mtime.getTime());
 
-      // Delete oldest files to get under the limit
+      // Delete oldest files to get under the limit (parallel)
       const toDelete = fileStats.slice(0, files.length - MAX_CONVERSATIONS);
-
-      for (const { file } of toDelete) {
-        const filePath = path.join(this.conversationsDir, file);
-        fs.unlinkSync(filePath);
-        logger.info(`Cleaned up old conversation: ${file}`, 'AIConversationService');
-      }
+      await Promise.all(
+        toDelete.map(async ({ file }) => {
+          const filePath = path.join(this.conversationsDir, file);
+          await fs.promises.unlink(filePath);
+          logger.info(`Cleaned up old conversation: ${file}`, 'AIConversationService');
+        })
+      );
     } catch (error) {
       logger.error(`Failed to cleanup conversations: ${error}`, 'AIConversationService');
     }

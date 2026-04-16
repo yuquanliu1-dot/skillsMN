@@ -65,9 +65,6 @@ export function registerAIHandlers(): void {
           if (message.kind === 'error' || message.kind === 'complete') {
             break;
           }
-
-          // Small delay to avoid overwhelming the renderer
-          await new Promise(resolve => setTimeout(resolve, 50));
         }
 
         return { success: true };

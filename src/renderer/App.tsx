@@ -4,28 +4,29 @@
  * Root component with React Context for state management
  */
 
-import React, { createContext, useReducer, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useReducer, useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import type { Configuration, Skill, UIState, FilterSource, SortBy, PrivateSkill, PrivateRepo, MigrationOptions, MigrationResult, VersionComparison } from '../shared/types';
 import { ipcClient } from './services/ipcClient';
 import SetupDialog from './components/SetupDialog';
 import SkillList from './components/SkillList';
 import CreateSkillDialog from './components/CreateSkillDialog';
 import CopySkillDialog from './components/CopySkillDialog';
-import { lazy, Suspense } from 'react';
-const SkillEditor = lazy(() => import('./components/SkillEditor'));
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import UploadToPrivateRepoDialog from './components/UploadToPrivateRepoDialog';
 import CommitChangesDialog from './components/CommitChangesDialog';
-import Settings from './components/Settings';
 import ToastContainer, { ToastMessage } from './components/ToastContainer';
-import PrivateRepoList from './components/PrivateRepoList';
 import Sidebar, { ViewType } from './components/Sidebar';
-import { RegistrySearchPanel } from './components/RegistrySearchPanel';
-import MigrationDialog from './components/MigrationDialog';
 import SkillPreviewDrawer from './components/SkillPreviewDrawer';
 import LocalSkillPreviewDrawer from './components/LocalSkillPreviewDrawer';
-import SkillEditorFull from './components/SkillEditorFull';
-import ImportDialog from './components/ImportDialog';
+
+// Lazy-loaded components (separated from main bundle for faster initial load)
+const SkillEditor = lazy(() => import('./components/SkillEditor'));
+const SkillEditorFull = lazy(() => import('./components/SkillEditorFull'));
+const Settings = lazy(() => import('./components/Settings'));
+const PrivateRepoList = lazy(() => import('./components/PrivateRepoList'));
+const RegistrySearchPanel = lazy(() => import('./components/RegistrySearchPanel').then(m => ({ default: m.RegistrySearchPanel })));
+const MigrationDialog = lazy(() => import('./components/MigrationDialog'));
+const ImportDialog = lazy(() => import('./components/ImportDialog'));
 
 type MainTab = 'local' | 'private-repos';
 
@@ -780,6 +781,23 @@ export default function App(): JSX.Element {
     }
   };
 
+  // Memoized callbacks for SkillList to avoid re-renders
+  const handleSkillClick = useCallback((skill: Skill) => setViewingSkill(skill), []);
+  const handleSkillSelect = useCallback((skill: Skill) => setSelectedSkillPath(skill.path), []);
+  const handleCreateNewSkill = useCallback(() => {
+    setEditingSkill(null);
+    setIsNewSkillMode(true);
+  }, []);
+  const handleImportSkill = useCallback(() => setShowImportDialog(true), []);
+  const handleEditSkill = useCallback((skill: Skill) => {
+    setEditingSkill(skill);
+    setIsNewSkillMode(false);
+  }, []);
+  const memoDeleteSkill = useCallback((skill: Skill) => setDeletingSkill(skill), []);
+  const memoCopySkill = useCallback((skill: Skill) => setCopyingSkill(skill), []);
+  const memoNavigateToSettings = useCallback(() => setShowSettings(true), []);
+  const handleTagAssigned = useCallback(() => { loadSkills(); }, [loadSkills]);
+
   /**
    * Render loading state
    */
@@ -825,13 +843,15 @@ export default function App(): JSX.Element {
    */
   if (showMigrationDialog) {
     return (
-      <MigrationDialog
-        isOpen={showMigrationDialog}
-        skills={migrationSkills}
-        targetDirectory={migrationTargetDirectory}
-        onMigrate={handleMigrationComplete}
-        onSkip={handleMigrationSkip}
-      />
+      <Suspense fallback={null}>
+        <MigrationDialog
+          isOpen={showMigrationDialog}
+          skills={migrationSkills}
+          targetDirectory={migrationTargetDirectory}
+          onMigrate={handleMigrationComplete}
+          onSkip={handleMigrationSkip}
+        />
+      </Suspense>
     );
   }
 
@@ -855,46 +875,43 @@ export default function App(): JSX.Element {
           <div style={{ display: currentView === 'skills' ? 'flex' : 'none' }} className="h-full flex flex-col overflow-hidden">
             <SkillList
               skills={state.skills}
-              onSkillClick={(skill) => setViewingSkill(skill)}
-              onSkillSelect={(skill) => setSelectedSkillPath(skill.path)}
-              onCreateSkill={() => {
-                // Directly open the skill editor in new skill mode, skip the dialog
-                setEditingSkill(null);
-                setIsNewSkillMode(true);
-              }}
-              onImportSkill={() => setShowImportDialog(true)}
-              onEditSkill={(skill) => {
-                setEditingSkill(skill);
-                setIsNewSkillMode(false);
-              }}
-              onDeleteSkill={(skill) => setDeletingSkill(skill)}
-              onCopySkill={(skill) => setCopyingSkill(skill)}
+              onSkillClick={handleSkillClick}
+              onSkillSelect={handleSkillSelect}
+              onCreateSkill={handleCreateNewSkill}
+              onImportSkill={handleImportSkill}
+              onEditSkill={handleEditSkill}
+              onDeleteSkill={memoDeleteSkill}
+              onCopySkill={memoCopySkill}
               onOpenFolder={handleOpenFolder}
               selectedSkillPath={selectedSkillPath}
               skillUpdates={skillUpdates}
               onSkillUpdate={handleUpdateSkill}
-              onNavigateToSettings={() => setShowSettings(true)}
-              onTagAssigned={loadSkills}
+              onNavigateToSettings={memoNavigateToSettings}
+              onTagAssigned={handleTagAssigned}
               onRefresh={handleRefreshSkills}
               isRefreshing={isRefreshingSkills}
             />
           </div>
 
           <div style={{ display: currentView === 'discover' ? 'flex' : 'none' }} className="h-full flex flex-col overflow-hidden">
-            <RegistrySearchPanel
-              config={state.config}
-              onInstallComplete={loadSkills}
-              onSkillClick={handleViewDiscoverSkill}
-            />
+            <Suspense fallback={null}>
+              <RegistrySearchPanel
+                config={state.config}
+                onInstallComplete={loadSkills}
+                onSkillClick={handleViewDiscoverSkill}
+              />
+            </Suspense>
           </div>
 
           <div style={{ display: currentView === 'private-repos' ? 'flex' : 'none' }} className="h-full flex flex-col overflow-hidden">
-            <PrivateRepoList
-              onSkillClick={handleViewPrivateSkill}
-              onNavigateToSettings={() => setShowSettings(true)}
-              onTagAssigned={loadSkills}
-              onLocalSkillsRefresh={loadSkills}
-            />
+            <Suspense fallback={null}>
+              <PrivateRepoList
+                onSkillClick={handleViewPrivateSkill}
+                onNavigateToSettings={memoNavigateToSettings}
+                onTagAssigned={handleTagAssigned}
+                onLocalSkillsRefresh={loadSkills}
+              />
+            </Suspense>
           </div>
         </div>
       </div>
@@ -913,6 +930,7 @@ export default function App(): JSX.Element {
 
       {/* Full-Screen Skill Editor (Two-Column Layout) */}
       {(editingSkill || isNewSkillMode) && (
+        <Suspense fallback={null}>
         <SkillEditorFull
           skill={editingSkill}
           isNewSkill={isNewSkillMode}
@@ -984,6 +1002,7 @@ export default function App(): JSX.Element {
           }}
           onShowToast={showToast}
         />
+        </Suspense>
       )}
 
       {/* Discover Skill Preview Drawer */}
@@ -1091,6 +1110,7 @@ export default function App(): JSX.Element {
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {/* Import Dialog */}
+      <Suspense fallback={null}>
       <ImportDialog
         isOpen={showImportDialog}
         onClose={() => setShowImportDialog(false)}
@@ -1099,8 +1119,10 @@ export default function App(): JSX.Element {
           showToast('Skills imported successfully', 'success');
         }}
       />
+      </Suspense>
 
       {/* Settings Modal */}
+      <Suspense fallback={null}>
       <Settings
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
@@ -1108,6 +1130,7 @@ export default function App(): JSX.Element {
         onSave={handleSaveSettings}
         onDirectoryAdded={handleProjectDirectoryAdded}
       />
+      </Suspense>
     </AppContext.Provider>
   );
 }

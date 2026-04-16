@@ -26,6 +26,7 @@ import { app } from 'electron';
 import { compareVersions } from '../utils/versionUtils';
 import { hasUnpushedCommits } from '../utils/gitOperations';
 import { GitApiError } from '../utils/GitApiError';
+import { toKebabCase } from '../utils/pathUtils';
 
 export class SkillService {
   private frontmatterCache: Map<string, { data: any; timestamp: number }> = new Map();
@@ -188,16 +189,18 @@ export class SkillService {
 
       // Get skill directories
       const skillDirs = await SkillDirectoryModel.getSkillDirectories(dirPath);
-      const skills: Skill[] = [];
 
-      // Parse each skill directory (T127: cached frontmatter)
-      for (const skillDir of skillDirs) {
-        try {
-          const skill = await SkillModel.fromDirectory(skillDir, source, this.frontmatterCache);
-          skills.push(skill);
-        } catch (error) {
-          logger.warn(`Failed to parse skill: ${skillDir}`, 'SkillService', { error });
-          // Continue with other skills
+      // Parse each skill directory in parallel (T127: cached frontmatter)
+      const results = await Promise.allSettled(
+        skillDirs.map(skillDir => SkillModel.fromDirectory(skillDir, source, this.frontmatterCache))
+      );
+
+      const skills: Skill[] = [];
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          skills.push(result.value);
+        } else {
+          logger.warn(`Failed to parse skill`, 'SkillService', { error: result.reason });
         }
       }
 
@@ -293,7 +296,7 @@ export class SkillService {
     });
 
     // Generate kebab-case directory name
-    const kebabName = this.toKebabCase(name);
+    const kebabName = toKebabCase(name);
     const skillDir = path.join(targetBase, kebabName);
 
     // Validate path
@@ -559,17 +562,6 @@ ${content}`;
 
     await shell.openPath(validatedPath);
     logger.debug(`Opened folder: ${validatedPath}`, 'SkillService');
-  }
-
-  /**
-   * Convert string to kebab-case
-   */
-  private toKebabCase(str: string): string {
-    return str
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
   }
 
   /**
@@ -1952,7 +1944,7 @@ ${content}`;
 
       // Extract skill name from path
       const skillName = path.basename(skillPath);
-      const kebabName = this.toKebabCase(skillName);
+      const kebabName = toKebabCase(skillName);
       const targetPath = path.join(baseDir, kebabName);
 
       // Check for conflicts

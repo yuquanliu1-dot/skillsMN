@@ -12,6 +12,8 @@ import { retryWithBackoff } from '../utils/retry';
 import type { TreeItem, Commit, SkillMetadata } from './GitProvider';
 import { getProxyAgent } from '../utils/proxy';
 import { GitApiError } from '../utils/GitApiError';
+import { Cache } from '../utils/Cache';
+import { findSkillDirectories } from './GitProvider';
 
 // HTTPS agent that ignores self-signed certificates for self-hosted GitLab instances
 const insecureAgent = new https.Agent({
@@ -28,46 +30,6 @@ const isInsecureInstance = (url: string): boolean => {
     return true;
   }
 };
-
-/**
- * Simple in-memory cache with TTL
- */
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-  ttl: number;
-}
-
-class Cache {
-  private entries = new Map<string, CacheEntry<any>>();
-
-  set<T>(key: string, data: T, ttlMs: number): void {
-    this.entries.set(key, {
-      data,
-      timestamp: Date.now(),
-      ttl: ttlMs,
-    });
-  }
-
-  get<T>(key: string): T | null {
-    const entry = this.entries.get(key);
-    if (!entry) {
-      return null;
-    }
-
-    // Check if expired
-    if (Date.now() - entry.timestamp > entry.ttl) {
-      this.entries.delete(key);
-      return null;
-    }
-
-    return entry.data as T;
-  }
-
-  clear(): void {
-    this.entries.clear();
-  }
-}
 
 // Default timeout for GitLab API requests (30 seconds)
 const GITLAB_API_TIMEOUT_MS = 30000;
@@ -336,43 +298,10 @@ export class GitLabService {
 
   /**
    * Find skill directories in repository tree
-   * When a directory is identified as a skill (contains SKILL.md), its subdirectories
-   * are not searched for additional skills (prevents nested sub-skills from being listed)
+   * Delegates to shared utility in GitProvider
    */
   private static findSkillDirectories(tree: TreeItem[]): any[] {
-    const skillFiles = tree.filter((item: TreeItem) => {
-      return item.type === 'blob' && item.path.endsWith('SKILL.md');
-    });
-
-    // Get all skill directories first
-    const allSkillDirs = skillFiles.map((file: TreeItem) => {
-      const pathParts = file.path.split('/');
-      pathParts.pop();
-      const dirPath = pathParts.join('/');
-      const depth = pathParts.length;
-
-      return {
-        path: dirPath,
-        name: pathParts[pathParts.length - 1] || 'root',
-        skillFilePath: file.path,
-        depth,
-      };
-    });
-
-    // Filter out nested skills (skills that are subdirectories of other skills)
-    const topLevelSkills: typeof allSkillDirs = [];
-    for (const skillDir of allSkillDirs) {
-      // Check if this skill is a subdirectory of any already-added top-level skill
-      const isNested = topLevelSkills.some(parent =>
-        skillDir.path.startsWith(parent.path + '/')
-      );
-
-      if (!isNested) {
-        topLevelSkills.push(skillDir);
-      }
-    }
-
-    return topLevelSkills;
+    return findSkillDirectories(tree);
   }
 
   /**

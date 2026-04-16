@@ -7,7 +7,7 @@
  * Phase 2: Shiki code highlighting + custom block renderers
  */
 
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -349,7 +349,7 @@ function MarkdownRendererInner({
   const components = componentSets[mode];
 
   // If onLinkClick is provided, wrap link components
-  const finalComponents = onLinkClick
+  const finalComponents = useMemo(() => onLinkClick
     ? {
         ...components,
         a: ({ href, children, ...rest }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children?: React.ReactNode }) => (
@@ -367,7 +367,7 @@ function MarkdownRendererInner({
           </a>
         ),
       }
-    : components;
+    : components, [components, onLinkClick]);
 
   return (
     <div className={`markdown-renderer markdown-${mode} ${className}`}>

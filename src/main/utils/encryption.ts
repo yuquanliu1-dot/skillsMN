@@ -1,97 +1,17 @@
 /**
- * Encryption Utility for Private Repository PATs
+ * Encryption Utility
  *
- * Uses Electron's safeStorage for secure credential encryption
- * Falls back to OS-specific credential managers on different platforms
+ * Unified encryption/decryption for API keys and PATs using Electron safeStorage
+ * Supports two modes:
+ * - Strict: Throws if encryption is unavailable (for PATs)
+ * - Fallback: Falls back to base64 encoding (for API keys)
  */
 
 import { safeStorage } from 'electron';
 import { logger } from './Logger';
 
 /**
- * Encrypt a Personal Access Token using Electron safeStorage
- *
- * Platform-specific implementation:
- * - Windows: Uses DPAPI (Data Protection API) with user credentials
- * - macOS: Uses Keychain Access for secure storage
- * - Linux: Uses libsecret (requires GNOME Keyring or KDE Wallet)
- *
- * The encrypted data is tied to the user account and cannot be decrypted
- * on a different machine or by a different user.
- *
- * @param pat - Plain text PAT to encrypt
- * @returns Base64-encoded encrypted PAT (safe for JSON storage)
- * @throws Error if encryption is not available or fails
- */
-export function encryptPAT(pat: string): string {
-  // Check platform support before attempting encryption
-  // This prevents runtime errors on Linux systems without libsecret
-  if (!safeStorage.isEncryptionAvailable()) {
-    const error = new Error('Credential encryption not available on this platform');
-    logger.error('Encryption not available', 'EncryptionUtil', {
-      platform: process.platform,
-      error: error.message,
-    });
-    throw error;
-  }
-
-  try {
-    const encrypted = safeStorage.encryptString(pat);
-    const encryptedBase64 = encrypted.toString('base64');
-
-    logger.debug('PAT encrypted successfully', 'EncryptionUtil');
-    return encryptedBase64;
-  } catch (error) {
-    logger.error('Failed to encrypt PAT', 'EncryptionUtil', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw new Error('Failed to encrypt PAT');
-  }
-}
-
-/**
- * Decrypt an encrypted Personal Access Token
- *
- * Reverse operation of encryptPAT():
- * 1. Converts Base64 string back to Buffer
- * 2. Passes to safeStorage.decryptString()
- * 3. Returns plain text PAT for API authentication
- *
- * SECURITY: The decrypted PAT should never be exposed to the renderer process.
- * It should only be used in the main process for GitHub API calls.
- *
- * @param encryptedPAT - Base64-encoded encrypted PAT (from config file)
- * @returns Decrypted plain text PAT (for API use only)
- * @throws Error if decryption fails (corrupted data or wrong platform)
- */
-export function decryptPAT(encryptedPAT: string): string {
-  // Verify encryption support before attempting decryption
-  if (!safeStorage.isEncryptionAvailable()) {
-    const error = new Error('Credential encryption not available on this platform');
-    logger.error('Decryption not available', 'EncryptionUtil', {
-      platform: process.platform,
-      error: error.message,
-    });
-    throw error;
-  }
-
-  try {
-    const buffer = Buffer.from(encryptedPAT, 'base64');
-    const decrypted = safeStorage.decryptString(buffer);
-
-    logger.debug('PAT decrypted successfully', 'EncryptionUtil');
-    return decrypted;
-  } catch (error) {
-    logger.error('Failed to decrypt PAT', 'EncryptionUtil', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw new Error('Failed to decrypt PAT');
-  }
-}
-
-/**
- * Check if credential encryption is available on this platform
- * @returns True if encryption is available
+ * Check if encryption is available on this platform
  */
 export function isEncryptionAvailable(): boolean {
   const available = safeStorage.isEncryptionAvailable();
@@ -106,16 +26,11 @@ export function isEncryptionAvailable(): boolean {
 
 /**
  * Get encryption backend info for debugging
- * @returns Human-readable description of encryption backend
  */
 export function getEncryptionBackend(): string {
   if (!safeStorage.isEncryptionAvailable()) {
     return 'Not available';
   }
-
-  // On Windows, uses DPAPI
-  // On macOS, uses Keychain Access
-  // On Linux, uses Secret Service API (libsecret)
 
   switch (process.platform) {
     case 'win32':
@@ -127,4 +42,174 @@ export function getEncryptionBackend(): string {
     default:
       return 'Unknown';
   }
+}
+
+/**
+ * Encrypt a value using Electron safeStorage (strict mode)
+ * Throws if encryption is not available
+ *
+ * @param value - Plain text value to encrypt
+ * @param label - Label for logging (e.g., 'PAT', 'API key')
+ * @returns Base64-encoded encrypted value
+ * @throws Error if encryption is not available or fails
+ */
+export function encryptStrict(value: string, label: string = 'value'): string {
+  if (typeof value !== 'string') {
+    throw new Error(`${label} must be a string`);
+  }
+
+  if (!value) {
+    return '';
+  }
+
+  if (!safeStorage.isEncryptionAvailable()) {
+    const error = new Error('Credential encryption not available on this platform');
+    logger.error('Encryption not available', 'EncryptionUtil', {
+      platform: process.platform,
+      error: error.message,
+    });
+    throw error;
+  }
+
+  try {
+    const encrypted = safeStorage.encryptString(value);
+    logger.debug(`${label} encrypted successfully`, 'EncryptionUtil');
+    return encrypted.toString('base64');
+  } catch (error) {
+    logger.error(`Failed to encrypt ${label}`, 'EncryptionUtil', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error(`Failed to encrypt ${label}`);
+  }
+}
+
+/**
+ * Decrypt a value using Electron safeStorage (strict mode)
+ * Throws if encryption is not available
+ *
+ * @param encryptedValue - Base64-encoded encrypted value
+ * @param label - Label for logging (e.g., 'PAT', 'API key')
+ * @returns Decrypted plain text value
+ * @throws Error if decryption fails
+ */
+export function decryptStrict(encryptedValue: string, label: string = 'value'): string {
+  if (typeof encryptedValue !== 'string') {
+    throw new Error(`Encrypted ${label} must be a string`);
+  }
+
+  if (!encryptedValue) {
+    return '';
+  }
+
+  if (!safeStorage.isEncryptionAvailable()) {
+    const error = new Error('Credential encryption not available on this platform');
+    logger.error('Decryption not available', 'EncryptionUtil', {
+      platform: process.platform,
+      error: error.message,
+    });
+    throw error;
+  }
+
+  try {
+    const buffer = Buffer.from(encryptedValue, 'base64');
+    logger.debug(`${label} decrypted successfully`, 'EncryptionUtil');
+    return safeStorage.decryptString(buffer);
+  } catch (error) {
+    logger.error(`Failed to decrypt ${label}`, 'EncryptionUtil', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error(`Failed to decrypt ${label}`);
+  }
+}
+
+/**
+ * Encrypt a value using Electron safeStorage (fallback mode)
+ * Falls back to base64 if safeStorage is unavailable
+ *
+ * @param value - Plain text value to encrypt
+ * @param label - Label for logging
+ * @returns Encrypted value (base64 encoded)
+ */
+export function encryptWithFallback(value: string, label: string = 'API key'): string {
+  if (typeof value !== 'string') {
+    throw new Error(`${label} must be a string`);
+  }
+
+  if (!value) {
+    return '';
+  }
+
+  if (!safeStorage.isEncryptionAvailable()) {
+    logger.warn(
+      `Encryption not available, storing ${label} in base64 (NOT SECURE)`,
+      'EncryptionUtil'
+    );
+    return Buffer.from(value).toString('base64');
+  }
+
+  try {
+    const encrypted = safeStorage.encryptString(value);
+    return encrypted.toString('base64');
+  } catch (error) {
+    logger.error(`Failed to encrypt ${label}`, 'EncryptionUtil', error);
+    throw new Error(`Failed to encrypt ${label}`);
+  }
+}
+
+/**
+ * Decrypt a value using Electron safeStorage (fallback mode)
+ * Falls back to base64 decode if safeStorage is unavailable
+ *
+ * @param encryptedValue - Base64-encoded encrypted value
+ * @param label - Label for logging
+ * @returns Decrypted plain text value
+ */
+export function decryptWithFallback(encryptedValue: string, label: string = 'API key'): string {
+  if (typeof encryptedValue !== 'string') {
+    throw new Error(`Encrypted ${label} must be a string`);
+  }
+
+  if (!encryptedValue) {
+    return '';
+  }
+
+  if (!safeStorage.isEncryptionAvailable()) {
+    logger.warn(
+      `Encryption not available, decrypting ${label} from base64 (NOT SECURE)`,
+      'EncryptionUtil'
+    );
+    return Buffer.from(encryptedValue, 'base64').toString('utf-8');
+  }
+
+  try {
+    const buffer = Buffer.from(encryptedValue, 'base64');
+    return safeStorage.decryptString(buffer);
+  } catch (error) {
+    logger.error(`Failed to decrypt ${label}`, 'EncryptionUtil', error);
+    throw new Error(`Failed to decrypt ${label}. The key may be corrupted or was encrypted on a different machine.`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Backward-compatible named exports
+// ---------------------------------------------------------------------------
+
+/** Encrypt API key (fallback mode) */
+export function encryptAPIKey(apiKey: string): string {
+  return encryptWithFallback(apiKey, 'API key');
+}
+
+/** Decrypt API key (fallback mode) */
+export function decryptAPIKey(encryptedKey: string): string {
+  return decryptWithFallback(encryptedKey, 'API key');
+}
+
+/** Encrypt PAT (strict mode) */
+export function encryptPAT(pat: string): string {
+  return encryptStrict(pat, 'PAT');
+}
+
+/** Decrypt PAT (strict mode) */
+export function decryptPAT(encryptedPAT: string): string {
+  return decryptStrict(encryptedPAT, 'PAT');
 }

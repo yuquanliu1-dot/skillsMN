@@ -21,87 +21,12 @@ import { toKebabCase } from '../utils/pathUtils';
 import type { ProxyConfig } from '../../shared/types';
 // Import shared proxy utilities and re-export for backward compatibility
 export { setProxyConfig, getProxyAgent, getProxySettings } from '../utils/proxy';
-import { getProxyAgent } from '../utils/proxy';
+import { getProxyAgent, fetchWithProxy } from '../utils/proxy';
 import { GitApiError } from '../utils/GitApiError';
+import { Cache } from '../utils/Cache';
+import { findSkillDirectories } from './GitProvider';
 
 const GITHUB_API_BASE = 'https://api.github.com';
-
-/**
- * Fetch with system proxy support and timeout
- */
-async function fetchWithProxy(url: string, options: any = {}): Promise<any> {
-  // Add default timeout of 30 seconds if not specified
-  const timeout = options.timeout || 30000;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    // Get proxy agent if configured, otherwise use a fresh agent to avoid connection pooling issues
-    let agent = getProxyAgent(url);
-
-    // If no proxy agent, create a simple agent that disables connection pooling
-    // This helps prevent ECONNRESET errors from connection reuse
-    if (!agent && url.startsWith('https://')) {
-      const https = require('https');
-      agent = new https.Agent({
-        keepAlive: false, // Disable keep-alive to prevent connection reuse issues
-        timeout: 30000,
-      });
-    }
-
-    const response = await fetch(url, {
-      ...options,
-      agent,
-      signal: options.signal || controller.signal,
-    });
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-/**
- * Cache entry
- */
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-  ttl: number;
-}
-
-/**
- * Simple in-memory cache with TTL
- */
-class Cache {
-  private entries = new Map<string, CacheEntry<any>>();
-
-  set<T>(key: string, data: T, ttlMs: number): void {
-    this.entries.set(key, {
-      data,
-      timestamp: Date.now(),
-      ttl: ttlMs,
-    });
-  }
-
-  get<T>(key: string): T | null {
-    const entry = this.entries.get(key);
-    if (!entry) {
-      return null;
-    }
-
-    // Check if expired
-    if (Date.now() - entry.timestamp > entry.ttl) {
-      this.entries.delete(key);
-      return null;
-    }
-
-    return entry.data as T;
-  }
-
-  clear(): void {
-    this.entries.clear();
-  }
-}
 
 // Cache instance (5-minute TTL)
 const cache = new Cache();
@@ -775,47 +700,10 @@ export class GitHubService {
 
   /**
    * Find skill directories in repository tree
-   * When a directory is identified as a skill (contains SKILL.md), its subdirectories
-   * are not searched for additional skills (prevents nested sub-skills from being listed)
+   * Delegates to shared utility in GitProvider
    */
   static findSkillDirectories(tree: any[]): any[] {
-    const skillFiles = tree.filter((item: any) => {
-      return item.type === 'blob' && item.path.endsWith('SKILL.md');
-    });
-
-    // Build list of skill directories with their paths
-    const allSkillDirs: { path: string; name: string; skillFilePath: string; depth: number }[] = [];
-    for (const file of skillFiles) {
-      const pathParts = file.path.split('/');
-      pathParts.pop();
-      const dirPath = pathParts.join('/');
-      const depth = pathParts.length;
-
-      allSkillDirs.push({
-        path: dirPath,
-        name: pathParts[pathParts.length - 1] || 'root',
-        skillFilePath: file.path,
-        depth,
-      });
-    }
-
-    // Sort by path length (shorter first) to process parent dirs before children
-    allSkillDirs.sort((a, b) => a.path.length - b.path.length);
-
-    // Filter out nested skills (skills that are subdirectories of other skills)
-    const topLevelSkills: typeof allSkillDirs = [];
-    for (const skillDir of allSkillDirs) {
-      // Check if this skill is a subdirectory of any already-added top-level skill
-      const isNested = topLevelSkills.some(parent =>
-        skillDir.path.startsWith(parent.path + '/')
-      );
-
-      if (!isNested) {
-        topLevelSkills.push(skillDir);
-      }
-    }
-
-    return topLevelSkills;
+    return findSkillDirectories(tree);
   }
 
   /**
@@ -850,11 +738,9 @@ export class GitHubService {
 
       const files = new Map<string, string>();
 
-      // Process files sequentially with delay to avoid rate limiting and connection issues
-      // Using GitHub API instead of raw.githubusercontent.com to avoid IPv6 issues
-      for (const file of directoryFiles) {
-        try {
-          // Use GitHub API to get file content (more reliable than raw.githubusercontent.com)
+      // Download files in parallel using GitHub API
+      const results = await Promise.allSettled(
+        directoryFiles.map(async (file: any) => {
           const content = await retryWithBackoff(
             async () => {
               const headers: Record<string, string> = {
@@ -882,15 +768,17 @@ export class GitHubService {
             { maxAttempts: 3, initialDelay: 1000, backoffMultiplier: 2 }
           );
 
-          files.set(file.path, content);
+          return { path: file.path, content };
+        })
+      );
 
-          // Small delay between files to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (fileError) {
-          logger.warn(`Failed to download file ${file.path}, skipping`, 'GitHubService', {
-            error: fileError instanceof Error ? fileError.message : 'Unknown error',
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          files.set(result.value.path, result.value.content);
+        } else {
+          logger.warn('Failed to download file, skipping', 'GitHubService', {
+            error: result.reason instanceof Error ? result.reason.message : 'Unknown error',
           });
-          // Continue with other files instead of failing completely
         }
       }
 

@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import shikiService from './ShikiService';
+import shikiService from '../services/ShikiService';
 import CopyButton from './CopyButton';
 
 interface CodeBlockShikiProps {

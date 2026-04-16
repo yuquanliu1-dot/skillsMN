@@ -38,19 +38,25 @@ class Logger {
     }
 
     if (this.isPackaged) {
-      // In packaged mode, write logs to file
+      // In packaged mode, lazily initialize file logging on first write
+      this.initPromise = null;
+    }
+  }
+
+  private initPromise: Promise<void> | null = null;
+
+  private ensureLogStream(): void {
+    if (this.logStream || this.initPromise) return;
+    this.initPromise = (async () => {
       try {
         const logsDir = path.join(app.getPath('userData'), 'logs');
-        if (!fs.existsSync(logsDir)) {
-          fs.mkdirSync(logsDir, { recursive: true });
-        }
+        await fs.promises.mkdir(logsDir, { recursive: true });
         this.logFilePath = path.join(logsDir, `app-${new Date().toISOString().split('T')[0]}.log`);
         this.logStream = fs.createWriteStream(this.logFilePath, { flags: 'a' });
       } catch (error) {
-        // Fallback to console if file logging fails
         console.error('Failed to initialize file logging:', error);
       }
-    }
+    })();
   }
 
   private formatTimestamp(): string {
@@ -99,9 +105,12 @@ class Logger {
 
     const formatted = this.formatEntry(entry);
 
-    // In packaged mode, write to file only (avoid stdout pollution for CLI)
-    if (this.isPackaged && this.logStream) {
-      this.logStream.write(formatted + '\n');
+    // In packaged mode, lazily init and write to file
+    if (this.isPackaged) {
+      this.ensureLogStream();
+      if (this.logStream) {
+        this.logStream.write(formatted + '\n');
+      }
       // Also write errors to stderr for visibility
       if (level === LogLevel.ERROR) {
         console.error(formatted);
