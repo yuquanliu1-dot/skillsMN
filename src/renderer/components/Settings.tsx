@@ -1425,46 +1425,30 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               </div>
 
               <div className="space-y-4">
-                {/* Font Size and Theme */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                      {t('settings.fontSize')}
-                    </label>
-                    <select
-                      data-testid="editor-font-size"
-                      value={skillEditorConfig.fontSize}
-                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, fontSize: parseInt(e.target.value) })}
-                      className="input text-sm"
-                      disabled={isSaving}
-                    >
-                      <option value="10">10px</option>
-                      <option value="11">11px</option>
-                      <option value="12">12px</option>
-                      <option value="13">13px</option>
-                      <option value="14">14px (Default)</option>
-                      <option value="15">15px</option>
-                      <option value="16">16px</option>
-                      <option value="18">18px</option>
-                      <option value="20">20px</option>
-                      <option value="22">22px</option>
-                      <option value="24">24px</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                      {t('settings.theme')}
-                    </label>
-                    <select
-                      value={skillEditorConfig.theme}
-                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, theme: e.target.value as 'light' | 'dark' })}
-                      className="input text-sm"
-                      disabled={isSaving}
-                    >
-                      <option value="light">Light</option>
-                      <option value="dark">Dark</option>
-                    </select>
-                  </div>
+                {/* Font Size */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    {t('settings.fontSize')}
+                  </label>
+                  <select
+                    data-testid="editor-font-size"
+                    value={skillEditorConfig.fontSize}
+                    onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, fontSize: parseInt(e.target.value) })}
+                    className="input text-sm"
+                    disabled={isSaving}
+                  >
+                    <option value="10">10px</option>
+                    <option value="11">11px</option>
+                    <option value="12">12px</option>
+                    <option value="13">13px</option>
+                    <option value="14">14px (Default)</option>
+                    <option value="15">15px</option>
+                    <option value="16">16px</option>
+                    <option value="18">18px</option>
+                    <option value="20">20px</option>
+                    <option value="22">22px</option>
+                    <option value="24">24px</option>
+                  </select>
                 </div>
 
                 {/* Font Family */}
@@ -1537,55 +1521,44 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                   </div>
                 </div>
 
-                {/* Toggle Options */}
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between group">
-                    <div className="flex items-center gap-3.5 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => setSkillEditorConfig({ ...skillEditorConfig, showMinimap: !skillEditorConfig.showMinimap })}
-                        disabled={isSaving}
-                        className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
-                          skillEditorConfig.showMinimap ? 'bg-blue-500' : 'bg-slate-200 group-hover:bg-slate-300'
-                        } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                        aria-pressed={skillEditorConfig.showMinimap}
-                      >
-                        <span
-                          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
-                            skillEditorConfig.showMinimap ? 'translate-x-5' : 'translate-x-0'
-                          }`}
-                        />
-                      </button>
-                      <div>
-                        <span className="text-sm text-slate-700 font-medium block">{t('settings.showMinimap')}</span>
-                        <p className="text-xs text-slate-500">Show code minimap on the right side</p>
-                      </div>
-                    </div>
+                {/* Toggle Options - 2 columns */}
+                <div className="grid grid-cols-2 gap-4 pt-1">
+                  <div className="flex items-center gap-3.5">
+                    <button
+                      type="button"
+                      onClick={() => setSkillEditorConfig({ ...skillEditorConfig, showMinimap: !skillEditorConfig.showMinimap })}
+                      disabled={isSaving}
+                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out flex-shrink-0 ${
+                        skillEditorConfig.showMinimap ? 'bg-blue-500' : 'bg-slate-200 group-hover:bg-slate-300'
+                      } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      aria-pressed={skillEditorConfig.showMinimap}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
+                          skillEditorConfig.showMinimap ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                    <span className="text-sm text-slate-700 font-medium">{t('settings.showMinimap')}</span>
                   </div>
-
-                  <div className="flex items-center justify-between group">
-                    <div className="flex items-center gap-3.5 flex-1">
-                      <button
-                        type="button"
-                        data-testid="word-wrap-toggle"
-                        onClick={() => setSkillEditorConfig({ ...skillEditorConfig, wordWrap: !skillEditorConfig.wordWrap })}
-                        disabled={isSaving}
-                        className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
-                          skillEditorConfig.wordWrap ? 'bg-blue-500' : 'bg-slate-200 group-hover:bg-slate-300'
-                        } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                        aria-pressed={skillEditorConfig.wordWrap}
-                      >
-                        <span
-                          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
-                            skillEditorConfig.wordWrap ? 'translate-x-5' : 'translate-x-0'
-                          }`}
-                        />
-                      </button>
-                      <div>
-                        <span className="text-sm text-slate-700 font-medium block">{t('settings.enableWordWrap')}</span>
-                        <p className="text-xs text-slate-500">Wrap long lines to fit the editor width</p>
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-3.5">
+                    <button
+                      type="button"
+                      data-testid="word-wrap-toggle"
+                      onClick={() => setSkillEditorConfig({ ...skillEditorConfig, wordWrap: !skillEditorConfig.wordWrap })}
+                      disabled={isSaving}
+                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out flex-shrink-0 ${
+                        skillEditorConfig.wordWrap ? 'bg-blue-500' : 'bg-slate-200 group-hover:bg-slate-300'
+                      } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      aria-pressed={skillEditorConfig.wordWrap}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
+                          skillEditorConfig.wordWrap ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                    <span className="text-sm text-slate-700 font-medium">{t('settings.enableWordWrap')}</span>
                   </div>
                 </div>
               </div>
@@ -1600,49 +1573,40 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                 <h4 className="text-sm font-semibold text-slate-900">Auto-save</h4>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between group">
-                  <div className="flex items-center gap-3.5 flex-1">
-                    <button
-                      type="button"
-                      onClick={() => setSkillEditorConfig({ ...skillEditorConfig, autoSaveEnabled: !skillEditorConfig.autoSaveEnabled })}
-                      disabled={isSaving}
-                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
-                        skillEditorConfig.autoSaveEnabled ? 'bg-blue-500' : 'bg-slate-200 group-hover:bg-slate-300'
-                      } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                      aria-pressed={skillEditorConfig.autoSaveEnabled}
-                    >
-                      <span
-                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
-                          skillEditorConfig.autoSaveEnabled ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                    <div>
-                      <span className="text-sm text-slate-700 font-medium block">{t('settings.enableAutoSave')}</span>
-                      <p className="text-xs text-slate-500">Automatically save changes while editing</p>
-                    </div>
-                  </div>
-                </div>
-
-                {skillEditorConfig.autoSaveEnabled && (
-                  <div className="pl-12">
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                      {t('settings.autoSaveDelay')} (ms)
-                    </label>
-                    <input
-                      type="number"
-                      value={skillEditorConfig.autoSaveDelay}
-                      onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, autoSaveDelay: parseInt(e.target.value) })}
-                      min={500}
-                      max={10000}
-                      step={500}
-                      className="input text-sm"
-                      disabled={isSaving}
+              <div>
+                <div className="flex items-center gap-3.5">
+                  <button
+                    type="button"
+                    onClick={() => setSkillEditorConfig({ ...skillEditorConfig, autoSaveEnabled: !skillEditorConfig.autoSaveEnabled })}
+                    disabled={isSaving}
+                    className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out flex-shrink-0 ${
+                      skillEditorConfig.autoSaveEnabled ? 'bg-blue-500' : 'bg-slate-200 group-hover:bg-slate-300'
+                    } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    aria-pressed={skillEditorConfig.autoSaveEnabled}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out ${
+                        skillEditorConfig.autoSaveEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                     />
-                    <p className="text-xs text-slate-500 mt-1">500 - 10,000 (default: 2000ms)</p>
-                  </div>
-                )}
+                  </button>
+                  <span className="text-sm text-slate-700 font-medium">{t('settings.enableAutoSave')}</span>
+                  {skillEditorConfig.autoSaveEnabled && (
+                    <div className="flex items-center gap-2 ml-auto">
+                      <input
+                        type="number"
+                        value={skillEditorConfig.autoSaveDelay}
+                        onChange={(e) => setSkillEditorConfig({ ...skillEditorConfig, autoSaveDelay: parseInt(e.target.value) })}
+                        min={500}
+                        max={10000}
+                        step={500}
+                        className="input text-sm w-24"
+                        disabled={isSaving}
+                      />
+                      <span className="text-xs text-slate-500">ms</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1770,25 +1734,6 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
               </div>
             </div>
 
-            {/* AI Shortcuts Card */}
-            <div className="card">
-              <div className="flex items-center gap-2 mb-4">
-                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0M12 8a4 4 0 100 8 4 4 0 000-8z" />
-                </svg>
-                <h4 className="text-sm font-semibold text-slate-900">{t('settings.aiShortcuts')}</h4>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-                  <span className="text-slate-700">{t('settings.aiRewrite')}</span>
-                  <kbd className="px-2.5 py-1 bg-purple-200 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+R</kbd>
-                </div>
-                <div className="flex items-center justify-between text-sm p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-                  <span className="text-slate-700">{t('settings.aiInsert')}</span>
-                  <kbd className="px-2.5 py-1 bg-purple-200 rounded text-xs text-purple-700 font-mono">Ctrl+Alt+I</kbd>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -2155,16 +2100,18 @@ export default function Settings({ isOpen, onClose, config, onSave, onDirectoryA
                   {t('settings.skillGroupsDescription')}
                 </p>
               </div>
-              <button
-                onClick={() => setShowAddGroupForm(!showAddGroupForm)}
-                className="btn btn-primary btn-sm flex items-center gap-1.5 disabled:opacity-50"
-                disabled={isAddingGroup}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                {t('settings.addGroup')}
-              </button>
+              {skillGroups.length > 0 && (
+                <button
+                  onClick={() => setShowAddGroupForm(!showAddGroupForm)}
+                  className="btn btn-primary btn-sm flex items-center gap-1.5 disabled:opacity-50"
+                  disabled={isAddingGroup}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  {t('settings.addGroup')}
+                </button>
+              )}
             </div>
 
             {/* Add Group Form */}

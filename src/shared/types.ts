@@ -536,6 +536,8 @@ export interface AIGenerationRequest {
   prompt: string;
   /** Generation mode */
   mode: AIGenerationMode;
+  /** Whether this is a continuation of a previous multi-turn conversation (e.g., after AskUserQuestion) */
+  continuation?: boolean;
   /** Current skill content (for modify/insert/replace modes) */
   currentContent?: string;
   /** Selection start position (for insert/replace modes) */

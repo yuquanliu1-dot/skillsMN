@@ -1078,7 +1078,7 @@ export class AIService {
   // --------------------------------------------------------------------------
 
   private static buildUserPrompt(request: AIGenerationRequest): string {
-    const { mode, prompt, skillContext } = request;
+    const { mode, prompt, skillContext, continuation } = request;
     // All non-new modes use skillPath - AI will use Read tool to get content
     // Use "New Skill" for new mode, actual name for others, or "Untitled" as fallback
     const skillName = mode === 'new' ? 'New Skill' : (skillContext?.name || 'Untitled');
@@ -1091,6 +1091,49 @@ export class AIService {
       cleanPrompt = cleanPrompt.replace(/^\/skill-creator\s*/i, '').trim();
     }
 
+    // Prepend /skill-creator to invoke the skill-creator skill
+    // Include language detection instruction to respond in user's language
+    const skillCreatorPrefix = `/skill-creator
+
+IMPORTANT: Respond in the SAME language as the user's input.
+If the user writes in Chinese, respond in Chinese.
+If the user writes in English, respond in English.
+
+`;
+
+    // ---- CONTINUATION PATH ----
+    // When following up after AskUserQuestion, skip first-turn instructions
+    // to avoid restarting the skill creation process from scratch.
+    if (continuation) {
+      let saveLocationSection = '';
+      if (mode === 'new' && targetPath) {
+        saveLocationSection = `
+
+## Save Location
+You MUST save the skill to this directory:
+${targetPath}/<skill-name>/SKILL.md
+
+IMPORTANT:
+- Do NOT save to ~/.claude/skills or any other location
+- The file MUST be named "SKILL.md" (uppercase)`;
+      } else if (skillPath) {
+        saveLocationSection = `
+
+## File Location
+The skill directory is: ${skillPath}
+The skill file is at: ${skillPath}/SKILL.md
+
+IMPORTANT:
+1. Read the existing content from: ${skillPath}/SKILL.md
+2. Save the changes to: ${skillPath}/SKILL.md`;
+      }
+
+      return `${skillCreatorPrefix}CONTINUATION: This is a CONTINUATION of a previous conversation where you are creating/modifying a skill. Do NOT start over. Do NOT ask the user the same questions again. Pick up EXACTLY where you left off and proceed with the task based on the conversation history and new input below.
+
+${cleanPrompt}${saveLocationSection}`;
+    }
+
+    // ---- FIRST-TURN PATH (existing logic) ----
     // Build context section with save location - make it VERY explicit
     let contextSection = '';
     if (mode === 'new' && targetPath) {
@@ -1150,16 +1193,6 @@ IMPORTANT Instructions:
 5. Do NOT delete the skill file or directory
 6. Do NOT create a new directory. Do NOT change the location.`;
     }
-
-    // Prepend /skill-creator to invoke the skill-creator skill
-    // Include language detection instruction to respond in user's language
-    const skillCreatorPrefix = `/skill-creator
-
-IMPORTANT: Respond in the SAME language as the user's input.
-If the user writes in Chinese, respond in Chinese.
-If the user writes in English, respond in English.
-
-`;
 
     switch (mode) {
       case 'new':

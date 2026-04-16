@@ -198,7 +198,7 @@ interface UseAIGenerationReturn {
   isComplete: boolean;
   isIdle: boolean;
   isWaitingPermission: boolean;
-  generate: (prompt: string, mode: AIGenerationMode, context?: AIGenerationRequest['skillContext']) => Promise<void>;
+  generate: (prompt: string, mode: AIGenerationMode, context?: AIGenerationRequest['skillContext'], options?: { continuation?: boolean }) => Promise<void>;
   stop: () => Promise<void>;
   retry: () => Promise<void>;
   reset: () => void;
@@ -217,6 +217,7 @@ export function useAIGeneration(
     prompt: string;
     mode: AIGenerationMode;
     context?: AIGenerationRequest['skillContext'];
+    options?: { continuation?: boolean };
   } | null>(null);
 
   // Use refs to track latest values for synchronous access in onComplete callback
@@ -351,12 +352,13 @@ export function useAIGeneration(
   const generate = useCallback(async (
     prompt: string,
     mode: AIGenerationMode,
-    context?: AIGenerationRequest['skillContext']
+    context?: AIGenerationRequest['skillContext'],
+    generateOptions?: { continuation?: boolean }
   ) => {
     const requestId = generateMessageId();
 
     // Store for retry
-    lastRequestRef.current = { prompt, mode, context };
+    lastRequestRef.current = { prompt, mode, context, options: generateOptions };
 
     // Start generation
     dispatchWithRefUpdate({ type: 'START_GENERATION', requestId });
@@ -366,6 +368,7 @@ export function useAIGeneration(
       prompt,
       mode,
       skillContext: context,
+      continuation: generateOptions?.continuation,
     };
 
     try {
@@ -408,8 +411,8 @@ export function useAIGeneration(
    */
   const retry = useCallback(async () => {
     if (lastRequestRef.current) {
-      const { prompt, mode, context } = lastRequestRef.current;
-      await generate(prompt, mode, context);
+      const { prompt, mode, context, options } = lastRequestRef.current;
+      await generate(prompt, mode, context, options);
     }
   }, [generate]);
 

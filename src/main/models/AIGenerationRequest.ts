@@ -13,6 +13,8 @@ export interface AIGenerationRequest {
   prompt: string;
   /** Generation mode */
   mode: AIGenerationMode;
+  /** Whether this is a continuation of a previous multi-turn conversation (e.g., after AskUserQuestion) */
+  continuation?: boolean;
   /** Timestamp of the request */
   timestamp?: Date;
   /** Target directory for the skill (project or global) */

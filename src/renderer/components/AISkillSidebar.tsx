@@ -889,7 +889,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
     // Determine mode: new skill if no skillPath, otherwise modify
     const mode = currentSkillPath ? 'modify' : 'new';
-    await generate(fullPrompt, mode, skillContext);
+    await generate(fullPrompt, mode, skillContext, { continuation: true });
   }, [pendingQuestions, messages, generate, config, currentSkillName, currentSkillPath]);
 
   /**
@@ -938,7 +938,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
 
     // Determine mode: new skill if no skillPath, otherwise modify
     const mode = currentSkillPath ? 'modify' : 'new';
-    await generate(fullPrompt, mode, skillContext);
+    await generate(fullPrompt, mode, skillContext, { continuation: true });
   }, [messages, generate, config, currentSkillName, currentSkillPath]);
 
   /**
@@ -1221,11 +1221,12 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <>
-    <div className="h-full bg-slate-50 flex flex-col">
+    <div
+      className="h-full bg-slate-50 flex flex-col"
+      style={{ display: isOpen ? undefined : 'none' }}
+    >
       {/* Header - Clean blue style matching main app */}
       <div className="bg-white border-b border-slate-200 px-3 py-2.5 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -1391,7 +1392,7 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
               data-testid={message.role === 'assistant' ? 'ai-response-content' : undefined}
               className={`max-w-[92%] rounded-xl px-3 py-2 ${
                 message.role === 'user'
-                  ? 'text-slate-800'
+                  ? 'bg-blue-500 text-white'
                   : `bg-slate-50 border text-slate-800 ${
                       message.isStreaming
                         ? 'border-blue-400 shadow-md animate-pulse'
