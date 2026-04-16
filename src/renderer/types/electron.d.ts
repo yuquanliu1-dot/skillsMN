@@ -5,6 +5,7 @@
 import type {
   Configuration,
   Skill,
+  SkillUpdateCheckItem,
   IPCResponse,
   FSEvent,
   AIGenerationRequest,
@@ -43,6 +44,7 @@ import type { BadgeDefinition } from '../../shared/types';
 export interface ElectronAPI {
   // Skill Operations
   listSkills: (config?: Configuration) => Promise<IPCResponse<Skill[]>>;
+  rescanSkill: (skillPath: string, config?: Configuration) => Promise<IPCResponse<Skill | null>>;
   getSkill: (path: string) => Promise<IPCResponse<{ metadata: Skill; content: string }>>;
   createSkill: (name: string) => Promise<IPCResponse<Skill>>;
   copySkill: (sourcePath: string, newName: string) => Promise<IPCResponse<Skill>>;
@@ -54,7 +56,7 @@ export interface ElectronAPI {
   deleteSkill: (path: string) => Promise<IPCResponse<void>>;
   openFolder: (path: string) => Promise<IPCResponse<void>>;
   checkForUpdates: (
-    skills: Skill[]
+    skills: SkillUpdateCheckItem[]
   ) => Promise<IPCResponse<Record<string, VersionComparison>>>;
   updateSkillFromSource: (
     skillPath: string

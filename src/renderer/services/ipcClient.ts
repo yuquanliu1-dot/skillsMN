@@ -7,6 +7,7 @@
 import type {
   Configuration,
   Skill,
+  SkillUpdateCheckItem,
   FSEvent,
   SkillSource,
   IPCResponse,
@@ -43,6 +44,15 @@ export const ipcClient = {
       throw new Error(response.error?.message || 'Unknown error');
     }
     return response.data!;
+  },
+
+  async rescanSkill(skillPath: string, config?: Configuration): Promise<Skill | null> {
+    if (!isElectron()) return null;
+    const response = await window.electronAPI.rescanSkill(skillPath, config);
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Unknown error');
+    }
+    return response.data;
   },
 
   async getSkill(path: string): Promise<{ metadata: Skill; content: string }> {
@@ -100,7 +110,7 @@ export const ipcClient = {
     }
   },
 
-  async checkForUpdates(skills: Skill[]): Promise<Record<string, VersionComparison>> {
+  async checkForUpdates(skills: SkillUpdateCheckItem[]): Promise<Record<string, VersionComparison>> {
     if (!isElectron()) {
       console.warn('[IPC Client] Cannot check updates in browser mode');
       return {};

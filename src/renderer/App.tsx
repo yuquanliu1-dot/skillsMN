@@ -50,7 +50,8 @@ type Action =
   | { type: 'SELECT_SKILL'; payload: string | null }
   | { type: 'SET_FILTER'; payload: FilterSource }
   | { type: 'SET_SORT'; payload: SortBy }
-  | { type: 'SET_SEARCH'; payload: string };
+  | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'UPDATE_SKILL'; payload: Skill };
 
 const initialState: AppState = {
   config: null,
@@ -75,6 +76,13 @@ function appReducer(state: AppState, action: Action): AppState {
       return { ...state, config: action.payload };
     case 'SET_SKILLS':
       return { ...state, skills: action.payload };
+    case 'UPDATE_SKILL':
+      return {
+        ...state,
+        skills: state.skills.map(s =>
+          s.path === action.payload.path ? action.payload : s
+        ),
+      };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'SET_ERROR':
@@ -90,6 +98,21 @@ function appReducer(state: AppState, action: Action): AppState {
     default:
       return state;
   }
+}
+
+/**
+ * Extract skill directory path from a changed file path
+ * Matches the file path against known skill directory paths
+ */
+function extractSkillDir(filePath: string, skills: Skill[]): string | null {
+  for (const skill of skills) {
+    if (filePath.startsWith(skill.path.replace(/[\\/]/g, '/') + '/') ||
+        filePath.startsWith(skill.path + '/') ||
+        filePath.startsWith(skill.path + '\\')) {
+      return skill.path;
+    }
+  }
+  return null;
 }
 
 // ============================================================================
@@ -191,8 +214,25 @@ export default function App(): JSX.Element {
           // Remove any existing listener before adding new one
           ipcClient.removeFSChangeListener();
 
-          // Subscribe to file system changes
+          // Subscribe to file system changes (incremental when possible)
           ipcClient.onFSChange(async (event) => {
+            // Try incremental update for single-file changes
+            if (event.path && event.type !== 'unlink') {
+              // Walk up from the changed file to find the skill directory
+              const skillDir = extractSkillDir(event.path, state.skills);
+              if (skillDir) {
+                try {
+                  const updatedSkill = await ipcClient.rescanSkill(skillDir, state.config ?? undefined);
+                  if (updatedSkill) {
+                    dispatch({ type: 'UPDATE_SKILL', payload: updatedSkill });
+                    return; // Incremental update succeeded
+                  }
+                } catch {
+                  // Fall through to full reload
+                }
+              }
+            }
+            // Full reload for deletions, new skills, or failed incremental updates
             await loadSkillsRef.current();
           });
         }
@@ -331,7 +371,14 @@ export default function App(): JSX.Element {
     }
 
     try {
-      const updates = await ipcClient.checkForUpdates(skillsToCheck);
+      // Send lightweight payload (path, name, version, sourceMetadata only)
+      const checkItems = skillsToCheck.map(s => ({
+        path: s.path,
+        name: s.name,
+        version: s.version,
+        sourceMetadata: s.sourceMetadata,
+      }));
+      const updates = await ipcClient.checkForUpdates(checkItems);
       setSkillUpdates(updates);
     } catch (error) {
       console.error('Failed to check for updates:', error);

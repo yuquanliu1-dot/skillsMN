@@ -9,6 +9,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   Configuration,
   Skill,
+  SkillUpdateCheckItem,
   IPCResponse,
   FSEvent,
   SkillSource,
@@ -58,6 +59,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_LIST, { config });
   },
 
+  rescanSkill: (skillPath: string, config?: Configuration): Promise<IPCResponse<Skill | null>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SKILL_RESCAN, { skillPath, config });
+  },
+
   getSkill: (path: string): Promise<IPCResponse<{ metadata: Skill; content: string }>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_GET, { path });
   },
@@ -88,7 +93,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   checkForUpdates: (
-    skills: Skill[]
+    skills: SkillUpdateCheckItem[]
   ): Promise<IPCResponse<Record<string, VersionComparison>>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_CHECK_UPDATES, { skills });
   },

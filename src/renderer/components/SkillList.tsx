@@ -4,10 +4,13 @@
  * Grid-based skill list with group support
  */
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Skill, FilterSource, SortBy, VersionComparison, SkillGroup } from '../../shared/types';
 import { KeywordMatcher } from '../../shared/services/KeywordMatcher';
+import { SEARCH_DEBOUNCE_MS } from '../../shared/constants';
+import { useColumnCount } from '../hooks/useColumnCount';
 import SkillCard from './SkillCard';
 import { ipcClient } from '../services/ipcClient';
 import GroupIcon from './GroupIcon';
@@ -71,6 +74,13 @@ export default function SkillList({
   }, [t]);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Debounce search query for filtering
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
   const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
@@ -119,8 +129,8 @@ export default function SkillList({
     }
 
     // Filter by search query (matches name, description, and tags)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase();
       result = result.filter(
         (skill) =>
           skill.name.toLowerCase().includes(query) ||
@@ -142,7 +152,7 @@ export default function SkillList({
     });
 
     return result;
-  }, [skills, filterSource, searchQuery, sortBy]);
+  }, [skills, filterSource, debouncedSearchQuery, sortBy]);
 
   // Keyword matching results (cached alongside grouping)
   const keywordMatches = useMemo(() => {
@@ -209,6 +219,36 @@ export default function SkillList({
       await ipcClient.updateSkillFromSource(skill.path);
     }
   }, [onSkillUpdate]);
+
+  // Virtual scrolling setup
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const columnCount = useColumnCount(scrollRef);
+
+  // Flatten grouped skills into virtual rows
+  const virtualRows = useMemo(() => {
+    type VirtualRow =
+      | { type: 'header'; group: SkillGroup | null; count: number }
+      | { type: 'cards'; skills: Skill[] };
+
+    const rows: VirtualRow[] = [];
+    for (const { group, skills: groupSkills } of groupedSkills) {
+      rows.push({ type: 'header', group, count: groupSkills.length });
+      for (let i = 0; i < groupSkills.length; i += columnCount) {
+        rows.push({ type: 'cards', skills: groupSkills.slice(i, i + columnCount) });
+      }
+    }
+    return rows;
+  }, [groupedSkills, columnCount]);
+
+  const virtualizer = useVirtualizer({
+    count: virtualRows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (index) => {
+      const row = virtualRows[index];
+      return row?.type === 'header' ? 36 : 152; // header + margin, or card + gap
+    },
+    overscan: 5,
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -358,83 +398,97 @@ export default function SkillList({
         </div>
       </div>
 
-      {/* Skill grid with groups */}
-      <div data-testid="skills-list" className="flex-1 overflow-auto bg-white p-4">
+      {/* Skill grid with virtual scrolling */}
+      <div ref={scrollRef} data-testid="skills-list" className="flex-1 overflow-auto bg-white p-4">
         {filteredAndSortedSkills.length > 0 ? (
-          <div className="space-y-6">
-            {groupedSkills.map(({ group, skills: groupSkills }) => (
-              <div key={group?.id || 'ungrouped'}>
-                {/* Group header */}
-                {group && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <span
-                      style={{ color: group.color }}
-                    >
-                      <GroupIcon icon={group.icon} className="w-5 h-5" />
-                    </span>
-                    <h3
-                      className="text-sm font-semibold"
-                      style={{ color: group.color }}
-                    >
-                      {tGroupField(group.name)}
-                    </h3>
-                    {tGroupField(group.description) && (
-                      <span className="text-xs text-gray-500">
-                        · {tGroupField(group.description)}
-                      </span>
+          <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const row = virtualRows[virtualItem.index];
+              if (!row) return null;
+
+              if (row.type === 'header') {
+                const g = row.group;
+                return (
+                  <div
+                    key={virtualItem.key}
+                    style={{
+                      position: 'absolute',
+                      top: virtualItem.start,
+                      left: 0,
+                      width: '100%',
+                      height: virtualItem.size,
+                    }}
+                    className="flex items-center gap-2 mb-1"
+                  >
+                    {g ? (
+                      <>
+                        <span style={{ color: g.color }}>
+                          <GroupIcon icon={g.icon} className="w-5 h-5" />
+                        </span>
+                        <h3 className="text-sm font-semibold" style={{ color: g.color }}>
+                          {tGroupField(g.name)}
+                        </h3>
+                        {tGroupField(g.description) && (
+                          <span className="text-xs text-gray-500">
+                            · {tGroupField(g.description)}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400">({row.count})</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-gray-400"><GroupIcon className="w-5 h-5" /></span>
+                        <h3 className="text-sm font-semibold text-gray-500">
+                          {t('skills.ungrouped')}
+                        </h3>
+                        <span className="text-xs text-gray-400">({row.count})</span>
+                      </>
                     )}
-                    <span className="text-xs text-gray-400">
-                      ({groupSkills.length})
-                    </span>
                   </div>
-                )}
-                {!group && groupSkills.length > 0 && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-gray-400"><GroupIcon className="w-5 h-5" /></span>
-                    <h3 className="text-sm font-semibold text-gray-500">
-                      {t('skills.ungrouped')}
-                    </h3>
-                    <span className="text-xs text-gray-400">
-                      ({groupSkills.length})
-                    </span>
-                  </div>
-                )}
+                );
+              }
 
-                {/* Skill cards grid - using content-visibility for performance */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
-                  {groupSkills.map((skill) => {
+              // Card row
+              return (
+                <div
+                  key={virtualItem.key}
+                  style={{
+                    position: 'absolute',
+                    top: virtualItem.start,
+                    left: 0,
+                    width: '100%',
+                    height: virtualItem.size,
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
+                    gap: '14px',
+                    alignContent: 'start',
+                  }}
+                >
+                  {row.skills.map((skill) => {
                     const versionStatus = skillUpdates[skill.path];
-                    // Get match result for display (reuse cached keywordMatches)
-                    const matchResult = group
-                      ? keywordMatches.get(skill.path)
-                      : undefined;
-
+                    const matchResult = keywordMatches.get(skill.path);
                     return (
-                      <div
+                      <SkillCard
                         key={skill.path}
-                        style={{ contentVisibility: 'auto', containIntrinsicSize: '0 200px' }}
-                      >
-                        <SkillCard
-                          skill={skill}
-                          matchResult={matchResult}
-                          onClick={onSkillClick}
-                          onEdit={onEditSkill}
-                          onSelect={onSkillSelect}
-                          onDelete={onDeleteSkill}
-                          onCopy={onCopySkill}
-                          onOpenFolder={onOpenFolder}
-                          isSelected={skill.path === selectedSkillPath}
-                          versionStatus={versionStatus}
-                          onUpdate={handleSkillUpdate}
-                          onNavigateToSettings={onNavigateToSettings}
-                          onTagAssigned={handleTagAssigned}
-                        />
-                      </div>
+                        skill={skill}
+                        matchResult={matchResult}
+                        onClick={onSkillClick}
+                        onEdit={onEditSkill}
+                        onSelect={onSkillSelect}
+                        onDelete={onDeleteSkill}
+                        onCopy={onCopySkill}
+                        onOpenFolder={onOpenFolder}
+                        isSelected={skill.path === selectedSkillPath}
+                        versionStatus={versionStatus}
+                        onUpdate={handleSkillUpdate}
+                        onNavigateToSettings={onNavigateToSettings}
+                        onTagAssigned={handleTagAssigned}
+                      />
                     );
                   })}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">

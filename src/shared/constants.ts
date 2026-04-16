@@ -120,6 +120,7 @@ export const KEBAB_CASE_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 export const IPC_CHANNELS = {
   // Skill operations
   SKILL_LIST: 'skill:list',
+  SKILL_RESCAN: 'skill:rescan',
   SKILL_GET: 'skill:get',
   SKILL_CREATE: 'skill:create',
   SKILL_COPY: 'skill:copy',

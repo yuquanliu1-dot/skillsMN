@@ -28,6 +28,10 @@ export class SymlinkService {
   // In-memory cache for symlinks database
   private databaseCache: Map<string, SymlinksDatabase> = new Map();
 
+  // In-memory cache for V2 database
+  private databaseV2Cache: Map<string, { data: SymlinksDatabaseV2; timestamp: number }> = new Map();
+  private readonly V2_CACHE_TTL = 300000; // 5 minutes
+
   /**
    * Expand tilde (~) in path to actual home directory
    * @param filePath - Path that may contain ~
@@ -452,7 +456,18 @@ export class SymlinkService {
    * @returns Multi-target symlinks database
    */
   async loadDatabaseV2(appSkillsDir: string): Promise<SymlinksDatabaseV2> {
+    // Check V2 cache first
+    const cached = this.databaseV2Cache.get(appSkillsDir);
+    if (cached && Date.now() - cached.timestamp < this.V2_CACHE_TTL) {
+      return cached.data;
+    }
+
     const dbPath = this.getSymlinksDatabasePath(appSkillsDir);
+
+    const cacheResult = (db: SymlinksDatabaseV2): SymlinksDatabaseV2 => {
+      this.databaseV2Cache.set(appSkillsDir, { data: db, timestamp: Date.now() });
+      return db;
+    };
 
     try {
       if (await fs.promises.access(dbPath, fs.constants.R_OK).then(() => true).catch(() => false)) {
@@ -464,13 +479,13 @@ export class SymlinkService {
           logger.debug('Loaded v2 symlinks database', 'SymlinkService', {
             symlinkCount: Object.keys(db.symlinks).length,
           });
-          return db as SymlinksDatabaseV2;
+          return cacheResult(db as SymlinksDatabaseV2);
         }
 
         // Migrate from v1 to v2
         if (db.version === 1) {
           logger.info('Migrating symlinks database from v1 to v2', 'SymlinkService');
-          return this.migrateDatabaseV1toV2(db as SymlinksDatabase);
+          return cacheResult(await this.migrateDatabaseV1toV2(db as SymlinksDatabase));
         }
       }
     } catch (error) {
@@ -486,7 +501,7 @@ export class SymlinkService {
       symlinks: {},
     };
 
-    return emptyDb;
+    return cacheResult(emptyDb);
   }
 
   /**
@@ -537,6 +552,9 @@ export class SymlinkService {
    * @param db - v2 database to save
    */
   async saveDatabaseV2(appSkillsDir: string, db: SymlinksDatabaseV2): Promise<void> {
+    // Update cache on save
+    this.databaseV2Cache.set(appSkillsDir, { data: db, timestamp: Date.now() });
+
     const dbPath = this.getSymlinksDatabasePath(appSkillsDir);
 
     try {

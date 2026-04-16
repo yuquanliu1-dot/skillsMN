@@ -18,7 +18,7 @@ import {
 import { SkillService } from '../services/SkillService';
 import { PathValidator } from '../services/PathValidator';
 import { IPC_CHANNELS } from '../../shared/constants';
-import { IPCResponse, IPCError, Skill, Configuration, SkillFileTreeNode, SkillFileContent } from '../../shared/types';
+import { IPCResponse, IPCError, Skill, Configuration, SkillFileTreeNode, SkillFileContent, SkillUpdateCheckItem } from '../../shared/types';
 import { getFileWatcher } from '../index';
 import { getConfigService } from './configHandlers';
 
@@ -90,6 +90,24 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
         return { success: true, data: skills };
       } catch (error) {
         logger.error('Failed to list skills', 'SkillHandlers', error);
+        return { success: false, error: toIPCError(error) };
+      }
+    }
+  );
+
+  // Handler for skill:rescan — incremental single skill update
+  ipcMain.handle(
+    IPC_CHANNELS.SKILL_RESCAN,
+    async (_event, { skillPath, config }: { skillPath: string; config?: Configuration }): Promise<IPCResponse<Skill | null>> => {
+      try {
+        const skillConfig = config || (await getConfigService()?.load()) as Configuration;
+        if (!skillConfig) {
+          throw new ConfigurationError('Configuration not available');
+        }
+        const skill = await skillService!.rescanSingleSkill(skillPath, skillConfig);
+        return { success: true, data: skill };
+      } catch (error) {
+        logger.error('Failed to rescan skill', 'SkillHandlers', error);
         return { success: false, error: toIPCError(error) };
       }
     }
@@ -236,10 +254,10 @@ export function registerSkillHandlers(pathValidator: PathValidator, symlinkServi
   // Handler for skill:check-updates
   ipcMain.handle(
     IPC_CHANNELS.SKILL_CHECK_UPDATES,
-    async (_event, { skills }: { skills: Skill[] }): Promise<IPCResponse<Map<string, { hasUpdate: boolean; remoteSHA?: string }>>> => {
+    async (_event, { skills }: { skills: SkillUpdateCheckItem[] }): Promise<IPCResponse<Map<string, { hasUpdate: boolean; remoteSHA?: string }>>> => {
       try {
         logger.debug('Checking for skill updates', 'SkillHandlers');
-        const updates = await skillService!.checkForUpdates(skills);
+        const updates = await skillService!.checkForUpdates(skills as any as Skill[]);
 
         // Convert Map to plain object for IPC serialization
         const updatesObject: Record<string, { hasUpdate: boolean; remoteSHA?: string }> = {};

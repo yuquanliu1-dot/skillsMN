@@ -30,7 +30,9 @@ import { toKebabCase } from '../utils/pathUtils';
 
 export class SkillService {
   private frontmatterCache: Map<string, { data: any; timestamp: number }> = new Map();
-  private readonly CACHE_TTL = 60000; // 1 minute cache TTL
+  private readonly CACHE_TTL = 300000; // 5 minute cache TTL
+  private lastCacheCleanTime = 0;
+  private readonly CACHE_CLEAN_INTERVAL = 60000; // Clean expired entries every 60s
   // Track skills that have already attempted to save commitHash to avoid repeated write attempts
   private commitHashSaveAttempted: Set<string> = new Set();
 
@@ -190,17 +192,16 @@ export class SkillService {
       // Get skill directories
       const skillDirs = await SkillDirectoryModel.getSkillDirectories(dirPath);
 
-      // Parse each skill directory in parallel (T127: cached frontmatter)
-      const results = await Promise.allSettled(
-        skillDirs.map(skillDir => SkillModel.fromDirectory(skillDir, source, this.frontmatterCache))
-      );
-
+      // Parse skill directories with concurrency limit (T127: cached frontmatter)
+      const tasks = skillDirs.map(skillDir => () => SkillModel.fromDirectory(skillDir, source, this.frontmatterCache));
       const skills: Skill[] = [];
-      for (const result of results) {
-        if (result.status === 'fulfilled') {
-          skills.push(result.value);
+      const results = await this.concurrentLimit(tasks, 20);
+
+      for (let i = 0; i < results.length; i++) {
+        if (results[i] !== null) {
+          skills.push(results[i]!);
         } else {
-          logger.warn(`Failed to parse skill`, 'SkillService', { error: result.reason });
+          logger.warn(`Failed to parse skill: ${skillDirs[i]}`, 'SkillService');
         }
       }
 
@@ -217,15 +218,100 @@ export class SkillService {
   }
 
   /**
+   * Rescan a single skill directory and return updated Skill
+   * Used for incremental updates when a file change is detected
+   */
+  async rescanSingleSkill(skillDirPath: string, config: Configuration): Promise<Skill | null> {
+    try {
+      const skillFile = path.join(skillDirPath, 'SKILL.md');
+      if (!fs.existsSync(skillFile)) {
+        return null;
+      }
+
+      // Invalidate cache for this skill
+      this.frontmatterCache.delete(skillFile);
+
+      // Parse the single skill
+      const skill = await SkillModel.fromDirectory(skillDirPath, 'application', this.frontmatterCache);
+
+      // Enrich with symlink info
+      if (this.symlinkService) {
+        try {
+          const appDir = this.getApplicationSkillsDirectory(config);
+          const symlinkDb = await this.symlinkService.loadDatabaseV2(appDir);
+          const multiTargetConfig = symlinkDb.symlinks[skill.name] || symlinkDb.symlinks[path.basename(skill.path)];
+
+          if (multiTargetConfig && multiTargetConfig.targets) {
+            const enabledTargets = Object.values(multiTargetConfig.targets).filter(t => t.enabled);
+            skill.symlinkTargetCount = enabledTargets.length;
+            skill.isSymlinked = enabledTargets.length > 0;
+            const firstEnabledTarget = enabledTargets[0];
+            if (firstEnabledTarget) {
+              skill.symlinkConfig = {
+                enabled: true,
+                claudeDirectory: firstEnabledTarget.targetDirectory,
+                createdAt: firstEnabledTarget.createdAt,
+                lastModified: firstEnabledTarget.lastModified,
+              };
+            }
+          } else {
+            skill.symlinkTargetCount = 0;
+            skill.isSymlinked = false;
+          }
+        } catch {
+          // Symlink enrichment failure is non-critical
+        }
+      }
+
+      return skill;
+    } catch (error) {
+      logger.warn(`Failed to rescan skill: ${skillDirPath}`, 'SkillService', { error });
+      return null;
+    }
+  }
+
+  /**
    * Clean expired cache entries (T127)
    */
   private cleanExpiredCache(): void {
     const now = Date.now();
+    if (now - this.lastCacheCleanTime < this.CACHE_CLEAN_INTERVAL) return;
+    this.lastCacheCleanTime = now;
     for (const [path, entry] of this.frontmatterCache.entries()) {
       if (now - entry.timestamp > this.CACHE_TTL) {
         this.frontmatterCache.delete(path);
       }
     }
+  }
+
+  /**
+   * Invalidate frontmatter cache for a specific skill file
+   */
+  invalidateCache(skillFilePath: string): void {
+    this.frontmatterCache.delete(skillFilePath);
+  }
+
+  /**
+   * Execute async tasks with a concurrency limit
+   */
+  private async concurrentLimit<T>(tasks: (() => Promise<T>)[], limit: number): Promise<(T | null)[]> {
+    const results: (T | null)[] = new Array(tasks.length).fill(null);
+    let nextIndex = 0;
+
+    async function runNext(): Promise<void> {
+      while (nextIndex < tasks.length) {
+        const index = nextIndex++;
+        try {
+          results[index] = await tasks[index]();
+        } catch {
+          // Individual failure stored as null
+        }
+      }
+    }
+
+    const workers = Array.from({ length: Math.min(limit, tasks.length) }, () => runNext());
+    await Promise.all(workers);
+    return results;
   }
 
   /**

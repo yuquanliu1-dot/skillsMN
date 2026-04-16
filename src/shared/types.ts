@@ -47,6 +47,14 @@ export interface Skill {
   symlinkTargetCount?: number;
 }
 
+/** Lightweight type for update checking — avoids sending full Skill[] over IPC */
+export interface SkillUpdateCheckItem {
+  path: string;
+  name: string;
+  version?: string;
+  sourceMetadata?: import('../main/models/SkillSource').SkillSource;
+}
+
 export interface SkillDirectory {
   /** Canonical path to directory */
   path: string;

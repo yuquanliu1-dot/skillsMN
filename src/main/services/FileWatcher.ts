@@ -17,8 +17,9 @@ export class FileWatcher {
   private mainWindow: BrowserWindow | null = null;
   private pathValidator: PathValidator;
   private watchedPaths: Set<string> = new Set();
-  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
-  private readonly DEBOUNCE_MS = 200;
+  private globalDebounceTimer: NodeJS.Timeout | null = null;
+  private readonly GLOBAL_DEBOUNCE_MS = 500;
+  private lastEmittedPaths: string[] = [];
 
   // Event queue for when main window is unavailable
   private eventQueue: Array<{ eventType: FSEvent['type']; path: string }> = [];
@@ -140,9 +141,12 @@ export class FileWatcher {
     this.watchedPaths.clear();
     logger.info('File watcher stopped', 'FileWatcher');
 
-    // Clear any pending debounce timers
-    this.debounceTimers.forEach((timer) => clearTimeout(timer));
-    this.debounceTimers.clear();
+    // Clear any pending debounce timer
+    if (this.globalDebounceTimer) {
+      clearTimeout(this.globalDebounceTimer);
+      this.globalDebounceTimer = null;
+    }
+    this.lastEmittedPaths = [];
   }
 
   /**
@@ -155,35 +159,23 @@ export class FileWatcher {
       path,
     });
 
-    // Map parcel/watcher event types to our FSEvent types
-    const eventTypeMap: Record<'create' | 'update' | 'delete', FSEvent['type']> = {
-      create: 'add',
-      update: 'change',
-      delete: 'unlink',
-    };
+    // Accumulate changed paths
+    this.lastEmittedPaths.push(path);
 
-    const mappedEventType = eventTypeMap[eventType];
-
-    // Debounce rapid changes
-    const key = `${mappedEventType}:${path}`;
-
-    // Clear existing timer if any
-    const existingTimer = this.debounceTimers.get(key);
-    if (existingTimer) {
-      clearTimeout(existingTimer);
+    // Global debounce: coalesce all events into a single emission
+    if (this.globalDebounceTimer) {
+      clearTimeout(this.globalDebounceTimer);
     }
 
-    // Set new timer
-    const timer = setTimeout(() => {
-      logger.info('Emitting debounced file system event', 'FileWatcher', {
-        eventType: mappedEventType,
-        path,
+    this.globalDebounceTimer = setTimeout(() => {
+      logger.info('Emitting coalesced file system event', 'FileWatcher', {
+        pathCount: this.lastEmittedPaths.length,
       });
-      this.emitEvent(mappedEventType, path);
-      this.debounceTimers.delete(key);
-    }, this.DEBOUNCE_MS);
-
-    this.debounceTimers.set(key, timer);
+      // Emit with the last event type and first path — renderer ignores details anyway
+      this.emitEvent('change', this.lastEmittedPaths[0]);
+      this.lastEmittedPaths = [];
+      this.globalDebounceTimer = null;
+    }, this.GLOBAL_DEBOUNCE_MS);
   }
 
   /**
