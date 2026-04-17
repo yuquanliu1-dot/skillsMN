@@ -381,27 +381,26 @@ export const AISkillSidebar: React.FC<AISkillSidebarProps> = ({
         return;
       }
 
-      // Check for new skill creation (only when currentSkillPath is undefined)
-      // Look for Write tool in the tool calls
-      const writeToolCall = finalToolCalls.find(t => t.name === 'Write');
-      if (writeToolCall?.input?.file_path) {
-        const filePath = writeToolCall.input.file_path as string;
-        console.log('[AISkillSidebar] Write tool found, checking for new skill creation');
-        console.log('[AISkillSidebar] file_path:', filePath);
+      // Check for skill creation or modification (when currentSkillPath is undefined)
+      // Look for file_path from any tool call (Write, Edit, etc.)
+      const toolWithFilePath = finalToolCalls.find(t => t.input?.file_path);
+      if (toolWithFilePath?.input?.file_path) {
+        const filePath = toolWithFilePath.input.file_path as string;
+        console.log('[AISkillSidebar] Found file path from', toolWithFilePath.name, 'tool:', filePath);
 
         // Extract skill name from path (e.g., /path/to/skills/skill-name/SKILL.md -> skill-name)
         const pathParts = filePath.replace(/\\/g, '/').split('/');
         const skillsIndex = pathParts.findIndex(p => p === 'skills');
-        console.log('[AISkillSidebar] Checking for new skill creation, skillsIndex:', skillsIndex);
+        console.log('[AISkillSidebar] Checking for skill path, skillsIndex:', skillsIndex);
 
         if (skillsIndex !== -1 && pathParts.length > skillsIndex + 1) {
           const skillName = pathParts[skillsIndex + 1];
-          console.log('[AISkillSidebar] Skill created:', skillName, 'at path:', filePath);
+          console.log('[AISkillSidebar] Skill path resolved:', skillName, 'at:', filePath);
           // Store in ref for immediate access in saveCurrentConversation
           createdSkillNameRef.current = skillName;
           console.log('[AISkillSidebar] Set createdSkillNameRef.current to:', createdSkillNameRef.current);
           // Show completion toast
-          onShowToast?.(`Skill "${skillName}" created successfully!`, 'success');
+          onShowToast?.(`Skill "${skillName}" modified successfully!`, 'success');
           onSkillCreated({ name: skillName, path: filePath });
           return;
         }
