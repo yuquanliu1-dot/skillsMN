@@ -866,5 +866,10 @@
       "updateSuccess": "关键词已更新",
       "updateError": "关键词更新失败"
     }
+  },
+
+  "viewMode": {
+    "card": "卡片视图",
+    "list": "列表视图"
   }
 }

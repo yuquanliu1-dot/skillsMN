@@ -860,5 +860,10 @@
       "updateSuccess": "Keywords updated successfully",
       "updateError": "Failed to update keywords"
     }
+  },
+
+  "viewMode": {
+    "card": "Card view",
+    "list": "List view"
   }
 }
