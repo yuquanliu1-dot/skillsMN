@@ -14,6 +14,8 @@ import { useColumnCount } from '../hooks/useColumnCount';
 import SkillCard from './SkillCard';
 import { ipcClient } from '../services/ipcClient';
 import GroupIcon from './GroupIcon';
+import { useViewMode } from '../hooks/useViewMode';
+import { ViewModeToggle } from './ViewModeToggle';
 
 interface SkillListProps {
   skills: Skill[];
@@ -84,6 +86,7 @@ export default function SkillList({
   const [filterSource, setFilterSource] = useState<FilterSource>('all');
   const [sortBy, setSortBy] = useState<SortBy>('name');
   const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
+  const { viewMode, setViewMode } = useViewMode('skillList');
 
   // Load skill groups
   const loadSkillGroups = useCallback(async () => {
@@ -394,6 +397,9 @@ export default function SkillList({
                 <option value="modified">{t('skills.date')}</option>
               </select>
             </div>
+
+            {/* View mode toggle */}
+            <ViewModeToggle viewMode={viewMode} onChange={setViewMode} />
           </div>
         </div>
       </div>
@@ -401,13 +407,187 @@ export default function SkillList({
       {/* Skill grid with virtual scrolling */}
       <div ref={scrollRef} data-testid="skills-list" className="flex-1 overflow-auto bg-white p-4">
         {filteredAndSortedSkills.length > 0 ? (
-          <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const row = virtualRows[virtualItem.index];
-              if (!row) return null;
+          viewMode === 'list' ? (
+            /* List mode: grouped skills with headers */
+            <div className="space-y-4">
+              {groupedSkills.map(({ group, skills: groupSkills }) => (
+                <div key={group?.id ?? 'ungrouped'} className="space-y-2">
+                  {/* Group header */}
+                  <div className="flex items-center gap-2 px-1">
+                    {group ? (
+                      <>
+                        <span style={{ color: group.color }}>
+                          <GroupIcon icon={group.icon} className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-sm font-semibold" style={{ color: group.color }}>
+                          {tGroupField(group.name)}
+                        </h3>
+                        {tGroupField(group.description) && (
+                          <span className="text-xs text-gray-500">
+                            · {tGroupField(group.description)}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400">({groupSkills.length})</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-gray-400"><GroupIcon className="w-4 h-4" /></span>
+                        <h3 className="text-sm font-semibold text-gray-500">
+                          {t('skills.ungrouped')}
+                        </h3>
+                        <span className="text-xs text-gray-400">({groupSkills.length})</span>
+                      </>
+                    )}
+                  </div>
+                  {groupSkills.map((skill) => {
+                    const versionStatus = skillUpdates[skill.path];
+                    return (
+                      <div
+                        key={skill.path}
+                        className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
+                          skill.path === selectedSkillPath
+                            ? 'border-blue-400 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {/* Skill name + version badge */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm text-gray-900 truncate">
+                              {skill.name}
+                            </span>
+                            {skill.version && (
+                              <span className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded border border-gray-200">
+                                v{skill.version}
+                              </span>
+                            )}
+                            {versionStatus?.hasUpdate && (
+                              <span className="px-1.5 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded border border-yellow-200">
+                                {t('skills.updateAvailable')}
+                              </span>
+                            )}
+                          </div>
+                          {/* Description */}
+                          {skill.description && (
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                              {skill.description}
+                            </p>
+                          )}
+                          {/* Source URL */}
+                          {skill.sourceMetadata?.type === 'registry' && skill.sourceMetadata.registryUrl && (
+                            <p className="text-xs text-gray-400 mt-1 truncate">
+                              {skill.sourceMetadata.registryUrl}
+                            </p>
+                          )}
+                        </div>
 
-              if (row.type === 'header') {
-                const g = row.group;
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {onEditSkill && (
+                            <button
+                              onClick={() => onEditSkill(skill)}
+                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title={t('common.edit')}
+                              aria-label={t('common.edit')}
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+                          {onCopySkill && (
+                            <button
+                              onClick={() => onCopySkill(skill)}
+                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title={t('common.copy')}
+                              aria-label={t('common.copy')}
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )}
+                          {onOpenFolder && (
+                            <button
+                              onClick={() => onOpenFolder(skill)}
+                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title={t('skills.openFolder')}
+                              aria-label={t('skills.openFolder')}
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                              </svg>
+                            </button>
+                          )}
+                          {onDeleteSkill && (
+                            <button
+                              onClick={() => onDeleteSkill(skill)}
+                              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title={t('common.delete')}
+                              aria-label={t('common.delete')}
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Grid mode: virtualized card grid */
+            <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const row = virtualRows[virtualItem.index];
+                if (!row) return null;
+
+                if (row.type === 'header') {
+                  const g = row.group;
+                  return (
+                    <div
+                      key={virtualItem.key}
+                      style={{
+                        position: 'absolute',
+                        top: virtualItem.start,
+                        left: 0,
+                        width: '100%',
+                        height: virtualItem.size,
+                      }}
+                      className="flex items-center gap-2 mb-1"
+                    >
+                      {g ? (
+                        <>
+                          <span style={{ color: g.color }}>
+                            <GroupIcon icon={g.icon} className="w-5 h-5" />
+                          </span>
+                          <h3 className="text-sm font-semibold" style={{ color: g.color }}>
+                            {tGroupField(g.name)}
+                          </h3>
+                          {tGroupField(g.description) && (
+                            <span className="text-xs text-gray-500">
+                              · {tGroupField(g.description)}
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-400">({row.count})</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-gray-400"><GroupIcon className="w-5 h-5" /></span>
+                          <h3 className="text-sm font-semibold text-gray-500">
+                            {t('skills.ungrouped')}
+                          </h3>
+                          <span className="text-xs text-gray-400">({row.count})</span>
+                        </>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Card row
                 return (
                   <div
                     key={virtualItem.key}
@@ -417,80 +597,39 @@ export default function SkillList({
                       left: 0,
                       width: '100%',
                       height: virtualItem.size,
+                      display: 'grid',
+                      gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
+                      gap: '14px',
+                      alignContent: 'start',
                     }}
-                    className="flex items-center gap-2 mb-1"
                   >
-                    {g ? (
-                      <>
-                        <span style={{ color: g.color }}>
-                          <GroupIcon icon={g.icon} className="w-5 h-5" />
-                        </span>
-                        <h3 className="text-sm font-semibold" style={{ color: g.color }}>
-                          {tGroupField(g.name)}
-                        </h3>
-                        {tGroupField(g.description) && (
-                          <span className="text-xs text-gray-500">
-                            · {tGroupField(g.description)}
-                          </span>
-                        )}
-                        <span className="text-xs text-gray-400">({row.count})</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-gray-400"><GroupIcon className="w-5 h-5" /></span>
-                        <h3 className="text-sm font-semibold text-gray-500">
-                          {t('skills.ungrouped')}
-                        </h3>
-                        <span className="text-xs text-gray-400">({row.count})</span>
-                      </>
-                    )}
+                    {row.skills.map((skill) => {
+                      const versionStatus = skillUpdates[skill.path];
+                      const matchResult = keywordMatches.get(skill.path);
+                      return (
+                        <SkillCard
+                          key={skill.path}
+                          skill={skill}
+                          matchResult={matchResult}
+                          onClick={onSkillClick}
+                          onEdit={onEditSkill}
+                          onSelect={onSkillSelect}
+                          onDelete={onDeleteSkill}
+                          onCopy={onCopySkill}
+                          onOpenFolder={onOpenFolder}
+                          isSelected={skill.path === selectedSkillPath}
+                          versionStatus={versionStatus}
+                          onUpdate={handleSkillUpdate}
+                          onNavigateToSettings={onNavigateToSettings}
+                          onTagAssigned={handleTagAssigned}
+                        />
+                      );
+                    })}
                   </div>
                 );
-              }
-
-              // Card row
-              return (
-                <div
-                  key={virtualItem.key}
-                  style={{
-                    position: 'absolute',
-                    top: virtualItem.start,
-                    left: 0,
-                    width: '100%',
-                    height: virtualItem.size,
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
-                    gap: '14px',
-                    alignContent: 'start',
-                  }}
-                >
-                  {row.skills.map((skill) => {
-                    const versionStatus = skillUpdates[skill.path];
-                    const matchResult = keywordMatches.get(skill.path);
-                    return (
-                      <SkillCard
-                        key={skill.path}
-                        skill={skill}
-                        matchResult={matchResult}
-                        onClick={onSkillClick}
-                        onEdit={onEditSkill}
-                        onSelect={onSkillSelect}
-                        onDelete={onDeleteSkill}
-                        onCopy={onCopySkill}
-                        onOpenFolder={onOpenFolder}
-                        isSelected={skill.path === selectedSkillPath}
-                        versionStatus={versionStatus}
-                        onUpdate={handleSkillUpdate}
-                        onNavigateToSettings={onNavigateToSettings}
-                        onTagAssigned={handleTagAssigned}
-                      />
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
+              })}
+            </div>
+          )) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500">
               {skills.length === 0
