@@ -306,9 +306,11 @@ export class ImportService {
       const skillPaths = this.findSkillDirectories(tree);
 
       // Get skills with metadata
+      // Special case: if SKILL.md is at root (skillPath === ''), use repo name as skill name
       const skills: DetectedSkill[] = await Promise.all(
         skillPaths.map(async (skillPath) => {
-          const skillName = path.basename(skillPath);
+          // Use repo name for root-level skills (SKILL.md at repo root)
+          const skillName = skillPath === '' ? parsed.repo : path.basename(skillPath);
           return {
             name: skillName,
             path: skillPath,
@@ -429,7 +431,8 @@ export class ImportService {
 
     for (let i = 0; i < skillPaths.length; i++) {
       const skillPath = skillPaths[i];
-      const skillName = path.basename(skillPath);
+      // Use repo name for root-level skills (SKILL.md at repo root)
+      const skillName = skillPath === '' ? parsed.repo : path.basename(skillPath);
 
       try {
         // Send progress update
@@ -482,9 +485,12 @@ export class ImportService {
         if (files && Array.isArray(files)) {
           for (const file of files) {
             if (file.path && file.content) {
-              const relativePath = file.path.startsWith(skillPath + '/')
-                ? file.path.substring(skillPath.length + 1)
-                : file.path;
+              // For root-level skill (skillPath === ''), keep full path; otherwise strip skillPath prefix
+              const relativePath = skillPath === ''
+                ? file.path
+                : (file.path.startsWith(skillPath + '/')
+                  ? file.path.substring(skillPath.length + 1)
+                  : file.path);
               const targetFilePath = path.join(targetDir, relativePath);
               await fsExtra.ensureDir(path.dirname(targetFilePath));
               await fsExtra.writeFile(targetFilePath, file.content);
@@ -501,12 +507,18 @@ export class ImportService {
           );
 
           const skillFiles = tree.filter((item: any) =>
-            item.path.startsWith(skillPath + '/') || item.path === skillPath
+            // For root-level skill (skillPath === ''), match all files
+            skillPath === ''
+              ? item.path !== undefined
+              : (item.path.startsWith(skillPath + '/') || item.path === skillPath)
           );
 
           for (const file of skillFiles) {
             if (file.type === 'blob') {
-              const relativePath = file.path.substring(skillPath.length + 1);
+              // For root-level skill (skillPath === ''), keep full path; otherwise strip skillPath prefix
+              const relativePath = skillPath === ''
+                ? file.path
+                : file.path.substring(skillPath.length + 1);
               const targetFilePath = path.join(targetDir, relativePath);
               await fsExtra.ensureDir(path.dirname(targetFilePath));
 
@@ -679,21 +691,31 @@ export class ImportService {
    * Find skill directories in a repository tree
    * When a directory is identified as a skill (contains SKILL.md), its subdirectories
    * are not searched for additional skills (prevents nested sub-skills from being listed)
+   * Special case: if SKILL.md exists at repo root (path ''), treat as a skill with empty path
    */
   private findSkillDirectories(tree: any[]): string[] {
     const skillFiles = tree.filter((item: any) =>
       item.type === 'blob' && item.path.endsWith('SKILL.md')
     );
 
-    // Collect all skill directories with their paths
+    // Build list of skill directories with their paths
+    // Deduplicate by path to avoid duplicate entries (e.g., root SKILL.md only added once)
+    const seenPaths = new Set<string>();
     const allSkillDirs: Array<{ path: string; depth: number }> = [];
     for (const file of skillFiles) {
-      const dirPath = path.dirname(file.path);
-      const depth = dirPath.split('/').length;
+      const pathParts = file.path.split('/');
+      pathParts.pop(); // Remove 'SKILL.md'
+      const dirPath = pathParts.join('/');
+      const depth = pathParts.length;
+
+      // Skip if we've already seen this path (prevents duplicates)
+      if (seenPaths.has(dirPath)) continue;
+      seenPaths.add(dirPath);
+
       allSkillDirs.push({ path: dirPath, depth });
     }
 
-    // Sort by depth (shallowest first) so we process parent skills before children
+    // Sort by path length (shorter first) to process parent dirs before children
     allSkillDirs.sort((a, b) => a.depth - b.depth);
 
     // Filter out nested skills (skills that are subdirectories of other skills)

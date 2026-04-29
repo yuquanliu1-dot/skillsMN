@@ -93,7 +93,8 @@
     "savedToLibraryShort": "Skills are saved to your centralized skills library",
     "createdSuccessfully": "Skill created successfully!",
     "location": "Location",
-    "ungrouped": "Ungrouped"
+    "ungrouped": "Ungrouped",
+    "updateAvailable": "Update available"
   },
 
   "tagGroup": {

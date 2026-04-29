@@ -444,7 +444,8 @@ export default function SkillList({
                     return (
                       <div
                         key={skill.path}
-                        className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
+                        onClick={() => onSkillClick?.(skill)}
+                        className={`flex items-start gap-3 p-3 border rounded-lg transition-colors cursor-pointer ${
                           skill.path === selectedSkillPath
                             ? 'border-blue-400 bg-blue-50'
                             : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -511,8 +512,8 @@ export default function SkillList({
                             <button
                               onClick={() => onOpenFolder(skill)}
                               className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                              title={t('skills.openFolder')}
-                              aria-label={t('skills.openFolder')}
+                              title={t('skillCard.openFolder')}
+                              aria-label={t('skillCard.openFolder')}
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
