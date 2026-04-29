@@ -13,6 +13,8 @@ import PrivateSkillCard from './PrivateSkillCard';
 import ContributionBadge from './ContributionBadge';
 import ReadmeDialog from './ReadmeDialog';
 import GroupIcon from './GroupIcon';
+import { useViewMode } from '../hooks/useViewMode';
+import { ViewModeToggle } from './ViewModeToggle';
 
 type SortBy = 'name' | 'modified';
 
@@ -74,6 +76,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
   const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
   const [showReadmeDialog, setShowReadmeDialog] = useState(false);
   const [repoReadmeAvailable, setRepoReadmeAvailable] = useState<Map<string, boolean>>(new Map()); // Track README availability per repo
+  const { viewMode, setViewMode } = useViewMode('privateRepo');
 
   // Load skill groups
   const loadSkillGroups = useCallback(async () => {
@@ -547,6 +550,7 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
                   <option value="modified">{t('privateRepos.sortByDate')}</option>
                 </select>
               </div>
+              <ViewModeToggle viewMode={viewMode} onChange={setViewMode} />
             </>
           )}
         </div>
@@ -716,23 +720,65 @@ export default function PrivateRepoList({ onInstallSkill, onSkillClick, onNaviga
                   </div>
                 )}
 
-                {/* Skill cards grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
-                  {groupSkills.slice(0, visibleCount).map((skill) => (
-                        <PrivateSkillCard
-                      key={skill.path}
-                      skill={skill}
-                      repo={selectedRepo!}
-                      onInstallComplete={() => {
-                        loadSkills(selectedRepo!.id);
-                        onLocalSkillsRefresh?.(); // Refresh local skills to show the new badge
-                      }}
-                      onSkillClick={onSkillClick}
-                      onNavigateToSettings={onNavigateToSettings}
-                      onTagAssigned={handleTagAssigned}
-                    />
-                  ))}
-                </div>
+                {/* Skill cards grid or list */}
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+                    {groupSkills.slice(0, visibleCount).map((skill) => (
+                      <PrivateSkillCard
+                        key={skill.path}
+                        skill={skill}
+                        repo={selectedRepo!}
+                        onInstallComplete={() => {
+                          loadSkills(selectedRepo!.id);
+                          onLocalSkillsRefresh?.();
+                        }}
+                        onSkillClick={onSkillClick}
+                        onNavigateToSettings={onNavigateToSettings}
+                        onTagAssigned={handleTagAssigned}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {groupSkills.slice(0, visibleCount).map((skill) => (
+                      <div
+                        key={skill.path}
+                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                        onClick={() => onSkillClick?.(skill)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {skill.name}
+                            </span>
+                            {skill.tags && skill.tags.length > 0 && (
+                              <span className="px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                                {skill.tags[0]}
+                              </span>
+                            )}
+                          </div>
+                          {skill.description && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                              {skill.description}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+                          {skill.lastCommitAuthor || selectedRepo?.owner}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInstallSkill(skill);
+                          }}
+                          className="btn btn-primary btn-sm"
+                        >
+                          Install
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
 
